@@ -2,7 +2,9 @@
 
 > อัปเดต 12 พ.ย. 2026 · ใช้คู่กับ `11_UX_UI_Spec.md` (ตาราง component ระบุเสียงต่อปุ่ม) และ GDD หัวข้อ 10 (เครื่องมือเสียง)
 
-**สถานะตอนนี้:** เสียงทั้ง 38 ตัว + เพลง 1 ตัว ใน `unity/Assets/Audio` เป็นเสียงสังเคราะห์จากโค้ด (`art/tools/make_sfx.py`) ไม่มี sample จากใคร จึงไม่มีเรื่องลิขสิทธิ์ ใช้ได้ทันทีและเป็นของเราเอง (ถือเป็น CC0 ได้)
+**สถานะตอนนี้ (อัปเดต 12 พ.ย. บ่าย): แทนด้วย CC0 แล้ว 20 ตัว (ตาราง 4) ที่เหลือยังสังเคราะห์ ห้ามรัน `make_sfx.py` ซ้ำ**
+
+**สถานะเดิม:** เสียงทั้ง 38 ตัว + เพลง 1 ตัว ใน `unity/Assets/Audio` เป็นเสียงสังเคราะห์จากโค้ด (`art/tools/make_sfx.py`) ไม่มี sample จากใคร จึงไม่มีเรื่องลิขสิทธิ์ ใช้ได้ทันทีและเป็นของเราเอง (ถือเป็น CC0 ได้)
 งานถัดไปคือแทนตัวที่ฟังแล้วไม่ใช่ "งานบ้าน" (ไม้กวาด น้ำ สเปรย์ ฟอง) ด้วยเสียงจริงจากชุด **CC0** ด้านล่าง โดยใช้ **ชื่อไฟล์เดิม** โค้ดจึงไม่ต้องแก้
 
 ## 1. แหล่ง CC0 ที่คัดไว้
@@ -80,7 +82,9 @@
 
 | ไฟล์ | แหล่ง (ลิงก์หน้า) | ผู้ทำ | Licence ที่เห็นบนหน้า | วันที่ตรวจ |
 | --- | --- | --- | --- | --- |
-| ทุกไฟล์ปัจจุบัน | `art/tools/make_sfx.py` | ทีม BOB (สังเคราะห์) | ของเราเอง | 12 พ.ย. 2026 |
+| ไฟล์ที่เหลือ (water_pour, spray_psst, steam_hiss, broom_sweep, scrub_loop, fizz, mud_splat ฯลฯ) | `art/tools/make_sfx.py` | ทีม BOB (สังเคราะห์) | ของเราเอง | 12 พ.ย. 2026 |
+| ui_tap, ui_confirm, ui_cancel, ui_card_flip, drop_invalid, lobby_join, ready_on, vote_tick, timer_tick, pass_part | Kenney Interface Sounds (OpenGameArt: opengameart.org/content/interface-sounds, ไฟล์ click_001, confirmation_001, back_001, scroll_001, error_001, open_001, toggle_001, tick_001, tick_002, pluck_001) | Kenney | CC0 (ป้าย CC0 บนหน้า OGA + `art/licenses/kenney-interface-sounds-LICENSE.txt`) | 12 พ.ย. 2026 |
+| pickup, coin, place_layer, table_put, bubble_pop, cart_grab, lift_layer, enemy_hit, enemy_defeat, enemy_spawn | RPG Sound Pack (OpenGameArt: opengameart.org/content/rpg-sound-pack, ไฟล์ cloth, coin, cloth-heavy, wood-small, bubble, metal-small1, armor-light, slime2, slime5, slime8) | artisticdude | CC0 (ป้าย CC0 บนหน้า OGA) | 12 พ.ย. 2026 |
 
 ## 5. เพลง
 
