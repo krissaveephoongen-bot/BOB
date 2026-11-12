@@ -12,7 +12,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../unity/Assets/Scripts/**/*.cs" />
-    <!-- Editor scripts that use Unity 2019+ editor APIs missing from the 2018 reference assembly; they compile in Unity itself. -->
+    <!-- Editor scripts that use Unity 2019+ editor APIs missing from the 2018 reference assembly; they compile in Unity itself.
+         New editor scripts should stay 2018-compatible (call those through EditorApplication.ExecuteMenuItem) so they are checked here. -->
     <Compile Remove="../unity/Assets/Scripts/Editor/BobArtImporter.cs;../unity/Assets/Scripts/Editor/BobAutoSmoke.cs;../unity/Assets/Scripts/Editor/BobGameScene.cs" />
     <Compile Include="Shims.cs" />
   </ItemGroup>
