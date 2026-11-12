@@ -28,10 +28,16 @@ namespace Bob.Game
 
         /// <summary>A font with Thai glyphs: the OS font on Windows / Android, Unity's built-in one as a last resort.
         /// TODO: ship Mitr / IBM Plex Sans Thai as a TextMeshPro asset for correct Thai mark placement on every device.</summary>
+        static Font heading;
+        /// <summary>Mitr for titles and bold labels; falls back to the body font.</summary>
+        public static Font Heading { get { if (heading == null) heading = Resources.Load<Font>("Fonts/Mitr-Medium"); return heading != null ? heading : Font; } }
+
         public static Font Font
         {
             get
             {
+                if (font != null) return font;
+                font = Resources.Load<Font>("Fonts/IBMPlexSansThai-Medium"); // bundled (OFL), same on every device
                 if (font != null) return font;
                 try { font = Font.CreateDynamicFontFromOSFont(new[] { "Leelawadee UI", "Leelawadee", "Tahoma", "Noto Sans Thai", "Noto Sans Thai UI", "Sans" }, 32); }
                 catch (Exception) { font = null; }
@@ -114,7 +120,7 @@ namespace Bob.Game
         {
             var r = Rect("Text", parent);
             var t = r.gameObject.AddComponent<Text>();
-            t.font = Font; t.text = text; t.fontSize = size; t.color = color ?? Ink; t.alignment = align; t.fontStyle = style;
+            t.font = style == FontStyle.Bold ? Heading : Font; t.text = text; t.fontSize = size; t.color = color ?? Ink; t.alignment = align; t.fontStyle = style == FontStyle.Bold && Heading != Font ? FontStyle.Normal : style;
             t.horizontalOverflow = HorizontalWrapMode.Wrap; t.verticalOverflow = VerticalWrapMode.Overflow; t.raycastTarget = false;
             t.lineSpacing = 1.1f;
             return t;

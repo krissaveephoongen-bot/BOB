@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: trash_spawn
+  m_Name: 
   serializedVersion: 8
   m_Legacy: 0
   m_Compressed: 0
@@ -43,24 +43,8 @@ AnimationClip:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 0, y: 0, z: 0}
   m_ClipBindingConstant:
-    genericBindings:
-    - serializedVersion: 2
-      path: 0
-      attribute: 0
-      script: {fileID: 0}
-      typeID: 212
-      customType: 23
-      isPPtrCurve: 1
-      isIntCurve: 0
-      isSerializeReferenceCurve: 0
-      metaData: 0
-    pptrCurveMapping:
-    - {fileID: -2486697859274239163, guid: ab2a28005b2b87d419d6165b62ddbf9e, type: 3}
-    - {fileID: 8499013993908462359, guid: ab2a28005b2b87d419d6165b62ddbf9e, type: 3}
-    - {fileID: -7425564354474586129, guid: ab2a28005b2b87d419d6165b62ddbf9e, type: 3}
-    - {fileID: -15953959439598808, guid: ab2a28005b2b87d419d6165b62ddbf9e, type: 3}
-    - {fileID: 6831892314817114257, guid: ab2a28005b2b87d419d6165b62ddbf9e, type: 3}
-    - {fileID: 6831892314817114257, guid: ab2a28005b2b87d419d6165b62ddbf9e, type: 3}
+    genericBindings: []
+    pptrCurveMapping: []
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}

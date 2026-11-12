@@ -197,6 +197,8 @@ drag) are written for phones but so far tested only in the Editor; the bot test 
 test view, cart pushing, passing and the parking table (GDD 9, 20) live in the online co-op scene (above), not in this
 single-player scene.
 
+Solo scene extras (`Game/BobGame.Extras.cs`): walk into the cart to push it, an item rest table on the left (tap a hand slot near it to stash, tap the table or press T to take back) and a 4.5 s split-screen test view before the score cards (tap to skip). The online versions of these live in the co-op scene.
+
 ## Needs the PC (one sitting)
 
 Everything above was done in the cloud; these steps need Unity, Docker Desktop or a phone. Do them in order:
@@ -212,3 +214,8 @@ Everything above was done in the cloud; these steps need Unity, Docker Desktop o
 5. TextMeshPro: import TMP Essentials and make Mitr / IBM Plex Sans Thai font assets (UX spec 2.2); then switch `BobUi.Label` to TMP.
 6. Optional: swap placeholder sounds for CC0 ones (`art/docs/12_Sound_Manifest.md`), art for the parking table (asset C07).
 7. Android: build an APK, install it, set the server IP to the PC's LAN IP, play one online match phone vs PC.
+
+## Leonardo art (12 Nov 2026)
+Background-removed cutouts live in `bob-art/cutouts*` (project files, see `docs/12_RAW_Cutouts.md`). Imported so far: 8 parts, 10 items and the cart (`unity/Assets/Art/Sprites`). Needs the Unity Editor licence (Hub sign-in) to reimport and run `Bob > Run Game Test`.
+
+Title and lobby screens now sit on the GDD-themed Leonardo room pictures (`Sprites/Environments/Lobby/lobby_{rental_room,condo,coffee_shop,kitchen}`; title = rental room, online lobby = condo). Match music is a CC0 loop; 20 sounds are CC0 (see `art/docs/12_Sound_Manifest.md`).

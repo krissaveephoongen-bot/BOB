@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: grease_defeat
+  m_Name: 
   serializedVersion: 8
   m_Legacy: 0
   m_Compressed: 0
@@ -49,27 +49,8 @@ AnimationClip:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 0, y: 0, z: 0}
   m_ClipBindingConstant:
-    genericBindings:
-    - serializedVersion: 2
-      path: 0
-      attribute: 0
-      script: {fileID: 0}
-      typeID: 212
-      customType: 23
-      isPPtrCurve: 1
-      isIntCurve: 0
-      isSerializeReferenceCurve: 0
-      metaData: 0
-    pptrCurveMapping:
-    - {fileID: -2347712220701613293, guid: 50bc7e0e2c98be2428e3fdba43df29cc, type: 3}
-    - {fileID: -3955742110252054298, guid: 50bc7e0e2c98be2428e3fdba43df29cc, type: 3}
-    - {fileID: -4138234633310276041, guid: 50bc7e0e2c98be2428e3fdba43df29cc, type: 3}
-    - {fileID: 9134853001689246669, guid: 50bc7e0e2c98be2428e3fdba43df29cc, type: 3}
-    - {fileID: -2921714897379202103, guid: 50bc7e0e2c98be2428e3fdba43df29cc, type: 3}
-    - {fileID: 3094842544887019544, guid: 50bc7e0e2c98be2428e3fdba43df29cc, type: 3}
-    - {fileID: -6264676983394670611, guid: 50bc7e0e2c98be2428e3fdba43df29cc, type: 3}
-    - {fileID: -2720041899539235956, guid: 50bc7e0e2c98be2428e3fdba43df29cc, type: 3}
-    - {fileID: -2720041899539235956, guid: 50bc7e0e2c98be2428e3fdba43df29cc, type: 3}
+    genericBindings: []
+    pptrCurveMapping: []
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}

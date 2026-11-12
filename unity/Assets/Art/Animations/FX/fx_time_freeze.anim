@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: fx_time_freeze
+  m_Name: 
   serializedVersion: 8
   m_Legacy: 0
   m_Compressed: 0
@@ -49,27 +49,8 @@ AnimationClip:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 0, y: 0, z: 0}
   m_ClipBindingConstant:
-    genericBindings:
-    - serializedVersion: 2
-      path: 0
-      attribute: 0
-      script: {fileID: 0}
-      typeID: 212
-      customType: 23
-      isPPtrCurve: 1
-      isIntCurve: 0
-      isSerializeReferenceCurve: 0
-      metaData: 0
-    pptrCurveMapping:
-    - {fileID: 5093174675744279753, guid: 91c2811ee7206ff4db9e08e4a5b1b920, type: 3}
-    - {fileID: 684230683808463794, guid: 91c2811ee7206ff4db9e08e4a5b1b920, type: 3}
-    - {fileID: 1968579122247818896, guid: 91c2811ee7206ff4db9e08e4a5b1b920, type: 3}
-    - {fileID: 4236391913001680475, guid: 91c2811ee7206ff4db9e08e4a5b1b920, type: 3}
-    - {fileID: -586043042719338088, guid: 91c2811ee7206ff4db9e08e4a5b1b920, type: 3}
-    - {fileID: -3407543775837296917, guid: 91c2811ee7206ff4db9e08e4a5b1b920, type: 3}
-    - {fileID: 8779529977450705150, guid: 91c2811ee7206ff4db9e08e4a5b1b920, type: 3}
-    - {fileID: -8168131559250573426, guid: 91c2811ee7206ff4db9e08e4a5b1b920, type: 3}
-    - {fileID: -8168131559250573426, guid: 91c2811ee7206ff4db9e08e4a5b1b920, type: 3}
+    genericBindings: []
+    pptrCurveMapping: []
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}

@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: rust_hit
+  m_Name: 
   serializedVersion: 8
   m_Legacy: 0
   m_Compressed: 0
@@ -41,23 +41,8 @@ AnimationClip:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 0, y: 0, z: 0}
   m_ClipBindingConstant:
-    genericBindings:
-    - serializedVersion: 2
-      path: 0
-      attribute: 0
-      script: {fileID: 0}
-      typeID: 212
-      customType: 23
-      isPPtrCurve: 1
-      isIntCurve: 0
-      isSerializeReferenceCurve: 0
-      metaData: 0
-    pptrCurveMapping:
-    - {fileID: 2667748756637526959, guid: c1227f2a62b6c6d47bf8a813bf648325, type: 3}
-    - {fileID: 7236782268820382597, guid: c1227f2a62b6c6d47bf8a813bf648325, type: 3}
-    - {fileID: -8856083482348641557, guid: c1227f2a62b6c6d47bf8a813bf648325, type: 3}
-    - {fileID: -3540946258927219112, guid: c1227f2a62b6c6d47bf8a813bf648325, type: 3}
-    - {fileID: -3540946258927219112, guid: c1227f2a62b6c6d47bf8a813bf648325, type: 3}
+    genericBindings: []
+    pptrCurveMapping: []
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}

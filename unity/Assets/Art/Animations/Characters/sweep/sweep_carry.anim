@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: sweep_carry
+  m_Name: 
   serializedVersion: 8
   m_Legacy: 0
   m_Compressed: 0
@@ -45,25 +45,8 @@ AnimationClip:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 0, y: 0, z: 0}
   m_ClipBindingConstant:
-    genericBindings:
-    - serializedVersion: 2
-      path: 0
-      attribute: 0
-      script: {fileID: 0}
-      typeID: 212
-      customType: 23
-      isPPtrCurve: 1
-      isIntCurve: 0
-      isSerializeReferenceCurve: 0
-      metaData: 0
-    pptrCurveMapping:
-    - {fileID: 7164719623430918311, guid: 8317f43ab94708a41b73b458c2868660, type: 3}
-    - {fileID: 2358475448819543869, guid: 8317f43ab94708a41b73b458c2868660, type: 3}
-    - {fileID: -5865758508400738322, guid: 8317f43ab94708a41b73b458c2868660, type: 3}
-    - {fileID: 3750372923218154331, guid: 8317f43ab94708a41b73b458c2868660, type: 3}
-    - {fileID: 4285670397411701667, guid: 8317f43ab94708a41b73b458c2868660, type: 3}
-    - {fileID: 5630667798347326272, guid: 8317f43ab94708a41b73b458c2868660, type: 3}
-    - {fileID: 7164719623430918311, guid: 8317f43ab94708a41b73b458c2868660, type: 3}
+    genericBindings: []
+    pptrCurveMapping: []
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}

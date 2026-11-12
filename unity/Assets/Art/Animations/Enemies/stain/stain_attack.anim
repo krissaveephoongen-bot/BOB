@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: stain_attack
+  m_Name: 
   serializedVersion: 8
   m_Legacy: 0
   m_Compressed: 0
@@ -43,24 +43,8 @@ AnimationClip:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 0, y: 0, z: 0}
   m_ClipBindingConstant:
-    genericBindings:
-    - serializedVersion: 2
-      path: 0
-      attribute: 0
-      script: {fileID: 0}
-      typeID: 212
-      customType: 23
-      isPPtrCurve: 1
-      isIntCurve: 0
-      isSerializeReferenceCurve: 0
-      metaData: 0
-    pptrCurveMapping:
-    - {fileID: 8640564099935310508, guid: 4bbaad5d89f5e124d964f9810e4bc0b5, type: 3}
-    - {fileID: -8708486966869803528, guid: 4bbaad5d89f5e124d964f9810e4bc0b5, type: 3}
-    - {fileID: 4313827213138387661, guid: 4bbaad5d89f5e124d964f9810e4bc0b5, type: 3}
-    - {fileID: 3806604433031186757, guid: 4bbaad5d89f5e124d964f9810e4bc0b5, type: 3}
-    - {fileID: -2245503863327208928, guid: 4bbaad5d89f5e124d964f9810e4bc0b5, type: 3}
-    - {fileID: -2245503863327208928, guid: 4bbaad5d89f5e124d964f9810e4bc0b5, type: 3}
+    genericBindings: []
+    pptrCurveMapping: []
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}

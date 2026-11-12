@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: fx_fizz
+  m_Name: 
   serializedVersion: 8
   m_Legacy: 0
   m_Compressed: 0
@@ -45,25 +45,8 @@ AnimationClip:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 0, y: 0, z: 0}
   m_ClipBindingConstant:
-    genericBindings:
-    - serializedVersion: 2
-      path: 0
-      attribute: 0
-      script: {fileID: 0}
-      typeID: 212
-      customType: 23
-      isPPtrCurve: 1
-      isIntCurve: 0
-      isSerializeReferenceCurve: 0
-      metaData: 0
-    pptrCurveMapping:
-    - {fileID: 4729845712645008015, guid: d9153e1856727f64b86f1ad8b6979105, type: 3}
-    - {fileID: -5405204497195883329, guid: d9153e1856727f64b86f1ad8b6979105, type: 3}
-    - {fileID: -7281703751310972055, guid: d9153e1856727f64b86f1ad8b6979105, type: 3}
-    - {fileID: -998217370236325515, guid: d9153e1856727f64b86f1ad8b6979105, type: 3}
-    - {fileID: -7236612261857704240, guid: d9153e1856727f64b86f1ad8b6979105, type: 3}
-    - {fileID: -2841908842498751688, guid: d9153e1856727f64b86f1ad8b6979105, type: 3}
-    - {fileID: 4729845712645008015, guid: d9153e1856727f64b86f1ad8b6979105, type: 3}
+    genericBindings: []
+    pptrCurveMapping: []
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}

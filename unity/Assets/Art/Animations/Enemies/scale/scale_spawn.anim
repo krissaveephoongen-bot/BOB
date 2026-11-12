@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: scale_spawn
+  m_Name: 
   serializedVersion: 8
   m_Legacy: 0
   m_Compressed: 0
@@ -43,24 +43,8 @@ AnimationClip:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 0, y: 0, z: 0}
   m_ClipBindingConstant:
-    genericBindings:
-    - serializedVersion: 2
-      path: 0
-      attribute: 0
-      script: {fileID: 0}
-      typeID: 212
-      customType: 23
-      isPPtrCurve: 1
-      isIntCurve: 0
-      isSerializeReferenceCurve: 0
-      metaData: 0
-    pptrCurveMapping:
-    - {fileID: 2971799463442038082, guid: f3bd866c592772d448a47ac9a9420cc6, type: 3}
-    - {fileID: -6969794838565915265, guid: f3bd866c592772d448a47ac9a9420cc6, type: 3}
-    - {fileID: 6858539578099408771, guid: f3bd866c592772d448a47ac9a9420cc6, type: 3}
-    - {fileID: 4080726351310904466, guid: f3bd866c592772d448a47ac9a9420cc6, type: 3}
-    - {fileID: 4076900134501230622, guid: f3bd866c592772d448a47ac9a9420cc6, type: 3}
-    - {fileID: 4076900134501230622, guid: f3bd866c592772d448a47ac9a9420cc6, type: 3}
+    genericBindings: []
+    pptrCurveMapping: []
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}

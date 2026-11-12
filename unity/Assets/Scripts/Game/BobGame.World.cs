@@ -19,7 +19,9 @@ namespace Bob.Game
         static readonly string[] StationIds = { "tool", "chem", "energy", "method" };
         static readonly string[] StationNames = { "ชั้นวางอุปกรณ์", "ตู้น้ำยา", "จุดแรงทำงาน", "กระดานวิธีใช้" };
         static readonly Rect[] StationRects = { PR(30, 30, 170, 64), PR(600, 30, 170, 64), PR(30, 406, 170, 64), PR(600, 406, 170, 64) };
-        static readonly Rect CartRect = PR(355, 215, 90, 64), SofaRect = PR(300, 385, 200, 30); // sofa sits lower than the prototype so its sprite does not hide the cart
+        static readonly Rect CartHome = PR(355, 215, 90, 64), SofaRect = PR(300, 385, 200, 30); // sofa sits lower than the prototype so its sprite does not hide the cart
+        Rect cartRect = CartHome;
+        Rect CartRect => cartRect; // solo: the hero can push the cart (BobGame.Extras.cs)
         static readonly Vector2 PlayerStart = new Vector2(4f, 0.6f);
 
         Camera cam;
@@ -90,6 +92,7 @@ namespace Bob.Game
             if (!art.Has("cart")) { cartSr.transform.localScale = new Vector3(CartRect.width, CartRect.height, 1); cartSr.transform.position = CartRect.center; cartSr.color = BobUi.Surface; }
             cartSr.sortingOrder = Order(CartRect.yMin);
             cartT = cartSr.transform;
+            BuildTable();
             cartLayers = new GameObject("CartLayers").transform; cartLayers.SetParent(worldRoot);
 
             enemyRoot = new GameObject("Enemies").transform; enemyRoot.SetParent(worldRoot);
@@ -172,7 +175,8 @@ namespace Bob.Game
             bool dirty = R != null;
             foreach (var t in floorTiles) t.sprite = art.Get(dirty && rng.NextDouble() < 0.45 ? "floor_tile_dirty" : "floor_tile");
 
-            pos = PlayerStart; target = null; stuck = 0; near = null; nearCart = false;
+            cartRect = CartHome; PlaceCart(); ClearTable();
+            pos = PlayerStart; target = null; stuck = 0; near = null; nearCart = false; nearTable = false;
             handShown = -1;
         }
 
@@ -199,6 +203,7 @@ namespace Bob.Game
         {
             if (!cam.pixelRect.Contains(p)) return;
             var w = cam.ScreenToWorldPoint(p);
+            if (!Online && phase == Phase.Build && tableItems.Count > 0 && TableRect.Contains(w) && nearTable) { TakeFromTable(); return; }
             if (w.x < -0.3f || w.x > RoomW + 0.3f || w.y < -0.3f || w.y > RoomH + 0.3f) return;
             target = new Vector2(Mathf.Clamp(w.x, 0.18f, RoomW - 0.18f), Mathf.Clamp(w.y, 0.18f, RoomH - 0.18f)); stuck = 0;
         }
@@ -209,6 +214,7 @@ namespace Bob.Game
             // keyboard shortcuts: 1-3 place from hand, Q lift the top layer, F ability, Enter submit
             for (int i = 0; i < HandMax; i++) if (Input.GetKeyDown(KeyCode.Alpha1 + i)) Place(i);
             if (Input.GetKeyDown(KeyCode.Q)) LiftTop();
+            if (Input.GetKeyDown(KeyCode.T)) TakeFromTable();
             if (Input.GetKeyDown(KeyCode.F)) UseAbility();
             if (Input.GetKeyDown(KeyCode.Return) && BobRules.CountLayers(stack) > 0) Submit();
 
@@ -270,6 +276,7 @@ namespace Bob.Game
                     var (d, c) = RectDist(pos, r);
                     if (d < Radius) pos = d > 0.0001f ? c + (pos - c) / d * Radius : old;
                 }
+                if (!Online) PushCart(old);
                 if (target.HasValue) { if (Vector2.Distance(pos, old) < sp * 0.25f) { stuck += dt; if (stuck > 0.4f) target = null; } else stuck = 0; }
                 lastMove = pos - old;
                 stepT += dt; if (stepT > 0.32f) { stepT = 0; Sfx("footstep"); }
@@ -280,7 +287,8 @@ namespace Bob.Game
             string n = null; float best = NearStation;
             for (int i = 0; i < 4; i++) { var d = RectDist(pos, StationRects[i]).d; if (d < best) { best = d; n = StationIds[i]; } }
             bool nc = RectDist(pos, CartRect).d < NearCart;
-            if (n != near || nc != nearCart) { near = n; nearCart = nc; if (phase == Phase.Build) Sfx("ui_tap"); RenderAll(); }
+            bool ntb = !Online && RectDist(pos, TableRect).d < NearCart;
+            if (n != near || nc != nearCart || ntb != nearTable) { near = n; nearCart = nc; nearTable = ntb; if (phase == Phase.Build) Sfx("ui_tap"); RenderAll(); }
 
             // hero
             playerSr.transform.position = pos;
@@ -296,7 +304,7 @@ namespace Bob.Game
             if (target.HasValue) targetMarker.position = target.Value;
         }
 
-        IEnumerable<Rect> Solids() { foreach (var r in StationRects) yield return r; yield return CartRect; yield return SofaRect; }
+        IEnumerable<Rect> Solids() { foreach (var r in StationRects) yield return r; if (Online) yield return CartRect; yield return SofaRect; if (!Online) yield return TableRect; }
 
         void FitCamera()
         {
@@ -315,6 +323,7 @@ namespace Bob.Game
         void RenderWorld()
         {
             if (cartLayers == null) return;
+            RenderTable();
             {
                 foreach (Transform c in cartLayers) Destroy(c.gameObject);
                 float y0 = CartRect.yMin + 0.42f; int layer = 0;

@@ -305,6 +305,7 @@ namespace Bob.Game
         void Lobby()
         {
             var S = screenRoot;
+            ScreenBackdrop("lobby_condo");
             var card = Card(S, "Lobby", BobUi.Bg); BobUi.Pin(card, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 40), new Vector2(1100, 0));
             VStack(card, 46, 34, 16);
             card.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;

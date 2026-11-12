@@ -1544,3 +1544,23 @@ MonoBehaviour:
     - {fileID: 21300000, guid: 49e1fd6e9e5c302409769752b4a2533e, type: 3}
     fps: 10
     loop: 1
+  - name: lobby_rental_room
+    frames:
+    - {fileID: 21300000, guid: 3f9c5438604ac6e49babaa93324b57d3, type: 3}
+    fps: 10
+    loop: 1
+  - name: lobby_condo
+    frames:
+    - {fileID: 21300000, guid: 2a39a73e67f028e40938ecb419453df2, type: 3}
+    fps: 10
+    loop: 1
+  - name: lobby_coffee_shop
+    frames:
+    - {fileID: 21300000, guid: 0cb7f03e24f405243b6b37e3b0736975, type: 3}
+    fps: 10
+    loop: 1
+  - name: lobby_kitchen
+    frames:
+    - {fileID: 21300000, guid: 13cd8e3e6c7d0e349ad9f0780e5bdea0, type: 3}
+    fps: 10
+    loop: 1

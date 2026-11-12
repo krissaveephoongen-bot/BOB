@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: fx_splash
+  m_Name: 
   serializedVersion: 8
   m_Legacy: 0
   m_Compressed: 0
@@ -47,26 +47,8 @@ AnimationClip:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 0, y: 0, z: 0}
   m_ClipBindingConstant:
-    genericBindings:
-    - serializedVersion: 2
-      path: 0
-      attribute: 0
-      script: {fileID: 0}
-      typeID: 212
-      customType: 23
-      isPPtrCurve: 1
-      isIntCurve: 0
-      isSerializeReferenceCurve: 0
-      metaData: 0
-    pptrCurveMapping:
-    - {fileID: 167866504463145037, guid: 8e9c48fc4f184474e9deb536132d905e, type: 3}
-    - {fileID: -3680854067685732631, guid: 8e9c48fc4f184474e9deb536132d905e, type: 3}
-    - {fileID: 6832876941473378000, guid: 8e9c48fc4f184474e9deb536132d905e, type: 3}
-    - {fileID: -1900967354775950733, guid: 8e9c48fc4f184474e9deb536132d905e, type: 3}
-    - {fileID: 7268523017320393230, guid: 8e9c48fc4f184474e9deb536132d905e, type: 3}
-    - {fileID: 4795096200280210451, guid: 8e9c48fc4f184474e9deb536132d905e, type: 3}
-    - {fileID: -6954753530169324211, guid: 8e9c48fc4f184474e9deb536132d905e, type: 3}
-    - {fileID: -6954753530169324211, guid: 8e9c48fc4f184474e9deb536132d905e, type: 3}
+    genericBindings: []
+    pptrCurveMapping: []
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}

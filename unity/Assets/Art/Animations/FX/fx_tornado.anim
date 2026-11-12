@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: fx_tornado
+  m_Name: 
   serializedVersion: 8
   m_Legacy: 0
   m_Compressed: 0
@@ -49,27 +49,8 @@ AnimationClip:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 0, y: 0, z: 0}
   m_ClipBindingConstant:
-    genericBindings:
-    - serializedVersion: 2
-      path: 0
-      attribute: 0
-      script: {fileID: 0}
-      typeID: 212
-      customType: 23
-      isPPtrCurve: 1
-      isIntCurve: 0
-      isSerializeReferenceCurve: 0
-      metaData: 0
-    pptrCurveMapping:
-    - {fileID: -5176519986370192543, guid: 4b4ae7d17f11e234caa34db23b3d401f, type: 3}
-    - {fileID: -4031310300797991834, guid: 4b4ae7d17f11e234caa34db23b3d401f, type: 3}
-    - {fileID: -3499232665440258209, guid: 4b4ae7d17f11e234caa34db23b3d401f, type: 3}
-    - {fileID: 4902766515954406342, guid: 4b4ae7d17f11e234caa34db23b3d401f, type: 3}
-    - {fileID: -4103067473555060679, guid: 4b4ae7d17f11e234caa34db23b3d401f, type: 3}
-    - {fileID: 5924958492728633199, guid: 4b4ae7d17f11e234caa34db23b3d401f, type: 3}
-    - {fileID: 7988964074644463817, guid: 4b4ae7d17f11e234caa34db23b3d401f, type: 3}
-    - {fileID: -1462821666448272427, guid: 4b4ae7d17f11e234caa34db23b3d401f, type: 3}
-    - {fileID: -5176519986370192543, guid: 4b4ae7d17f11e234caa34db23b3d401f, type: 3}
+    genericBindings: []
+    pptrCurveMapping: []
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}

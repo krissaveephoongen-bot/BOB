@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: fx_steam
+  m_Name: 
   serializedVersion: 8
   m_Legacy: 0
   m_Compressed: 0
@@ -45,25 +45,8 @@ AnimationClip:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 0, y: 0, z: 0}
   m_ClipBindingConstant:
-    genericBindings:
-    - serializedVersion: 2
-      path: 0
-      attribute: 0
-      script: {fileID: 0}
-      typeID: 212
-      customType: 23
-      isPPtrCurve: 1
-      isIntCurve: 0
-      isSerializeReferenceCurve: 0
-      metaData: 0
-    pptrCurveMapping:
-    - {fileID: -7357322515862126882, guid: 296e762b739592144a3de47f4785e04e, type: 3}
-    - {fileID: 1198068688576932423, guid: 296e762b739592144a3de47f4785e04e, type: 3}
-    - {fileID: -4056402109819223102, guid: 296e762b739592144a3de47f4785e04e, type: 3}
-    - {fileID: 3004539621392445182, guid: 296e762b739592144a3de47f4785e04e, type: 3}
-    - {fileID: -2931434916688530004, guid: 296e762b739592144a3de47f4785e04e, type: 3}
-    - {fileID: 7365403376933120173, guid: 296e762b739592144a3de47f4785e04e, type: 3}
-    - {fileID: 7365403376933120173, guid: 296e762b739592144a3de47f4785e04e, type: 3}
+    genericBindings: []
+    pptrCurveMapping: []
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}

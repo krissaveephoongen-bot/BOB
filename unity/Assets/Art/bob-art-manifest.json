@@ -2484,6 +2484,34 @@
    "h": 304,
    "frames": 1,
    "group": "ui"
+  },
+  {
+   "path": "Sprites/Environments/Lobby/lobby_rental_room",
+   "w": 1280,
+   "h": 720,
+   "frames": 1,
+   "group": "env"
+  },
+  {
+   "path": "Sprites/Environments/Lobby/lobby_condo",
+   "w": 1280,
+   "h": 720,
+   "frames": 1,
+   "group": "env"
+  },
+  {
+   "path": "Sprites/Environments/Lobby/lobby_coffee_shop",
+   "w": 1280,
+   "h": 720,
+   "frames": 1,
+   "group": "env"
+  },
+  {
+   "path": "Sprites/Environments/Lobby/lobby_kitchen",
+   "w": 1280,
+   "h": 720,
+   "frames": 1,
+   "group": "env"
   }
  ]
 }

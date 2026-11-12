@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: boss_attack
+  m_Name: 
   serializedVersion: 8
   m_Legacy: 0
   m_Compressed: 0
@@ -43,24 +43,8 @@ AnimationClip:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 0, y: 0, z: 0}
   m_ClipBindingConstant:
-    genericBindings:
-    - serializedVersion: 2
-      path: 0
-      attribute: 0
-      script: {fileID: 0}
-      typeID: 212
-      customType: 23
-      isPPtrCurve: 1
-      isIntCurve: 0
-      isSerializeReferenceCurve: 0
-      metaData: 0
-    pptrCurveMapping:
-    - {fileID: 8320824912735345967, guid: f8dc8799300e4614bb7510cf75322245, type: 3}
-    - {fileID: -3975016362501032488, guid: f8dc8799300e4614bb7510cf75322245, type: 3}
-    - {fileID: -649678722289502472, guid: f8dc8799300e4614bb7510cf75322245, type: 3}
-    - {fileID: -514692836225630516, guid: f8dc8799300e4614bb7510cf75322245, type: 3}
-    - {fileID: 8958798872038287775, guid: f8dc8799300e4614bb7510cf75322245, type: 3}
-    - {fileID: 8958798872038287775, guid: f8dc8799300e4614bb7510cf75322245, type: 3}
+    genericBindings: []
+    pptrCurveMapping: []
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}

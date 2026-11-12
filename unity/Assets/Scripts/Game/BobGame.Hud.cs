@@ -177,10 +177,15 @@ namespace Bob.Game
             var port = BobUi.Img(abilityBtn.transform, charId + "_portrait", 92); port.name = "Portrait";
             BobUi.Pin(port.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(14, 0), new Vector2(92, 92));
 
-            submitBtn = BobUi.Button(col, "ส่งทดสอบ", BobUi.Teal, Submit, 40, Color.white);
+            submitBtn = BobUi.Button(col, "กดค้างเพื่อส่ง", BobUi.Teal, Submit, 40, Color.white);
             BobUi.Size(submitBtn, 160, 160);
             submitBtn.GetComponentInChildren<Text>().fontStyle = FontStyle.Bold;
+            // UX spec 14.4: hold 0.6 s to send (a ring fills), so a thumb slip cannot end the round. Settings: PlayerPrefs bob.holdSubmit.
+            submitBtn.onClick.RemoveAllListeners();
+            submitHold = Bob.UI.BobHoldButton.Attach(submitBtn.targetGraphic, BobUi.Circle, new Color(1f, 0.85f, 0.3f, 0.9f), Submit);
         }
+
+        Bob.UI.BobHoldButton submitHold;
 
         void BuildJoystick()
         {
@@ -231,7 +236,7 @@ namespace Bob.Game
             if (nearCart && hand.Count > 0) return "แตะหรือลากของในมือไปที่รถเข็น ลำดับการซ้อนมีผล";
             if (hand.Count > 0) return "เดินไปที่รถเข็นกลางห้องเพื่อวางของ";
             if (stack.Count == 0) return "ลากจอยซ้ายมือ หรือแตะพื้นเพื่อเดินไปที่ชั้นวาง";
-            return "ดูใบงานซ้ายบน เส้นชมพูคือเป้า พร้อมแล้วกดส่งทดสอบ";
+            return "ดูใบงานซ้ายบน เส้นชมพูคือเป้า พร้อมแล้วกดค้างปุ่มส่ง";
         }
 
         // ================================================================ render on change
@@ -393,6 +398,7 @@ namespace Bob.Game
             var pt = abilityBtn.transform.Find("Portrait");
             if (pt != null) pt.GetComponent<Image>().sprite = art.Get(charId + "_portrait");
             submitBtn.interactable = phase == Phase.Build && BobRules.CountLayers(stack) > 0;
+            if (submitHold != null) submitHold.interactable = submitBtn.interactable;
         }
 
         // ---------------------------------------------------------------- station shelf
@@ -459,6 +465,8 @@ namespace Bob.Game
             bool show = phase != Phase.Build && phase != Phase.Countdown;
             modalRoot.gameObject.SetActive(show);
             if (!show) return;
+            if (phase == Phase.Test && shownPhase != Phase.Test) testStart = Time.unscaledTime;
+            shownPhase = phase;
             BobUi.Clear(screenRoot);
             switch (phase)
             {
@@ -466,7 +474,7 @@ namespace Bob.Game
                 case Phase.Loading: Busy("กำลังเตรียมห้อง…", online ? "ขอใบงานรอบ " + roundNo + " จากเซิร์ฟเวอร์" : "สุ่มห้องในเครื่อง"); break;
                 case Phase.Scoring: Busy("กำลังทดสอบความสะอาด…", online ? "เซิร์ฟเวอร์กำลังคิดคะแนน" : "คิดคะแนนในเครื่อง"); break;
                 case Phase.Intro: RoomTicket(); break;
-                case Phase.Test: RoundResult(); break;
+                case Phase.Test: if (SplitActive) SplitView(); else RoundResult(); break;
                 case Phase.Result: MatchResult(); break;
                 case Phase.Lobby: Lobby(); break;
             }
@@ -475,6 +483,7 @@ namespace Bob.Game
         void MainMenu()
         {
             var S = screenRoot;
+            ScreenBackdrop("lobby_rental_room");
             // top-left server status, top-right coins + settings
             var net = Card(S, "Net", BobUi.Surface, 1f); BobUi.Pin(net, new Vector2(0, 1), new Vector2(0, 1), new Vector2(24, -24), new Vector2(330, 72));
             var nt = BobUi.Label(net, (online ? "● ออนไลน์" : connecting ? "○ กำลังเชื่อมต่อ…" : "○ ออฟไลน์"), 24, online ? BobUi.Good : BobUi.Muted, TextAnchor.MiddleCenter); BobUi.Stretch(nt.rectTransform);

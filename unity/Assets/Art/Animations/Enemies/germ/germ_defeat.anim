@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: germ_defeat
+  m_Name: 
   serializedVersion: 8
   m_Legacy: 0
   m_Compressed: 0
@@ -49,27 +49,8 @@ AnimationClip:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 0, y: 0, z: 0}
   m_ClipBindingConstant:
-    genericBindings:
-    - serializedVersion: 2
-      path: 0
-      attribute: 0
-      script: {fileID: 0}
-      typeID: 212
-      customType: 23
-      isPPtrCurve: 1
-      isIntCurve: 0
-      isSerializeReferenceCurve: 0
-      metaData: 0
-    pptrCurveMapping:
-    - {fileID: 1642055246474452982, guid: 210dbf306a979594a94af671065d0b58, type: 3}
-    - {fileID: 3445223655228555374, guid: 210dbf306a979594a94af671065d0b58, type: 3}
-    - {fileID: -1915568402172958798, guid: 210dbf306a979594a94af671065d0b58, type: 3}
-    - {fileID: 4318401538375611756, guid: 210dbf306a979594a94af671065d0b58, type: 3}
-    - {fileID: -3054691224806612028, guid: 210dbf306a979594a94af671065d0b58, type: 3}
-    - {fileID: 3900591202193159629, guid: 210dbf306a979594a94af671065d0b58, type: 3}
-    - {fileID: 699013007625377110, guid: 210dbf306a979594a94af671065d0b58, type: 3}
-    - {fileID: -8602709432549804350, guid: 210dbf306a979594a94af671065d0b58, type: 3}
-    - {fileID: -8602709432549804350, guid: 210dbf306a979594a94af671065d0b58, type: 3}
+    genericBindings: []
+    pptrCurveMapping: []
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}
