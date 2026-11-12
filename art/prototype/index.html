@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bob Art Viewer</title>
+<style>
+:root{--bg:#FFF6DC;--surface:#FFFDF5;--ink:#2B2D42;--muted:#6B6E86;--sun:#FFD166;--teal:#1FA6A0;--rose:#EF476F;--line:#E8DFC4}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Mitr","IBM Plex Sans Thai",system-ui,sans-serif}
+header{padding:20px 16px 8px;max-width:1100px;margin:auto}
+h1{margin:0;font-size:24px}
+header p{margin:4px 0 0;color:var(--muted)}
+nav{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:2px solid var(--line);padding:8px 16px;display:flex;gap:6px;overflow-x:auto}
+nav a{flex:none;padding:6px 12px;border-radius:999px;border:2px solid var(--ink);color:var(--ink);text-decoration:none;background:var(--surface);font-size:14px}
+main{max-width:1100px;margin:auto;padding:0 16px 60px}
+section{margin-top:28px}
+h2{font-size:19px;margin:0 0 4px}
+.note{color:var(--muted);margin:0 0 12px;font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.cell{background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:8px;text-align:center}
+.cell small{display:block;color:var(--muted);font-size:12px;word-break:break-all}
+.spr{margin:auto;background-repeat:no-repeat;image-rendering:auto}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+button{font:inherit;border:2px solid var(--ink);background:var(--sun);color:var(--ink);border-radius:12px;padding:6px 12px;cursor:pointer;box-shadow:0 3px 0 var(--ink)}
+button:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+button.sel{background:var(--teal);color:#fff}
+.snd{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
+.snd button{text-align:left;background:var(--surface)}
+.snd button small{color:var(--muted)}
+#stage{position:relative;width:100%;max-width:800px;aspect-ratio:8/5;border:3px solid var(--ink);border-radius:18px;overflow:hidden;background:#F3E3B5 url(../unity/Assets/Art/Sprites/Props/floor_tile.png) repeat;background-size:64px;touch-action:manipulation}
+#stage .ent{position:absolute;transform:translate(-50%,-100%)}
+.flip{transform:translate(-50%,-100%) scaleX(-1)!important}
+.wide .spr{max-width:100%}
+.warn{background:#FFE3E8;border:2px solid var(--rose);border-radius:12px;padding:10px 12px;font-size:14px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Battle of the Brooms: ชุด asset placeholder</h1>
+  <p>ภาพ เสียง และอนิเมชันที่สร้างจากโค้ดทั้งหมด ใช้แทนชั่วคราวจนกว่าจะได้งานศิลป์จริง เปิดไฟล์นี้ตรงๆ ในเบราว์เซอร์ได้เลย</p>
+</header>
+<nav>
+  <a href="#demo">ฉากทดลอง</a><a href="#chars">ตัวละคร</a><a href="#enemies">ศัตรู</a><a href="#parts">ชิ้นส่วน</a><a href="#props">พร็อพ</a><a href="#ui">UI</a><a href="#fx">เอฟเฟกต์</a><a href="#sfx">เสียง</a>
+</nav>
+<main>
+  <section id="demo">
+    <h2>ฉากทดลอง</h2>
+    <p class="note">แตะพื้นเพื่อเดิน แตะศัตรูเพื่อโจมตี (3 ครั้งแพ้) แตะรถเข็นเพื่อวางชั้น เสียงเริ่มหลังแตะครั้งแรก</p>
+    <div class="row" id="demoChars"></div>
+    <div id="stage"></div>
+  </section>
+  <section id="chars"><h2>ตัวละคร</h2><p class="note">5 ท่าต่อตัว: idle, walk, carry, work, cheer เฟรมละ 256×256 px</p><div id="charGrid"></div></section>
+  <section id="enemies"><h2>ศัตรู</h2><p class="note">idle (วน), hit, defeat (เล่นครั้งเดียว กดที่ภาพเพื่อเล่นซ้ำ)</p><div class="grid" id="enemyGrid"></div></section>
+  <section id="parts"><h2>ชิ้นส่วน 15 ชิ้น</h2><p class="note">กรอบสีตามหมวด: ส้ม=อุปกรณ์ ฟ้า=น้ำยา ชมพู=พลังงาน ม่วง=วิธีใช้</p><div class="grid" id="partGrid"></div></section>
+  <section id="props"><h2>พร็อพ</h2><div class="grid wide" id="propGrid"></div></section>
+  <section id="ui"><h2>UI</h2><p class="note">ปุ่ม แผง และแถบ ตั้งค่า 9-slice ไว้ใน Unity ให้แล้ว ยืดได้ไม่เสียขอบ</p><div class="grid wide" id="uiGrid"></div></section>
+  <section id="fx"><h2>เอฟเฟกต์</h2><div class="grid" id="fxGrid"></div></section>
+  <section id="sfx"><h2>เสียง</h2><p class="note">สังเคราะห์จากโค้ดทั้งหมด WAV 44.1 kHz โมโน</p><div class="snd" id="sndGrid"></div>
+    <p class="warn" style="margin-top:12px">เพลง music_placeholder_loop เป็นเพียงลูปทดสอบจังหวะ ไม่ควรใช้ในเกมจริง</p></section>
+</main>
+<script src="data.js"></script>
+<script>
+const ART='../unity/Assets/Art/', AUD='../unity/Assets/Audio/';
+const M=window.BOB_ART, A=window.BOB_AUDIO;
+const byPath={}; M.sprites.forEach(s=>byPath[s.path]=s);
+const anims=[]; // {el,s,t,playing}
+function spr(path,disp,opts={}){
+  const s=byPath[path]; const el=document.createElement('div'); el.className='spr';
+  const h=disp||s.h/2, w=h*s.w/s.h;
+  el.style.width=w+'px'; el.style.height=h+'px';
+  el.style.backgroundImage=`url(${ART}${path}.png)`;
+  el.style.backgroundSize=`${w*s.frames}px ${h}px`;
+  if(s.frames>1){const a={el,s,w,t:0,playing:opts.autoplay!==false,onend:opts.onend}; anims.push(a); el._anim=a;
+    el.addEventListener('click',()=>{if(!opts.noclick){a.t=0;a.playing=true}});}
+  return el;
+}
+function setSheet(el,path){const s=byPath[path];const a=el._anim; const h=parseFloat(el.style.height), w=h*s.w/s.h;
+  el.style.backgroundImage=`url(${ART}${path}.png)`; el.style.backgroundSize=`${w*s.frames}px ${h}px`; el.style.width=w+'px'; Object.assign(a,{s,w,t:0,playing:true,ended:false});}
+function cell(child,label){const c=document.createElement('div');c.className='cell';c.append(child);const l=document.createElement('small');l.textContent=label;c.append(l);return c}
+let last=performance.now();
+function tick(now){const dt=Math.min(.1,(now-last)/1000); last=now;
+  for(const a of anims){ if(!a.playing) continue; a.t+=dt; let i=Math.floor(a.t*a.s.fps);
+    if(i>=a.s.frames){ if(a.s.loop){a.t%=a.s.frames/a.s.fps;i%=a.s.frames} else {i=a.s.frames-1;a.playing=false; if(a.onend) a.onend()} }
+    a.el.style.backgroundPosition=`${-i*a.w}px 0`; }
+  demoStep(dt); requestAnimationFrame(tick)}
+// sound
+const audio={}; function play(n,vol=1){const f=A.find(x=>x.name===n); if(!f) return; const a=new Audio(`${AUD}${f.folder}/${n}.wav`); a.volume=vol; a.play().catch(()=>{}); return a}
+
+// ---- galleries
+const chars=['sweep','bubble','spray','press'], anim5=['idle','walk','carry','work','cheer'];
+chars.forEach(c=>{const h=document.createElement('h3');h.textContent=c[0].toUpperCase()+c.slice(1);h.style.margin='14px 0 6px';const g=document.createElement('div');g.className='grid';
+  g.append(cell(spr(`Sprites/Characters/${c}/${c}_portrait`,128),'portrait'));
+  anim5.forEach(a=>g.append(cell(spr(`Sprites/Characters/${c}/${c}_${a}`,128),a)));
+  $('charGrid').append(h,g)});
+function $(id){return document.getElementById(id)}
+['stain','dust','grease','rust','scale'].forEach(e=>['idle','hit','defeat'].forEach(a=>$('enemyGrid').append(cell(spr(`Sprites/Enemies/${e}/${e}_${a}`,128),`${e} ${a}`))));
+M.sprites.filter(s=>s.group==='parts').forEach(s=>$('partGrid').append(cell(spr(s.path,96),s.owner)));
+M.sprites.filter(s=>s.group==='props').forEach(s=>$('propGrid').append(cell(spr(s.path,Math.min(110,s.h/2)),s.path.split('/').pop())));
+M.sprites.filter(s=>s.group==='ui').forEach(s=>$('uiGrid').append(cell(spr(s.path,s.path.includes('logo')?160:Math.min(96,s.h/2)),s.path.split('/').pop())));
+M.sprites.filter(s=>s.group==='fx').forEach(s=>{const el=spr(s.path,128);$('fxGrid').append(cell(el,s.path.split('/').pop()+' (กดเล่น)'))});
+A.forEach(x=>{const b=document.createElement('button');b.innerHTML=`${x.name}<br><small>${x.sec}s · ${x.folder}</small>`;
+  let cur=null; b.onclick=()=>{ if(cur&&!cur.paused){cur.pause();cur=null;return} cur=play(x.name)}; $('sndGrid').append(b)});
+
+// ---- demo scene (coordinates in a 800x500 room, scaled to the stage)
+const stage=$('stage'); let scale=1; const D={char:'sweep',x:200,y:380,tx:null,ty:null,state:'idle',layers:0,enemies:[]};
+const fam=['tool','chem','energy','method'], famCol={tool:'#F4A340',chem:'#4EA8DE',energy:'#EF476F',method:'#9B7EDE'};
+function place(el,x,y){el.style.left=(x*scale)+'px'; el.style.top=(y*scale)+'px'}
+const ent=(path,h)=>{const e=spr(path,h,{noclick:true}); e.classList.add('ent'); stage.append(e); return e};
+const sofa=ent('Sprites/Props/sofa',80), cart=ent('Sprites/Props/cart',90);
+const stations=fam.map(f=>ent(`Sprites/Props/station_${f}`,64));
+const player=ent('Sprites/Characters/sweep/sweep_idle',96);
+const layerEls=[];
+[['dust',330,200],['grease',470,190],['rust',610,210]].forEach(([e,x,y])=>{const el=ent(`Sprites/Enemies/${e}/${e}_idle`,96); D.enemies.push({e,x,y,el,hp:3,dead:false});
+  el.addEventListener('click',ev=>{ev.stopPropagation(); hitEnemy(D.enemies.find(q=>q.el===el))})});
+cart.addEventListener('click',ev=>{ev.stopPropagation(); addLayer()});
+function layout(){scale=stage.clientWidth/800; place(sofa,130,180); place(cart,690,450); stations.forEach((s,i)=>place(s,90+i*120,500));
+  D.enemies.forEach(q=>place(q.el,q.x,q.y)); layerEls.forEach((l,i)=>place(l,690,382-i*13)); place(player,D.x,D.y);
+  [sofa,cart,player,...stations,...D.enemies.map(q=>q.el)].forEach(el=>{const h0=el._h||(el._h=parseFloat(el.style.height)); const s=byPath[(el.style.backgroundImage.match(/Art\/(.*)\.png/)||[])[1]]; const h=h0*scale, w=h*s.w/s.h; el.style.height=h+'px'; el.style.width=w+'px'; el.style.backgroundSize=`${w*s.frames}px ${h}px`; if(el._anim) el._anim.w=w;})}
+function setAnim(a){ if(D.state===a) return; D.state=a; const h=parseFloat(player.style.height); setSheet(player,`Sprites/Characters/${D.char}/${D.char}_${a}`); player.style.height=h+'px'; const s=byPath[`Sprites/Characters/${D.char}/${D.char}_${a}`]; player.style.backgroundSize=`${h*s.frames}px ${h}px`; player.style.width=h+'px'; player._anim.w=h;}
+let unlocked=false;
+stage.addEventListener('click',ev=>{const r=stage.getBoundingClientRect(); D.tx=(ev.clientX-r.left)/scale; D.ty=Math.max(260,(ev.clientY-r.top)/scale); if(!unlocked){unlocked=true; const m=play('music_placeholder_loop',.25); if(m) m.loop=true} play('ui_tap',.5)});
+let stepT=0;
+function demoStep(dt){ if(D.tx==null) return; const dx=D.tx-D.x, dy=D.ty-D.y, d=Math.hypot(dx,dy);
+  if(d<4){D.tx=null; setAnim('idle'); return}
+  const sp=170*dt; D.x+=dx/d*Math.min(sp,d); D.y+=dy/d*Math.min(sp,d); setAnim('walk');
+  player.classList.toggle('flip',dx<0); place(player,D.x,D.y); stepT+=dt; if(stepT>.28){stepT=0; play('footstep',.35)} }
+function fx(path,x,y,h=96,snd){const e=ent(path,h); const a=e._anim; place(e,x,y); const s=byPath[path]; e.style.height=h*scale+'px'; e.style.width=h*scale+'px'; e.style.backgroundSize=`${h*scale*s.frames}px ${h*scale}px`; a.w=h*scale; a.onend=()=>e.remove(); if(snd) play(snd)}
+function hitEnemy(q){ if(!q||q.dead) return; q.hp--; setAnim('work'); setTimeout(()=>{if(D.tx==null) setAnim('idle')},500);
+  const base=`Sprites/Enemies/${q.e}/${q.e}`;
+  if(q.hp>0){ swap(q.el,base+'_hit'); play('enemy_hit'); q.el._anim.onend=()=>{swap(q.el,base+'_idle')}; fx('Sprites/FX/fx_bubble_pop',q.x,q.y-10,80,'bubble_pop')}
+  else { q.dead=true; swap(q.el,base+'_defeat'); play('enemy_defeat'); fx('Sprites/FX/fx_sparkle',q.x,q.y-20,110); q.el._anim.onend=()=>{q.el.style.opacity=0};
+    if(D.enemies.every(z=>z.dead)) setTimeout(()=>{setAnim('cheer'); play('round_win')},600) } }
+function swap(el,path){const h=parseFloat(el.style.height), s=byPath[path]; setSheet(el,path); el.style.height=h+'px'; el.style.width=h+'px'; el.style.backgroundSize=`${h*s.frames}px ${h}px`; el._anim.w=h; el._anim.onend=null}
+function addLayer(){ if(layerEls.length>=5){ play('drop_invalid'); return } const f=fam[layerEls.length%4];
+  const l=document.createElement('div'); l.className='ent'; const w=82*scale,h=15*scale; Object.assign(l.style,{width:w+'px',height:h+'px',background:famCol[f],border:`${2*scale}px solid #2B2D42`,borderRadius:6*scale+'px',transition:'transform .25s cubic-bezier(.3,1.8,.5,1)',transform:'translate(-50%,-100%) scale(1.4,.6)'});
+  stage.append(l); layerEls.push(l); place(l,690,382-(layerEls.length-1)*13); requestAnimationFrame(()=>requestAnimationFrame(()=>l.style.transform='translate(-50%,-100%)'));
+  play('place_layer'); if(layerEls.length===5) setTimeout(()=>{fx('Sprites/FX/fx_sparkle',690,330,120,'reaction_good')},250) }
+// character picker
+chars.forEach(c=>{const b=document.createElement('button');b.textContent=c;b.className=c===D.char?'sel':'';b.onclick=()=>{D.char=c;[...$('demoChars').children].forEach(x=>x.className=x===b?'sel':'');const s=D.state;D.state='';setAnim(s);play('ui_confirm')};$('demoChars').append(b)});
+const resetBtn=document.createElement('button'); resetBtn.textContent='เริ่มใหม่'; resetBtn.onclick=()=>{D.enemies.forEach(q=>{q.hp=3;q.dead=false;q.el.style.opacity=1;swap(q.el,`Sprites/Enemies/${q.e}/${q.e}_idle`)}); layerEls.splice(0).forEach(l=>l.remove()); setAnim('idle'); play('enemy_spawn')}; $('demoChars').append(resetBtn);
+window.addEventListener('resize',()=>{layerEls.forEach(l=>{l.style.width=82*stage.clientWidth/800+'px'}); layout()});
+layout(); requestAnimationFrame(tick);
+</script>
+</body>
+</html>

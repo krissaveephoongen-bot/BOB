@@ -1,0 +1,167 @@
+[
+ {
+  "name": "ui_tap",
+  "folder": "SFX",
+  "sec": 0.05
+ },
+ {
+  "name": "ui_confirm",
+  "folder": "SFX",
+  "sec": 0.25
+ },
+ {
+  "name": "ui_cancel",
+  "folder": "SFX",
+  "sec": 0.25
+ },
+ {
+  "name": "ui_card_flip",
+  "folder": "SFX",
+  "sec": 0.09
+ },
+ {
+  "name": "coin",
+  "folder": "SFX",
+  "sec": 0.35
+ },
+ {
+  "name": "pickup",
+  "folder": "SFX",
+  "sec": 0.12
+ },
+ {
+  "name": "place_layer",
+  "folder": "SFX",
+  "sec": 0.25
+ },
+ {
+  "name": "lift_layer",
+  "folder": "SFX",
+  "sec": 0.22
+ },
+ {
+  "name": "drop_invalid",
+  "folder": "SFX",
+  "sec": 0.18
+ },
+ {
+  "name": "reaction_good",
+  "folder": "SFX",
+  "sec": 0.7
+ },
+ {
+  "name": "reaction_bad",
+  "folder": "SFX",
+  "sec": 0.5
+ },
+ {
+  "name": "fizz",
+  "folder": "SFX",
+  "sec": 1.0
+ },
+ {
+  "name": "bubble_pop",
+  "folder": "SFX",
+  "sec": 0.14
+ },
+ {
+  "name": "steam_hiss",
+  "folder": "SFX",
+  "sec": 1.1
+ },
+ {
+  "name": "spray_psst",
+  "folder": "SFX",
+  "sec": 0.35
+ },
+ {
+  "name": "broom_sweep",
+  "folder": "SFX",
+  "sec": 0.45
+ },
+ {
+  "name": "scrub_loop",
+  "folder": "SFX",
+  "sec": 0.48
+ },
+ {
+  "name": "air_whoosh",
+  "folder": "SFX",
+  "sec": 0.5
+ },
+ {
+  "name": "water_pour",
+  "folder": "SFX",
+  "sec": 0.9
+ },
+ {
+  "name": "footstep",
+  "folder": "SFX",
+  "sec": 0.07
+ },
+ {
+  "name": "cart_roll_loop",
+  "folder": "SFX",
+  "sec": 1.0
+ },
+ {
+  "name": "enemy_hit",
+  "folder": "SFX",
+  "sec": 0.3
+ },
+ {
+  "name": "enemy_defeat",
+  "folder": "SFX",
+  "sec": 1.0
+ },
+ {
+  "name": "enemy_spawn",
+  "folder": "SFX",
+  "sec": 0.6
+ },
+ {
+  "name": "mud_splat",
+  "folder": "SFX",
+  "sec": 0.7
+ },
+ {
+  "name": "timer_tick",
+  "folder": "SFX",
+  "sec": 0.03
+ },
+ {
+  "name": "timer_warning",
+  "folder": "SFX",
+  "sec": 0.4
+ },
+ {
+  "name": "round_start",
+  "folder": "SFX",
+  "sec": 1.0
+ },
+ {
+  "name": "round_win",
+  "folder": "SFX",
+  "sec": 1.5
+ },
+ {
+  "name": "round_lose",
+  "folder": "SFX",
+  "sec": 1.4
+ },
+ {
+  "name": "ability_activate",
+  "folder": "SFX",
+  "sec": 0.5
+ },
+ {
+  "name": "score_count",
+  "folder": "SFX",
+  "sec": 0.04
+ },
+ {
+  "name": "music_placeholder_loop",
+  "folder": "Music",
+  "sec": 16.0
+ }
+]
