@@ -35,6 +35,7 @@ namespace Bob.Coop
         BobOnline net;
         string charId = "sweep", status = "";
         MpResult lastResult;
+        readonly System.Collections.Generic.List<MpResult> roundResults = new System.Collections.Generic.List<MpResult>();
         int shownRound = -1;
         float testShownAt;
 
@@ -65,6 +66,7 @@ namespace Bob.Coop
             BuildWorld();
             BuildHud();
             Connect();
+            if (AutoRequested()) StartCoroutine(AutoPlayCoop());
         }
 
         async void OnDestroy()
@@ -138,7 +140,7 @@ namespace Bob.Coop
             net.OnResult += OnResult;
             net.OnRefused += t => { Toast(t); Sfx("drop_invalid"); Buzz(); };
             net.OnPeek += OnPeek;
-            lastResult = null; shownRound = -1; havePos = false;
+            lastResult = null; roundResults.Clear(); shownRound = -1; havePos = false;
             Go(View.Lobby, "");
             Sfx("lobby_join");
             net.Ready(charId, false);
@@ -184,7 +186,7 @@ namespace Bob.Coop
 
         void OnResult(MpResult r)
         {
-            lastResult = r;
+            lastResult = r; if (!roundResults.Any(x => x.round == r.round)) roundResults.Add(r);
             bool win = net != null && r.winner == net.MyTeam;
             Sfx(r.winner < 0 ? "reaction_good" : win ? "round_win" : "round_lose");
             ShowTest();
@@ -211,7 +213,7 @@ namespace Bob.Coop
         void OnBack()
         {
             if (screen == View.Lobby || screen == View.Result || screen == View.Searching) LeaveMatch();
-            else if (screen == View.Build) Toast("ออกกลางแมตช์ได้จากปุ่ม ออก (เพื่อนเล่นต่อได้)");
+            else if (screen == View.Build) SetOv(ov == Ov.None ? Ov.Pause : ov == Ov.Confirm ? Ov.Pause : Ov.None); // Android Back / Esc: pause, back out of the confirm, resume
         }
 
         bool Pushing => net?.MyCart != null && net.MyCart.pusher == net.Me;

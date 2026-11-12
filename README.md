@@ -16,7 +16,7 @@ Playable prototype: https://claude.ai/artifact/M9orSH3LFGbYboRm7QAkHn
 | `dashboard/index.html` | Balance dashboard: reads `bob_analytics` from the local Nakama and charts part, character, round and room stats. | Checked in Chromium, light and dark |
 | `unity-check/` | .NET console app: spot checks + C#-vs-server parity on random stacks + the co-op moves with three `BobOnline` clients (`CoopCheck.cs`). | 275 stacks, 0 mismatches; co-op check PASS |
 | `unity-typecheck/` | Type-checks every script in `unity/Assets/Scripts` without the Unity Editor (NuGet reference assemblies), for cloud sessions. | 0 errors |
-| `unity/Assets/Scripts/Coop/` + `UI/` | **Online co-op scene** (`Assets/Scenes/Coop.unity`, menu **Bob > Build Coop Scene**): menu, lobby, other players, shared cart, push / pass / parking table, hold-to-send vote, split-screen test. UI kit from the UX spec: `BobUiTheme`, `BobSafeArea`, `BobHitArea`, `BobHoldButton`. | Type-checked only, **not yet compiled or played in Unity** |
+| `unity/Assets/Scripts/Coop/` + `UI/` | **Online co-op scene** (`Assets/Scenes/Coop.unity`, menu **Bob > Build Coop Scene**): menu, lobby, other players, shared cart, push / pass / parking table, hold-to-send vote, split-screen test. UI kit from the UX spec: `BobUiTheme`, `BobSafeArea`, `BobHitArea`, `BobHoldButton`. | Compiled in Unity 6000.6.8f1 and played by a bot against 2 bot players: **Bob > Run Coop Test** (`COOP TEST PASSED`). Not played by real people yet; HUD layout checked by screenshots at 1920x1080, 2400x1080 and 2560x1440 |
 | `art/` | Official concept boards and production docs (`docs/`, including the full UX/UI spec `docs/11_UX_UI_Spec.md` and wireframes `docs/ux/BOB_UX_Wireframes.html`), sprite sources (`source/`) and generator tools (`tools/`). Unity-ready copies live in `unity/Assets`. | Concept / placeholder |
 
 ## Run
@@ -202,13 +202,13 @@ Solo scene extras (`Game/BobGame.Extras.cs`): walk into the cart to push it, an 
 Everything above was done in the cloud; these steps need Unity, Docker Desktop or a phone. Do them in order:
 
 1. `git pull` this branch, start Docker Desktop, then `start-server.ps1` (`server/modules/index.js` is already rebuilt).
-2. Open `unity/` in Unity 6000.6.8f1 and let it import. Unity creates `.meta` files for the new scripts and sounds.
-   If the Console shows compile errors in `Scripts/Coop/` or `Scripts/UI/`, fix those first (they were type-checked
-   against older Unity reference assemblies, never compiled by Unity 6).
-3. **Bob > Build Coop Scene**, then play two copies (Editor + a Windows build, or Multiplayer Play Mode): create a room,
+2. Open `unity/` in Unity 6000.6.8f1 and let it import. Done on 2026-11-12: `Scripts/Coop/` and `Scripts/UI/` compile with no errors in Unity 6, and the `.meta` files, `Coop.unity`, `BobAudio.prefab` and Build Settings are committed.
+3. **Bob > Build Coop Scene**. Automatic check: start the other players with `cd server && node mp-host.js 2 ../unity/Logs/bob-mp-match.txt`, then **Bob > Run Coop Test** (or `-executeMethod Bob.EditorTools.BobCoopScene.RunTest`, no `-batchmode`); screenshots go to `unity/Logs/bob-coop-*.png`. By hand: play two copies (Editor + a Windows build, or Multiplayer Play Mode): create a room,
    join with the code, ready up, and try push / pass / table / hold-to-send, each hero's ability, closing and reopening one copy
    mid-round (it must rejoin), and the split-screen test.
-4. Commit what Unity made: `.meta` files, `Assets/Scenes/Coop.unity`, `Assets/Art/BobAudio.prefab`, `ProjectSettings/EditorBuildSettings.asset`.
+4. ~~Commit what Unity made~~ (done).
+   **UX review fixes (2026-11-13):** menu fits the screen; hand cards show the icon beside the name; cart card lists each layer with its icon and a up/down marker where it reacts; result screen lists every round's score; pause button (top right) opens a pause card and a leave confirm (Esc / Android Back too; the server clock keeps running); lobby hero buttons have portraits; text in the match HUD is >= 36u, player names above heads are larger. Still missing from the spec: team-mate item tray, Quick Ping, TextMeshPro + Mitr / IBM Plex Sans Thai fonts, left-hand mode.
+   **Layout (fixed 2026-11-12):** in a match the room camera now sits between the side columns (order ticket + team cart card on the left, action buttons + send on the right), under the top bar and above the hand row (`BobCoopGame.FitRoomCamera`); menus, lobby and result get a solid background; a backdrop camera clears the screen so nothing stale shows; the split-screen test keeps the rooms between the score boxes and the result line. To check another screen size: `BOB_VIEW=2400x1080` before starting Unity, then **Bob > Run Coop Test**.
 5. TextMeshPro: import TMP Essentials and make Mitr / IBM Plex Sans Thai font assets (UX spec 2.2); then switch `BobUi.Label` to TMP.
 6. Optional: swap placeholder sounds for CC0 ones (`art/docs/12_Sound_Manifest.md`), art for the parking table (asset C07).
 7. Android: build an APK, install it, set the server IP to the PC's LAN IP, play one online match phone vs PC.
