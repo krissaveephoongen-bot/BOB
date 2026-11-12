@@ -2,7 +2,8 @@
 // The server owns the round: room, clock, each team's shared cart, hands and scores. This file copies what the server
 // says into the same fields the single-player game uses (R, stack, hand, budget, time, wins), so the HUD, cart and
 // result screens work unchanged, and draws team-mates walking in the room. The other team plays the same room in its own
-// copy, so only its progress shows (top bar). Abilities stay off online until the server supports them.
+// copy, so only its progress shows (top bar). Abilities run on the server: each team has its own clock (Press),
+// Bubble's shield covers the team cart, Spray's preview comes back to that player only.
 // Flow: title "ออนไลน์" -> matchmaker (2-4 players) -> lobby (ready) -> rounds -> result.
 using System;
 using System.Collections.Generic;
@@ -70,6 +71,7 @@ namespace Bob.Game
             mp.OnState += OnMpState;
             mp.OnPositions += OnMpPositions;
             mp.OnResult += OnMpResult;
+            mp.OnPreview += pv => { preview = new ScoreResult { Total = pv.total, Pass = pv.pass }; Toast("เล็งเป้า! กองนี้จะได้ " + pv.total + " คะแนน"); RenderAll(); };
             mp.OnRefused += t => { Toast(t); Sfx("drop_invalid"); Debug.Log("[BobGame] server refused: " + t + " at " + pos + " (server " + (mp?.MePlayer != null ? new Vector2(mp.MePlayer.x, mp.MePlayer.y).ToString() : "?") + ")"); };
             roundNo = 0; wins = 0; losses = 0; results.Clear(); R = null;
             mp.Ready(charId, false); // tells the server our hero; the player taps Ready in the lobby
@@ -106,7 +108,7 @@ namespace Bob.Game
             {
                 // a new round: same room for everyone, positions reset by the server
                 roundNo = s.round; seed = s.seed; R = ToRound(s.room);
-                stack.Clear(); hand.Clear(); preview = null; shield = false; swapMode = false; abUsed = true; freeze = 0;
+                stack.Clear(); hand.Clear(); preview = null; shield = false; swapMode = false; abUsed = false; freeze = 0;
                 ResetRoomForRound();
                 pos = new Vector2(me.x, me.y); mpSent = pos;
                 if (roundNo == 1) Log("match_start", $"{{\"seed\":{seed},\"char\":\"{charId}\",\"mode\":\"online\",\"players\":{s.players.Length}}}");
@@ -127,7 +129,8 @@ namespace Bob.Game
             var newHand = (me.hand ?? new string[0]).ToList();
             if (newHand.Count > hand.Count) { Sfx("pickup"); PopHand(); }
             hand.Clear(); hand.AddRange(newHand);
-            budget = team.budget; time = s.time;
+            budget = team.budget; time = team.time; freeze = team.freeze; shield = team.shield;
+            abUsed = me.abUsed; // the server logs ability_used itself
             SyncMates(s, me);
             RenderAll();
         }
@@ -135,7 +138,8 @@ namespace Bob.Game
         void OnMpPositions(MpPositions p)
         {
             if (mp == null) return;
-            time = p.time;
+            time = p.tt != null && p.tt.Length == 2 ? p.tt[mp.MyTeam] : p.time;
+            if (freeze > 0) freeze = Mathf.Max(0, freeze - 0.1f);
             var me = mp.MePlayer;
             // the server is the truth: if it disagrees a lot (blocked move, lag), snap back
             if (me != null && phase == Phase.Build && Vector2.Distance(pos, new Vector2(me.x, me.y)) > 0.75f) { pos = new Vector2(me.x, me.y); mpSent = pos; target = null; }
@@ -202,6 +206,21 @@ namespace Bob.Game
         {
             if (mp.MyCart != null && mp.MyCart.submitted) return;
             mp.Submit(); Sfx("ui_confirm"); Toast("ส่งรถเข็นแล้ว รอทีมคู่แข่ง…");
+        }
+
+        /// <summary>The hero's ability online: the server checks and applies it, these are only the local effects.</summary>
+        void OnlineAbility()
+        {
+            switch (charId)
+            {
+                case "sweep":
+                    if (stack.Count < 2) { Toast("ต้องมีอย่างน้อย 2 ชิ้นบนรถเข็น"); return; }
+                    swapMode = !swapMode; Sfx("ui_tap"); RenderAll(); return; // the swap itself goes through SwapAt
+                case "bubble": Toast("โล่ฟอง! กันปฏิกิริยาหักล้างที่แรงที่สุดให้ทั้งทีม"); Sfx("bubble_pop"); SpawnFx("fx_bubble_pop", PlayerPos + Vector2.up * 0.5f); break;
+                case "spray": Sfx("spray_psst"); SpawnFx("fx_target", CartTop); break; // the score arrives as OnPreview
+                case "press": Toast("รีดเวลา! หยุดนาฬิกาของทีม 8 วินาที"); Sfx("steam_hiss"); SpawnFx("fx_steam", PlayerPos + Vector2.up * 0.5f); break;
+            }
+            mp.Ability(0); Sfx("ability_activate");
         }
 
         void SendPosNow() { if (mp == null) return; mp.Move(pos.x, pos.y); mpSent = pos; mpSendT = 0; }

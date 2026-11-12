@@ -129,7 +129,7 @@ class Bot {
   // Abilities, once per player per round
   const by = c => bots.find(b => b.state.players[b.me].char === c);
   const sweep = by('sweep'), bubble = by('bubble'), spray = by('spray'), press = by('press');
-  if (sweep) { sweep.send(OP.ABILITY, {}); check('sweep: a swap needs a layer', await sweep.until(() => sweep.errors.includes('เลือกชั้นที่จะสลับ')));
+  if (sweep) { sweep.send(OP.ABILITY, {}); check('sweep: a swap needs a layer', await sweep.until(() => sweep.errors.some(e => e === 'เลือกชั้นที่จะสลับ' || e === 'ต้องมีอย่างน้อย 2 ชิ้นบนรถเข็น')));
     check('sweep: a refused swap does not use the ability', !sweep.state.players[sweep.me].ab); sweep.errors.length = 0; }
   if (bubble) { bubble.send(OP.ABILITY, {}); check('bubble: the team gets the shield', await bubble.until(() => bubble.state.teams[bubble.team].shield)); }
   if (spray) { spray.send(OP.ABILITY, {}); check('spray: a private score preview', await spray.until(() => spray.peek && typeof spray.peek.total === 'number'));

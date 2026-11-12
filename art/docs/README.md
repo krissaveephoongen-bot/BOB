@@ -1,6 +1,8 @@
 # BOB – Battle of the Brooms : เอกสารผลิต Character & Game Asset (2.5D Cartoon, Unity)
 
-เวอร์ชัน 0.1 · 12 พ.ย. 2026 · สถานะ: ร่างเพื่อรีวิว
+เวอร์ชัน 0.2 · 12 พ.ย. 2026 · สถานะ: ร่างเพื่อรีวิว (เพิ่มภาพ RAW จาก Leonardo ครบทุกแถวของ Asset List)
+
+> **กฎเอกสาร:** ทุกครั้งที่อัปเดตงาน ต้องอัปเดตไฟล์ .md ที่เกี่ยวข้องในรอบเดียวกัน (README, docs/, Asset List, สถานะ)
 
 ชุดเอกสารนี้แปลง Art Direction ที่ตกลงไว้ (2.5D Stylized Cartoon, Chibi 3D, URP, กล้อง Orthographic) ให้เป็นสเปกที่ทีมอาร์ตและทีม Unity ใช้ผลิตได้จริง โดยยึดเอกลักษณ์จากชุดภาพ BOB เดิม (`bob-art/preview.png`, `bob-art/prototype/`) เป็นหลัก
 
@@ -11,6 +13,12 @@
 | [02_Asset_List.md](02_Asset_List.md) | รายการ asset 6 กลุ่ม (A–F) พร้อมรหัส ลำดับความสำคัญ และสถานะเทียบชุด placeholder | Producer / Artist |
 | [03_Unity_Spec.md](03_Unity_Spec.md) | Poly/texture budget, rig, animation, shader URP, import, โฟลเดอร์, prefab, การตั้งชื่อ, optimization | 3D artist / Unity dev |
 | [04_AI_Prompts.md](04_AI_Prompts.md) | Prompt สำหรับ ChatGPT / Midjourney / เครื่องมือ AI ใช้สร้าง Character Sheet และ asset ให้ตรงสไตล์ | Concept artist |
+| [08_Leonardo_Production_Pack.md](08_Leonardo_Production_Pack.md) | **เริ่มที่นี่ (ใช้ Leonardo.ai)**: ตั้งค่า, Image Guidance, prompt + negative prompt ทีละไฟล์ | ผู้ใช้ / Concept artist |
+| [10_Leonardo_RAW.md](10_Leonardo_RAW.md) | **ภาพ RAW จาก Leonardo.ai** 740 ภาพ + ฉากหลังล็อบบี้ 22 ฉาก + ชุดเติมส่วนที่ขาด 81 รายการ + รอบสร้างใหม่ภาพที่ใช้ไม่ได้: โฟลเดอร์ ชื่อไฟล์ ค่าที่ใช้ ข้อควรระวัง และ gen id สำหรับดาวน์โหลดซ้ำ | ทุกคน |
+| [12_RAW_Cutouts.md](12_RAW_Cutouts.md) | ภาพ RAW ที่ลบพื้นหลังแล้ว (`cutouts/`, `cutouts_best/`) และรายการที่นำเข้า Unity / ยังต้องแก้ (ไฟล์อยู่บนเครื่องผู้ใช้) | ทุกคน |
+| [09_Leonardo_Full_Prompts.md](09_Leonardo_Full_Prompts.md) / [.csv](09_Leonardo_Full_Prompts.csv) | **Prompt เต็ม 172 รายการ** ก็อปวางได้ทันที เรียงตามลำดับผลิต พร้อมชื่อไฟล์ โฟลเดอร์ `incoming/` ค่าตั้ง และ negative prompt (CSV ไว้ติ๊กงานที่เสร็จ) | ผู้ใช้ / Concept artist |
+| [14_Leonardo_Regen_Prompts.csv](14_Leonardo_Regen_Prompts.csv) | prompt รอบสร้างใหม่ภาพที่ตัดพื้นหลังไม่ได้ (25 รายการ) | ผู้ใช้ / Concept artist |
+| [07_ChatGPT_Production_Pack.md](07_ChatGPT_Production_Pack.md) | ทางเลือก: prompt สำหรับ ChatGPT ทีละไฟล์ ตั้งชื่อไฟล์ และวิธีส่งกลับมาเข้า Unity | Concept artist / ผู้ใช้ |
 | [06_Placeholder_Status.md](06_Placeholder_Status.md) | สถานะ placeholder ที่ผลิตด้วยโค้ดตาม concept และงานที่ยังต้องให้ศิลปิน/AI ทำ | ทุกคน |
 | [05_Roster_Mapping.md](05_Roster_Mapping.md) | เทียบ roster ใหม่ (กวาด/ฟอง/ถู/สเปรย์/เจ้าคราบ) กับตัวละครที่โค้ดเกมใช้อยู่ และประเด็นที่ต้องตัดสินใจ | Game designer |
 | [11_UX_UI_Spec.md](11_UX_UI_Spec.md) | สเปก UX/UI ทั้งเกม: แผนผังหน้าจอ 30+ จอ, flow, HUD, component library (ขนาด u/dp, สถานะ, เสียง/สั่น), tokens สี/ฟอนต์ไทย, accessibility, วิธีทำใน Unity (uGUI + TMP) + wireframe [`ux/BOB_UX_Wireframes.html`](ux/BOB_UX_Wireframes.html) | Game designer / UI artist / Unity dev |

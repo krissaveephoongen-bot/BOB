@@ -67,6 +67,10 @@ namespace Bob.Game
                 coins = PlayerPrefs.GetInt("bob.coins", 0);
                 soundOn = PlayerPrefs.GetInt("bob.sound", 1) == 1; musicOn = PlayerPrefs.GetInt("bob.music", 1) == 1;
                 var h = PlayerPrefs.GetString("bob.host", ""); if (!string.IsNullOrWhiteSpace(h)) host = h.Trim();
+#if UNITY_EDITOR
+                // tests can point the Editor at a second Nakama (server/docker-compose.test.yml): BOB_PORT=7360
+                if (int.TryParse(Environment.GetEnvironmentVariable("BOB_PORT"), out var envPort)) port = envPort;
+#endif
             }
             catch (Exception) { }
             Application.targetFrameRate = 60;
@@ -277,6 +281,7 @@ namespace Bob.Game
         void SwapAt(int i) // swap layer i with the one above it (Sweep's ability)
         {
             if (i < 0 || i >= stack.Count - 1) return;
+            if (Online) { swapMode = false; mp.Ability(i); RenderAll(); return; } // the server swaps the team cart
             var a = stack.ToList(); (a[i], a[i + 1]) = (a[i + 1], a[i]);
             bool bad = BobRules.IsMethod(a[0]);
             for (int k = 1; k < a.Count; k++) if (BobRules.IsMethod(a[k]) && BobRules.IsMethod(a[k - 1])) bad = true;
@@ -296,7 +301,8 @@ namespace Bob.Game
 
         void UseAbility()
         {
-            if (phase != Phase.Build || abUsed) { if (Online && phase == Phase.Build) Toast("ความสามารถพิเศษยังไม่เปิดในโหมดออนไลน์"); return; }
+            if (phase != Phase.Build || abUsed) return;
+            if (Online) { OnlineAbility(); return; }
             switch (charId)
             {
                 case "sweep":
