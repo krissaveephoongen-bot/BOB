@@ -82,6 +82,7 @@
 
 | ไฟล์ | แหล่ง (ลิงก์หน้า) | ผู้ทำ | Licence ที่เห็นบนหน้า | วันที่ตรวจ |
 | --- | --- | --- | --- | --- |
+| music_placeholder_loop (เพลงในแมตช์) | "Happy Clappy Loop" (opengameart.org/content/happy-clappy-loop) เป็น loop 17.7 วิ | ดูหน้า OGA (จากหนังสั้น Cat's Sky) | CC0 (ป้าย CC0 บนหน้า OGA) | 12 พ.ย. 2026 · ชั่วคราว รอเพลงที่ AI สร้าง (ElevenLabs เครดิตหมด) |
 | ไฟล์ที่เหลือ (water_pour, spray_psst, steam_hiss, broom_sweep, scrub_loop, fizz, mud_splat ฯลฯ) | `art/tools/make_sfx.py` | ทีม BOB (สังเคราะห์) | ของเราเอง | 12 พ.ย. 2026 |
 | ui_tap, ui_confirm, ui_cancel, ui_card_flip, drop_invalid, lobby_join, ready_on, vote_tick, timer_tick, pass_part | Kenney Interface Sounds (OpenGameArt: opengameart.org/content/interface-sounds, ไฟล์ click_001, confirmation_001, back_001, scroll_001, error_001, open_001, toggle_001, tick_001, tick_002, pluck_001) | Kenney | CC0 (ป้าย CC0 บนหน้า OGA + `art/licenses/kenney-interface-sounds-LICENSE.txt`) | 12 พ.ย. 2026 |
 | pickup, coin, place_layer, table_put, bubble_pop, cart_grab, lift_layer, enemy_hit, enemy_defeat, enemy_spawn | RPG Sound Pack (OpenGameArt: opengameart.org/content/rpg-sound-pack, ไฟล์ cloth, coin, cloth-heavy, wood-small, bubble, metal-small1, armor-light, slime2, slime5, slime8) | artisticdude | CC0 (ป้าย CC0 บนหน้า OGA) | 12 พ.ย. 2026 |
