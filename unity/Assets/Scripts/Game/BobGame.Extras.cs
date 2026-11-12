@@ -93,6 +93,20 @@ namespace Bob.Game
             }
         }
 
+        // ---------------------------------------------------------------- screen backdrop (GDD themed rooms)
+
+        /// <summary>A full-screen room picture behind a menu screen, softened so the cards on top stay readable.</summary>
+        void ScreenBackdrop(string sprite)
+        {
+            if (!art.Has(sprite)) return;
+            var r = BobUi.Rect("Backdrop", screenRoot); r.SetAsFirstSibling();
+            r.anchorMin = r.anchorMax = new Vector2(0.5f, 0.5f); r.sizeDelta = new Vector2(100, 100);
+            var img = r.gameObject.AddComponent<Image>(); img.sprite = art.Get(sprite); img.raycastTarget = false;
+            var fit = r.gameObject.AddComponent<AspectRatioFitter>(); fit.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent; fit.aspectRatio = 16f / 9f;
+            var veil = BobUi.Rect("Veil", screenRoot); veil.SetSiblingIndex(1); BobUi.Stretch(veil);
+            var vi = veil.gameObject.AddComponent<Image>(); vi.color = new Color(1f, 0.96f, 0.86f, 0.22f); vi.raycastTarget = false;
+        }
+
         // ---------------------------------------------------------------- split-screen test view
 
         public const float SplitTime = 4.5f;

@@ -483,6 +483,7 @@ namespace Bob.Game
         void MainMenu()
         {
             var S = screenRoot;
+            ScreenBackdrop("lobby_rental_room");
             // top-left server status, top-right coins + settings
             var net = Card(S, "Net", BobUi.Surface, 1f); BobUi.Pin(net, new Vector2(0, 1), new Vector2(0, 1), new Vector2(24, -24), new Vector2(330, 72));
             var nt = BobUi.Label(net, (online ? "● ออนไลน์" : connecting ? "○ กำลังเชื่อมต่อ…" : "○ ออฟไลน์"), 24, online ? BobUi.Good : BobUi.Muted, TextAnchor.MiddleCenter); BobUi.Stretch(nt.rectTransform);
