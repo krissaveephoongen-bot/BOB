@@ -85,10 +85,12 @@ created by the Nakama module on start. Code: `server/analytics.js`.
 
 ## Not done yet
 
-- The co-op scene (`Coop/`) is written and type-checked but has never been compiled or played in Unity: open it on the PC first (see "Needs the PC" below).
-- Abilities in online matches (the server has no ability ops yet), drag-and-drop in the co-op HUD (it uses taps), Quick Ping, voice chat.
-- Single-player scene (`Game.unity`): no link to the co-op scene yet; no cart pushing / passing there (solo play does not need them).
-- Scrub and Wash abilities, obstacles other than the sofa and the shelves, the other 7 scenes; Party / Community modes.
+- Two online front-ends exist: the **Game scene's online mode** (`Game/BobGame.Online.cs`, compiled and bot-tested in Unity,
+  quick match only) and the **Co-op scene** (`Coop/`, written in the cloud, type-checked only) which also has the private room
+  screen, team switch, push / pass / table, hold-to-send vote and the split-screen test. Plan: port those features into the
+  Game scene's online mode on the PC and keep the Co-op scene as the reference (see "Needs the PC").
+- Online: abilities are off (the server does not run them yet), no reconnect after the app is closed, no Quick Ping or voice chat.
+- Scrub and Wash abilities, obstacles other than the sofa, the shelves and the table, the other 7 scenes; Party / Community modes.
 - Balance: every number is an untested starting value.
 - Development passwords, the `defaultkey` server key and the `defaulthttpkey` HTTP key must be replaced before any deployment.
 - Analytics: no retention or archiving yet; Unity client does not send `bob_log_event` yet (only `stack_scored` is logged from Unity).
@@ -101,7 +103,8 @@ The server owns a multiplayer match: phones send intents, the server checks them
   One seed per match, so both teams get the same room each round; each team plays in its own copy of the room.
 - Each team shares one cart; each player holds at most 2 parts (`BobRules.HandTeam`).
 - The server checks walking speed, distance to a station (pick), the cart (place, lift, push) or the table, budget, 5 layers and 2 methods.
-  Shelves, the parking table and the sofa are solid: the server pushes players out of them (same maths in `Coop/BobCoopLayout.cs`).
+  Shelves, the parking table, the sofa and the team's own cart are solid: the server pushes players out of them (same maths
+  as `BobGame.World` and `Coop/BobCoopLayout.cs`; the pusher is not pushed out of the cart they hold).
 - Co-op moves (GDD 20): **push the cart** (grab it, it follows you at 80% speed, one pusher per team), **pass** a part to a team-mate
   within 1 unit, **parking table** for up to 4 parts. A player who drops mid-round leaves their parts on the team's table.
 - Sending is a **vote** (UX spec BTN-Submit): the cart is sent when half the online team has voted.
@@ -127,6 +130,11 @@ Tests: start the server, then `cd server && node mp-test.js 4` (bots walk, pick,
 
 Note for server code: Nakama keeps match state as Go values between ticks, so `array.push` / `splice` on state can be
 lost. Always assign a new array (`t.table = t.table.concat([x])`, `without(a, i)`).
+
+**In the Unity scene** (`Scripts/Game/BobGame.Online.cs`): title button **ออนไลน์ 2-4 คน** → matchmaker → lobby (both teams, heroes, Ready) → rounds. The scene copies the server state into the normal game fields, so the HUD, cart card and result screens are the same as solo. Team-mates walk in your room with what they carry; the other team plays the same room in its own copy, and its layer count and submit show in the top bar. The server runs the clock (pause does not stop it) and ends the round when both teams submit.
+
+More tests:
+- Unity + bots: `cd server && node mp-host.js 2 ../unity/Logs/bob-mp-match.txt`, then menu **Bob > Run Online Test** (or `-executeMethod Bob.EditorTools.BobGameScene.RunOnlineTest`). The Unity bot joins with one bot team-mate against one bot, must print GAME TEST PASSED; screenshots `unity/Logs/bob-game-online-*.png`.
 
 ## Co-op scene (Unity)
 

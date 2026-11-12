@@ -207,7 +207,7 @@ namespace Bob.Game
         {
             if (phase != Phase.Build || overlay != Overlay.None) { joyActive = false; return; }
             // keyboard shortcuts: 1-3 place from hand, Q lift the top layer, F ability, Enter submit
-            for (int i = 0; i < Hand; i++) if (Input.GetKeyDown(KeyCode.Alpha1 + i)) Place(i);
+            for (int i = 0; i < HandMax; i++) if (Input.GetKeyDown(KeyCode.Alpha1 + i)) Place(i);
             if (Input.GetKeyDown(KeyCode.Q)) LiftTop();
             if (Input.GetKeyDown(KeyCode.F)) UseAbility();
             if (Input.GetKeyDown(KeyCode.Return) && BobRules.CountLayers(stack) > 0) Submit();

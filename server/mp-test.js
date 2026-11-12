@@ -4,10 +4,11 @@
 const HOST = process.env.BOB_HOST || '127.0.0.1:7350', KEY = 'defaultkey';
 const N = Math.max(2, Math.min(4, +process.argv[2] || 2));
 const OP = { MOVE: 1, PICK: 2, PLACE: 3, LIFT: 4, READY: 5, SUBMIT: 6, STATE: 10, POS: 11, RESULT: 12, ERROR: 13 };
-const STATION = { tool: [1.2, 3.75], chem: [6.8, 3.75], energy: [1.2, 1.6], method: [6.8, 1.6] };
+const STATION = { tool: [1.2, 3.75], chem: [6.8, 3.75], energy: [1.2, 1.25], method: [6.8, 1.25] };
 const FAM = { cloth: 'tool', sponge: 'tool', brush: 'tool', broom: 'tool', soap: 'chem', vinegar: 'chem', soda: 'chem', polish: 'chem',
   hot: 'energy', steam: 'energy', scrub: 'energy', air: 'energy', soak: 'method', spray: 'method', circle: 'method' };
-const CART = [4.0, 2.0];
+const CART = [3.3, 2.5]; // left of the cart, within reach
+// Bots walk in lanes so they never press into a station, the cart or the sofa: x = 2.6 / 5.4 up and down, y = 3.3 across.
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const b64 = o => Buffer.from(JSON.stringify(o)).toString('base64');
 
@@ -33,10 +34,10 @@ class Bot {
     if (m.cid && this.wait[m.cid]) { const w = this.wait[m.cid]; delete this.wait[m.cid]; m.error ? w.bad(new Error(JSON.stringify(m.error))) : w.ok(m); return; }
     if (!m.match_data) return;
     const op = +m.match_data.op_code, d = JSON.parse(Buffer.from(m.match_data.data || '', 'base64').toString() || '{}');
-    if (op === OP.STATE) { const pm = {}; d.players.forEach(p => { pm[p.id] = p; (this.srv = this.srv || {})[p.id] = [p.x, p.y]; }); d.players = pm; this.state = d; }
+    if (op === OP.STATE) { const pm = {}; d.players.forEach(p => pm[p.id] = p); d.players = pm; this.state = d; }
     if (op === OP.RESULT) this.results.push(d);
     if (op === OP.ERROR) this.errors.push(d.t);
-    if (op === OP.POS && this.state) { this.state.time = d.time; d.p.forEach(q => this.srv[q.id] = [q.x, q.y]); }
+    if (op === OP.POS && this.state) { this.state.time = d.time; const me = d.p.find(q => q.id === this.me); if (me) this.server = [me.x, me.y]; }
   }
   req(body) { const cid = String(++this.cid); return new Promise((ok, bad) => { this.wait[cid] = { ok, bad }; this.ws.send(JSON.stringify({ cid, ...body })); }); }
   send(op, obj) { this.ws.send(JSON.stringify({ match_data_send: { match_id: this.matchId, op_code: String(op), data: b64(obj) } })); }
@@ -45,31 +46,34 @@ class Bot {
     const r = await this.req({ match_join: { match_id: matchId } });
     this.me = r.match.self.user_id;
   }
-  // Walks from the server's position (the server pushes players out of shelves, the table and the sofa).
+  async route(x, y) {
+    const lane = this.pos[0] < 4 ? 2.6 : 5.4;
+    for (const [wx, wy] of [[lane, this.pos[1]], [lane, 3.3], [x, 3.3], [x, y]]) await this.walkTo(wx, wy);
+  }
   async walkTo(x, y) {
-    for (let k = 0; k < 80; k++) {
-      const [px, py] = this.srv[this.me], dx = x - px, dy = y - py, d = Math.hypot(dx, dy);
-      if (d < 0.08) return;
-      const st = Math.min(d, 0.25);
-      this.send(OP.MOVE, { x: px + dx / d * st, y: py + dy / d * st });
-      await sleep(110);
+    for (let k = 0; k < 60; k++) {
+      const [px, py] = this.pos, dx = x - px, dy = y - py, d = Math.hypot(dx, dy);
+      if (d < 0.05) return;
+      const st = Math.min(d, 0.25); this.pos = [px + dx / d * st, py + dy / d * st];
+      this.send(OP.MOVE, { x: this.pos[0], y: this.pos[1] });
+      await sleep(100);
     }
   }
-  async playRound(round) {
+  async playRound(round, submit = true) {
     const s = this.state, team = s.players[this.me].team;
     // Each bot carries one part; team-mates pick different ones so the shared cart gets two layers.
     const mates = Object.keys(s.players).filter(k => s.players[k].team === team).sort();
     const offer = s.room.offer.filter(id => FAM[id] !== 'method');
     const id = offer[(mates.indexOf(this.me) + team * 2 + round) % offer.length];
-    const sx = s.players[this.me].x < 4 ? 2.6 : 5.4; // step out from under the sofa first
-    await this.walkTo(sx, 0.5); await this.walkTo(sx, 2.0);
-    await this.walkTo(...STATION[FAM[id]]); this.send(OP.PICK, { id }); await sleep(200);
-    await this.walkTo(...CART); this.send(OP.PLACE, { i: 0 }); await sleep(300);
-    if (mates.indexOf(this.me) === mates.length - 1) { await sleep(400); this.send(OP.SUBMIT, {}); }
+    this.pos = [s.players[this.me].x, s.players[this.me].y];
+    await this.route(...STATION[FAM[id]]); this.send(OP.PICK, { id }); await sleep(200);
+    await this.route(...CART); this.send(OP.PLACE, { i: 0 }); await sleep(300);
+    if (submit && mates.indexOf(this.me) === mates.length - 1) { await sleep(400); this.send(OP.SUBMIT, {}); }
   }
 }
 
-(async () => {
+module.exports = { Bot, auth, OP, sleep, HOST };
+if (require.main === module) (async () => {
   const bots = [];
   for (let i = 0; i < N; i++) { const b = new Bot(i, await auth(i)); await b.open(); bots.push(b); }
   const r = await fetch(`http://${HOST}/v2/rpc/bob_create_match?unwrap`, {

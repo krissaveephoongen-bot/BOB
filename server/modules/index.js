@@ -379,22 +379,28 @@ var MP_PUSH_SPEED = 0.8, MP_PASS_NEAR = 1.0, MP_TABLE_MAX = 4, MP_RADIUS = 0.16;
 var STATION_FAM = { tool: [0.3, 4.06, 2.0, 4.7], chem: [6.0, 4.06, 7.7, 4.7], energy: [0.3, 0.3, 2.0, 0.94], method: [6.0, 0.3, 7.7, 0.94] };
 var TABLE = [3.5, 4.2, 4.5, 4.7];              // parking table (โต๊ะพักของ): leave parts for a team-mate
 var SOFA = [3.0, 0.85, 5.0, 1.15];             // obstacle
-var SOLIDS = [STATION_FAM.tool, STATION_FAM.chem, STATION_FAM.energy, STATION_FAM.method, TABLE, SOFA];
+var SOLIDS = [STATION_FAM.tool, STATION_FAM.chem, STATION_FAM.energy, STATION_FAM.method, TABLE, SOFA], RADIUS = MP_RADIUS;
 var CART_W = 0.9, CART_H = 0.64, CART_START = [4.0, 2.53], NEAR = 0.6;
 // Nakama keeps match state as Go values between ticks, where push/splice on an array can be lost: always assign a new array.
 function without(a, i) { return a.slice(0, i).concat(a.slice(i + 1)); }
 function cartRect(t) { return [t.cx - CART_W / 2, t.cy - CART_H / 2, t.cx + CART_W / 2, t.cy + CART_H / 2]; }
-// Push a point (a body of radius r) out of every solid rect, along the shortest way out. Bodies never block each other.
-function mpSolve(x, y, r) {
-  for (var k = 0; k < SOLIDS.length; k++) {
-    var b = SOLIDS[k], x0 = b[0] - r, y0 = b[1] - r, x1 = b[2] + r, y1 = b[3] + r;
-    if (x <= x0 || x >= x1 || y <= y0 || y >= y1) continue;
-    var dl = x - x0, dr = x1 - x, db = y - y0, dt = y1 - y, m = Math.min(dl, dr, db, dt);
-    if (m === dl) x = x0; else if (m === dr) x = x1; else if (m === db) y = y0; else y = y1;
-  }
-  return [Math.max(0.18, Math.min(7.82, x)), Math.max(0.18, Math.min(4.82, y))];
+// Push a body of radius r out of one rect (same maths as BobGame.World and Coop/BobCoopLayout.cs, so phones predict it).
+function mpPushRect(x, y, b, r) {
+  var cx = Math.max(b[0], Math.min(b[2], x)), cy = Math.max(b[1], Math.min(b[3], y)), d = Math.hypot(x - cx, y - cy);
+  if (d >= r) return [x, y];
+  if (d > 0.0001) return [cx + (x - cx) / d * r, cy + (y - cy) / d * r];
+  var opts = [[b[0] - r, y, x - b[0]], [b[2] + r, y, b[2] - x], [x, b[1] - r, y - b[1]], [x, b[3] + r, b[3] - y]]; // centre inside: nearest edge
+  opts.sort(function (p, q) { return p[2] - q[2]; }); return [opts[0][0], opts[0][1]];
 }
-// A cart's centre stays in the room and out of the solids (its half size acts as the radius, so it is a little forgiving).
+// A player: out of the shelves, the table, the sofa and (unless pushing it) the team's own cart, then inside the room.
+// Bodies never block each other (GDD 20). extra = more rects, e.g. the team's cart.
+function mpSolve(x, y, r, extra) {
+  x = Math.max(0.18, Math.min(7.82, x)); y = Math.max(0.18, Math.min(4.82, y));
+  var all = extra ? SOLIDS.concat(extra) : SOLIDS;
+  for (var k = 0; k < all.length; k++) { var q = mpPushRect(x, y, all[k], r); x = q[0]; y = q[1]; }
+  return [x, y];
+}
+// A pushed cart's centre stays in the room and out of the solids (its half height acts as the radius).
 function mpCartSolve(x, y) {
   var p = mpSolve(x, y, CART_H / 2);
   return [Math.max(CART_W / 2, Math.min(8 - CART_W / 2, p[0])), Math.max(CART_H / 2, Math.min(5 - CART_H / 2, p[1]))];
@@ -500,7 +506,7 @@ function matchLoop(ctx, logger, nk, d, tick, s, messages) {
         var dx = x - p.x, dy = y - p.y, dist = Math.hypot(dx, dy),
           max = MP_SPEED * (pushing ? MP_PUSH_SPEED : 1) * Math.min(1, Math.max(1, tick - (p.moveTick || 0)) / MP_TICK);
         if (dist > max) { x = p.x + dx / dist * max; y = p.y + dy / dist * max; }
-        var ox = p.x, oy = p.y, np = mpSolve(x, y, MP_RADIUS);
+        var ox = p.x, oy = p.y, np = mpSolve(x, y, MP_RADIUS, pushing ? null : [cartRect(t)]);
         p.x = np[0]; p.y = np[1];
         p.moveTick = tick;
         if (pushing) { var c = mpCartSolve(t.cx + p.x - ox, t.cy + p.y - oy); t.cx = c[0]; t.cy = c[1]; }

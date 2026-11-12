@@ -220,7 +220,8 @@ namespace Bob.Coop
             {
                 var speed = BobCoopLayout.Speed * (Pushing ? BobCoopLayout.PushSpeed : 1f);
                 var before = myPos;
-                var p = BobCoopLayout.Solve(myPos.x + dir.x * speed * dt, myPos.y + dir.y * speed * dt);
+                var cart = Pushing ? (Box?)null : BobCoopLayout.CartBox(net.MyCart.cx, net.MyCart.cy);
+                var p = BobCoopLayout.Solve(myPos.x + dir.x * speed * dt, myPos.y + dir.y * speed * dt, BobCoopLayout.Radius, cart);
                 myPos = new Vector2(p.x, p.y);
                 if (Pushing) PredictCart(myPos - before);
                 walking = true;

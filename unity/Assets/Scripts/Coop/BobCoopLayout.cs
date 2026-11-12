@@ -50,18 +50,26 @@ namespace Bob.Coop
         /// <summary>Where a player of `team` starts each round.</summary>
         public static (float x, float y) Spawn(int team) => (team == 1 ? 4.6f : 3.4f, 0.6f);
 
-        /// <summary>Push a body of radius r out of the shelves, the table and the sofa, then keep it in the room.
-        /// Same as mpSolve in server/match.js, so the client predicts what the server will accept.</summary>
-        public static (float x, float y) Solve(float x, float y, float r = Radius)
+        /// <summary>Push a body of radius r out of one box: to the nearest point's distance r, or out of the nearest edge
+        /// when the centre is inside. Same maths as mpPushRect in server/match.js and BobGame.World.</summary>
+        public static (float x, float y) PushOut(float x, float y, Box b, float r)
         {
-            foreach (var b in Solids)
-            {
-                float x0 = b.X0 - r, y0 = b.Y0 - r, x1 = b.X1 + r, y1 = b.Y1 + r;
-                if (x <= x0 || x >= x1 || y <= y0 || y >= y1) continue;
-                float dl = x - x0, dr = x1 - x, db = y - y0, dt = y1 - y, m = Math.Min(Math.Min(dl, dr), Math.Min(db, dt));
-                if (m == dl) x = x0; else if (m == dr) x = x1; else if (m == db) y = y0; else y = y1;
-            }
-            return (Math.Max(0.18f, Math.Min(7.82f, x)), Math.Max(0.18f, Math.Min(4.82f, y)));
+            float cx = Math.Max(b.X0, Math.Min(b.X1, x)), cy = Math.Max(b.Y0, Math.Min(b.Y1, y));
+            float dx = x - cx, dy = y - cy, d = (float)Math.Sqrt(dx * dx + dy * dy);
+            if (d >= r) return (x, y);
+            if (d > 0.0001f) return (cx + dx / d * r, cy + dy / d * r);
+            float l = x - b.X0, rt = b.X1 - x, bo = y - b.Y0, t = b.Y1 - y, m = Math.Min(Math.Min(l, rt), Math.Min(bo, t));
+            if (m == l) return (b.X0 - r, y); if (m == rt) return (b.X1 + r, y); if (m == bo) return (x, b.Y0 - r); return (x, b.Y1 + r);
+        }
+
+        /// <summary>Where the server will put a player who asks for (x, y): inside the room, then out of the shelves, the table,
+        /// the sofa and (when given, i.e. when not pushing it) the team's cart. Same as mpSolve in server/match.js.</summary>
+        public static (float x, float y) Solve(float x, float y, float r = Radius, Box? cart = null)
+        {
+            x = Math.Max(0.18f, Math.Min(7.82f, x)); y = Math.Max(0.18f, Math.Min(4.82f, y));
+            foreach (var b in Solids) (x, y) = PushOut(x, y, b, r);
+            if (cart.HasValue) (x, y) = PushOut(x, y, cart.Value, r);
+            return (x, y);
         }
 
         /// <summary>A pushed cart's centre: out of the solids (its half height as the radius) and inside the room.</summary>

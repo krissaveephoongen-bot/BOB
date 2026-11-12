@@ -73,16 +73,27 @@ namespace Bob.Net
         {
             var o = new BobOnline(server.Realtime, server.UserId);
             var found = new TaskCompletionSource<IMatchmakerMatched>();
+            finding = found;
             void Matched(IMatchmakerMatched m) => found.TrySetResult(m);
             server.Realtime.ReceivedMatchmakerMatched += Matched;
             try
             {
-                await server.Realtime.AddMatchmakerAsync("*", minPlayers, maxPlayers);
-                var m = await found.Task;
+                ticket = await server.Realtime.AddMatchmakerAsync("*", minPlayers, maxPlayers);
+                var m = await found.Task; // throws TaskCanceledException after CancelFindAsync
                 await o.JoinById(m.MatchId);
             }
-            finally { server.Realtime.ReceivedMatchmakerMatched -= Matched; }
+            finally { server.Realtime.ReceivedMatchmakerMatched -= Matched; ticket = null; finding = null; }
             return o;
+        }
+
+        static IMatchmakerTicket ticket;
+        static TaskCompletionSource<IMatchmakerMatched> finding;
+
+        /// <summary>Stops a FindAsync that is still waiting (its task then throws TaskCanceledException).</summary>
+        public static async Task CancelFindAsync(BobServer server)
+        {
+            var t = ticket; finding?.TrySetCanceled();
+            if (t != null) try { await server.Realtime.RemoveMatchmakerAsync(t); } catch (Exception) { }
         }
 
         /// <summary>Private room: creates a match on the server; share MatchId so friends can JoinAsync it.</summary>
