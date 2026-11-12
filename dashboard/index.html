@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brooms Balance Dashboard</title>
+<style>
+:root{color-scheme:light;
+  --surface-0:#f4f3f0;--surface-1:#fcfcfb;--border:#e2e0da;--grid:#ecebe7;
+  --text-primary:#0b0b0b;--text-secondary:#52514e;--text-muted:#77756f;
+  --series-1:#2a78d6;--series-1-soft:#cde2fb;--ref:#77756f;
+  --critical:#c62a2a;--good:#1f7a3a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+  --surface-0:#121211;--surface-1:#1a1a19;--border:#2e2d2b;--grid:#262624;
+  --text-primary:#f0efec;--text-secondary:#c3c2b7;--text-muted:#9a988f;
+  --series-1:#3987e5;--series-1-soft:#184f95;--ref:#9a988f;--critical:#ef6b6b;--good:#5cc27a}}
+:root[data-theme="dark"]{color-scheme:dark;
+  --surface-0:#121211;--surface-1:#1a1a19;--border:#2e2d2b;--grid:#262624;
+  --text-primary:#f0efec;--text-secondary:#c3c2b7;--text-muted:#9a988f;
+  --series-1:#3987e5;--series-1-soft:#184f95;--ref:#9a988f;--critical:#ef6b6b;--good:#5cc27a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--surface-0);color:var(--text-primary);font:14px/1.45 system-ui,-apple-system,"Segoe UI","Noto Sans Thai",sans-serif}
+header{padding:16px;display:flex;flex-wrap:wrap;gap:12px;align-items:end;justify-content:space-between;max-width:1200px;margin:0 auto}
+h1{font-size:20px;margin:0}
+.sub{color:var(--text-secondary);margin:2px 0 0}
+form{display:flex;flex-wrap:wrap;gap:8px;align-items:end}
+label{display:flex;flex-direction:column;font-size:12px;color:var(--text-secondary);gap:2px}
+input,select,button{font:inherit;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-primary)}
+button{cursor:pointer;background:var(--series-1);border-color:var(--series-1);color:#fff;font-weight:600}
+main{max-width:1200px;margin:0 auto;padding:0 16px 32px;display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;min-width:0}
+.card h2{font-size:15px;margin:0 0 2px}
+.card .hint{color:var(--text-muted);font-size:12px;margin:0 0 10px}
+.wide{grid-column:1/-1}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.tile{background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.tile .v{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
+.tile .k{color:var(--text-secondary);font-size:12px}
+.bars{display:grid;grid-template-columns:minmax(80px,max-content) 1fr 56px;gap:6px 10px;align-items:center}
+.bars .lb{color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
+.bars .tr{position:relative;height:16px}
+.bars .tr i{position:absolute;left:0;top:2px;bottom:2px;background:var(--series-1);border-radius:0 4px 4px 0;min-width:2px}
+.bars .tr b{position:absolute;top:-2px;bottom:-2px;width:0;border-left:1px dashed var(--ref)}
+.bars .vl{text-align:right;font-variant-numeric:tabular-nums;font-size:13px}
+.bars .row{display:contents}
+.bars .row:hover .lb,.bars .row:hover .vl{color:var(--text-primary);font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:5px 6px;border-bottom:1px solid var(--grid);text-align:right;font-variant-numeric:tabular-nums}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--text-secondary);font-weight:600}
+.scroll{overflow-x:auto}
+.lt th,td.l{text-align:left}
+.lt~tr td{white-space:nowrap}
+.flag{font-size:12px;font-weight:600}
+.flag.hi{color:var(--critical)}.flag.lo{color:var(--critical)}
+.empty{color:var(--text-muted)}
+#err{max-width:1200px;margin:0 auto 12px;padding:0 16px;color:var(--critical)}
+#tip{position:fixed;pointer-events:none;background:var(--surface-1);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.15);display:none;z-index:9;max-width:260px}
+.ev{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:520px}
+svg text{fill:var(--text-muted);font-size:11px}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Battle of the Brooms · balance dashboard</h1>
+  <p class="sub" id="sub">Play data from the Nakama analytics backend</p></div>
+  <form id="f">
+    <label>Server<input id="srv" value="http://127.0.0.1:7350" size="22"></label>
+    <label>HTTP key<input id="key" value="defaulthttpkey" size="14"></label>
+    <label>Period<select id="days"><option value="1">1 day</option><option value="7" selected>7 days</option><option value="30">30 days</option><option value="365">1 year</option></select></label>
+    <button>Refresh</button>
+  </form>
+</header>
+<div id="err" role="alert"></div>
+<main id="m"><p class="empty">Loading…</p></main>
+<div id="tip"></div>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pct=v=>v==null?'–':Math.round(v*100)+'%';
+const f1=v=>v==null?'–':(Math.round(v*10)/10).toString();
+try{const c=JSON.parse(localStorage.getItem('bob.dash')||'{}');if(c.srv)$('srv').value=c.srv;if(c.key)$('key').value=c.key;if(c.days)$('days').value=c.days}catch(e){}
+
+// Horizontal bar list. rows: [{label, value, text, tip}], max = scale top, ref = optional reference line value.
+function bars(rows,max,ref){
+  if(!rows.length) return '<p class="empty">No data yet.</p>';
+  return '<div class="bars">'+rows.map(r=>`<div class="row" data-tip="${esc(r.tip)}"><span class="lb">${esc(r.label)}</span>
+    <span class="tr"><i style="width:${Math.max(0,Math.min(100,(r.value||0)/max*100))}%"></i>${ref!=null?`<b style="left:${ref/max*100}%"></b>`:''}</span>
+    <span class="vl">${esc(r.text)}</span></div>`).join('')+'</div>';
+}
+// Daily activity: single-series column chart of matches started per day.
+function daily(d){
+  const days=[...new Set(d.daily.map(r=>r.day))].sort();
+  if(!days.length) return '<p class="empty">No data yet.</p>';
+  const get=(day,ev)=>(d.daily.find(r=>r.day===day&&r.event===ev)||{}).n||0;
+  const vals=days.map(x=>get(x,'match_start')), mx=Math.max(1,...vals);
+  const W=1100,H=120,pad=28,bw=Math.min(36,(W-pad)/days.length-4);
+  let s=`<svg viewBox="0 0 ${W} ${H+20}" width="100%" role="img" aria-label="Matches started per day">`;
+  [0,.5,1].forEach(t=>{const y=H-t*(H-10);s+=`<line x1="${pad}" x2="${W}" y1="${y}" y2="${y}" stroke="var(--grid)"/><text x="0" y="${y+4}">${Math.round(t*mx)}</text>`});
+  days.forEach((day,i)=>{const x=pad+4+i*((W-pad)/days.length), h=vals[i]/mx*(H-10);
+    s+=`<g data-tip="${esc(day+': '+vals[i]+' matches started, '+get(day,'match_end')+' finished, '+get(day,'stack_scored')+' stacks scored')}">
+      <rect x="${x-2}" y="0" width="${bw+4}" height="${H}" fill="transparent"/>
+      <path d="M${x},${H} V${H-h+4} q0,-4 4,-4 h${bw-8} q4,0 4,4 V${H} Z" fill="var(--series-1)"/>
+      <text x="${x+bw/2}" y="${H+14}" text-anchor="middle">${day.slice(5)}</text></g>`});
+  return s+'</svg>';
+}
+function render(d){
+  const T=d.totals, done=T.matches_started?T.matches_finished/T.matches_started:null;
+  $('sub').textContent=`Last ${d.days} day(s) · updated ${new Date(d.generated_at).toLocaleString()}`;
+  const tiles=[['Players',T.players],['Matches started',T.matches_started],['Completion',pct(done)],['Rounds played',T.rounds_played],['Stacks scored (server)',T.stacks_scored],['Events',T.events]];
+  const parts=d.parts.slice().sort((a,b)=>b.uses-a.uses), maxUse=Math.max(1,...parts.map(p=>p.uses));
+  const wr=d.parts.filter(p=>p.win_rounds).sort((a,b)=>b.win_rate-a.win_rate);
+  const flag=(v,lo,hi)=>v==null?'':v>hi?' <span class="flag hi">▲ high</span>':v<lo?' <span class="flag lo">▼ low</span>':'';
+  let h=`<section class="wide tiles">${tiles.map(([k,v])=>`<div class="tile"><div class="v">${esc(v)}</div><div class="k">${k}</div></div>`).join('')}</section>`;
+  h+=`<section class="card wide"><h2>Matches started per day</h2><p class="hint">Hover a column for finished matches and stacks scored.</p>${daily(d)}</section>`;
+  h+=`<section class="card"><h2>Part pick count</h2><p class="hint">Times each part was in a stack the server scored. Rarely picked parts may be too weak or too expensive.</p>
+    ${bars(parts.map(p=>({label:p.name+' ('+p.cost+')',value:p.uses,text:p.uses,tip:`${p.name} · ${p.family} · cost ${p.cost}\nUsed ${p.uses}× in ${p.stacks} stacks\nAvg score ${f1(p.avg_total)} · spec pass ${pct(p.pass_rate)}`})),maxUse)}</section>`;
+  h+=`<section class="card"><h2>Round win rate when the part is in the stack</h2><p class="hint">Dashed line is 50%. Parts far above it may be overpowered.</p>
+    ${bars(wr.map(p=>({label:p.name,value:p.win_rate,text:pct(p.win_rate),tip:`${p.name}: won ${pct(p.win_rate)} of ${p.win_rounds} rounds`})),1,.5)}</section>`;
+  h+=`<section class="card"><h2>Characters</h2><p class="hint">Match win rate by character. Flags mark win rates outside 35–65%.</p><div class="scroll"><table>
+    <tr><th>Character</th><th>Matches</th><th>Win rate</th><th>Abilities used</th></tr>
+    ${d.characters.map(c=>`<tr><td>${esc(c.name)}</td><td>${c.matches}</td><td>${pct(c.win_rate)}${flag(c.win_rate,.35,.65)}</td><td>${c.abilities_used}</td></tr>`).join('')||'<tr><td class="empty" colspan="4">No finished matches yet.</td></tr>'}</table></div></section>`;
+  h+=`<section class="card"><h2>Rounds</h2><p class="hint">Player vs rival by round. Spec pass is the share of player stacks that met the room spec.</p><div class="scroll"><table>
+    <tr><th>Round</th><th>Played</th><th>Avg score</th><th>Rival avg</th><th>Win rate</th><th>Spec pass</th><th>Time left</th></tr>
+    ${d.rounds.map(r=>`<tr><td>${r.round}</td><td>${r.n}</td><td>${f1(r.avg_total)}</td><td>${f1(r.avg_rival)}</td><td>${pct(r.win_rate)}${flag(r.win_rate,.35,.65)}</td><td>${pct(r.pass_rate)}</td><td>${f1(r.avg_time_left)}s</td></tr>`).join('')||'<tr><td class="empty" colspan="7">No rounds yet.</td></tr>'}</table></div></section>`;
+  h+=`<section class="card"><h2>Room difficulty by enemy line-up</h2><p class="hint">Share of stacks that passed the room spec, hardest first.</p>
+    ${bars(d.enemies.map(e=>({label:e.name,value:e.pass_rate,text:pct(e.pass_rate),tip:`${e.name}\n${e.stacks} stacks · spec pass ${pct(e.pass_rate)} · avg score ${f1(e.avg_total)}`})),1)}</section>`;
+  h+=`<section class="card"><h2>Average score by stack size</h2><p class="hint">Items in the stack (layers plus methods).</p>
+    ${bars(d.stack_sizes.map(s=>({label:s.size+' items',value:s.avg_total,text:f1(s.avg_total),tip:`${s.size} items: ${s.n} stacks, avg score ${f1(s.avg_total)}`})),100)}</section>`;
+  h+=`<section class="card wide"><h2>Latest events</h2><p class="hint">The 40 newest rows of bob_events, all time.</p><div class="scroll"><table>
+    <tr class="lt"><th>Time (UTC)</th><th>Event</th><th>Match</th><th>Data</th></tr>
+    ${d.recent.map(r=>`<tr><td>${esc(r.at)}</td><td class="l">${esc(r.event)}</td><td class="l">${esc(r.match_id||'')}</td><td class="l"><div class="ev" title="${esc(JSON.stringify(r.data))}">${esc(JSON.stringify(r.data))}</div></td></tr>`).join('')}</table></div></section>`;
+  $('m').innerHTML=h;
+}
+async function load(e){
+  if(e) e.preventDefault();
+  const srv=$('srv').value.replace(/\/$/,''), key=$('key').value, days=$('days').value;
+  try{localStorage.setItem('bob.dash',JSON.stringify({srv,key,days}))}catch(_){}
+  $('err').textContent='';
+  try{
+    const r=await fetch(`${srv}/v2/rpc/bob_analytics?http_key=${encodeURIComponent(key)}&unwrap`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({days:+days})});
+    const t=await r.text(); if(!r.ok) throw new Error(r.status+' '+t.slice(0,200));
+    render(JSON.parse(t));
+  }catch(err){ $('err').textContent='Could not load analytics: '+err.message+'. Is the server running (start-server.sh) and is the HTTP key right?' }
+}
+$('f').addEventListener('submit',load);
+// Tooltip for any element with data-tip.
+document.addEventListener('mousemove',ev=>{const t=ev.target.closest&&ev.target.closest('[data-tip]'),tip=$('tip');
+  if(!t){tip.style.display='none';return}
+  tip.innerText=t.getAttribute('data-tip');tip.style.display='block';
+  const x=Math.min(ev.clientX+14,innerWidth-tip.offsetWidth-8);tip.style.left=x+'px';tip.style.top=(ev.clientY+14)+'px'});
+load();
+</script>
+</body>
+</html>

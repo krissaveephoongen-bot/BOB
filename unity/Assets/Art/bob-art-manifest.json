@@ -1,0 +1,1057 @@
+{
+ "scale": 2,
+ "sprites": [
+  {
+   "path": "Sprites/Characters/sweep/sweep_idle",
+   "w": 256,
+   "h": 256,
+   "frames": 6,
+   "fps": 8,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "group": "characters",
+   "owner": "sweep",
+   "anim": "idle"
+  },
+  {
+   "path": "Sprites/Characters/sweep/sweep_walk",
+   "w": 256,
+   "h": 256,
+   "frames": 8,
+   "fps": 12,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "group": "characters",
+   "owner": "sweep",
+   "anim": "walk"
+  },
+  {
+   "path": "Sprites/Characters/sweep/sweep_carry",
+   "w": 256,
+   "h": 256,
+   "frames": 6,
+   "fps": 10,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "group": "characters",
+   "owner": "sweep",
+   "anim": "carry"
+  },
+  {
+   "path": "Sprites/Characters/sweep/sweep_work",
+   "w": 256,
+   "h": 256,
+   "frames": 4,
+   "fps": 10,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "group": "characters",
+   "owner": "sweep",
+   "anim": "work"
+  },
+  {
+   "path": "Sprites/Characters/sweep/sweep_cheer",
+   "w": 256,
+   "h": 256,
+   "frames": 6,
+   "fps": 10,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "group": "characters",
+   "owner": "sweep",
+   "anim": "cheer"
+  },
+  {
+   "path": "Sprites/Characters/sweep/sweep_portrait",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "characters",
+   "owner": "sweep"
+  },
+  {
+   "path": "Sprites/Characters/bubble/bubble_idle",
+   "w": 256,
+   "h": 256,
+   "frames": 6,
+   "fps": 8,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "group": "characters",
+   "owner": "bubble",
+   "anim": "idle"
+  },
+  {
+   "path": "Sprites/Characters/bubble/bubble_walk",
+   "w": 256,
+   "h": 256,
+   "frames": 8,
+   "fps": 12,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "group": "characters",
+   "owner": "bubble",
+   "anim": "walk"
+  },
+  {
+   "path": "Sprites/Characters/bubble/bubble_carry",
+   "w": 256,
+   "h": 256,
+   "frames": 6,
+   "fps": 10,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "group": "characters",
+   "owner": "bubble",
+   "anim": "carry"
+  },
+  {
+   "path": "Sprites/Characters/bubble/bubble_work",
+   "w": 256,
+   "h": 256,
+   "frames": 4,
+   "fps": 10,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "group": "characters",
+   "owner": "bubble",
+   "anim": "work"
+  },
+  {
+   "path": "Sprites/Characters/bubble/bubble_cheer",
+   "w": 256,
+   "h": 256,
+   "frames": 6,
+   "fps": 10,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "group": "characters",
+   "owner": "bubble",
+   "anim": "cheer"
+  },
+  {
+   "path": "Sprites/Characters/bubble/bubble_portrait",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "characters",
+   "owner": "bubble"
+  },
+  {
+   "path": "Sprites/Characters/spray/spray_idle",
+   "w": 256,
+   "h": 256,
+   "frames": 6,
+   "fps": 8,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "group": "characters",
+   "owner": "spray",
+   "anim": "idle"
+  },
+  {
+   "path": "Sprites/Characters/spray/spray_walk",
+   "w": 256,
+   "h": 256,
+   "frames": 8,
+   "fps": 12,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "group": "characters",
+   "owner": "spray",
+   "anim": "walk"
+  },
+  {
+   "path": "Sprites/Characters/spray/spray_carry",
+   "w": 256,
+   "h": 256,
+   "frames": 6,
+   "fps": 10,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "group": "characters",
+   "owner": "spray",
+   "anim": "carry"
+  },
+  {
+   "path": "Sprites/Characters/spray/spray_work",
+   "w": 256,
+   "h": 256,
+   "frames": 4,
+   "fps": 10,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "group": "characters",
+   "owner": "spray",
+   "anim": "work"
+  },
+  {
+   "path": "Sprites/Characters/spray/spray_cheer",
+   "w": 256,
+   "h": 256,
+   "frames": 6,
+   "fps": 10,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "group": "characters",
+   "owner": "spray",
+   "anim": "cheer"
+  },
+  {
+   "path": "Sprites/Characters/spray/spray_portrait",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "characters",
+   "owner": "spray"
+  },
+  {
+   "path": "Sprites/Characters/press/press_idle",
+   "w": 256,
+   "h": 256,
+   "frames": 6,
+   "fps": 8,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "group": "characters",
+   "owner": "press",
+   "anim": "idle"
+  },
+  {
+   "path": "Sprites/Characters/press/press_walk",
+   "w": 256,
+   "h": 256,
+   "frames": 8,
+   "fps": 12,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "group": "characters",
+   "owner": "press",
+   "anim": "walk"
+  },
+  {
+   "path": "Sprites/Characters/press/press_carry",
+   "w": 256,
+   "h": 256,
+   "frames": 6,
+   "fps": 10,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "group": "characters",
+   "owner": "press",
+   "anim": "carry"
+  },
+  {
+   "path": "Sprites/Characters/press/press_work",
+   "w": 256,
+   "h": 256,
+   "frames": 4,
+   "fps": 10,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "group": "characters",
+   "owner": "press",
+   "anim": "work"
+  },
+  {
+   "path": "Sprites/Characters/press/press_cheer",
+   "w": 256,
+   "h": 256,
+   "frames": 6,
+   "fps": 10,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "group": "characters",
+   "owner": "press",
+   "anim": "cheer"
+  },
+  {
+   "path": "Sprites/Characters/press/press_portrait",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "characters",
+   "owner": "press"
+  },
+  {
+   "path": "Sprites/Enemies/stain/stain_idle",
+   "w": 256,
+   "h": 256,
+   "frames": 8,
+   "fps": 10,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "group": "enemies",
+   "owner": "stain",
+   "anim": "idle"
+  },
+  {
+   "path": "Sprites/Enemies/stain/stain_hit",
+   "w": 256,
+   "h": 256,
+   "frames": 4,
+   "fps": 14,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "group": "enemies",
+   "owner": "stain",
+   "anim": "hit"
+  },
+  {
+   "path": "Sprites/Enemies/stain/stain_defeat",
+   "w": 256,
+   "h": 256,
+   "frames": 8,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "group": "enemies",
+   "owner": "stain",
+   "anim": "defeat"
+  },
+  {
+   "path": "Sprites/Enemies/dust/dust_idle",
+   "w": 256,
+   "h": 256,
+   "frames": 8,
+   "fps": 10,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "group": "enemies",
+   "owner": "dust",
+   "anim": "idle"
+  },
+  {
+   "path": "Sprites/Enemies/dust/dust_hit",
+   "w": 256,
+   "h": 256,
+   "frames": 4,
+   "fps": 14,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "group": "enemies",
+   "owner": "dust",
+   "anim": "hit"
+  },
+  {
+   "path": "Sprites/Enemies/dust/dust_defeat",
+   "w": 256,
+   "h": 256,
+   "frames": 8,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "group": "enemies",
+   "owner": "dust",
+   "anim": "defeat"
+  },
+  {
+   "path": "Sprites/Enemies/grease/grease_idle",
+   "w": 256,
+   "h": 256,
+   "frames": 8,
+   "fps": 10,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "group": "enemies",
+   "owner": "grease",
+   "anim": "idle"
+  },
+  {
+   "path": "Sprites/Enemies/grease/grease_hit",
+   "w": 256,
+   "h": 256,
+   "frames": 4,
+   "fps": 14,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "group": "enemies",
+   "owner": "grease",
+   "anim": "hit"
+  },
+  {
+   "path": "Sprites/Enemies/grease/grease_defeat",
+   "w": 256,
+   "h": 256,
+   "frames": 8,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "group": "enemies",
+   "owner": "grease",
+   "anim": "defeat"
+  },
+  {
+   "path": "Sprites/Enemies/rust/rust_idle",
+   "w": 256,
+   "h": 256,
+   "frames": 8,
+   "fps": 10,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "group": "enemies",
+   "owner": "rust",
+   "anim": "idle"
+  },
+  {
+   "path": "Sprites/Enemies/rust/rust_hit",
+   "w": 256,
+   "h": 256,
+   "frames": 4,
+   "fps": 14,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "group": "enemies",
+   "owner": "rust",
+   "anim": "hit"
+  },
+  {
+   "path": "Sprites/Enemies/rust/rust_defeat",
+   "w": 256,
+   "h": 256,
+   "frames": 8,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "group": "enemies",
+   "owner": "rust",
+   "anim": "defeat"
+  },
+  {
+   "path": "Sprites/Enemies/scale/scale_idle",
+   "w": 256,
+   "h": 256,
+   "frames": 8,
+   "fps": 10,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "group": "enemies",
+   "owner": "scale",
+   "anim": "idle"
+  },
+  {
+   "path": "Sprites/Enemies/scale/scale_hit",
+   "w": 256,
+   "h": 256,
+   "frames": 4,
+   "fps": 14,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "group": "enemies",
+   "owner": "scale",
+   "anim": "hit"
+  },
+  {
+   "path": "Sprites/Enemies/scale/scale_defeat",
+   "w": 256,
+   "h": 256,
+   "frames": 8,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "group": "enemies",
+   "owner": "scale",
+   "anim": "defeat"
+  },
+  {
+   "path": "Sprites/Parts/part_cloth",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "parts",
+   "owner": "cloth",
+   "family": "tool"
+  },
+  {
+   "path": "Sprites/Parts/part_sponge",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "parts",
+   "owner": "sponge",
+   "family": "tool"
+  },
+  {
+   "path": "Sprites/Parts/part_brush",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "parts",
+   "owner": "brush",
+   "family": "tool"
+  },
+  {
+   "path": "Sprites/Parts/part_broom",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "parts",
+   "owner": "broom",
+   "family": "tool"
+  },
+  {
+   "path": "Sprites/Parts/part_soap",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "parts",
+   "owner": "soap",
+   "family": "chem"
+  },
+  {
+   "path": "Sprites/Parts/part_vinegar",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "parts",
+   "owner": "vinegar",
+   "family": "chem"
+  },
+  {
+   "path": "Sprites/Parts/part_soda",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "parts",
+   "owner": "soda",
+   "family": "chem"
+  },
+  {
+   "path": "Sprites/Parts/part_polish",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "parts",
+   "owner": "polish",
+   "family": "chem"
+  },
+  {
+   "path": "Sprites/Parts/part_hot",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "parts",
+   "owner": "hot",
+   "family": "energy"
+  },
+  {
+   "path": "Sprites/Parts/part_steam",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "parts",
+   "owner": "steam",
+   "family": "energy"
+  },
+  {
+   "path": "Sprites/Parts/part_scrub",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "parts",
+   "owner": "scrub",
+   "family": "energy"
+  },
+  {
+   "path": "Sprites/Parts/part_air",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "parts",
+   "owner": "air",
+   "family": "energy"
+  },
+  {
+   "path": "Sprites/Parts/part_soak",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "parts",
+   "owner": "soak",
+   "family": "method"
+  },
+  {
+   "path": "Sprites/Parts/part_spray",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "parts",
+   "owner": "spray",
+   "family": "method"
+  },
+  {
+   "path": "Sprites/Parts/part_circle",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "parts",
+   "owner": "circle",
+   "family": "method"
+  },
+  {
+   "path": "Sprites/Props/cart",
+   "w": 384,
+   "h": 320,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ]
+  },
+  {
+   "path": "Sprites/Props/cart_layer",
+   "w": 256,
+   "h": 48,
+   "frames": 1,
+   "group": "props"
+  },
+  {
+   "path": "Sprites/Props/sofa",
+   "w": 512,
+   "h": 320,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ]
+  },
+  {
+   "path": "Sprites/Props/station_tool",
+   "w": 384,
+   "h": 256,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "family": "tool"
+  },
+  {
+   "path": "Sprites/Props/station_chem",
+   "w": 384,
+   "h": 256,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "family": "chem"
+  },
+  {
+   "path": "Sprites/Props/station_energy",
+   "w": 384,
+   "h": 256,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "family": "energy"
+  },
+  {
+   "path": "Sprites/Props/station_method",
+   "w": 384,
+   "h": 256,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "family": "method"
+  },
+  {
+   "path": "Sprites/Props/floor_tile",
+   "w": 128,
+   "h": 128,
+   "frames": 1,
+   "group": "props",
+   "tile": true
+  },
+  {
+   "path": "Sprites/Props/floor_tile_dirty",
+   "w": 128,
+   "h": 128,
+   "frames": 1,
+   "group": "props",
+   "tile": true
+  },
+  {
+   "path": "Sprites/UI/ui_button",
+   "w": 192,
+   "h": 96,
+   "frames": 1,
+   "group": "ui",
+   "border": [
+    36,
+    36,
+    36,
+    36
+   ]
+  },
+  {
+   "path": "Sprites/UI/ui_button_pressed",
+   "w": 192,
+   "h": 96,
+   "frames": 1,
+   "group": "ui",
+   "border": [
+    36,
+    36,
+    36,
+    36
+   ]
+  },
+  {
+   "path": "Sprites/UI/ui_button_teal",
+   "w": 192,
+   "h": 96,
+   "frames": 1,
+   "group": "ui",
+   "border": [
+    36,
+    36,
+    36,
+    36
+   ]
+  },
+  {
+   "path": "Sprites/UI/ui_panel",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "ui",
+   "border": [
+    48,
+    48,
+    48,
+    48
+   ]
+  },
+  {
+   "path": "Sprites/UI/ui_bar_bg",
+   "w": 128,
+   "h": 40,
+   "frames": 1,
+   "group": "ui",
+   "border": [
+    20,
+    20,
+    20,
+    20
+   ]
+  },
+  {
+   "path": "Sprites/UI/ui_bar_fill",
+   "w": 128,
+   "h": 40,
+   "frames": 1,
+   "group": "ui",
+   "border": [
+    20,
+    20,
+    20,
+    20
+   ]
+  },
+  {
+   "path": "Sprites/UI/ui_card",
+   "w": 192,
+   "h": 256,
+   "frames": 1,
+   "group": "ui",
+   "border": [
+    32,
+    32,
+    32,
+    32
+   ]
+  },
+  {
+   "path": "Sprites/UI/stat_clean",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/stat_gentle",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/stat_speed",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/stat_shine",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/icon_timer",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/icon_budget",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/icon_star",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/icon_star_empty",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/icon_pause",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/icon_check",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/icon_cross",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/icon_ability",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/icon_lift",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/logo_placeholder",
+   "w": 1024,
+   "h": 1024,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/FX/fx_bubble_pop",
+   "w": 256,
+   "h": 256,
+   "frames": 6,
+   "fps": 16,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.5
+   ],
+   "group": "fx"
+  },
+  {
+   "path": "Sprites/FX/fx_sparkle",
+   "w": 256,
+   "h": 256,
+   "frames": 6,
+   "fps": 14,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.5
+   ],
+   "group": "fx"
+  },
+  {
+   "path": "Sprites/FX/fx_steam",
+   "w": 256,
+   "h": 256,
+   "frames": 6,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.5
+   ],
+   "group": "fx"
+  },
+  {
+   "path": "Sprites/FX/fx_poof",
+   "w": 256,
+   "h": 256,
+   "frames": 6,
+   "fps": 14,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.5
+   ],
+   "group": "fx"
+  },
+  {
+   "path": "Sprites/FX/fx_fizz",
+   "w": 256,
+   "h": 256,
+   "frames": 6,
+   "fps": 12,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.5
+   ],
+   "group": "fx"
+  },
+  {
+   "path": "Sprites/FX/fx_target",
+   "w": 256,
+   "h": 256,
+   "frames": 4,
+   "fps": 8,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.5
+   ],
+   "group": "fx"
+  }
+ ]
+}
