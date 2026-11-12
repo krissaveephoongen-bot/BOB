@@ -53,6 +53,54 @@ namespace Bob.Game
             return r;
         }
 
+        /// <summary>Pin a rect to one anchor point: pos is the offset from that anchor, size its size.</summary>
+        public static RectTransform Pin(RectTransform r, Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 size)
+        {
+            r.anchorMin = r.anchorMax = anchor; r.pivot = pivot; r.anchoredPosition = pos; r.sizeDelta = size;
+            return r;
+        }
+
+        static Sprite circle;
+        /// <summary>A soft-edged white disc, for the joystick and round badges.</summary>
+        public static Sprite Circle
+        {
+            get
+            {
+                if (circle != null) return circle;
+                const int n = 128; var tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+                var px = new Color32[n * n];
+                for (int y = 0; y < n; y++)
+                    for (int x = 0; x < n; x++)
+                    {
+                        float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(n / 2f, n / 2f));
+                        byte a = (byte)(Mathf.Clamp01(n / 2f - 1 - d) * 255);
+                        px[y * n + x] = new Color32(255, 255, 255, a);
+                    }
+                tex.SetPixels32(px); tex.Apply();
+                circle = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100);
+                return circle;
+            }
+        }
+
+        public static Image Img(Transform parent, string sprite, float size, Color? tint = null)
+        {
+            var r = Rect("Img", parent);
+            var img = r.gameObject.AddComponent<Image>();
+            img.sprite = Art != null && Art.Has(sprite) ? Art.Get(sprite) : null;
+            img.preserveAspect = true; img.raycastTarget = false; img.color = tint ?? Color.white;
+            r.sizeDelta = new Vector2(size, size);
+            Size(img, size, size, 0, size);
+            return img;
+        }
+
+        public static Image Disc(Transform parent, Color c, float size, string name = "Disc")
+        {
+            var r = Rect(name, parent);
+            var img = r.gameObject.AddComponent<Image>(); img.sprite = Circle; img.color = c;
+            r.sizeDelta = new Vector2(size, size);
+            return img;
+        }
+
         public static Image Panel(Transform parent, Color c, string sprite = "ui_panel", string name = "Panel")
         {
             var r = Rect(name, parent);
@@ -87,7 +135,7 @@ namespace Bob.Game
 
         public static LayoutElement Size(Component c, float minH = -1, float prefH = -1, float flexW = -1, float prefW = -1, float flexH = -1)
         {
-            var le = c.GetComponent<LayoutElement>() ?? c.gameObject.AddComponent<LayoutElement>();
+            if (!c.TryGetComponent<LayoutElement>(out var le)) le = c.gameObject.AddComponent<LayoutElement>();
             if (minH >= 0) le.minHeight = minH;
             if (prefH >= 0) le.preferredHeight = prefH;
             if (flexW >= 0) le.flexibleWidth = flexW;
