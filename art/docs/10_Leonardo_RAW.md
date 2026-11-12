@@ -1,6 +1,6 @@
 # 10 · ภาพ RAW จาก Leonardo.ai (12 พ.ย. 2026)
 
-สร้างครบทุก asset ในบัญชี Leonardo ของผู้ใช้ผ่าน Claude in Chrome รวม 740 ภาพ (+ ฉากหลังล็อบบี้ 144 ภาพ + ชุดเติมส่วนที่ขาด 324 ภาพ + รอบสร้างใหม่ 128 ภาพ) เก็บไว้ที่ `bob-art/leonardo_raw/` (ทั้งใน project files และ `C:\Users\Jakgrits\SweapBattle\bob-art\leonardo_raw\`) ภาพรวม: `docs/overview_leonardo_raw.jpg`, `docs/overview_lobby_backgrounds.jpg`, `docs/overview_leonardo_gapfill.jpg`
+สร้างครบทุก asset ในบัญชี Leonardo ของผู้ใช้ผ่าน Claude in Chrome รวม 740 ภาพ (+ ฉากหลังล็อบบี้ 144 ภาพ + ชุดเติมส่วนที่ขาด 324 ภาพ + รอบสร้างใหม่ 128 ภาพ) เก็บไว้ที่ `bob-art/leonardo_raw/` (ทั้งใน project files และ `C:\Users\Jakgrits\SweapBattle\bob-art\leonardo_raw\`) ใน repo อยู่ที่ `art/leonardo_raw/` (Git LFS, `.gitattributes` ที่ราก repo) ภาพรวม: `docs/overview_leonardo_raw.jpg`, `docs/overview_lobby_backgrounds.jpg`, `docs/overview_leonardo_gapfill.jpg`
 
 **สถานะ: RAW** ยังไม่ลบพื้นหลัง ยังไม่ตัดเฟรม ยังไม่ได้แทน placeholder ใน Unity ผู้ใช้จะนำไปจัดต่อเอง
 
