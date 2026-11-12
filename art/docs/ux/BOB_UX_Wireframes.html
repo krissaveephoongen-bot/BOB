@@ -1,0 +1,417 @@
+<title>BOB UX Wireframes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mitr:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap">
+<style>
+/* Layout: a spec sheet. Sticky section nav, then the flow, a gallery of 20:9 phone frames, then the component sheet. */
+:root{
+  --bg:#F4F6FB; --panel:#FFFFFF; --fg:#0B1A3A; --muted:#55607A; --line:#D7DDEA; --accent:#1A6FC4; --chip:#E8EEF8;
+  --display:"Mitr","IBM Plex Sans Thai",system-ui,sans-serif;
+  --body:"IBM Plex Sans Thai","Noto Sans Thai",system-ui,sans-serif;
+  --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0B1222;--panel:#121B30;--fg:#E8EDF8;--muted:#9AA6C2;--line:#26324D;--accent:#6CB2FF;--chip:#1B2742;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0B1222;--panel:#121B30;--fg:#E8EDF8;--muted:#9AA6C2;--line:#26324D;--accent:#6CB2FF;--chip:#1B2742;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.6}
+.wrap{max-width:1240px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 64px}
+h1,h2,h3{font-family:var(--display);font-weight:600;text-wrap:balance;margin:0}
+h1{font-size:clamp(28px,4vw,40px)}
+h2{font-size:24px;margin-bottom:6px}
+h3{font-size:17px;font-weight:500}
+p{margin:0;max-width:70ch}
+.lead{color:var(--muted);margin-top:8px}
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);margin:20px 0 8px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+nav .row{display:flex;gap:6px;flex-wrap:wrap;padding-block:10px;align-items:center}
+nav a{color:var(--fg);text-decoration:none;font-size:14px;padding:6px 12px;border-radius:999px;background:var(--chip)}
+nav a:hover,nav a:focus-visible{background:var(--accent);color:#fff;outline:none}
+.toggles{margin-left:auto;display:flex;gap:12px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+.toggles label{display:flex;gap:6px;align-items:center;cursor:pointer}
+section{padding-top:36px;display:grid;gap:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,540px),1fr));gap:18px}
+figure{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;gap:10px;min-width:0}
+figure svg{width:100%;height:auto;display:block;border-radius:10px;background:#0b1a3a}
+figcaption{display:grid;gap:4px;min-width:0}
+figcaption .id{font-family:var(--mono);font-size:12px;color:var(--accent)}
+figcaption p{font-size:14px;color:var(--muted)}
+.zone{display:none}
+body.show-zones .zone{display:inline}
+.safe{display:none}
+body.show-safe .safe{display:inline}
+.mermaid-box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;overflow-x:auto}
+/* component sheet */
+.sheet{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr));gap:18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:12px;align-content:start;min-width:0}
+.card .meta{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.stage{background:#FEEECF;border-radius:10px;padding:14px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.gb{font-family:var(--display);font-weight:600;border:3px solid #041E4F;border-radius:16px;padding:10px 18px;min-height:48px;min-width:96px;box-shadow:0 5px 0 rgba(4,30,79,.35);cursor:pointer;transition:transform 70ms ease-out,box-shadow 70ms ease-out;font-size:16px;line-height:1.2}
+.gb:active,.gb.is-pressed{transform:translateY(4px) scale(.97);box-shadow:0 1px 0 rgba(4,30,79,.35)}
+.gb:focus-visible{outline:3px solid #FD7713;outline-offset:3px}
+.gb.primary{background:linear-gradient(#FFD166,#F6C431);color:#041E4F}
+.gb.secondary{background:#1A6FC4;color:#fff}
+.gb.tertiary{background:#FEEECF;color:#2E4484;border-color:#2E4484}
+.gb.danger{background:#D81E36;color:#fff}
+.gb.success{background:#178A4F;color:#fff}
+.gb.icon{width:48px;min-width:48px;height:48px;padding:0;border-radius:50%;background:#2E4484;color:#fff;font-size:20px}
+.gb[disabled]{background:#C9CFDD;color:#5A5F7A;box-shadow:none;border-color:#9AA3B8;cursor:not-allowed}
+.gb.selected{box-shadow:0 0 0 4px #FD7713,0 5px 0 rgba(4,30,79,.35)}
+.cap{font-size:12px;color:#5A5F7A;text-align:center;font-family:var(--mono)}
+.col{display:grid;gap:6px;justify-items:center}
+.sw{display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:center;font-size:13px}
+.sw i{width:44px;height:44px;border-radius:10px;border:1px solid var(--line);display:block}
+.sw b{font-family:var(--mono);font-weight:500}
+.typescale{display:grid;gap:6px}
+.typescale div{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.typescale span:first-child{font-family:var(--mono);font-size:12px;color:var(--muted);width:110px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--display);font-weight:500}
+.tblwrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 10px}
+@media (prefers-reduced-motion: reduce){.gb{transition:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>BOB · UX/UI Wireframes</h1>
+    <p class="lead">หน้าจอ ปุ่ม และ component ของ "สมรภูมิปัดกวาด" บนมือถือแนวนอน ทุกภาพวาดบนกรอบ 2340×1080u (มือถือ 19.5:9 ที่ canvas อ้างอิง 1920×1080 match ความสูง) สเปกเต็มอยู่ใน <code>art/docs/11_UX_UI_Spec.md</code></p>
+  </header>
+
+  <nav aria-label="หมวด">
+    <div class="row">
+      <a href="#flow">Flow</a><a href="#onboarding">เริ่มเกม</a><a href="#lobby">ล็อบบี้</a><a href="#match">ในแมตช์</a><a href="#meta">ร้าน/ตั้งค่า</a><a href="#components">Components</a><a href="#tokens">Tokens</a>
+      <div class="toggles">
+        <label><input type="checkbox" id="tg-zones"> โซนนิ้วโป้ง</label>
+        <label><input type="checkbox" id="tg-safe" checked> Safe area</label>
+      </div>
+    </div>
+  </nav>
+
+  <section id="flow">
+    <h2>แผนผังหน้าจอ</h2>
+    <p class="lead">เส้นทางหลัก: เปิดแอป → ล็อบบี้ → ห้องทีม → จับคู่ → เลือกตัวละคร → 3 รอบ → ผลแมตช์ → เล่นอีก (กลับห้องเดิม)</p>
+    <div class="mermaid-box">
+<pre class="mermaid">
+flowchart LR
+  S00[Splash] --> S01[ตรวจเวอร์ชัน/โหลด]
+  S01 -->|ครั้งแรก| S02[เข้าสู่ระบบ] --> S03[อายุ+ยินยอม] --> S04[ตั้งชื่อ] --> S05[Tutorial]
+  S01 -->|มีบัญชี| S10
+  S05 --> S10[Home / Lobby]
+  S10 --> S11[เลือกโหมด]
+  S11 -->|Story| S13[แผนที่ด่าน] --> S14
+  S11 -->|Solo / Duo / Friends / Party / Community| S14[ห้องทีม]
+  S14 --> S15[จับคู่] --> S16[เลือกตัวละคร 15 วิ] --> S17[VS]
+  S17 --> S20[ใบงานห้อง] --> S21[3-2-1] --> S22[HUD จัดชุด] --> S25[ทดสอบ ก่อน-หลัง] --> S26[ผลรอบ]
+  S26 -->|รอบถัดไป| S20
+  S22 -.-> S24[หยุดเกม]
+  S26 -->|ครบ 3 รอบ| S27[ผลแมตช์+รางวัล]
+  S27 -->|เล่นอีก| S14
+  S27 -->|หน้าหลัก| S10
+  S10 --> S30[ร้านค้า] & S31[ตู้เสื้อผ้า] & S34[ภารกิจ] & S36[เพื่อน] & S38[จดหมาย] & S39[ตั้งค่า]
+</pre>
+    </div>
+  </section>
+
+  <section id="onboarding"><h2>เริ่มเกม</h2><div class="grid" id="g-onboarding"></div></section>
+  <section id="lobby"><h2>ล็อบบี้และก่อนแมตช์</h2><div class="grid" id="g-lobby"></div></section>
+  <section id="match"><h2>ในแมตช์</h2><p class="lead">HUD เก็บเลย์เอาต์ของ PR #2 (ใบงานซ้ายบน, เวลาบนกลาง, รถเข็นขวา, มือล่างกลาง, จอยสติ๊กซ้าย) แล้วเพิ่มถาดเพื่อน, Quick Ping, ส่งทดสอบแบบกดค้าง และขยายเป้ากดเป็น ≥ 144u</p><div class="grid" id="g-match"></div></section>
+  <section id="meta"><h2>ร้านค้า ตั้งค่า และ popup</h2><div class="grid" id="g-meta"></div></section>
+
+  <section id="components">
+    <h2>Component sheet</h2>
+    <p class="lead">ปุ่มด้านล่างกดได้จริงเพื่อดูสถานะ pressed ขนาดในหน้านี้ย่อลง ขนาดจริงดูจาก u ในป้ายใต้ปุ่ม (144u = 48 dp)</p>
+    <div class="sheet">
+      <div class="card">
+        <h3>ปุ่ม: ชนิด</h3>
+        <div class="stage">
+          <div class="col"><button class="gb primary" style="min-width:150px;min-height:62px;font-size:20px">เล่น</button><span class="cap">BTN-Primary-XL 520×200</span></div>
+          <div class="col"><button class="gb primary">ยืนยัน</button><span class="cap">Primary ≥360×160</span></div>
+          <div class="col"><button class="gb secondary">เชิญเพื่อน</button><span class="cap">Secondary ≥300×144</span></div>
+          <div class="col"><button class="gb tertiary">ยกเลิก</button><span class="cap">Tertiary ≥240×144</span></div>
+          <div class="col"><button class="gb danger">ออกจากแมตช์</button><span class="cap">Danger ≥300×144</span></div>
+          <div class="col"><button class="gb success">ส่งทดสอบ ✓</button><span class="cap">Submit 440×180</span></div>
+          <div class="col"><button class="gb icon" aria-label="หยุดเกม">❚❚</button><span class="cap">Icon hit 144</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>ปุ่ม: สถานะ</h3>
+        <div class="stage">
+          <div class="col"><button class="gb primary">ปกติ</button><span class="cap">normal</span></div>
+          <div class="col"><button class="gb primary is-pressed">กดอยู่</button><span class="cap">pressed −8u</span></div>
+          <div class="col"><button class="gb primary" disabled>งบไม่พอ</button><span class="cap">disabled + เหตุผล</span></div>
+          <div class="col"><button class="gb tertiary selected">เลือกแล้ว</button><span class="cap">selected</span></div>
+          <div class="col"><button class="gb secondary">● ● ●</button><span class="cap">loading</span></div>
+        </div>
+        <p class="meta">กด: ui_tap + selection haptic · ปล่อย (Primary): ui_confirm + light · disabled ยังแตะได้เพื่อบอกเหตุผล</p>
+      </div>
+      <div class="card">
+        <h3>แถบ ชิป ป้าย</h3>
+        <svg viewBox="0 0 720 300" role="img" aria-label="ตัวอย่างแถบค่าและชิป" id="cmp-bars" style="width:100%;height:auto;background:#FEEECF;border-radius:10px"></svg>
+        <p class="meta">BAR-Stat 340×40 + เส้นเป้า · CHIP-Currency สูง 96 · TIMER-Pill 250×100 · PIPS-Round · BADGE · ICON-Family ▲●⚡◆</p>
+      </div>
+      <div class="card">
+        <h3>การควบคุมในแมตช์</h3>
+        <svg viewBox="0 0 720 300" role="img" aria-label="จอยสติ๊ก ปุ่ม ability และวงล้อ ping" id="cmp-ctrl" style="width:100%;height:auto;background:#DDE9F7;border-radius:10px"></svg>
+        <p class="meta">Joystick ฐาน 260 ปุ่ม 120 · Ability วงกลม 200 · Ping wheel 6 ช่อง รัศมี 260 · Drag ghost ยกเหนือนิ้ว 80u</p>
+      </div>
+      <div class="card">
+        <h3>การ์ด</h3>
+        <svg viewBox="0 0 720 320" role="img" aria-label="การ์ดฮีโร่ การ์ดชิ้นส่วน การ์ดสินค้า" id="cmp-cards" style="width:100%;height:auto;background:#2E4484;border-radius:10px"></svg>
+        <p class="meta">CARD-Hero 360×560 · CARD-Part 160×176 (มือ) / 176×220 (ชั้นวาง) · CARD-ShopItem 320×420</p>
+      </div>
+      <div class="card">
+        <h3>Feedback</h3>
+        <svg viewBox="0 0 720 300" role="img" aria-label="toast modal banner" id="cmp-fb" style="width:100%;height:auto;background:#9FC7EE;border-radius:10px"></svg>
+        <p class="meta">TOAST สูง 112 บนกลาง 2.5 วิ · MODAL 900–1200 กว้าง · BANNER-Offline สูง 72 · SPINNER-Bubble 96</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="tokens">
+    <h2>Tokens</h2>
+    <div class="sheet">
+      <div class="card"><h3>สี</h3><div id="swatches" style="display:grid;gap:8px"></div></div>
+      <div class="card">
+        <h3>ตัวอักษร (u ที่ 1920×1080 · ≈ sp)</h3>
+        <div class="typescale">
+          <div><span>display 120 · 40</span><span style="font-family:var(--display);font-size:34px;font-weight:600">3-2-1 เริ่ม!</span></div>
+          <div><span>h1 72 · 24</span><span style="font-family:var(--display);font-size:24px;font-weight:600">ผลแมตช์</span></div>
+          <div><span>h2 56 · 19</span><span style="font-family:var(--display);font-size:19px;font-weight:500">กวาด · จัดทัพ</span></div>
+          <div><span>button.lg 60 · 20</span><span style="font-family:var(--display);font-size:20px;font-weight:600">ส่งทดสอบ</span></div>
+          <div><span>body 42 · 14</span><span style="font-size:14px">ซ้อนน้ำร้อนใต้สบู่ช่วยละลายคราบมัน</span></div>
+          <div><span>caption 36 · 12</span><span style="font-size:12px">ฟองน้ำ · 15 งบ (ขั้นต่ำ)</span></div>
+        </div>
+        <p class="meta">Mitr (หัวข้อ/ปุ่ม/ตัวเลข) + IBM Plex Sans Thai (เนื้อความ), line-height ไทย ≥ 1.5, ตัดคำด้วย U+200B ตอน build</p>
+      </div>
+      <div class="card">
+        <h3>ขนาดเป้ากดและโซน</h3>
+        <div class="tblwrap"><table>
+          <thead><tr><th>ประเภท</th><th>ขั้นต่ำ</th><th>แนะนำ</th></tr></thead>
+          <tbody>
+            <tr><td>ทั่วไป</td><td>144u (48 dp)</td><td>160u</td></tr>
+            <tr><td>ในแมตช์</td><td>160u</td><td>176–200u</td></tr>
+            <tr><td>ปุ่มหลัก</td><td>สูง 160u</td><td>180 × 420–520u</td></tr>
+            <tr><td>ระยะห่าง</td><td>16u</td><td>24u</td></tr>
+          </tbody>
+        </table></div>
+        <p class="meta">1 dp ≈ 3u บนมือถือแนวนอนสูง 360 dp · เผื่อขอบ safe area อีก 24u</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+const W=2340,H=1080, NL=132, NR=48, NB=60, PAD=24;
+const SL=NL+PAD, SR=W-NR-PAD, ST=PAD, SB=H-NB-PAD;
+const C={ink:'#041E4F',frame:'#2E4484',cream:'#FEEECF',surface:'#FFFDF5',gold:'#F6C431',gold2:'#FFD166',orange:'#FD7713',blue:'#1A6FC4',sky:'#3695F2',red:'#FB2F44',green:'#178A4F',danger:'#D81E36',muted:'#5A5F7A',spark:'#3DDC84',
+  sweep:'#F79A2E',bubble:'#3D8FE0',press:'#2FA97A',spray:'#8E6BD8',tool:'#F4A340',chem:'#4EA8DE',energy:'#EF476F',method:'#9B7EDE',grey:'#C9CFDD'};
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const R=(x,y,w,h,f,o={})=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${o.r??0}" fill="${f}"${o.s?` stroke="${o.s}" stroke-width="${o.sw??5}"`:''}${o.dash?` stroke-dasharray="${o.dash}"`:''}${o.op!=null?` opacity="${o.op}"`:''}/>`;
+const Ci=(x,y,r,f,o={})=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${f}"${o.s?` stroke="${o.s}" stroke-width="${o.sw??5}"`:''}${o.op!=null?` opacity="${o.op}"`:''}${o.dash?` stroke-dasharray="${o.dash}"`:''}/>`;
+const T=(x,y,t,sz=42,f=C.ink,o={})=>`<text x="${x}" y="${y}" font-size="${sz}" fill="${f}" text-anchor="${o.a||'start'}" font-family="${o.d===false?'IBM Plex Sans Thai,system-ui':'Mitr,IBM Plex Sans Thai,system-ui'}" font-weight="${o.w||500}" dominant-baseline="middle"${o.st?` stroke="${o.st}" stroke-width="${o.sw||8}" paint-order="stroke"`:''}>${esc(t)}</text>`;
+const KIND={primary:[C.gold,C.ink],secondary:[C.blue,'#fff'],tertiary:[C.cream,C.frame],danger:[C.danger,'#fff'],success:[C.green,'#fff'],dis:[C.grey,C.muted],navy:[C.frame,'#fff']};
+function B(x,y,w,h,label,k='primary',sz){const [f,t]=KIND[k];sz=sz||Math.min(60,h*0.36);
+  return R(x,y+10,w,h,C.ink,{r:Math.min(44,h/2),op:k==='dis'?0:.35})+R(x,y,w,h,f,{r:Math.min(44,h/2),s:k==='tertiary'?C.frame:C.ink})+
+  (k==='primary'?R(x+12,y+10,w-24,h*0.38,'#fff',{r:Math.min(30,h/3),op:.28}):'')+T(x+w/2,y+h/2+2,label,sz,t,{a:'middle',w:600});}
+function IB(x,y,d,glyph,f=C.frame){return Ci(x,y+6,d/2,C.ink,{op:.35})+Ci(x,y,d/2,f,{s:C.ink})+T(x,y+2,glyph,d*0.42,'#fff',{a:'middle',w:600});}
+function panel(x,y,w,h,title,f=C.cream){let s=R(x,y+12,w,h,C.ink,{r:44,op:.25})+R(x,y,w,h,f,{r:44,s:C.frame,sw:8});
+  if(title){s+=R(x+w/2-Math.max(220,title.length*24),y-44,Math.max(440,title.length*48),88,C.frame,{r:44})+T(x+w/2,y,title,52,'#fff',{a:'middle',w:600});}return s;}
+function chip(x,y,w,label,dot,plus){let s=R(x,y,w,96,C.surface,{r:48,s:C.ink,sw:4})+Ci(x+48,y+48,30,dot,{s:C.ink,sw:3})+T(x+92,y+50,label,44,C.ink,{w:600});
+  if(plus)s+=Ci(x+w-48,y+48,30,C.green,{s:C.ink,sw:3})+T(x+w-48,y+50,'+',44,'#fff',{a:'middle',w:600});return s;}
+function bar(x,y,w,v,t,label,icon){let s=Ci(x+20,y+20,20,icon,{s:C.ink,sw:3})+R(x+52,y,w-52,40,'#E6DCC2',{r:20,s:C.ink,sw:3})+R(x+52,y,(w-52)*v,40,icon,{r:20});
+  const tx=x+52+(w-52)*t;s+=R(tx-3,y-8,6,56,C.ink);if(label)s+=T(x+w+16,y+20,label,30,C.ink,{d:false});if(v>=t)s+=T(x+w-18,y+21,'✓',30,C.ink,{a:'middle',w:600});return s;}
+function hero(x,y,s,col,kind){const hr=60*s;let g=`<g>`;
+  g+=`<ellipse cx="${x}" cy="${y+150*s}" rx="${70*s}" ry="${14*s}" fill="${C.ink}" opacity=".2"/>`;
+  g+=R(x-48*s,y+40*s,96*s,100*s,col,{r:28*s,s:C.ink,sw:4*s})+R(x-34*s,y+60*s,68*s,70*s,C.cream,{r:16*s});
+  g+=Ci(x,y-20*s,hr,'#FADDC1',{s:C.ink,sw:4*s});
+  if(kind==='sweep')g+=R(x-hr,y-60*s,hr*2,22*s,C.red,{r:10*s});
+  if(kind==='bubble'){g+=Ci(x-48*s,y-72*s,26*s,'#8A5530',{s:C.ink,sw:3*s})+Ci(x+48*s,y-72*s,26*s,'#8A5530',{s:C.ink,sw:3*s});}
+  if(kind==='press')g+=R(x-56*s,y-96*s,112*s,56*s,'#B9BEC6',{r:12*s,s:C.ink,sw:4*s});
+  if(kind==='spray')g+=R(x-hr,y-44*s,hr*2,26*s,'#7FD3F7',{r:12*s,s:C.ink,sw:3*s});
+  g+=Ci(x-20*s,y-14*s,9*s,C.ink)+Ci(x+20*s,y-14*s,9*s,C.ink)+Ci(x-34*s,y+6*s,8*s,'#F7A1A1',{op:.8})+Ci(x+34*s,y+6*s,8*s,'#F7A1A1',{op:.8});
+  return g+'</g>';}
+function enemy(x,y,s,col){return `<ellipse cx="${x}" cy="${y}" rx="${70*s}" ry="${56*s}" fill="${col}" stroke="${C.ink}" stroke-width="${4*s}"/>`+Ci(x-22*s,y-10*s,16*s,'#fff')+Ci(x+22*s,y-10*s,16*s,'#fff')+Ci(x-20*s,y-8*s,7*s,C.ink)+Ci(x+20*s,y-8*s,7*s,C.ink);}
+function img(x,y,w,h,label,f='#9FC7EE'){return R(x,y,w,h,f,{r:28})+`<path d="M${x} ${y+h} L${x+w*0.35} ${y+h*0.55} L${x+w*0.55} ${y+h*0.75} L${x+w*0.75} ${y+h*0.45} L${x+w} ${y+h}" fill="#fff" opacity=".35"/>`+T(x+w/2,y+h/2,label,34,C.ink,{a:'middle',d:false});}
+function topbar(title,back=true){let s='';if(back)s+=IB(SL+72,ST+64,128,'←');s+=T(SL+(back?160:0),ST+64,title,72,'#fff',{w:600,st:C.ink});
+  s+=chip(SR-760,ST+16,300,'1,250',C.gold,true)+chip(SR-440,ST+16,240,'40',C.sky,true)+IB(SR-136,ST+64,112,'✉')+IB(SR-16-40,ST+64,112,'⚙');
+  s+=Ci(SR-136+40,ST+22,16,C.red,{s:'#fff',sw:4});return s;}
+function bg(top='#9FD1FF',bottom='#FEEECF'){const id='g'+Math.random().toString(36).slice(2,7);return `<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${top}"/><stop offset="1" stop-color="${bottom}"/></linearGradient></defs>`+R(0,0,W,H,`url(#${id})`);}
+function overlays(){let s=`<g class="safe">`+R(0,0,NL,H,'#000',{op:.35})+T(NL/2,H/2,'รอยบาก',30,'#fff',{a:'middle',d:false})+R(W-NR,0,NR,H,'#000',{op:.2})+R(0,H-NB,W,NB,'#000',{op:.2})+
+  R(SL,ST,SR-SL,SB-ST,'none',{s:'#FF3B8B',sw:4,dash:'18 14'})+`</g>`;
+  s+=`<g class="zone"><path d="M${SL} ${SB} L${SL} ${SB-540} Q${SL+700} ${SB-520} ${SL+820} ${SB} Z" fill="#3DDC84" opacity=".28"/><path d="M${SR} ${SB} L${SR} ${SB-540} Q${SR-700} ${SB-520} ${SR-820} ${SB} Z" fill="#3DDC84" opacity=".28"/>`+
+  T(SL+40,SB-470,'โป้งซ้าย',40,'#0A5C2E',{w:600})+T(SR-40,SB-470,'โป้งขวา',40,'#0A5C2E',{w:600,a:'end'})+R(W/2-500,ST,1000,200,'#FF8A00',{op:.18,r:20})+T(W/2,ST+100,'ยากต่อนิ้ว: ข้อมูลอ่านอย่างเดียว',36,'#7A3A00',{a:'middle',w:600})+`</g>`;return s;}
+function screen(id,title,desc,body,target){const fig=document.createElement('figure');
+  fig.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(id+' '+title)}">${body}${overlays()}</svg><figcaption><span class="id">${esc(id)}</span><h3>${esc(title)}</h3><p>${desc}</p></figcaption>`;
+  document.getElementById(target).appendChild(fig);}
+
+/* ---------- Onboarding ---------- */
+screen('S01','ตรวจเวอร์ชัน / ดาวน์โหลด','ภาพ screen_loading เต็มจอ แถบโหลดกลางล่างพร้อม MB และ tip สอนการซ้อนที่สลับทุก 4 วิ เกิน 50 MB บนเน็ตมือถือถามก่อน',
+  bg('#7EC2FF','#CFE6FF')+img(0,0,W,H,'',"#A9D3FF")+hero(760,520,1.6,C.sweep,'sweep')+hero(1060,540,1.5,C.bubble,'bubble')+hero(1360,520,1.6,C.press,'press')+hero(1660,540,1.5,C.spray,'spray')+
+  R(W/2-560,820,1120,72,C.surface,{r:36,s:C.frame,sw:6})+R(W/2-554,826,1108*0.45,60,C.gold,{r:30})+T(W/2,780,'กำลังเตรียมรถเข็น… 45% · 12.4 / 38 MB',44,C.ink,{a:'middle',w:600,st:'#fff',sw:10})+
+  T(W/2,950,'เคล็ดลับ: น้ำร้อนใต้สบู่ ช่วยละลายคราบมัน',40,C.ink,{a:'middle',d:false,st:'#fff',sw:10}),'g-onboarding');
+
+screen('S02','เข้าสู่ระบบ','ภาพ screen_login ซ้าย 60% panel ครีมขวา ปุ่ม Guest เด่นสุด, Google/Apple เป็นปุ่มรอง, ลิงก์นโยบายใต้ panel มีเป้ากด 144u',
+  bg('#8FD0FF','#F2E3B8')+img(SL,140,1240,820,'ภาพ: screen_login (โรงเรียน + 4 ฮีโร่)','#BFE1FF')+panel(SR-760,170,740,780,'BOB')+
+  B(SR-700,280,620,170,'เล่นเลย','primary')+B(SR-700,500,620,144,'เข้าด้วย Google','tertiary',44)+B(SR-700,670,620,144,'เข้าด้วย Apple','tertiary',44)+
+  T(SR-390,870,'นโยบายความเป็นส่วนตัว · ข้อตกลง',34,C.frame,{a:'middle',d:false}),'g-onboarding');
+
+screen('S05','Tutorial แมตช์แรก','coach mark บน HUD จริง 6 ขั้น เป้า ≤ 30 วิ dim 60% แต่ไม่บล็อกการแตะ ปุ่ม "ข้าม" บนขวาเสมอ',
+  bg('#E9D6A8','#D9C38F')+R(0,0,W,H,C.ink,{op:.6})+Ci(1180,980,210,'#fff',{op:.12})+
+  R(1030,880,160,176,C.surface,{r:24,s:C.ink})+T(1110,960,'ฟองน้ำ',34,C.ink,{a:'middle'})+
+  `<path d="M1140 900 C1400 700 1700 560 1900 470" stroke="#fff" stroke-width="12" fill="none" stroke-dasharray="26 20"/>`+Ci(1900,470,40,'#fff',{op:.8})+
+  R(1560,300,560,420,C.surface,{r:28,s:C.spark,sw:10})+T(1840,510,'รถเข็น',48,C.ink,{a:'middle',w:600})+
+  panel(700,160,940,180)+T(1170,250,'ลากฟองน้ำไปวางบนรถเข็น',56,C.ink,{a:'middle',w:600})+
+  B(SR-280,ST+20,260,120,'ข้าม','tertiary',44)+T(SL+40,ST+80,'ขั้น 3 / 6',44,'#fff',{w:600}),'g-onboarding');
+
+/* ---------- Lobby ---------- */
+screen('S10','Home / Lobby','ปุ่ม "เล่น" ใหญ่สุดล่างขวา selector โหมดข้างกัน dock 5 ปุ่มล่างซ้าย top bar มีระดับ ภารกิจ สกุลเงิน จดหมาย ตั้งค่า ฉากหลังหมุนจาก lobby_backgrounds ตามเวลาเครื่อง',
+  bg('#9FD1FF','#F3E3B5')+img(0,0,W,H,'','#CFE6FF')+R(0,760,W,320,'#E6C98E')+
+  Ci(SL+72,ST+64,60,C.sweep,{s:C.ink})+T(SL+150,ST+44,'Krit · Lv.12',44,'#fff',{w:600,st:C.ink})+R(SL+150,ST+80,300,24,'#fff',{r:12,s:C.ink,sw:3})+R(SL+150,ST+80,190,24,C.green,{r:12})+
+  B(SL+500,ST+16,240,112,'ภารกิจ','tertiary',40)+Ci(SL+730,ST+24,16,C.red,{s:'#fff',sw:4})+B(SL+760,ST+16,240,112,'Season','tertiary',40)+
+  chip(SR-760,ST+16,300,'1,250',C.gold,true)+chip(SR-440,ST+16,240,'40',C.sky,true)+IB(SR-136,ST+64,112,'✉')+Ci(SR-96,ST+22,16,C.red,{s:'#fff',sw:4})+IB(SR-40,ST+64,112,'⚙')+
+  img(SL,200,640,280,'แบนเนอร์ซีซัน / อีเวนต์','#FFD9A8')+
+  Ci(1170,700,240,'#fff',{op:.35})+hero(1170,500,2.3,C.sweep,'sweep')+hero(1530,560,1.4,C.bubble,'bubble')+R(1700,520,180,240,'none',{r:28,s:'#fff',sw:6,dash:'20 14'})+T(1790,640,'+ ชวน',40,'#fff',{a:'middle',w:600,st:C.ink})+
+  panel(SR-470,210,450,250)+T(SR-245,290,'เพื่อน 3 ออนไลน์',40,C.ink,{a:'middle',w:600})+B(SR-400,350,310,100,'+ ชวน','secondary',38)+
+  [['ร้านค้า','🛒'],['ตู้','👕'],['บ้าน','🏠'],['เพื่อน','👥'],['สูตร','📖']].map((d,i)=>R(SL+i*196,SB-176,176,176,C.surface,{r:32,s:C.ink})+T(SL+i*196+88,SB-110,d[1],64,C.ink,{a:'middle'})+T(SL+i*196+88,SB-36,d[0],34,C.ink,{a:'middle'})).join('')+
+  Ci(SL+176-10,SB-170,16,C.red,{s:'#fff',sw:4})+
+  B(SR-860,SB-170,300,160,'Duo ▾','secondary',48)+B(SR-520,SB-200,520,200,'เล่น','primary',84),'g-lobby');
+
+screen('S11','เลือกโหมด','การ์ดโหมดแนวนอน เลื่อนได้ บอกจำนวนคนและความยาว โหมดที่ล็อกยังแตะได้เพื่อดูเงื่อนไข',
+  bg('#7EC2FF','#E8F3FF')+topbar('เลือกโหมด')+
+  [['Story','1-4 คน','บท 1-6',C.sweep],['Solo','1 คน','6 นาที',C.bubble],['Duo','2 คน','6 นาที',C.red],['Friends','2-4 คน','6 นาที',C.press],['Party','3-7 คน','8 นาที',C.spray]].map((m,i)=>{const x=SL+i*420,y=240,sel=i===2;
+    return R(x,y+(sel?-24:0)+12,380,600,C.ink,{r:44,op:.3})+R(x,y+(sel?-24:0),380,600,C.surface,{r:44,s:sel?C.orange:C.ink,sw:sel?12:5})+img(x+20,y+20+(sel?-24:0),340,300,'',m[3])+
+    T(x+190,y+380+(sel?-24:0),m[0],60,C.ink,{a:'middle',w:600})+T(x+190,y+460+(sel?-24:0),m[1],38,C.muted,{a:'middle',d:false})+T(x+190,y+520+(sel?-24:0),m[2],38,C.muted,{a:'middle',d:false});}).join('')+
+  R(SL+5*420,240,300,600,C.grey,{r:44,s:C.ink})+T(SL+5*420+150,500,'🔒',80,C.ink,{a:'middle'})+T(SL+5*420+150,620,'Community',44,C.ink,{a:'middle',w:600})+T(SL+5*420+150,690,'ปลดที่ Lv.15',34,C.muted,{a:'middle',d:false})+
+  B(SR-420,SB-170,420,170,'เลือก','primary'),'g-lobby');
+
+screen('S14','ห้องทีม','รหัสห้องคัดลอก/แชร์ได้ การ์ดสมาชิกบอกพร้อมด้วย ✓ + ข้อความ เจ้าของกด "เริ่ม" เมื่อทุกคนพร้อม ไม่พร้อมบอกเหตุผลใต้ปุ่ม แตะการ์ดเพื่อน = โปรไฟล์ / บล็อก / รายงาน',
+  bg('#FFE2B0','#FEEECF')+topbar('ห้อง Friends')+R(SL+700,ST+24,520,96,C.surface,{r:48,s:C.ink,sw:4})+T(SL+740,ST+72,'รหัส 7K4Q',44,C.ink,{w:600})+IB(SL+1020,ST+72,80,'⧉')+IB(SL+1120,ST+72,80,'↗',C.blue)+
+  [[C.sweep,'sweep','Krit','พร้อม ✓',true],[C.bubble,'bubble','Mai','กำลังแต่งตัว…',false]].map((m,i)=>{const x=SL+40+i*360;return R(x,200,320,440,C.surface,{r:36,s:C.ink})+hero(x+160,330,1.2,m[0],m[1])+T(x+160,540,m[2],46,C.ink,{a:'middle',w:600})+R(x+40,575,240,50,m[4]?C.green:C.grey,{r:25})+T(x+160,600,m[3],30,m[4]?'#fff':C.ink,{a:'middle'})+(i===0?T(x+290,240,'👑',50,C.ink,{a:'middle'}):'');}).join('')+
+  [0,1].map(i=>{const x=SL+40+(2+i)*360;return R(x,200,320,440,'none',{r:36,s:C.frame,dash:'22 16',sw:6})+T(x+160,420,'+ ชวน',52,C.frame,{a:'middle',w:600});}).join('')+
+  panel(SL+40,720,680,220)+T(SL+80,790,'ฉาก: ห้องเรียน ▾',44,C.ink)+T(SL+80,870,'ระดับ: ปกติ ▾',44,C.ink)+
+  panel(SL+760,720,460,220)+T(SL+800,790,'"พร้อมแล้ว!"',40,C.ink,{d:false})+T(SL+800,870,'"รอแป๊บนะ"',40,C.ink,{d:false})+
+  B(SR-860,SB-150,320,150,'ออกจากห้อง','tertiary',40)+B(SR-500,SB-170,500,170,'เริ่ม','primary')+T(SR-250,SB-200,'รออีก 1 คนพร้อม',34,C.danger,{a:'middle',d:false}),'g-lobby');
+
+screen('S16','เลือกตัวละครแบบปิด 15 วินาที','การ์ด 4 ใบสีประจำตัว ปุ่มยืนยันเดียวล่างขวา ตัวที่เพื่อนเลือกแล้วหม่นพร้อมป้าย ห้ามซ้ำในทีม ฝั่งคู่แข่งเป็นเงา ? จนเริ่มแมตช์',
+  bg('#2E4484','#1A2E66')+T(SL,ST+70,'เลือกตัวละคร',72,'#fff',{w:600,st:C.ink})+R(W/2-125,ST+14,250,100,C.danger,{r:50,s:C.ink})+T(W/2,ST+66,'⏱ 0:05',52,'#fff',{a:'middle',w:600})+
+  [['กวาด','จัดทัพ: สลับ 2 ชั้น',C.sweep,'sweep',0],['ฟอง','โล่ฟอง: กันหักล้าง',C.bubble,'bubble',1],['ถู','ถังสำรอง: เก็บ 1 ชิ้น',C.press,'press',2],['สเปรย์','เล็งเป้า: ดูคะแนน',C.spray,'spray',3]].map((h,i)=>{const x=SL+40+i*400,y=i===0?170:200,sel=i===0,taken=i===2;
+    return R(x,y+12,360,600,C.ink,{r:40,op:.4})+R(x,y,360,600,C.cream,{r:40,s:sel?C.gold:C.ink,sw:sel?14:5})+R(x+18,y+18,324,420,h[2],{r:28})+hero(x+180,y+230,1.4,h[2],h[3])+
+    R(x+40,y+410,280,80,C.frame,{r:40})+T(x+180,y+450,h[0],48,'#fff',{a:'middle',w:600})+T(x+180,y+540,h[1],30,C.ink,{a:'middle',d:false})+
+    (taken?R(x,y,360,600,C.ink,{r:40,op:.55})+R(x+40,y+260,280,80,C.surface,{r:40})+T(x+180,y+300,'เพื่อนเลือกแล้ว',32,C.ink,{a:'middle',w:600}):'');}).join('')+
+  R(SR-420,200,400,500,'#0B1A3A',{r:40,s:'#fff',sw:4,dash:'16 12'})+T(SR-220,420,'?',160,'#fff',{a:'middle',w:600})+T(SR-220,600,'คู่แข่งกำลังเลือก',32,'#fff',{a:'middle',d:false})+
+  B(SR-460,SB-180,460,180,'ยืนยัน','primary'),'g-lobby');
+
+/* ---------- Match ---------- */
+function hud(){let s=bg('#F3E3B5','#E8D29C');
+  s+=R(500,250,1340,560,'#F7EBCB',{r:30,s:'#C9B27A',sw:6})+R(620,300,240,140,'#C8A26B',{r:16,s:C.ink,sw:4})+T(740,370,'ชั้นวางอุปกรณ์',30,C.ink,{a:'middle',d:false})+
+  R(1120,300,200,140,'#7FB2E8',{r:16,s:C.ink,sw:4})+T(1220,370,'ตู้น้ำยา',30,C.ink,{a:'middle',d:false})+R(1500,620,240,140,'#E89A7F',{r:16,s:C.ink,sw:4})+T(1620,690,'น้ำร้อน',30,C.ink,{a:'middle',d:false})+
+  enemy(1500,380,1,'#8A5226')+enemy(1680,360,0.8,'#8B4FC8')+hero(980,560,1,C.sweep,'sweep')+hero(1180,620,0.9,C.bubble,'bubble')+
+  R(1100,470,220,90,'#fff',{r:45,s:C.ink,sw:4})+T(1210,515,'ช่วยวางสบู่',28,C.ink,{a:'middle',d:false});
+  // order ticket
+  s+=R(SL,ST,440,560,C.surface,{r:32,s:C.ink})+T(SL+30,ST+50,'ใบงาน · ห้องเรียน',38,C.ink,{w:600})+enemy(SL+80,ST+130,0.55,'#8A5226')+enemy(SL+190,ST+130,0.5,'#8B4FC8');
+  [['ขจัดคราบ',0.72,0.6,'#E8724A'],['ถนอม',0.4,0.5,'#4EA8DE'],['เร็ว',0.55,0.3,'#F6C431'],['เงา',0.2,0.45,'#9B7EDE']].forEach((b,i)=>{s+=bar(SL+24,ST+230+i*80,280,b[1],b[2],b[0],b[3]);});
+  // top centre
+  s+=[0,1,2].map(i=>Ci(W/2-400+i*56,ST+60,22,i===0?C.green:'#fff',{s:C.ink,sw:4})).join('')+T(W/2-400,ST+62,'✓',26,'#fff',{a:'middle',w:600});
+  s+=R(W/2-125,ST+10,250,100,C.surface,{r:50,s:C.ink})+T(W/2,ST+62,'⏱ 1:12',52,C.ink,{a:'middle',w:600})+R(W/2+150,ST+22,330,76,C.surface,{r:38,s:C.ink,sw:4})+T(W/2+315,ST+62,'ทีมเรา 86 · คู่แข่ง ?',34,C.ink,{a:'middle'});
+  // top right
+  s+=chip(SR-420,ST,240,'120',C.gold,false)+IB(SR-72,ST+60,144,'❚❚');
+  // cart
+  const cx=SR-440,cy=ST+180;s+=R(cx,cy,440,400,C.surface,{r:32,s:C.ink})+T(cx+30,cy+44,'รถเข็น',38,C.ink,{w:600});
+  ['','','สบู่','น้ำร้อน','ฟองน้ำ'].forEach((n,i)=>{const y=cy+70+i*64;s+=R(cx+24,y,392,56,n?'#FFF3D6':'none',{r:20,s:n?C.ink:'#B9B0A0',sw:3,dash:n?null:'12 10'})+T(cx+50,y+28,String(5-i),30,C.muted)+(n?T(cx+110,y+28,n,32,C.ink):'');});
+  s+=Ci(cx+380,cy+70+2*64+60,20,C.spark,{s:C.ink,sw:3})+T(cx+380,cy+70+2*64+62,'+',28,C.ink,{a:'middle',w:600});
+  s+=R(cx+230,cy+70+3*64-8,120,24,C.method,{r:12})+T(cx+290,cy+70+3*64+4,'แช่',22,'#fff',{a:'middle',d:false});
+  // ability + submit
+  s+=Ci(SR-300,SB-300,100,C.ink,{op:.35})+Ci(SR-300,SB-306,100,C.frame,{s:C.sweep,sw:12})+T(SR-300,SB-306,'⇅',80,'#fff',{a:'middle',w:600})+T(SR-300,SB-180,'จัดทัพ',30,C.ink,{a:'middle',w:600,st:'#fff',sw:8});
+  s+=B(SR-440,SB-180,440,180,'ส่งทดสอบ ✓','success',54)+`<path d="M${SR-440+40} ${SB-180} h120" stroke="#fff" stroke-width="10" stroke-linecap="round" opacity=".7"/>`;
+  // hand
+  ['สเปรย์','ไอน้ำ',''].forEach((n,i)=>{const x=W/2-260+i*184;s+=R(x,SB-176,160,176,n?C.surface:'none',{r:24,s:n?C.ink:'#8A7E66',sw:n?5:4,dash:n?null:'14 10'})+(n?Ci(x+80,SB-110,40,i?C.energy:C.chem,{s:C.ink,sw:3})+T(x+80,SB-40,n,32,C.ink,{a:'middle'})+R(x+30,SB-12,100,8,i?C.energy:C.chem,{r:4}):'');});
+  s+=IB(W/2+340,SB-88,144,'💬',C.surface).replace('fill="#fff"','fill="#041E4F"');
+  // mate tray
+  s+=R(SL,ST+600,320,96,C.surface,{r:48,s:C.ink,sw:4})+Ci(SL+48,ST+648,34,C.bubble,{s:C.ink,sw:3})+T(SL+100,ST+650,'ฟอง:',32,C.ink)+Ci(SL+200,ST+648,26,C.chem,{s:C.ink,sw:3})+Ci(SL+262,ST+648,26,C.tool,{s:C.ink,sw:3});
+  // joystick
+  s+=Ci(SL+230,SB-170,130,C.ink,{op:.22})+Ci(SL+270,SB-200,60,'#fff',{s:C.ink,sw:4,op:.95});
+  return s;}
+screen('S22','HUD จัดชุด','ใบงาน + แถบค่า 4 ตัวพร้อมเส้นเป้า (บนซ้าย), รอบ/เวลา/คะแนน (บนกลาง), งบ+หยุด (บนขวา), รถเข็นพร้อมประกายปฏิกิริยา +/− และชิปวิธีใช้ (ขวา), ability เหนือปุ่มส่งทดสอบแบบกดค้าง 0.6 วิ, มือ 3 ช่อง + Quick Ping (ล่างกลาง), ถาดเพื่อน (ซ้าย), จอยสติ๊กลอย (ล่างซ้าย)',hud(),'g-match');
+
+screen('S22b','ลากวาง + วงล้อ Quick Ping','ภาพชิ้นส่วนยกเหนือนิ้ว 80u, รถเข็นเรืองเขียวเมื่อวางได้ ส่วน ping ลากจากปุ่มไปช่องแล้วปล่อย ข้อความบวกเท่านั้น',
+  hud()+R(0,0,W,H,C.ink,{op:.15})+R(SR-440,ST+180,440,400,'none',{r:32,s:C.spark,sw:14})+
+  R(1600,420,170,186,C.surface,{r:24,s:C.ink,op:.95})+Ci(1685,490,44,C.chem,{s:C.ink,sw:3})+T(1685,570,'สเปรย์',32,C.ink,{a:'middle'})+Ci(1690,700,46,'#FADDC1',{s:C.ink,sw:4,op:.9})+
+  Ci(W/2+340,SB-88-300,260,C.surface,{op:.92,s:C.ink,sw:4})+['ช่วยวาง','ฉันไปเอง','ยกชั้นบน','ใกล้หมดเวลา','เยี่ยม!','ขอบคุณ'].map((t,i)=>{const a=-Math.PI/2+i*Math.PI/3,x=W/2+340+Math.cos(a)*170,y=SB-388+Math.sin(a)*170;return T(x,y,t,30,C.ink,{a:'middle',w:i===4?600:500});}).join('')+Ci(W/2+340,SB-388,50,C.frame),'g-match');
+
+screen('S25','ช่วงทดสอบ ก่อน-หลัง (10 วิ)','แบ่งจอทแยงตามกรอบ transition_frame ซ้ายทีมเรา ขวาคู่แข่ง ฉากสกปรกค่อยๆ สะอาดตามค่า ศัตรูหายพร้อมประกาย แถบค่า count-up พร้อม ✓/✗',
+  R(0,0,W,H,'#6D5A3C')+`<path d="M0 0 H${W/2+120} L${W/2-120} ${H} H0 Z" fill="#CFE6FF"/>`+`<path d="M${W/2+120} 0 H${W} V${H} H${W/2-120} Z" fill="#B49A6E"/>`+
+  `<path d="M${W/2+120} 0 L${W/2-120} ${H}" stroke="#fff" stroke-width="22"/>`+T(SL+40,ST+70,'ทีมเรา',64,'#fff',{w:600,st:C.ink})+T(SR-40,ST+70,'คู่แข่ง',64,'#fff',{w:600,st:C.ink,a:'end'})+
+  [0.82,0.66,0.5,0.6].map((v,i)=>bar(SL+40,ST+150+i*70,420,v,[0.6,0.5,0.3,0.45][i],i===1?'':'',['#E8724A','#4EA8DE','#F6C431','#9B7EDE'][i])).join('')+
+  [0.7,0.3,0.6,0.2].map((v,i)=>bar(SR-560,ST+150+i*70,420,v,[0.6,0.5,0.3,0.45][i],'',['#E8724A','#4EA8DE','#F6C431','#9B7EDE'][i])).join('')+
+  [[620,700],[860,560],[480,520]].map(p=>Ci(p[0],p[1],14,'#fff')+Ci(p[0]+30,p[1]-20,8,'#fff')).join('')+enemy(1700,640,1.1,'#8B4FC8')+enemy(1940,760,0.9,'#8A5226')+
+  T(W/4,H-140,'สะอาดแล้ว!',90,'#fff',{a:'middle',w:600,st:C.green,sw:14}),'g-match');
+
+screen('S27','ผลแมตช์ + รางวัล + รูปทีม','ดาวของทีม รางวัลเท่ากันทุกคนนับขึ้นทีละแถว ไม่มีสถิติรายคน ปุ่มดูโฆษณาแบบเลือกเอง "เล่นอีก" กลับห้องเดิม',
+  bg('#7EC2FF','#FEEECF')+[0,1,2].map(i=>`<polygon points="${W/2-220+i*220},${100+(i===1?-30:0)} ${W/2-190+i*220},${170+(i===1?-30:0)} ${W/2-120+i*220},${175+(i===1?-30:0)} ${W/2-175+i*220},${220+(i===1?-30:0)} ${W/2-155+i*220},${290+(i===1?-30:0)} ${W/2-220+i*220},${250+(i===1?-30:0)} ${W/2-285+i*220},${290+(i===1?-30:0)} ${W/2-265+i*220},${220+(i===1?-30:0)} ${W/2-320+i*220},${175+(i===1?-30:0)} ${W/2-250+i*220},${170+(i===1?-30:0)}" fill="${i<2?C.gold:'#fff'}" stroke="${C.ink}" stroke-width="6"/>`).join('')+
+  T(W/2,350,'ทีมชนะ 2–1!',96,'#fff',{a:'middle',w:600,st:C.ink,sw:12})+
+  R(SL+40,440,760,360,'#BFE1FF',{r:36,s:C.ink})+hero(SL+260,540,1.1,C.sweep,'sweep')+hero(SL+560,550,1.0,C.bubble,'bubble')+B(SL+80,690,320,90,'บันทึกรูป','tertiary',34)+B(SL+430,690,320,90,'แชร์','tertiary',34)+
+  panel(SL+880,440,860,360,'รางวัล')+[['เหรียญ','+30',C.gold],['เศษวัสดุ','+6',C.tool],['XP','+120',C.green],['โบนัสทีมเวิร์ก','+10',C.gold]].map((r,i)=>Ci(SL+960,520+i*72,26,r[2],{s:C.ink,sw:3})+T(SL+1010,522+i*72,r[0],38,C.ink)+T(SL+1680,522+i*72,r[1],44,C.ink,{a:'end',w:600})).join('')+
+  B(SR-420,ST+20,420,120,'▶ เหรียญ ×2 (2/3)','tertiary',34)+B(SR-860,SB-150,400,150,'หน้าหลัก','secondary',46)+B(SR-440,SB-170,440,170,'เล่นอีก','primary'),'g-match');
+
+screen('S24','หยุดเกม (ออนไลน์)','เวลาไม่หยุดในแมตช์ออนไลน์จึงบอกชัดบนหัวแผง ออกจากแมตช์ต้องยืนยันอีกครั้ง',
+  hud()+R(0,0,W,H,C.ink,{op:.7})+panel(W/2-460,180,920,760,'หยุดเกม')+R(W/2-360,250,720,70,'#FFE1D6',{r:35})+T(W/2,286,'เวลายังเดินอยู่ 0:48',40,C.danger,{a:'middle',w:600})+
+  B(W/2-320,370,640,170,'เล่นต่อ','primary')+B(W/2-320,580,640,144,'ตั้งค่า','secondary',46)+B(W/2-320,760,640,144,'ออกจากแมตช์','tertiary',46),'g-match');
+
+/* ---------- Meta ---------- */
+screen('S30','ร้านค้า','แท็บบน การ์ดสินค้ามีราคาและสถานะ ไม่มีกล่องสุ่ม ไม่มีนาฬิกากดดัน แตะการ์ด → preview บนตัวละคร → ยืนยันซื้อ',
+  bg('#FFE2B0','#FEEECF')+topbar('ร้านค้า')+['แนะนำ','แฟชั่น','ของแต่งบ้าน','Season Pass','แพ็ก','เพชร'].map((t,i)=>{const x=SL+i*290,sel=i===1;return R(x,170,270,112,sel?C.blue:C.surface,{r:28,s:C.ink,sw:4})+T(x+135,227,t,38,sel?'#fff':C.frame,{a:'middle',w:sel?600:500})+(sel?R(x+40,268,190,10,C.orange,{r:5}):'');}).join('')+
+  ['ผ้ากันเปื้อนลายส้ม','หมวกฟองสบู่','ถุงมือดาว','สกินรถเข็นไม้','ท่าฉลองกวาดหมุน'].map((t,i)=>{const x=SL+i*400,y=330;return R(x,y,360,560,C.surface,{r:36,s:C.ink})+img(x+20,y+20,320,300,'',['#FFC98A','#BFE1FF','#FFE58A','#E2C59A','#D9C9FF'][i])+
+    T(x+180,y+370,t,34,C.ink,{a:'middle'})+(i===2?R(x+60,y+430,240,90,C.green,{r:45})+T(x+180,y+476,'มีแล้ว',36,'#fff',{a:'middle',w:600}):R(x+60,y+430,240,90,C.cream,{r:45,s:C.ink,sw:4})+Ci(x+110,y+475,26,i%2?C.sky:C.gold,{s:C.ink,sw:3})+T(x+150,y+477,i%2?'60':'1,200',40,C.ink,{w:600}))+
+    (i===0?R(x+250,y+30,90,50,C.orange,{r:25})+T(x+295,y+56,'NEW',28,C.ink,{a:'middle',w:600}):'');}).join(''),'g-meta');
+
+screen('S39','ตั้งค่า','แท็บซ้ายแนวตั้ง เปลี่ยนแล้วมีผลทันที รวมโหมดมือซ้าย ขนาดตัวอักษร ลดการเคลื่อนไหว สั่นแทนเสียง',
+  bg('#CFE6FF','#E8F3FF')+topbar('ตั้งค่า')+['เสียง','การควบคุม','การแสดงผล','การสั่น','ภาษา','บัญชี','ช่วยเหลือ'].map((t,i)=>R(SL,180+i*120,380,104,i===1?C.blue:C.surface,{r:24,s:C.ink,sw:4})+T(SL+40,232+i*120,t,40,i===1?'#fff':C.ink,{w:i===1?600:500})).join('')+
+  panel(SL+430,180,SR-SL-430,780)+[['วิธีเดิน','จอยสติ๊ก · แตะ · ทั้งสอง','seg'],['จอยสติ๊ก','ลอยตามนิ้ว','tog1'],['ขนาดจอยสติ๊ก','S · M · L','seg'],['โหมดมือซ้าย','','tog0'],['ส่งทดสอบด้วยกดค้าง','','tog1'],['ความไวการลาก','','sld']].map((r,i)=>{const y=250+i*118,x=SL+480;let ctl='';
+    if(r[2]==='seg')ctl=R(SR-760,y-46,700,92,C.surface,{r:46,s:C.ink,sw:4})+R(SR-760+4,y-42,230,84,C.blue,{r:42})+T(SR-760+120,y,r[1].split(' · ')[0],32,'#fff',{a:'middle',w:600})+T(SR-410,y,r[1].split(' · ')[1],32,C.ink,{a:'middle'})+T(SR-180,y,r[1].split(' · ')[2],32,C.ink,{a:'middle'});
+    if(r[2].startsWith('tog')){const on=r[2]==='tog1';ctl=R(SR-220,y-40,160,80,on?C.green:C.grey,{r:40,s:C.ink,sw:4})+Ci(on?SR-100:SR-180,y,32,'#fff',{s:C.ink,sw:3})+T(SR-250,y,on?'เปิด':'ปิด',32,C.ink,{a:'end'});}
+    if(r[2]==='sld')ctl=R(SR-700,y-10,640,20,'#E6DCC2',{r:10,s:C.ink,sw:3})+R(SR-700,y-10,380,20,C.blue,{r:10})+Ci(SR-320,y,36,'#fff',{s:C.ink,sw:4});
+    return T(x,y,r[0],42,C.ink)+ctl+(i<5?R(x,y+58,SR-x-60,3,'#E6D9B0'):'');}).join(''),'g-meta');
+
+screen('P04','เน็ตหลุด / ลองใหม่','retry อัตโนมัติ 3 ครั้ง (1, 2, 4 วิ) ก่อนแสดง popup ปุ่มปลอดภัยอยู่ซ้าย ปุ่มหลักขวา Android Back = เล่นออฟไลน์',
+  bg('#9FD1FF','#F3E3B5')+R(0,0,W,H,C.ink,{op:.7})+panel(W/2-560,230,1120,620,'เชื่อมต่อไม่ได้')+T(W/2,380,'📶',110,C.ink,{a:'middle'})+
+  T(W/2,500,'ตรวจ Wi-Fi หรือเน็ตมือถือ แล้วลองอีกครั้ง',44,C.ink,{a:'middle',d:false})+T(W/2,570,'หรือเล่น Solo กับคู่แข่งจำลองไปก่อนได้',38,C.muted,{a:'middle',d:false})+
+  B(W/2-480,660,440,150,'เล่นออฟไลน์','tertiary',44)+B(W/2+40,660,440,150,'ลองใหม่','primary'),'g-meta');
+
+screen('P02','ยืนยันซื้อ','บอกของ ราคา และยอดหลังซื้อ ผู้เยาว์มีขั้นยืนยันเพิ่มและเห็นยอดใช้เดือนนี้',
+  bg('#FFE2B0','#FEEECF')+R(0,0,W,H,C.ink,{op:.7})+panel(W/2-600,190,1200,720,'ยืนยันการซื้อ')+img(W/2-540,280,400,400,'ผ้ากันเปื้อนลายส้ม','#FFC98A')+
+  T(W/2-80,330,'ผ้ากันเปื้อนลายส้ม',52,C.ink,{w:600})+T(W/2-80,420,'ราคา  1,200 เหรียญ',42,C.ink,{d:false})+T(W/2-80,490,'คงเหลือหลังซื้อ  50 เหรียญ',42,C.muted,{d:false})+
+  R(W/2-80,550,620,110,'#FFF3D6',{r:24,s:C.orange,sw:4})+T(W/2-50,605,'ใช้ไปเดือนนี้ 120 / 500 บาท',36,C.ink,{d:false})+IB(W/2+600-20,190,112,'✕')+
+  B(W/2-540,740,440,144,'ยกเลิก','tertiary',46)+B(W/2+100,730,440,160,'ซื้อ','primary'),'g-meta');
+
+/* ---------- Component svgs ---------- */
+const cb=document.getElementById('cmp-bars');
+cb.innerHTML=bar(30,30,340,0.72,0.6,'ขจัดคราบ','#E8724A')+bar(30,90,340,0.35,0.5,'ถนอม','#4EA8DE')+
+  chip(30,170,230,'1,250',C.gold,true)+R(290,170,230,100,C.danger,{r:50,s:C.ink})+T(405,222,'⏱ 0:12',44,'#fff',{a:'middle',w:600})+
+  [C.green,'#fff','#fff'].map((f,i)=>Ci(560+i*48,50,20,f,{s:C.ink,sw:4})).join('')+T(560,52,'✓',22,'#fff',{a:'middle',w:600})+
+  R(560,90,64,40,C.red,{r:20})+T(592,111,'12',24,'#fff',{a:'middle',w:600})+Ci(660,110,14,C.red,{s:'#fff',sw:3})+
+  [['▲',C.tool],['●',C.chem],['⚡',C.energy],['◆',C.method]].map((f,i)=>Ci(560+i*0+(i%2)*60,190+Math.floor(i/2)*56,22,f[1],{s:C.ink,sw:3})+T(560+(i%2)*60,192+Math.floor(i/2)*56,f[0],22,C.ink,{a:'middle'})).join('')+
+  R(30,284,120,6,C.ink);
+const cc=document.getElementById('cmp-ctrl');
+cc.innerHTML=Ci(140,170,110,C.ink,{op:.22})+Ci(175,140,52,'#fff',{s:C.ink,sw:4})+T(140,285,'Joystick',22,C.ink,{a:'middle',d:false})+
+  Ci(380,150,86,C.ink,{op:.35})+Ci(380,144,86,C.frame,{s:C.sweep,sw:10})+T(380,144,'⇅',64,'#fff',{a:'middle',w:600})+T(380,262,'Ability',22,C.ink,{a:'middle',d:false})+
+  Ci(600,150,110,C.surface,{s:C.ink,sw:3})+['ช่วยวาง','ไปเอง','ยกชั้น','เวลา!','เยี่ยม','ขอบคุณ'].map((t,i)=>{const a=-Math.PI/2+i*Math.PI/3;return T(600+Math.cos(a)*72,150+Math.sin(a)*72,t,16,C.ink,{a:'middle',d:false});}).join('')+Ci(600,150,22,C.frame)+T(600,285,'Ping wheel',22,C.ink,{a:'middle',d:false});
+const ck=document.getElementById('cmp-cards');
+ck.innerHTML=R(24,20,200,280,C.cream,{r:24,s:C.gold,sw:8})+R(34,30,180,190,C.sweep,{r:16})+hero(124,110,0.65,C.sweep,'sweep')+R(54,196,140,44,C.frame,{r:22})+T(124,218,'กวาด',26,'#fff',{a:'middle',w:600})+T(124,270,'จัดทัพ',18,C.ink,{a:'middle',d:false})+
+  R(260,80,110,122,C.surface,{r:18,s:C.ink,sw:4})+Ci(315,130,30,C.chem,{s:C.ink,sw:3})+T(315,182,'สบู่',18,C.ink,{a:'middle',d:false})+R(285,194,60,6,C.chem,{r:3})+
+  R(390,60,122,150,C.surface,{r:18,s:C.ink,sw:4})+Ci(451,112,32,C.energy,{s:C.ink,sw:3})+T(451,168,'น้ำร้อน',18,C.ink,{a:'middle',d:false})+Ci(500,72,20,C.danger,{s:C.ink,sw:2})+T(500,73,'40',14,'#fff',{a:'middle',w:600})+
+  R(540,20,160,280,C.surface,{r:24,s:C.ink})+R(552,32,136,140,'#FFC98A',{r:16})+T(620,196,'ถุงมือดาว',18,C.ink,{a:'middle',d:false})+R(560,226,120,48,C.cream,{r:24,s:C.ink,sw:3})+T(620,251,'1,200',20,C.ink,{a:'middle',w:600});
+const cf=document.getElementById('cmp-fb');
+cf.innerHTML=R(160,20,400,72,C.surface,{r:36,s:C.ink,sw:4})+Ci(200,56,20,C.bubble,{s:C.ink,sw:3})+T(236,57,'ฟองใช้ โล่ฟอง',22,C.ink,{d:false})+
+  R(0,112,720,48,C.orange)+T(360,137,'ออฟไลน์ · เล่น Solo ได้',22,C.ink,{a:'middle',w:600})+
+  R(120,180,480,110,C.cream,{r:22,s:C.frame,sw:5})+R(240,166,240,36,C.frame,{r:18})+T(360,184,'ยืนยัน',20,'#fff',{a:'middle',w:600})+T(360,235,'ออกจากแมตช์?',20,C.ink,{a:'middle',d:false})+
+  [0,1,2].map(i=>Ci(640+i*22,250-(i===1?10:0),9,C.sky,{s:C.ink,sw:2})).join('');
+/* swatches */
+const sw=[['ink','#041E4F','ตัวหนังสือ, เส้นขอบ'],['frame','#2E4484','กรอบ, ribbon, ปุ่ม icon'],['surface.cream','#FEEECF','panel หลัก'],['primary','#F6C431','ปุ่มหลัก (ตัว ink 9.9:1)'],['accent','#FD7713','ป้าย NEW, แถบเลือก'],['secondary','#1A6FC4','ปุ่มรอง (ตัวขาว 5.1:1)'],['success','#178A4F','ส่งทดสอบ, ผ่าน'],['danger','#D81E36','ลบ, เวลาใกล้หมด'],['good.spark','#3DDC84','ปฏิกิริยาเสริม']];
+document.getElementById('swatches').innerHTML=sw.map(s=>`<div class="sw"><i style="background:${s[1]}"></i><div><b>${s[0]}</b> ${s[1]}<br><span style="color:var(--muted)">${s[2]}</span></div></div>`).join('');
+/* toggles */
+const zt=document.getElementById('tg-zones'),st=document.getElementById('tg-safe');
+const apply=()=>{document.body.classList.toggle('show-zones',zt.checked);document.body.classList.toggle('show-safe',st.checked);};
+zt.addEventListener('change',apply);st.addEventListener('change',apply);apply();
+})();
+</script>
