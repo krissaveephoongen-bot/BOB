@@ -2,12 +2,37 @@
 /* ============ MULTIPLAYER: server-authoritative match 'bob_coop' (2-4 players, two teams) ============ */
 // Every player in the match gets the same room per round (one seed). Each team shares one cart.
 // Clients only send intents (move, pick, place, lift, submit); the server checks them and owns the state.
-// Opcodes, client -> server: 1 MOVE {x,y}  2 PICK {id}  3 PLACE {i}  4 LIFT {}  5 READY {char}  6 SUBMIT {}
-// Opcodes, server -> client: 10 STATE (full snapshot)  11 POS {time,p:[{id,x,y}]} every tick  12 RESULT (round result)  13 ERROR {t}
-var OP = { MOVE: 1, PICK: 2, PLACE: 3, LIFT: 4, READY: 5, SUBMIT: 6, STATE: 10, POS: 11, RESULT: 12, ERROR: 13 };
+// Each team plays in its own copy of the same room (GDD 20), so both teams use the same coordinates.
+// Opcodes, client -> server: 1 MOVE {x,y}  2 PICK {id}  3 PLACE {i}  4 LIFT {}  5 READY {char, ready?, team?}  6 SUBMIT {}
+//                            7 PUSH {on}  8 PASS {i, to?}  9 TABLE {put:i} or {take:k}
+// Opcodes, server -> client: 10 STATE (full snapshot)  11 POS {time,p:[{id,x,y}],c:[{x,y}]} every tick  12 RESULT (round result)  13 ERROR {t}
+var OP = { MOVE: 1, PICK: 2, PLACE: 3, LIFT: 4, READY: 5, SUBMIT: 6, PUSH: 7, PASS: 8, TABLE: 9, STATE: 10, POS: 11, RESULT: 12, ERROR: 13 };
 var MP_TICK = 10, MP_MAX = 4, MP_HAND = 2, MP_TEST_SEC = 8, MP_SPEED = 2.3 * 1.25; // world units / s, with lag slack
+var MP_PUSH_SPEED = 0.8, MP_PASS_NEAR = 1.0, MP_TABLE_MAX = 4, MP_RADIUS = 0.16;
+// Room layout in world units [x0, y0, x1, y1], y up (the prototype's 800x500 px room / 100). Unity's Coop scene uses the same numbers.
 var STATION_FAM = { tool: [0.3, 4.06, 2.0, 4.7], chem: [6.0, 4.06, 7.7, 4.7], energy: [0.3, 0.3, 2.0, 0.94], method: [6.0, 0.3, 7.7, 0.94] };
-var CART = [3.55, 2.21, 4.45, 2.85], NEAR = 0.6;
+var TABLE = [3.5, 4.2, 4.5, 4.7];              // parking table (โต๊ะพักของ): leave parts for a team-mate
+var SOFA = [3.0, 0.85, 5.0, 1.15];             // obstacle
+var SOLIDS = [STATION_FAM.tool, STATION_FAM.chem, STATION_FAM.energy, STATION_FAM.method, TABLE, SOFA];
+var CART_W = 0.9, CART_H = 0.64, CART_START = [4.0, 2.53], NEAR = 0.6;
+// Nakama keeps match state as Go values between ticks, where push/splice on an array can be lost: always assign a new array.
+function without(a, i) { return a.slice(0, i).concat(a.slice(i + 1)); }
+function cartRect(t) { return [t.cx - CART_W / 2, t.cy - CART_H / 2, t.cx + CART_W / 2, t.cy + CART_H / 2]; }
+// Push a point (a body of radius r) out of every solid rect, along the shortest way out. Bodies never block each other.
+function mpSolve(x, y, r) {
+  for (var k = 0; k < SOLIDS.length; k++) {
+    var b = SOLIDS[k], x0 = b[0] - r, y0 = b[1] - r, x1 = b[2] + r, y1 = b[3] + r;
+    if (x <= x0 || x >= x1 || y <= y0 || y >= y1) continue;
+    var dl = x - x0, dr = x1 - x, db = y - y0, dt = y1 - y, m = Math.min(dl, dr, db, dt);
+    if (m === dl) x = x0; else if (m === dr) x = x1; else if (m === db) y = y0; else y = y1;
+  }
+  return [Math.max(0.18, Math.min(7.82, x)), Math.max(0.18, Math.min(4.82, y))];
+}
+// A cart's centre stays in the room and out of the solids (its half size acts as the radius, so it is a little forgiving).
+function mpCartSolve(x, y) {
+  var p = mpSolve(x, y, CART_H / 2);
+  return [Math.max(CART_W / 2, Math.min(8 - CART_W / 2, p[0])), Math.max(CART_H / 2, Math.min(5 - CART_H / 2, p[1]))];
+}
 
 function mpDist(x, y, r) { var cx = Math.max(r[0], Math.min(r[2], x)), cy = Math.max(r[1], Math.min(r[3], y)); return Math.hypot(x - cx, y - cy); }
 function mpSend(d, op, obj, to) { d.broadcastMessage(op, JSON.stringify(obj), to || null, null, true); }
@@ -16,14 +41,17 @@ function mpSnapshot(s) {
   // Arrays of plain objects (no maps) so Unity's JsonUtility can read every message.
   var players = Object.keys(s.players).sort().map(function (k) { var p = s.players[k];
     return { id: k, name: p.name, team: p.team, char: p.char, ready: p.ready, online: !!p.presence, x: p.x, y: p.y, hand: p.hand }; });
+  // cx, cy: the team's cart; pusher: user id pushing it ('' = nobody); table: parts parked on the team's table.
   return { phase: s.phase, seed: s.seed, round: s.round, time: s.time, room: s.room, players: players,
-    teams: s.teams.map(function (t) { return { stack: t.stack, budget: t.budget, wins: t.wins, submitted: t.submitted }; }) };
+    teams: s.teams.map(function (t) { return { stack: t.stack, budget: t.budget, wins: t.wins, submitted: t.submitted,
+      cx: t.cx, cy: t.cy, pusher: t.pusher || '', table: t.table }; }) };
 }
 function mpBroadcast(d, s) { mpSend(d, OP.STATE, mpSnapshot(s)); }
 
 function mpStartRound(s) {
   s.round++; s.room = makeRound(s.round, s.seed); s.phase = 'build'; s.time = ROUND_TIME;
-  s.teams.forEach(function (t) { t.stack = []; t.budget = ROUND_BUDGET + Math.floor(t.carry / 2); t.submitted = false; });
+  s.teams.forEach(function (t) { t.stack = []; t.budget = ROUND_BUDGET + Math.floor(t.carry / 2); t.submitted = false;
+    t.cx = CART_START[0]; t.cy = CART_START[1]; t.pusher = null; t.table = []; });
   Object.keys(s.players).forEach(function (k) { var p = s.players[k]; p.hand = []; p.x = p.team ? 4.6 : 3.4; p.y = 0.6; });
 }
 
@@ -47,7 +75,8 @@ function mpScoreRound(d, s, logger, nk) {
 function matchInit(ctx, logger, nk, params) {
   var seed = parseInt(params && params.seed, 10) || (1 + Math.floor(Math.random() * 8388607));
   var s = { seed: seed, round: 0, phase: 'lobby', time: ROUND_TIME, room: null, players: {}, label: 'mp' + seed, testLeft: 0,
-    teams: [{ stack: [], budget: ROUND_BUDGET, carry: 0, wins: 0, submitted: false }, { stack: [], budget: ROUND_BUDGET, carry: 0, wins: 0, submitted: false }] };
+    teams: [0, 1].map(function () { return { stack: [], budget: ROUND_BUDGET, carry: 0, wins: 0, submitted: false,
+      cx: CART_START[0], cy: CART_START[1], pusher: null, table: [] }; }) };
   return { state: s, tickRate: MP_TICK, label: JSON.stringify({ mode: 'bob_coop', open: true }) };
 }
 function matchJoinAttempt(ctx, logger, nk, d, tick, s, presence, metadata) {
@@ -66,7 +95,16 @@ function matchJoin(ctx, logger, nk, d, tick, s, presences) {
   return { state: s };
 }
 function matchLeave(ctx, logger, nk, d, tick, s, presences) {
-  presences.forEach(function (p) { if (s.phase === 'lobby') delete s.players[p.userId]; else if (s.players[p.userId]) s.players[p.userId].presence = null; });
+  presences.forEach(function (p) {
+    var pl = s.players[p.userId]; if (!pl) return;
+    if (s.phase === 'lobby') { delete s.players[p.userId]; return; }
+    pl.presence = null;
+    // A dropped player never breaks the team (GDD 4): their parts go on the team's table for a team-mate, and the cart is let go.
+    var t = s.teams[pl.team];
+    if (t.pusher === p.userId) t.pusher = null;
+    var room = Math.max(0, MP_TABLE_MAX - t.table.length);
+    t.table = t.table.concat(pl.hand.slice(0, room)); pl.hand = pl.hand.slice(room);
+  });
   mpBroadcast(d, s);
   return { state: s };
 }
@@ -78,16 +116,28 @@ function matchLoop(ctx, logger, nk, d, tick, s, messages) {
     var t = s.teams[p.team], err = null;
     switch (m.opCode) {
       case OP.READY:
-        if (s.phase === 'lobby') { if (CHARS[q.char]) p.char = q.char; p.ready = q.ready !== false; dirty = true; }
+        if (s.phase === 'lobby') {
+          if (CHARS[q.char]) p.char = q.char;
+          p.ready = q.ready !== false;
+          if ((q.team === 0 || q.team === 1) && q.team !== p.team) { // switch side in the lobby while the other side has room
+            var on = 0; Object.keys(s.players).forEach(function (k) { if (s.players[k].team === q.team) on++; });
+            if (on < MP_MAX / 2) p.team = q.team; else err = 'ทีมนั้นเต็มแล้ว';
+          }
+          dirty = true;
+        }
         break;
       case OP.MOVE: {
         if (s.phase !== 'build') break;
         var x = +q.x, y = +q.y; if (!isFinite(x) || !isFinite(y)) break;
         // Allowed distance grows with the time since the last accepted move (max 1 s), so extra messages buy no speed.
-        var dx = x - p.x, dy = y - p.y, dist = Math.hypot(dx, dy), max = MP_SPEED * Math.min(1, Math.max(1, tick - (p.moveTick || 0)) / MP_TICK);
+        var pushing = t.pusher === m.sender.userId;
+        var dx = x - p.x, dy = y - p.y, dist = Math.hypot(dx, dy),
+          max = MP_SPEED * (pushing ? MP_PUSH_SPEED : 1) * Math.min(1, Math.max(1, tick - (p.moveTick || 0)) / MP_TICK);
         if (dist > max) { x = p.x + dx / dist * max; y = p.y + dy / dist * max; }
-        p.x = Math.max(0.18, Math.min(7.82, x)); p.y = Math.max(0.18, Math.min(4.82, y));
+        var ox = p.x, oy = p.y, np = mpSolve(x, y, MP_RADIUS);
+        p.x = np[0]; p.y = np[1];
         p.moveTick = tick;
+        if (pushing) { var c = mpCartSolve(t.cx + p.x - ox, t.cy + p.y - oy); t.cx = c[0]; t.cy = c[1]; }
         break;
       }
       case OP.PICK:
@@ -101,7 +151,7 @@ function matchLoop(ctx, logger, nk, d, tick, s, messages) {
         if (s.phase !== 'build' || t.submitted) break;
         var id = p.hand[q.i | 0];
         if (!id) break;
-        if (mpDist(p.x, p.y, CART) > NEAR) { err = 'เดินไปที่รถเข็นก่อน'; break; }
+        if (mpDist(p.x, p.y, cartRect(t)) > NEAR) { err = 'เดินไปที่รถเข็นก่อน'; break; }
         var next = t.stack.concat([id]);
         if (isMethod(id) && (!t.stack.length || isMethod(t.stack[t.stack.length - 1]))) err = 'วิธีใช้ต้องวางบนชิ้นส่วน';
         else if (countLayers(next) > MAX_LAYERS) err = 'รถเข็นเต็ม 5 ชั้นแล้ว';
@@ -112,11 +162,46 @@ function matchLoop(ctx, logger, nk, d, tick, s, messages) {
       }
       case OP.LIFT:
         if (s.phase !== 'build' || t.submitted || !t.stack.length) break;
-        if (mpDist(p.x, p.y, CART) > NEAR) { err = 'เดินไปที่รถเข็นก่อน'; break; }
+        if (mpDist(p.x, p.y, cartRect(t)) > NEAR) { err = 'เดินไปที่รถเข็นก่อน'; break; }
         var top = t.stack.pop(); if (p.hand.length < MP_HAND) p.hand.push(top); dirty = true;
         break;
+      case OP.PUSH: // grab or let go of the team's cart; while grabbed it moves with you (a little slower)
+        if (s.phase !== 'build') break;
+        if (q.on === false) { if (t.pusher === m.sender.userId) { t.pusher = null; dirty = true; } break; }
+        if (t.submitted) { err = 'ส่งทดสอบแล้ว เข็นรถไม่ได้'; break; }
+        if (t.pusher && t.pusher !== m.sender.userId && s.players[t.pusher] && s.players[t.pusher].presence) { err = 'เพื่อนกำลังเข็นอยู่'; break; }
+        if (mpDist(p.x, p.y, cartRect(t)) > NEAR) { err = 'เดินไปที่รถเข็นก่อน'; break; }
+        t.pusher = m.sender.userId; dirty = true;
+        break;
+      case OP.PASS: { // hand a part to a team-mate standing close; `to` is optional (nearest team-mate)
+        if (s.phase !== 'build') break;
+        var gi = q.i | 0, gid = p.hand[gi]; if (!gid) break;
+        var best = null, bd = 1e9;
+        Object.keys(s.players).forEach(function (k) {
+          var o = s.players[k]; if (k === m.sender.userId || o.team !== p.team || !o.presence) return;
+          if (q.to && q.to !== k) return;
+          var dd = Math.hypot(o.x - p.x, o.y - p.y); if (dd < bd) { bd = dd; best = o; }
+        });
+        if (!best || bd > MP_PASS_NEAR) err = 'เดินไปใกล้เพื่อนก่อน';
+        else if (best.hand.length >= MP_HAND) err = 'มือเพื่อนเต็มแล้ว';
+        else { best.hand = best.hand.concat([gid]); p.hand = without(p.hand, gi); dirty = true; }
+        break;
+      }
+      case OP.TABLE: // park a part on the team's table ({put: hand index}) or take one back ({take: table index})
+        if (s.phase !== 'build') break;
+        if (mpDist(p.x, p.y, TABLE) > NEAR) { err = 'เดินไปที่โต๊ะพักของก่อน'; break; }
+        if (q.put != null) {
+          var pi = q.put | 0; if (!p.hand[pi]) break;
+          if (t.table.length >= MP_TABLE_MAX) err = 'โต๊ะเต็มแล้ว วางได้ ' + MP_TABLE_MAX + ' ชิ้น';
+          else { t.table = t.table.concat([p.hand[pi]]); p.hand = without(p.hand, pi); dirty = true; }
+        } else if (q.take != null) {
+          var ti = q.take | 0; if (!t.table[ti]) break;
+          if (p.hand.length >= MP_HAND) err = 'มือเต็มแล้ว ถือได้ ' + MP_HAND + ' ชิ้น';
+          else { p.hand = p.hand.concat([t.table[ti]]); t.table = without(t.table, ti); dirty = true; }
+        }
+        break;
       case OP.SUBMIT:
-        if (s.phase === 'build' && !t.submitted) { t.submitted = true; t.submitTime = s.time / ROUND_TIME; dirty = true; }
+        if (s.phase === 'build' && !t.submitted) { t.submitted = true; t.pusher = null; t.submitTime = s.time / ROUND_TIME; dirty = true; }
         break;
     }
     if (err) mpSend(d, OP.ERROR, { t: err }, [m.sender]);
@@ -134,7 +219,8 @@ function matchLoop(ctx, logger, nk, d, tick, s, messages) {
   } else if (s.phase === 'build') {
     s.time -= dt;
     if (s.time <= 0 || (s.teams[0].submitted && s.teams[1].submitted)) { s.time = Math.max(0, s.time); mpScoreRound(d, s, logger, nk); dirty = true; }
-    mpSend(d, OP.POS, { time: s.time, p: ids.map(function (k) { return { id: k, x: +s.players[k].x.toFixed(2), y: +s.players[k].y.toFixed(2) }; }) });
+    mpSend(d, OP.POS, { time: s.time, p: ids.map(function (k) { return { id: k, x: +s.players[k].x.toFixed(2), y: +s.players[k].y.toFixed(2) }; }),
+      c: s.teams.map(function (t) { return { x: +t.cx.toFixed(2), y: +t.cy.toFixed(2) }; }) });
   } else if (s.phase === 'test') {
     s.testLeft -= dt; if (s.testLeft <= 0) { mpStartRound(s); dirty = true; }
   } else if (s.phase === 'result') {
