@@ -10,7 +10,16 @@ namespace Bob.Game
 {
     public partial class BobGame
     {
-        public const string AutoKey = "Bob.AutoGame";
+        public const string AutoKey = "Bob.AutoGame", OnlineKey = "Bob.AutoOnline";
+
+        bool OnlineTestRequested()
+        {
+#if UNITY_EDITOR
+            return UnityEditor.SessionState.GetBool(OnlineKey, false);
+#else
+            return false;
+#endif
+        }
 
         bool AutoRequested()
         {
@@ -45,6 +54,7 @@ namespace Bob.Game
             Debug.Log("[BobGameBot] waiting for the server check");
             yield return WaitFor(() => netNote != "กำลังเชื่อมต่อเซิร์ฟเวอร์…", 12f);
             Debug.Log("[BobGameBot] " + netNote);
+            if (OnlineTestRequested()) { yield return AutoPlayOnline(); yield break; }
             yield return new WaitForSeconds(0.5f);
             Shot("1-title");
             yield return new WaitForSeconds(0.3f);

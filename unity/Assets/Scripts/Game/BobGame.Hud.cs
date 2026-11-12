@@ -227,7 +227,7 @@ namespace Bob.Game
         string Hint()
         {
             if (phase != Phase.Build) return "";
-            if (near != null) return "แตะชิ้นส่วนเพื่อหยิบ (ถือได้ " + Hand + " ชิ้น)";
+            if (near != null) return "แตะชิ้นส่วนเพื่อหยิบ (ถือได้ " + HandMax + " ชิ้น)";
             if (nearCart && hand.Count > 0) return "แตะหรือลากของในมือไปที่รถเข็น ลำดับการซ้อนมีผล";
             if (hand.Count > 0) return "เดินไปที่รถเข็นกลางห้องเพื่อวางของ";
             if (stack.Count == 0) return "ลากจอยซ้ายมือ หรือแตะพื้นเพื่อเดินไปที่ชั้นวาง";
@@ -248,7 +248,7 @@ namespace Bob.Game
                     bool? res = i < results.Count ? results[i] : (bool?)null;
                     pips[i].color = res == true ? BobUi.Good : res == false ? BobUi.Rose : (i == roundNo - 1 ? BobUi.Sun : BobUi.Line);
                 }
-                scoreText.text = $"รอบ {roundNo}/3  <b>{wins} : {losses}</b>";
+                scoreText.text = $"รอบ {roundNo}/3  <b>{wins} : {losses}</b>" + (Online ? OnlineRivalNote() : "");
                 budgetText.text = BudgetLeft.ToString();
                 RenderOrder(); RenderCart(); RenderHand(); RenderButtons(); RenderStationPop();
             }
@@ -354,7 +354,7 @@ namespace Bob.Game
         {
             BobUi.Clear(handRow);
             bool canPlace = nearCart && phase == Phase.Build;
-            for (int i = 0; i < Hand; i++)
+            for (int i = 0; i < HandMax; i++)
             {
                 int idx = i;
                 if (i < hand.Count)
@@ -404,7 +404,7 @@ namespace Bob.Game
             BobUi.Clear(stationPop);
             var title = BobUi.HBox(stationPop, 8, "Title"); title.childForceExpandHeight = false; BobUi.Size(title, 34, 34);
             BobUi.Size(BobUi.Label(title.transform, StationNames[si], 24, BobUi.Ink, TextAnchor.MiddleLeft, FontStyle.Bold), 34, 34, 1, 220);
-            BobUi.Size(BobUi.Label(title.transform, $"ในมือ {hand.Count}/{Hand}", 20, BobUi.Muted, TextAnchor.MiddleRight), 34, 34, 0, 120);
+            BobUi.Size(BobUi.Label(title.transform, $"ในมือ {hand.Count}/{HandMax}", 20, BobUi.Muted, TextAnchor.MiddleRight), 34, 34, 0, 120);
             var row = BobUi.HBox(stationPop, 12, "Items"); row.childForceExpandWidth = false; row.childForceExpandHeight = false;
             var items = near == "method" ? BobRules.Methods : R.Offer.Where(id => BobRules.Parts[id].Family == (Family)si).ToArray();
             foreach (var id in items)
@@ -414,7 +414,7 @@ namespace Bob.Game
                 var b = BobUi.Button(row.transform, "", BobUi.Surface, () => PickUp(pid));
                 b.GetComponentInChildren<Text>().text = "";
                 BobUi.Size(b, 196, 196, 0, 168);
-                b.interactable = hand.Count < Hand;
+                b.interactable = hand.Count < HandMax;
                 var ic = BobUi.Img(b.transform, "part_" + id, 88); BobUi.Pin(ic.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -12), new Vector2(88, 88));
                 var nm = BobUi.Label(b.transform, p.Name, 22, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold); BobUi.Pin(nm.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 52), new Vector2(160, 30));
                 var st = string.Join(" ", Enumerable.Range(0, 4).Where(i => p.S[i] != 0).Select(i => StatTh[BobRules.StatKeys[i]].Substring(0, 2) + (p.S[i] > 0 ? "+" : "") + p.S[i]));
@@ -468,6 +468,7 @@ namespace Bob.Game
                 case Phase.Intro: RoomTicket(); break;
                 case Phase.Test: RoundResult(); break;
                 case Phase.Result: MatchResult(); break;
+                case Phase.Lobby: Lobby(); break;
             }
         }
 
@@ -523,6 +524,9 @@ namespace Bob.Game
             BobUi.Pin((RectTransform)play.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-48, 40), new Vector2(440, 180));
             play.GetComponentInChildren<Text>().fontStyle = FontStyle.Bold;
             StartCoroutine(Breathe(play.transform));
+            // online (2-4 players, two teams): above PLAY, still in the thumb zone
+            var on = BobUi.Button(S, online ? "ออนไลน์ 2-4 คน" : "ออนไลน์ (ต่อเซิร์ฟเวอร์ก่อน)", online ? BobUi.Teal : BobUi.Surface, FindOnline, 36, online ? Color.white : BobUi.Muted);
+            BobUi.Pin((RectTransform)on.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-48, 236), new Vector2(440, 104));
         }
 
         IEnumerator Breathe(Transform t)
@@ -586,13 +590,13 @@ namespace Bob.Game
             StartCoroutine(BobTween.Pop(banner.transform, 0.35f, 1.15f));
 
             Side(new Vector2(-330, 10), "ทีมเรา · " + Hero.Name, L.Mine, L.Stats, L.Stack, L.Win, true);
-            Side(new Vector2(330, 10), "คู่แข่ง", L.Rival.Score, L.Rival.Ev.Stats, L.Rival.Stack, !L.Win, false);
+            Side(new Vector2(330, 10), Online ? "ทีมคู่แข่ง" : "คู่แข่ง", L.Rival.Score, L.Rival.Ev.Stats, L.Rival.Stack, !L.Win, false);
             var vs = BobUi.Disc(screenRoot, BobUi.Rose, 120, "VS"); BobUi.Pin(vs.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 60), new Vector2(120, 120));
             var vt = BobUi.Label(vs.transform, "VS", 48, BobUi.Surface, TextAnchor.MiddleCenter, FontStyle.Bold); BobUi.Stretch(vt.rectTransform);
 
             var src = BobUi.Label(screenRoot, L.FromServer ? "คะแนนของเราคิดโดยเซิร์ฟเวอร์ Nakama" : "คะแนนคิดในเครื่อง (ออฟไลน์)", 22, BobUi.Surface, TextAnchor.MiddleCenter);
             BobUi.Pin(src.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 196), new Vector2(900, 34));
-            var next = BobUi.Button(screenRoot, MatchOver ? "ดูผลแมตช์" : "รอบถัดไป", BobUi.Sun, AfterTest, 48);
+            var next = BobUi.Button(screenRoot, MatchOver ? "ดูผลแมตช์" : Online ? "รอรอบถัดไป…" : "รอบถัดไป", BobUi.Sun, AfterTest, 48);
             BobUi.Pin((RectTransform)next.transform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 40), new Vector2(520, 140));
             next.GetComponentInChildren<Text>().fontStyle = FontStyle.Bold;
         }
@@ -666,7 +670,7 @@ namespace Bob.Game
         void SetOverlay(Overlay o)
         {
             overlay = o;
-            Time.timeScale = o != Overlay.None && phase == Phase.Build ? 0 : 1;
+            Time.timeScale = o != Overlay.None && phase == Phase.Build && !Online ? 0 : 1; // online the match keeps running
             joyActive = false;
             Sfx(o == Overlay.None ? "ui_cancel" : "ui_tap");
             RenderOverlay();

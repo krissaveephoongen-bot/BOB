@@ -8,6 +8,20 @@ var OP = { MOVE: 1, PICK: 2, PLACE: 3, LIFT: 4, READY: 5, SUBMIT: 6, STATE: 10, 
 var MP_TICK = 10, MP_MAX = 4, MP_HAND = 2, MP_TEST_SEC = 8, MP_SPEED = 2.3 * 1.25; // world units / s, with lag slack
 var STATION_FAM = { tool: [0.3, 4.06, 2.0, 4.7], chem: [6.0, 4.06, 7.7, 4.7], energy: [0.3, 0.3, 2.0, 0.94], method: [6.0, 0.3, 7.7, 0.94] };
 var CART = [3.55, 2.21, 4.45, 2.85], NEAR = 0.6;
+// Same solids and radius as BobGame.World (stations, cart, sofa): players are pushed out of them like on the phone.
+var SOLIDS = [STATION_FAM.tool, STATION_FAM.chem, STATION_FAM.energy, STATION_FAM.method, CART, [3.0, 0.85, 5.0, 1.15]], RADIUS = 0.16;
+function mpPushOut(x, y) {
+  for (var i = 0; i < SOLIDS.length; i++) {
+    var r = SOLIDS[i], cx = Math.max(r[0], Math.min(r[2], x)), cy = Math.max(r[1], Math.min(r[3], y)), d = Math.hypot(x - cx, y - cy);
+    if (d >= RADIUS) continue;
+    if (d > 0.0001) { x = cx + (x - cx) / d * RADIUS; y = cy + (y - cy) / d * RADIUS; }
+    else { // centre inside the rect: leave by the nearest edge
+      var opts = [[r[0] - RADIUS, y, x - r[0]], [r[2] + RADIUS, y, r[2] - x], [x, r[1] - RADIUS, y - r[1]], [x, r[3] + RADIUS, r[3] - y]];
+      opts.sort(function (a, b) { return a[2] - b[2]; }); x = opts[0][0]; y = opts[0][1];
+    }
+  }
+  return [x, y];
+}
 
 function mpDist(x, y, r) { var cx = Math.max(r[0], Math.min(r[2], x)), cy = Math.max(r[1], Math.min(r[3], y)); return Math.hypot(x - cx, y - cy); }
 function mpSend(d, op, obj, to) { d.broadcastMessage(op, JSON.stringify(obj), to || null, null, true); }
@@ -86,7 +100,7 @@ function matchLoop(ctx, logger, nk, d, tick, s, messages) {
         // Allowed distance grows with the time since the last accepted move (max 1 s), so extra messages buy no speed.
         var dx = x - p.x, dy = y - p.y, dist = Math.hypot(dx, dy), max = MP_SPEED * Math.min(1, Math.max(1, tick - (p.moveTick || 0)) / MP_TICK);
         if (dist > max) { x = p.x + dx / dist * max; y = p.y + dy / dist * max; }
-        p.x = Math.max(0.18, Math.min(7.82, x)); p.y = Math.max(0.18, Math.min(4.82, y));
+        var q2 = mpPushOut(Math.max(0.18, Math.min(7.82, x)), Math.max(0.18, Math.min(4.82, y))); p.x = q2[0]; p.y = q2[1];
         p.moveTick = tick;
         break;
       }
