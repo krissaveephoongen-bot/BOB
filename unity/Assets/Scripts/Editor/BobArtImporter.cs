@@ -17,7 +17,7 @@ namespace Bob.Art.EditorTools
         public string path, group, owner, anim, family;
         public int w, h, frames = 1;
         public float fps = 10;
-        public bool loop = true, tile;
+        public bool loop = true, tile, still; // still = a sheet of separate poses (e.g. faces), not an animation
         public float[] pivot, border;
     }
 
@@ -129,7 +129,7 @@ namespace Bob.Art.EditorTools
 
             var perOwner = new Dictionary<string, List<KeyValuePair<ArtSprite, AnimationClip>>>();
             int made = 0;
-            foreach (var s in m.sprites.Where(x => x.frames > 1))
+            foreach (var s in m.sprites.Where(x => x.frames > 1 && !x.still))
             {
                 var png = BobArtImporter.ArtRoot + s.path + ".png";
                 var frames = AssetDatabase.LoadAllAssetsAtPath(png).OfType<Sprite>()
