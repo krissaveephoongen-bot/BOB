@@ -15,6 +15,7 @@
 | [05_Roster_Mapping.md](05_Roster_Mapping.md) | เทียบ roster ใหม่ (กวาด/ฟอง/ถู/สเปรย์/เจ้าคราบ) กับตัวละครที่โค้ดเกมใช้อยู่ และประเด็นที่ต้องตัดสินใจ | Game designer |
 | [11_UX_UI_Spec.md](11_UX_UI_Spec.md) | สเปก UX/UI ทั้งเกม: แผนผังหน้าจอ 30+ จอ, flow, HUD, component library (ขนาด u/dp, สถานะ, เสียง/สั่น), tokens สี/ฟอนต์ไทย, accessibility, วิธีทำใน Unity (uGUI + TMP) + wireframe [`ux/BOB_UX_Wireframes.html`](ux/BOB_UX_Wireframes.html) | Game designer / UI artist / Unity dev |
 | [12_Sound_Manifest.md](12_Sound_Manifest.md) | รายการเสียงทั้งเกม (39 ไฟล์ รวมเสียง co-op ใหม่ 6 ตัว), แหล่ง CC0 ที่คัดไว้ (Kenney, OpenGameArt, Freesound CC0), วิธีนำเข้า Unity และตารางบันทึก licence | Sound / Unity dev |
+| [13_Balance_Sim.md](13_Balance_Sim.md) | ผลจำลองสมดุลฮีโร่ 20,000 รอบ (`server/balance-sim.js`): ability แต่ละตัวช่วยได้แค่ไหน และข้อเสนอปรับตัวเลข (ยังไม่ได้แก้เกม) | Game design |
 
 ## สรุปสั้น
 

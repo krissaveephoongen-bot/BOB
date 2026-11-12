@@ -89,11 +89,14 @@ created by the Nakama module on start. Code: `server/analytics.js`.
   quick match only) and the **Co-op scene** (`Coop/`, written in the cloud, type-checked only) which also has the private room
   screen, team switch, push / pass / table, hold-to-send vote and the split-screen test. Plan: port those features into the
   Game scene's online mode on the PC and keep the Co-op scene as the reference (see "Needs the PC").
-- Online: abilities are off (the server does not run them yet), no reconnect after the app is closed, no Quick Ping or voice chat.
+- Online: abilities and reconnect run on the server and in the Co-op scene, but the Game scene's online mode still has its ability
+  button off and does not rejoin (port with the rest). No Quick Ping or voice chat.
 - Scrub and Wash abilities, obstacles other than the sofa, the shelves and the table, the other 7 scenes; Party / Community modes.
-- Balance: every number is an untested starting value.
+- Balance: every number is an untested starting value. `node server/balance-sim.js` compares the hero abilities
+  (results and suggested tweaks: `art/docs/13_Balance_Sim.md`); nothing has been changed from it yet.
 - Development passwords, the `defaultkey` server key and the `defaulthttpkey` HTTP key must be replaced before any deployment.
-- Analytics: no retention or archiving yet; Unity client does not send `bob_log_event` yet (only `stack_scored` is logged from Unity).
+- Analytics: no retention or archiving yet. Unity sends match_start, round_result, ability_used and match_end through `bob_log_event`;
+  online matches are also logged by the server (match_start, round_result, ability_used with `mode: mp`).
 
 ## Multiplayer
 
@@ -108,7 +111,12 @@ The server owns a multiplayer match: phones send intents, the server checks them
 - Co-op moves (GDD 20): **push the cart** (grab it, it follows you at 80% speed, one pusher per team), **pass** a part to a team-mate
   within 1 unit, **parking table** for up to 4 parts. A player who drops mid-round leaves their parts on the team's table.
 - Sending is a **vote** (UX spec BTN-Submit): the cart is sent when half the online team has voted.
-- A round ends when both teams have sent or the 100 s clock runs out; best of 3, ties go to the team with more budget left.
+- **Abilities** (GDD 6), once per player per round: Sweep swaps two neighbouring layers, Bubble shields the team's cart from its worst
+  bad reaction, Spray gets a private score preview (op 15, only to that player), Press stops the team's clock for 8 s.
+- Each team has its own 100 s clock (Press can stop it). When it runs out the cart goes as it is. The round ends when both teams have
+  sent; best of 3, ties go to the team with more budget left.
+- **Reconnect**: a dropped player keeps their seat. `BobOnline` stores the match id on the phone until the match ends, and the Co-op
+  scene joins it again on connect (`BobOnline.RejoinAsync`).
 - Join by matchmaker (`BobOnline.FindAsync`, 2-4 players) or a private room (`bob_create_match` RPC, `BobOnline.CreateAsync` / `JoinAsync` with the match id).
 
 | Op | Direction | Payload |
@@ -117,15 +125,18 @@ The server owns a multiplayer match: phones send intents, the server checks them
 | 2 PICK / 3 PLACE / 4 LIFT | client → server | `{id}` / `{i}` hand index / `{}` |
 | 5 READY / 6 SUBMIT | client → server | `{char,ready,team?}` in the lobby / `{vote?}` (a vote to send) |
 | 7 PUSH / 8 PASS / 9 TABLE | client → server | `{on}` grab or let go of the cart / `{i,to?}` hand index, team-mate id / `{put:i}` or `{take:k}` |
-| 10 STATE | server → clients | phase, round, room, players[] (with `vote`), teams[] (stack, `cx,cy` cart, `pusher`, `table`) |
-| 11 POS | server → clients | `{time,p:[{id,x,y}],c:[{x,y}]}` players and both carts, every tick (10 Hz) during build |
+| 14 ABILITY | client → server | `{}` or `{swap:i}` (Sweep: swap layer i with the one above) |
+| 10 STATE | server → clients | phase, round, room, players[] (with `vote`, `ab` = ability used), teams[] (stack, `cx,cy` cart, `pusher`, `table`, `time`, `freeze`, `shield`) |
+| 11 POS | server → clients | `{time,tt:[t0,t1],p:[{id,x,y}],c:[{x,y}]}` team clocks, players and both carts, every tick (10 Hz) during build |
 | 12 RESULT / 13 ERROR | server → clients | per-round scores and winner / Thai refusal text for one player |
+| 15 PEEK | server → one client | `{total,stats}` Spray's preview of the team's cart |
 
 Room layout (world units, y up; both server and Unity): stations tool `[0.3,4.06,2.0,4.7]`, chem `[6.0,4.06,7.7,4.7]`,
 energy `[0.3,0.3,2.0,0.94]`, method `[6.0,0.3,7.7,0.94]`; table `[3.5,4.2,4.5,4.7]`; sofa `[3.0,0.85,5.0,1.15]`; cart 0.9 × 0.64 starting at (4.0, 2.53).
 
 Tests: start the server, then `cd server && node mp-test.js 4` (bots walk, pick, place, submit) and `node coop-test.js`
-(4 bots: solid shelves, pass, table, push, place on the moved cart, a dropped player's parts; 18 checks). Both must print PASS.
+(4 bots: solid shelves, pass, table, push, place on the moved cart, a dropped player's parts, the four abilities, the team clock, reconnect; 26 checks). Both must print PASS.
+GitHub Actions (`.github/workflows/server-tests.yml`) runs all of these, plus the Unity type-check, on every push and PR.
 `cd unity-check && dotnet run` runs the same co-op moves through the C# client.
 
 Note for server code: Nakama keeps match state as Go values between ticks, so `array.push` / `splice` on state can be
@@ -147,6 +158,8 @@ Written in a cloud session: type-checked with `dotnet build unity-typecheck` (0 
    Tap a part in the hand to put it where it fits from where you stand: **cart** (place) → **table** (park) → **team-mate within reach** (pass).
    Near the cart: lift the top layer, **จับเข็นรถ / ปล่อยรถเข็น**. Near the table: take parts back. Send = **hold 0.6 s** (a team vote).
    The order ticket shows the 4 live stats vs the spec; the cart card lists the shared stack.
+   The hero's ability button (yellow, once a round) sits in the right column; Sweep's shows one button per pair of layers at the cart.
+   The clock is the team's own (it turns green while Press holds it). If the app closes mid-match, connecting again rejoins the same seat.
 4. Test (UX S25): the screen splits, left = our room, right = theirs, each with its final cart, score, pass ✓/✗ and the dirt wiped as far as the score.
 5. Result after 3 rounds; Esc / Android back leaves from the lobby or result.
 Two players on one PC: run one copy in the Editor and one as a Windows build (or Unity's Multiplayer Play Mode), both pointing at 127.0.0.1.
@@ -191,7 +204,8 @@ Everything above was done in the cloud; these steps need Unity, Docker Desktop o
    If the Console shows compile errors in `Scripts/Coop/` or `Scripts/UI/`, fix those first (they were type-checked
    against older Unity reference assemblies, never compiled by Unity 6).
 3. **Bob > Build Coop Scene**, then play two copies (Editor + a Windows build, or Multiplayer Play Mode): create a room,
-   join with the code, ready up, and try push / pass / table / hold-to-send and the split-screen test.
+   join with the code, ready up, and try push / pass / table / hold-to-send, each hero's ability, closing and reopening one copy
+   mid-round (it must rejoin), and the split-screen test.
 4. Commit what Unity made: `.meta` files, `Assets/Scenes/Coop.unity`, `Assets/Art/BobAudio.prefab`, `ProjectSettings/EditorBuildSettings.asset`.
 5. TextMeshPro: import TMP Essentials and make Mitr / IBM Plex Sans Thai font assets (UX spec 2.2); then switch `BobUi.Label` to TMP.
 6. Optional: swap placeholder sounds for CC0 ones (`art/docs/12_Sound_Manifest.md`), art for the parking table (asset C07).
