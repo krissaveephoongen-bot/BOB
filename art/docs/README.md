@@ -13,6 +13,9 @@
 | [04_AI_Prompts.md](04_AI_Prompts.md) | Prompt สำหรับ ChatGPT / Midjourney / เครื่องมือ AI ใช้สร้าง Character Sheet และ asset ให้ตรงสไตล์ | Concept artist |
 | [06_Placeholder_Status.md](06_Placeholder_Status.md) | สถานะ placeholder ที่ผลิตด้วยโค้ดตาม concept และงานที่ยังต้องให้ศิลปิน/AI ทำ | ทุกคน |
 | [05_Roster_Mapping.md](05_Roster_Mapping.md) | เทียบ roster ใหม่ (กวาด/ฟอง/ถู/สเปรย์/เจ้าคราบ) กับตัวละครที่โค้ดเกมใช้อยู่ และประเด็นที่ต้องตัดสินใจ | Game designer |
+| [11_UX_UI_Spec.md](11_UX_UI_Spec.md) | สเปก UX/UI ทั้งเกม: แผนผังหน้าจอ 30+ จอ, flow, HUD, component library (ขนาด u/dp, สถานะ, เสียง/สั่น), tokens สี/ฟอนต์ไทย, accessibility, วิธีทำใน Unity (uGUI + TMP) + wireframe [`ux/BOB_UX_Wireframes.html`](ux/BOB_UX_Wireframes.html) | Game designer / UI artist / Unity dev |
+| [12_Sound_Manifest.md](12_Sound_Manifest.md) | รายการเสียงทั้งเกม (39 ไฟล์ รวมเสียง co-op ใหม่ 6 ตัว), แหล่ง CC0 ที่คัดไว้ (Kenney, OpenGameArt, Freesound CC0), วิธีนำเข้า Unity และตารางบันทึก licence | Sound / Unity dev |
+| [13_Balance_Sim.md](13_Balance_Sim.md) | ผลจำลองสมดุลฮีโร่ 20,000 รอบ (`server/balance-sim.js`): ability แต่ละตัวช่วยได้แค่ไหน และข้อเสนอปรับตัวเลข (ยังไม่ได้แก้เกม) | Game design |
 
 ## สรุปสั้น
 
@@ -30,6 +33,6 @@
 | M3 | 3D Hero Base Mesh + Shared Rig | 1 ตัวเข้า Unity ได้, ทดสอบ shader/outline บนมือถือจริง | 1–2 สัปดาห์ |
 | M4 | อนิเมชันชุดหลัก (Idle/Walk/Run/Carry/Place/Work/Skill/Hit/Victory/Defeat) | `.fbx` animation + Animator Controller | 2 สัปดาห์ |
 | M5 | ศัตรู 5 ตัว + บอส, ห้องแรก 1 ห้อง (สกปรก/สะอาด) | Prefab พร้อม LOD | 2–3 สัปดาห์ |
-| M6 | UI/VFX ชุดจริง แทน placeholder | Sprite Atlas + VFX prefabs | 1–2 สัปดาห์ |
+| M6 | UI/VFX ชุดจริง แทน placeholder ตาม `11_UX_UI_Spec.md` (F01–F20) | Sprite Atlas + UI prefabs + VFX prefabs | 1–2 สัปดาห์ |
 
 ระหว่างผลิต ไฟล์ placeholder ใน `bob-art/unity/` ใช้ต่อได้ตามเดิม ชื่อไฟล์และ id ไม่เปลี่ยน งานจริงจะค่อยๆ เข้ามาแทนทีละชิ้น

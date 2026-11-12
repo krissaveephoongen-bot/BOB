@@ -1,0 +1,31 @@
+<!-- Type-checks every script under unity/Assets/Scripts without the Unity Editor (for cloud sessions).
+     Uses public reference assemblies from NuGet: UnityEngine 2021.3 modules, uGUI 2020.3, UnityEditor 2018.1, NakamaClient.
+     They are older than Unity 6, so a pass here means "no typos, wrong names or wrong types", not "compiles in Unity 6".
+     Run: dotnet build unity-typecheck   (a clean build prints 0 errors; warnings are fine) -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Library</OutputType><TargetFramework>netstandard2.1</TargetFramework><LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable><EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <DefineConstants>UNITY_5_3_OR_NEWER;UNITY_2021_3_OR_NEWER;UNITY_EDITOR</DefineConstants>
+    <NoWarn>CS0414;CS0649;CS0169;CS1701;CS1702;CS0618;NU1701</NoWarn>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../unity/Assets/Scripts/**/*.cs" />
+    <!-- Editor scripts that use Unity 2019+ editor APIs missing from the 2018 reference assembly; they compile in Unity itself.
+         New editor scripts should stay 2018-compatible (call those through EditorApplication.ExecuteMenuItem) so they are checked here. -->
+    <Compile Remove="../unity/Assets/Scripts/Editor/BobArtImporter.cs;../unity/Assets/Scripts/Editor/BobAutoSmoke.cs;../unity/Assets/Scripts/Editor/BobGameScene.cs" />
+    <Compile Include="Shims.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="UnityEngine.Modules" Version="2021.3.33" />
+    <PackageReference Include="Unity3D.UnityEngine.UI" Version="2020.3.21" ExcludeAssets="all" GeneratePathProperty="true" />
+    <PackageReference Include="Unity3D.UnityEditor" Version="2018.1.6-f1" ExcludeAssets="all" GeneratePathProperty="true" />
+    <PackageReference Include="Unity3D.UnityEngine" Version="2020.3.21" ExcludeAssets="all" />
+    <PackageReference Include="NakamaClient" Version="3.*" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="UnityEngine.UI"><HintPath>$(PkgUnity3D_UnityEngine_UI)/lib/UnityEngine.UI.dll</HintPath></Reference>
+    <Reference Include="UnityEditor"><HintPath>$(PkgUnity3D_UnityEditor)/lib/UnityEditor.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

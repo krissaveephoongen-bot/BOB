@@ -163,5 +163,35 @@
   "name": "music_placeholder_loop",
   "folder": "Music",
   "sec": 16.0
+ },
+ {
+  "name": "pass_part",
+  "folder": "SFX",
+  "sec": 0.32
+ },
+ {
+  "name": "table_put",
+  "folder": "SFX",
+  "sec": 0.22
+ },
+ {
+  "name": "cart_grab",
+  "folder": "SFX",
+  "sec": 0.3
+ },
+ {
+  "name": "lobby_join",
+  "folder": "SFX",
+  "sec": 0.45
+ },
+ {
+  "name": "ready_on",
+  "folder": "SFX",
+  "sec": 0.3
+ },
+ {
+  "name": "vote_tick",
+  "folder": "SFX",
+  "sec": 0.06
  }
 ]
