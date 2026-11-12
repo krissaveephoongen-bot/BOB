@@ -1,0 +1,2 @@
+art/leonardo_raw/**/*.jpg filter=lfs diff=lfs merge=lfs -text
+art/leonardo_raw/**/*.png filter=lfs diff=lfs merge=lfs -text
