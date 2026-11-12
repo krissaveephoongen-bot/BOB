@@ -107,6 +107,124 @@ namespace Bob.Game
             var vi = veil.gameObject.AddComponent<Image>(); vi.color = new Color(1f, 0.96f, 0.86f, 0.22f); vi.raycastTarget = false;
         }
 
+
+        // ---------------------------------------------------------------- context button, world signals, spawn (UX spec 5A.3, 5A.4, 5A.8)
+
+        enum Ctx { None, Place, Lift, Stash, TakeTable, Full }
+        Ctx ctx;
+        Button ctxBtn; Text ctxLabel;
+        SpriteRenderer ctxArrow, teamRing, spawnRing;
+        TextMesh heroName, spawnLabel;
+        bool enemiesLive; float buildElapsed;
+        const float EnemySpawnDelay = 2.5f; // seconds after "ลุย!"; every shelf is >= 4 tiles (2 u) from the spawn point
+
+        Ctx ComputeCtx()
+        {
+            if (phase != Phase.Build || overlay != Overlay.None) return Ctx.None;
+            if (nearCart && hand.Count > 0) return Ctx.Place;
+            if (nearCart && stack.Count > 0) return Ctx.Lift;
+            if (nearTable && hand.Count > 0 && tableItems.Count < TableMax) return Ctx.Stash;
+            if (nearTable && tableItems.Count > 0 && hand.Count < HandMax) return Ctx.TakeTable;
+            if (near != null && hand.Count >= HandMax) return Ctx.Full;
+            return Ctx.None;
+        }
+
+        static string CtxText(Ctx c)
+        {
+            switch (c)
+            {
+                case Ctx.Place: return "วาง";
+                case Ctx.Lift: return "ยก";
+                case Ctx.Stash: return "พักของ";
+                case Ctx.TakeTable: return "หยิบคืน";
+                case Ctx.Full: return "มือเต็ม";
+                default: return "เดินเข้าใกล้";
+            }
+        }
+
+        Vector2? CtxTarget(Ctx c)
+        {
+            switch (c)
+            {
+                case Ctx.Place:
+                case Ctx.Lift: return CartTop;
+                case Ctx.Stash:
+                case Ctx.TakeTable: return new Vector2(TableRect.center.x, TableRect.yMax + 0.5f);
+                default: return null;
+            }
+        }
+
+        void DoCtx()
+        {
+            switch (ComputeCtx())
+            {
+                case Ctx.Place: Place(0); break;
+                case Ctx.Lift: LiftTop(); break;
+                case Ctx.Stash: StashOnTable(0); break;
+                case Ctx.TakeTable: TakeFromTable(); break;
+                case Ctx.Full: Toast("มือเต็มแล้ว วางลงรถเข็นก่อน"); Sfx("drop_invalid"); break;
+            }
+        }
+
+        void RenderCtx()
+        {
+            if (ctxBtn == null) return;
+            ctx = ComputeCtx();
+            ctxLabel.text = CtxText(ctx);
+            ctxBtn.interactable = ctx != Ctx.None && ctx != Ctx.Full;
+            ((Image)ctxBtn.targetGraphic).color = ctx == Ctx.Full ? new Color(0.75f, 0.75f, 0.78f, 0.95f) : ctx == Ctx.None ? new Color(1f, 0.99f, 0.95f, 0.85f) : BobUi.Sun;
+            if (cartCardRt != null) cartCardRt.gameObject.SetActive(nearCart); // spec 5A.4: cart info appears when standing next to the cart
+        }
+
+        void BuildSignals()
+        {
+            ctxArrow = MakeSprite("CtxArrow", worldRoot, "icon_star", Vector2.zero, 0.32f, false); ctxArrow.sortingOrder = 2900; ctxArrow.gameObject.SetActive(false);
+            teamRing = MakeSprite("TeamRing", worldRoot, "fx_target", Vector2.zero, 0.8f, false);
+            spawnRing = MakeSprite("SpawnRing", worldRoot, "fx_target", PlayerStart, 1.0f, false); spawnRing.sortingOrder = -1400; spawnRing.gameObject.SetActive(false);
+            spawnLabel = WorldLabel("1", PlayerStart + new Vector2(0, -0.34f), 0.05f, BobUi.Ink); spawnLabel.gameObject.SetActive(false);
+            heroName = WorldLabel("", Vector2.zero, 0.028f, BobUi.Ink);
+        }
+
+        void TickSignals(float dt)
+        {
+            if (teamRing == null) return;
+            var hc = BobUi.Hex(Hero.Color);
+            bool inGame = R != null && phase != Phase.Title && phase != Phase.Loading;
+            teamRing.gameObject.SetActive(inGame); heroName.gameObject.SetActive(inGame);
+            if (inGame)
+            {
+                teamRing.color = new Color(hc.r, hc.g, hc.b, 0.85f); teamRing.transform.position = pos + new Vector2(0, 0.02f); teamRing.sortingOrder = Order(pos.y) - 1;
+                heroName.text = Hero.Name; heroName.transform.position = pos + new Vector2(0, -0.16f); heroName.color = hc;
+            }
+            bool pre = R != null && (phase == Phase.Intro || phase == Phase.Countdown);
+            spawnRing.gameObject.SetActive(pre); spawnLabel.gameObject.SetActive(pre);
+            if (pre) spawnRing.color = new Color(hc.r, hc.g, hc.b, 0.9f);
+
+            // the thing the main button will act on gets a bobbing star above it
+            var tgt = CtxTarget(ctx);
+            ctxArrow.gameObject.SetActive(tgt.HasValue);
+            if (tgt.HasValue) ctxArrow.transform.position = tgt.Value + new Vector2(0, 0.08f * Mathf.Sin(Time.unscaledTime * 6f));
+
+            // enemies appear 2.5 s after "ลุย!" (UX 5A.8) and never before everyone could move
+            if (phase == Phase.Build && overlay == Overlay.None && !Online) buildElapsed += dt;
+            if (!enemiesLive && phase == Phase.Build && buildElapsed >= EnemySpawnDelay) ActivateEnemies(true);
+        }
+
+        void ActivateEnemies(bool withFx)
+        {
+            enemiesLive = true;
+            foreach (var en in enemies)
+            {
+                if (en.t == null) continue;
+                en.t.gameObject.SetActive(true);
+                if (!withFx) continue;
+                var sp = art.Find(en.id + "_spawn");
+                if (sp != null) en.anim.Play(sp.frames, sp.fps, false);
+                SpawnFx("fx_poof", en.t.position + new Vector3(0, 0.4f, 0));
+            }
+            if (withFx) Sfx("enemy_spawn");
+        }
+
         // ---------------------------------------------------------------- split-screen test view
 
         public const float SplitTime = 4.5f;

@@ -111,6 +111,7 @@ namespace Bob.Game
             targetMarker.GetComponent<SpriteRenderer>().sortingOrder = -1500;
             targetMarker.gameObject.SetActive(false);
 
+            BuildSignals();
             ResetRoomForRound();
         }
 
@@ -173,8 +174,10 @@ namespace Bob.Game
                 var an = sr.gameObject.AddComponent<BobSpriteAnimator>();
                 if (idle != null) an.Play(idle.frames, idle.fps, true);
                 WorldLabel(BobMatch.Enemy(ids[i]).Name, new Vector2(x, 3.62f), 0.03f, BobUi.Ink, holder);
+                holder.gameObject.SetActive(false); // appear 2.5 s after the countdown (TickSignals)
                 enemies.Add((ids[i], an, holder));
             }
+            enemiesLive = false; buildElapsed = 0;
 
             var rng = new System.Random(seed * 13 + roundNo);
             bool dirty = R != null;
@@ -317,6 +320,7 @@ namespace Bob.Game
 
             targetMarker.gameObject.SetActive(target.HasValue);
             if (target.HasValue) targetMarker.position = target.Value;
+            TickSignals(dt);
         }
 
         IEnumerable<Rect> Solids() { foreach (var r in StationRects) yield return r; if (Online) yield return CartRect; yield return SofaRect; if (!Online) yield return TableRect; }
@@ -416,6 +420,7 @@ namespace Bob.Game
 
         void OnRoundTested(bool win)
         {
+            if (!enemiesLive) ActivateEnemies(false);
             foreach (var en in enemies)
             {
                 var e = art.Find(en.id + (win ? "_defeat" : "_hit"));

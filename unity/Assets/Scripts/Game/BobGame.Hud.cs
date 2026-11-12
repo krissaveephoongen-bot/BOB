@@ -161,28 +161,31 @@ namespace Bob.Game
 
         void BuildHand()
         {
-            handRow = BobUi.Pin(BobUi.Rect("Hand", hudRoot), new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 10), new Vector2(3 * 148 + 2 * 14, 148)); handRow.localScale = Vector3.one * 0.85f;
+            handRow = BobUi.Pin(BobUi.Rect("Hand", hudRoot), new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(-90, 10), new Vector2(3 * 148 + 2 * 14, 148)); handRow.localScale = Vector3.one * 0.75f;
             var h = handRow.gameObject.AddComponent<HorizontalLayoutGroup>(); h.spacing = 14;
             h.childControlWidth = h.childControlHeight = true; h.childForceExpandWidth = h.childForceExpandHeight = true;
         }
 
         void BuildActionButtons()
         {
-            var col = hudRoot; // thumb arc, bottom right: one big primary button, the ability button beside it
+            var col = hudRoot; // thumb arc, bottom right (UX 5A.2): big contextual main button, send (hold) beside it, ability further left
+            ctxBtn = BobUi.Button(col, "หยิบ", BobUi.Sun, DoCtx, 40);
+            BobUi.Pin((RectTransform)ctxBtn.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-20, 20), new Vector2(230, 160));
+            ctxLabel = ctxBtn.GetComponentInChildren<Text>(); ctxLabel.fontStyle = FontStyle.Bold;
 
-            abilityBtn = BobUi.Button(col, "", BobUi.Sun, UseAbility, 26);
-            BobUi.Pin((RectTransform)abilityBtn.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-300, 36), new Vector2(260, 104)); ((Image)abilityBtn.targetGraphic).color = new Color(1f, 0.82f, 0.35f, 0.95f);
-            var lab = abilityBtn.GetComponentInChildren<Text>(); lab.alignment = TextAnchor.MiddleLeft; BobUi.Stretch(lab.rectTransform, 100, 4, 10, 4);
-            abilityLabel = lab; abilityLabel.supportRichText = true;
-            var port = BobUi.Img(abilityBtn.transform, charId + "_portrait", 80); port.name = "Portrait";
-            BobUi.Pin(port.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(10, 0), new Vector2(80, 80));
-
-            submitBtn = BobUi.Button(col, "กดค้างเพื่อส่ง", BobUi.Teal, Submit, 40, Color.white);
-            BobUi.Pin((RectTransform)submitBtn.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-20, 20), new Vector2(270, 150));
+            submitBtn = BobUi.Button(col, "กดค้างเพื่อส่ง", BobUi.Teal, Submit, 30, Color.white);
+            BobUi.Pin((RectTransform)submitBtn.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-262, 20), new Vector2(230, 100));
             submitBtn.GetComponentInChildren<Text>().fontStyle = FontStyle.Bold;
             // UX spec 14.4: hold 0.6 s to send (a ring fills), so a thumb slip cannot end the round. Settings: PlayerPrefs bob.holdSubmit.
             submitBtn.onClick.RemoveAllListeners();
             submitHold = Bob.UI.BobHoldButton.Attach(submitBtn.targetGraphic, BobUi.Circle, new Color(1f, 0.85f, 0.3f, 0.9f), Submit);
+
+            abilityBtn = BobUi.Button(col, "", BobUi.Sun, UseAbility, 26);
+            BobUi.Pin((RectTransform)abilityBtn.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-504, 20), new Vector2(200, 100)); ((Image)abilityBtn.targetGraphic).color = new Color(1f, 0.82f, 0.35f, 0.95f);
+            var lab = abilityBtn.GetComponentInChildren<Text>(); lab.alignment = TextAnchor.MiddleLeft; BobUi.Stretch(lab.rectTransform, 84, 4, 8, 4);
+            abilityLabel = lab; abilityLabel.supportRichText = true;
+            var port = BobUi.Img(abilityBtn.transform, charId + "_portrait", 72); port.name = "Portrait";
+            BobUi.Pin(port.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(8, 0), new Vector2(72, 72));
         }
 
         Bob.UI.BobHoldButton submitHold;
@@ -393,12 +396,13 @@ namespace Bob.Game
         void RenderButtons()
         {
             var h = Hero;
-            abilityLabel.text = $"<b>{h.Ability}</b>\n<size=18>{(abUsed ? "ใช้แล้วในรอบนี้" : swapMode ? "แตะ สลับ↑ ในรถเข็น" : AbilityShort[charId])}</size>";
+            abilityLabel.text = $"<b>{h.Ability}</b>\n<size=16>{(abUsed ? "ใช้แล้ว" : swapMode ? "แตะ สลับ↑" : "พร้อม")}</size>";
             abilityBtn.interactable = phase == Phase.Build && !abUsed;
             var pt = abilityBtn.transform.Find("Portrait");
             if (pt != null) pt.GetComponent<Image>().sprite = art.Get(charId + "_portrait");
             submitBtn.interactable = phase == Phase.Build && BobRules.CountLayers(stack) > 0;
             if (submitHold != null) submitHold.interactable = submitBtn.interactable;
+            RenderCtx();
         }
 
         // ---------------------------------------------------------------- station shelf

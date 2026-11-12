@@ -230,3 +230,5 @@ Server: the game plays offline without a server. For online, start Docker + `sta
 Each round now sits on a GDD-themed room picture (round 1 rental room, round 2 condo, round 3 coffee shop; kitchen is ready for round 4). The pause button has a 144u touch area (`BobHitArea`).
 
 The solo scene is full-screen landscape: the camera fills the safe area, the themed room picture fills the screen and the HUD (order ticket, cart card, hand, buttons) floats over it (`FitCamera` in `BobGame.World.cs`). The Coop scene still uses its own split layout.
+
+UX spec 5A in the solo scene (`BobGame.Extras.cs`): a contextual main button (วาง / ยก / พักของ / หยิบคืน / มือเต็ม) at bottom right with a bobbing star over its target, hold-to-send and the ability button beside it, team ring + hero name under the feet, the cart card shows only when standing at the cart, a numbered spawn ring during the briefing and the countdown, and enemies appear 2.5 s after "ลุย!". Not done yet: the 55-degree camera and 3/4 art (F21-F24 are not drawn), spawn rotation for 2-4 players (online), passing to a team-mate and the Quick Ping wheel.
