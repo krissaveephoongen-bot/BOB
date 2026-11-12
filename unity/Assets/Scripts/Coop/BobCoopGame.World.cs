@@ -45,6 +45,9 @@ namespace Bob.Coop
             cam = Camera.main;
             if (cam == null) { var g = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener)) { tag = "MainCamera" }; cam = g.GetComponent<Camera>(); }
             cam.orthographic = true; cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = BobUi.Hex("#E9DDB8");
+            // The room cameras only clear their own viewport; this one clears the whole screen first, so nothing stale shows around the room.
+            var back = new GameObject("Backdrop Camera").AddComponent<Camera>();
+            back.depth = -10; back.cullingMask = 0; back.clearFlags = CameraClearFlags.SolidColor; back.backgroundColor = BobUi.Hex("#E9DDB8"); back.orthographic = true;
             camRight = new GameObject("Right Camera (split view)").AddComponent<Camera>();
             camRight.orthographic = true; camRight.clearFlags = CameraClearFlags.SolidColor; camRight.backgroundColor = BobUi.Hex("#DCCFA6");
             camRight.enabled = false;
@@ -81,7 +84,7 @@ namespace Bob.Coop
             var tb = BobCoopLayout.Table;
             var table = Sprite("Table", v.root, null, W(team, tb.Cx, tb.Cy), 1);
             table.transform.localScale = new Vector3(tb.W, tb.H, 1); table.color = BobUi.Hex("#C9925B"); table.sortingOrder = Order(tb.Y0);
-            Label("โต๊ะพักของ", W(team, tb.Cx, tb.Y0 - 0.14f), 0.03f, BobUi.Ink, v.root);
+            Label("โต๊ะพักของ", W(team, tb.Cx, tb.Y1 + 0.16f), 0.03f, BobUi.Ink, v.root);
             v.table = new GameObject("TableItems").transform; v.table.SetParent(v.root);
 
             var so = BobCoopLayout.Sofa;
@@ -270,6 +273,7 @@ namespace Bob.Coop
             }
             if (!split && cam != null && net != null && net.MePlayer != null)
             {
+                FitRoomCamera();
                 var c = W(net.MyTeam, BobCoopLayout.RoomW / 2, BobCoopLayout.RoomH / 2 + 0.3f);
                 cam.transform.position = new Vector3(c.x, c.y, -10);
             }
@@ -287,6 +291,21 @@ namespace Bob.Coop
 
         // ---------------------------------------------------------------- split view (test phase)
 
+        // In a match the room sits between the side columns (order ticket + cart card left, actions + send right), under the
+        // top bar and above the hand row, so no panel covers the floor (UX spec S22). Fractions of the safe area.
+        public const float SideCol = 0.24f, TopStrip = 0.125f, BottomStrip = 0.2f;
+
+        void FitRoomCamera()
+        {
+            if (screen != View.Build) return;
+            var sa = Screen.safeArea; float W = Mathf.Max(1, Screen.width), H = Mathf.Max(1, Screen.height);
+            float x0 = sa.xMin / W + SideCol * sa.width / W, x1 = sa.xMax / W - SideCol * sa.width / W;
+            float y0 = sa.yMin / H + BottomStrip * sa.height / H, y1 = sa.yMax / H - TopStrip * sa.height / H;
+            cam.rect = new Rect(x0, y0, Mathf.Max(0.1f, x1 - x0), Mathf.Max(0.1f, y1 - y0));
+            float needW = BobCoopLayout.RoomW + 0.3f, needH = BobCoopLayout.RoomH + 0.9f; // + room above the back shelves for their art
+            cam.orthographicSize = Mathf.Max(needH / 2, needW / 2 / Mathf.Max(0.1f, cam.aspect));
+        }
+
         void SetSplit(bool on)
         {
             split = on;
@@ -298,7 +317,8 @@ namespace Bob.Coop
                 return;
             }
             int mine = net != null ? net.MyTeam : 0;
-            cam.rect = new Rect(0, 0, 0.5f, 1); camRight.rect = new Rect(0.5f, 0, 0.5f, 1);
+            // the rooms sit between the score boxes (top) and the result line (bottom) so neither covers the floor
+            cam.rect = new Rect(0, 0.12f, 0.5f, 0.6f); camRight.rect = new Rect(0.5f, 0.12f, 0.5f, 0.6f);
             float aspect = Mathf.Max(0.3f, cam.aspect); // already the half-screen aspect after setting rect
             float size = Mathf.Max(2.9f, (BobCoopLayout.RoomW / 2 + 0.25f) / aspect);
             cam.orthographicSize = camRight.orthographicSize = size;

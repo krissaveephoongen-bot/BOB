@@ -16,7 +16,7 @@ namespace Bob.Coop
 {
     public partial class BobCoopGame
     {
-        RectTransform hudRoot, safe, page, ctxPanel, handRow, toastRt;
+        RectTransform hudRoot, safe, page, ctxPanel, handRow, toastRt, pageBg;
         Text timerText, toastText;
         float toastUntil;
         string ctxKey;
@@ -54,6 +54,14 @@ namespace Bob.Coop
         {
             if (safe == null) return;
             if (page != null) Destroy(page.gameObject);
+            if (pageBg != null) Destroy(pageBg.gameObject);
+            // menus, lobby and result get a solid background so the room behind never shows through the panels
+            if (screen != View.Build && screen != View.Test)
+            {
+                pageBg = BobUi.Stretch(BobUi.Rect("Background", hudRoot));
+                pageBg.gameObject.AddComponent<Image>().color = T.surfaceCream;
+                pageBg.SetAsFirstSibling();
+            }
             page = BobUi.Stretch(BobUi.Rect("Page", safe));
             timerText = null; ctxPanel = null; handRow = null; ctxKey = null;
             switch (screen)
@@ -129,7 +137,7 @@ namespace Bob.Coop
             Btn(top.transform, "คัดลอกรหัส", BobUi.Surface, () => { GUIUtility.systemCopyBuffer = code; Toast("คัดลอกรหัสห้องแล้ว ส่งให้เพื่อนได้เลย"); }, 150, 320);
 
             var teams = BobUi.HBox(page, T.spaceL, "Teams");
-            var tr = (RectTransform)teams.transform; tr.anchorMin = new Vector2(0, 0.3f); tr.anchorMax = new Vector2(1, 0.83f); tr.offsetMin = tr.offsetMax = Vector2.zero;
+            var tr = (RectTransform)teams.transform; tr.anchorMin = new Vector2(0, 0.25f); tr.anchorMax = new Vector2(1, 0.83f); tr.offsetMin = tr.offsetMax = Vector2.zero;
             for (int t = 0; t < 2; t++)
             {
                 var box = BobUi.Box(teams.transform, t == 0 ? "ทีม 1" : "ทีม 2", t == (net?.MyTeam ?? -1) ? "ทีมของคุณ" : null);
@@ -147,7 +155,7 @@ namespace Bob.Coop
             }
 
             var heroes = BobUi.HBox(page, T.spaceS, "Heroes");
-            var hr = (RectTransform)heroes.transform; hr.anchorMin = new Vector2(0, 0.12f); hr.anchorMax = new Vector2(0.62f, 0.28f); hr.offsetMin = hr.offsetMax = Vector2.zero;
+            var hr = (RectTransform)heroes.transform; hr.anchorMin = new Vector2(0, 0.03f); hr.anchorMax = new Vector2(0.5f, 0.19f); hr.offsetMin = hr.offsetMax = Vector2.zero;
             foreach (var c in BobMatch.Chars)
             {
                 var id = c.Id;
@@ -156,13 +164,13 @@ namespace Bob.Coop
             }
 
             var bottom = BobUi.HBox(page, T.spaceS, "Bottom");
-            BobUi.Pin((RectTransform)bottom.transform, new Vector2(1, 0), new Vector2(1, 0), Vector2.zero, new Vector2(1000, 180));
+            BobUi.Pin((RectTransform)bottom.transform, new Vector2(1, 0), new Vector2(1, 0), Vector2.zero, new Vector2(860, 180));
             Btn(bottom.transform, "ย้ายทีม", BobUi.Surface, SwitchTeam, 180, 300);
             Btn(bottom.transform, MeReady ? "ยกเลิกพร้อม" : "พร้อม ✓", MeReady ? BobUi.Surface : BobUi.Sun, ToggleReady, 180, 520, T.buttonLg);
             int n = s?.players?.Length ?? 0, ready = s?.players?.Count(p => p.ready) ?? 0;
             var hint = n < 2 ? "รอเพื่อนอีกอย่างน้อย 1 คน (ส่งรหัสห้องให้เพื่อน)" : ready < n ? $"พร้อมแล้ว {ready}/{n} คน เริ่มเมื่อทุกคนพร้อม" : "กำลังเริ่ม…";
             var h = BobUi.Label(page, hint, T.caption, T.inkMuted, TextAnchor.MiddleRight);
-            BobUi.Pin(h.rectTransform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(0, 190), new Vector2(1000, 60));
+            BobUi.Pin(h.rectTransform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(0, 196), new Vector2(880, 60));
         }
 
         // S22 in-match HUD for co-op
@@ -194,7 +202,7 @@ namespace Bob.Coop
 
             // order ticket: what the room needs vs what our cart gives now (live bars, GDD 9)
             var ticket = BobUi.Box(page, "ใบงาน", s.room?.enemies != null ? string.Join(" ", s.room.enemies.Select(e => BobMatch.Enemy(e).Name)) : null);
-            var trt = (RectTransform)ticket.transform; trt.anchorMin = new Vector2(0, 0.62f); trt.anchorMax = new Vector2(0.24f, 0.86f); trt.offsetMin = trt.offsetMax = Vector2.zero;
+            var trt = (RectTransform)ticket.transform; trt.anchorMin = new Vector2(0, 0.58f); trt.anchorMax = new Vector2(BobCoopGame.SideCol - 0.01f, 0.86f); trt.offsetMin = trt.offsetMax = Vector2.zero;
             var ev = BobRules.EvalStack(team.stack ?? new string[0], s.room?.enemies);
             var need = s.room?.spec?.need;
             string[] names = { "ขจัดคราบ", "ถนอมพื้นผิว", "เร็ว", "ความเงา" };
@@ -208,7 +216,7 @@ namespace Bob.Coop
 
             // cart card: the shared stack, bottom layer first, and who voted to send
             var cart = BobUi.Box(page, "รถเข็นของทีม", $"{BobRules.CountLayers(team.stack ?? new string[0])}/5 ชั้น");
-            var crt = (RectTransform)cart.transform; crt.anchorMin = new Vector2(0.76f, 0.5f); crt.anchorMax = new Vector2(1, 0.86f); crt.offsetMin = crt.offsetMax = Vector2.zero;
+            var crt = (RectTransform)cart.transform; crt.anchorMin = new Vector2(0, 0.26f); crt.anchorMax = new Vector2(BobCoopGame.SideCol - 0.01f, 0.57f); crt.offsetMin = crt.offsetMax = Vector2.zero;
             var stack = team.stack ?? new string[0];
             for (int i = stack.Length - 1; i >= 0; i--) BobUi.Size(BobUi.Label(cart.transform, $"{i + 1}. {PartName(stack[i])}", T.caption, T.ink), 44, 44);
             if (stack.Length == 0) BobUi.Size(BobUi.Label(cart.transform, "ยังว่าง เดินไปหยิบของที่ชั้นวาง", T.caption, T.inkMuted), 44, 44);
@@ -220,7 +228,7 @@ namespace Bob.Coop
             // context actions (station parts, cart, table) on the right, above the send button
             ctxPanel = (RectTransform)BobUi.VBox(page, T.spaceS, 0, "Context").transform;
             ctxPanel.anchorMin = new Vector2(1, 0); ctxPanel.anchorMax = new Vector2(1, 0); ctxPanel.pivot = new Vector2(1, 0);
-            ctxPanel.anchoredPosition = new Vector2(0, T.submitSize.y + T.spaceM); ctxPanel.sizeDelta = new Vector2(560, 520);
+            ctxPanel.anchoredPosition = new Vector2(0, T.submitSize.y + T.spaceM); ctxPanel.sizeDelta = new Vector2(440, 640);
             ctxPanel.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.LowerRight;
 
             // send: hold 0.6 s; in a team it is a vote (half the team sends the cart)
@@ -271,19 +279,19 @@ namespace Bob.Coop
                 foreach (var id in ids)
                 {
                     var p = BobRules.Parts[id]; var pid = id;
-                    Btn(ctxPanel, $"หยิบ {p.Name} ({p.Cost})", BobUi.Surface, () => Pick(pid), 120, 520, T.caption);
+                    Btn(ctxPanel, $"หยิบ {p.Name} ({p.Cost})", BobUi.Surface, () => Pick(pid), 120, 440, T.caption);
                 }
             }
             if (spot == Spot.Cart && !team.submitted)
             {
-                if ((team.stack?.Length ?? 0) > 0) Btn(ctxPanel, "ยกชั้นบนสุดออก", BobUi.Surface, Lift, 160, 520);
-                Btn(ctxPanel, Pushing ? "ปล่อยรถเข็น" : "จับเข็นรถ", BobUi.Surface, TogglePush, 160, 520);
+                if ((team.stack?.Length ?? 0) > 0) Btn(ctxPanel, "ยกชั้นบนสุดออก", BobUi.Surface, Lift, 160, 440);
+                Btn(ctxPanel, Pushing ? "ปล่อยรถเข็น" : "จับเข็นรถ", BobUi.Surface, TogglePush, 160, 440);
             }
-            else if (Pushing) Btn(ctxPanel, "ปล่อยรถเข็น", BobUi.Surface, TogglePush, 160, 520);
+            else if (Pushing) Btn(ctxPanel, "ปล่อยรถเข็น", BobUi.Surface, TogglePush, 160, 440);
             if (spot == Spot.Table)
             {
                 var items = team.table ?? new string[0];
-                for (int k = 0; k < items.Length; k++) { int kk = k; Btn(ctxPanel, "หยิบ " + PartName(items[k]) + " จากโต๊ะ", BobUi.Surface, () => TakeFromTable(kk), 140, 520, T.caption); }
+                for (int k = 0; k < items.Length; k++) { int kk = k; Btn(ctxPanel, "หยิบ " + PartName(items[k]) + " จากโต๊ะ", BobUi.Surface, () => TakeFromTable(kk), 140, 440, T.caption); }
                 if (items.Length == 0) BobUi.Size(BobUi.Label(ctxPanel, "โต๊ะว่าง แตะของในมือเพื่อพักไว้ให้เพื่อน", T.caption, T.inkMuted, TextAnchor.MiddleRight), 90, 90);
             }
             // the hero's ability, once a round (GDD 6); Sweep picks the pair of layers at the cart
@@ -293,9 +301,9 @@ namespace Bob.Coop
                 if (me.@char == "sweep")
                 {
                     var st = team.stack ?? new string[0];
-                    if (spot == Spot.Cart) for (int i = 0; i < st.Length - 1; i++) { int ii = i; Btn(ctxPanel, $"{abName}: สลับ {PartName(st[i])} ↔ {PartName(st[i + 1])}", BobUi.Sun, () => UseAbility(ii), 120, 520, T.caption); }
+                    if (spot == Spot.Cart) for (int i = 0; i < st.Length - 1; i++) { int ii = i; Btn(ctxPanel, $"{abName}: สลับ {PartName(st[i])} ↔ {PartName(st[i + 1])}", BobUi.Sun, () => UseAbility(ii), 120, 440, T.caption); }
                 }
-                else Btn(ctxPanel, abName, BobUi.Sun, () => UseAbility(-1), 140, 520);
+                else Btn(ctxPanel, abName, BobUi.Sun, () => UseAbility(-1), 140, 440);
             }
             BobHitArea.EnsureAll(ctxPanel, T.hitInMatch); BobHitArea.EnsureAll(handRow, T.hitInMatch);
         }
@@ -333,7 +341,7 @@ namespace Bob.Coop
                 var tr = r.teams.FirstOrDefault(x => x.team == team); if (tr == null) continue;
                 var box = BobUi.Box(page, side == 0 ? "ทีมเรา" : "ทีมคู่แข่ง", tr.score != null ? (tr.score.pass ? "ผ่านสเปก ✓" : "ไม่ผ่านสเปก ✗") : null);
                 var rt = (RectTransform)box.transform;
-                rt.anchorMin = new Vector2(side * 0.5f + 0.02f, 0.7f); rt.anchorMax = new Vector2(side * 0.5f + 0.48f, 1); rt.offsetMin = rt.offsetMax = Vector2.zero;
+                rt.anchorMin = new Vector2(side * 0.5f + 0.02f, 0.74f); rt.anchorMax = new Vector2(side * 0.5f + 0.48f, 1); rt.offsetMin = rt.offsetMax = Vector2.zero;
                 BobUi.Size(BobUi.Label(box.transform, $"คะแนน {tr.score?.total ?? 0}", T.h2, T.ink, TextAnchor.MiddleLeft, FontStyle.Bold), 70, 70);
                 if (tr.stats != null)
                     BobUi.Size(BobUi.Label(box.transform, $"ขจัดคราบ {tr.stats.clean} · ถนอม {tr.stats.gentle} · เร็ว {tr.stats.speed} · เงา {tr.stats.shine}", T.caption, T.ink), 50, 50);
