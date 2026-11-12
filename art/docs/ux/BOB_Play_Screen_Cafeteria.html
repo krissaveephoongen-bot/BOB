@@ -190,6 +190,20 @@ function signWet(x,y){
 function bubble(x,y,w,t,c='#fff'){return R(x-w/2,y-30,w,60,c,{r:30,s:INK,sw:4})+`<path d="M${x-10} ${y+30} l10 16 l10 -16z" fill="${c}" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/>`+T(x,y+2,t,28,INK,{a:'middle',d:false,w:600});}
 function ring(x,y,r,pct,col){const c=2*Math.PI*r;return Ci(x,y,r,'none',{s:'#fff',sw:13,op:.85})+`<circle cx="${f1(x)}" cy="${f1(y)}" r="${r}" fill="none" stroke="${col}" stroke-width="10" stroke-dasharray="${f1(c*pct)} ${f1(c)}" transform="rotate(-90 ${f1(x)} ${f1(y)})" stroke-linecap="round"/>`;}
 
+const SPAWN=[{x:1.6,y:2.4,col:'#F79A2E',kind:'sweep',n:'Krit'},{x:2.95,y:2.4,col:'#3D8FE0',kind:'bubble',n:'Mai'},{x:4.95,y:2.4,col:'#2FA97A',kind:'press',n:'Pim'},{x:6.3,y:2.4,col:'#8E6BD8',kind:'spray',n:'Tan'}];
+const CART_C=[3.95,5.0];
+function spawnPads(){
+  let s='';
+  const cp=P(CART_C[0],CART_C[1]);
+  SPAWN.forEach((q,i)=>{const p=P(q.x,q.y);
+    s+=`<line x1="${f1(p[0])}" y1="${f1(p[1])}" x2="${f1(cp[0])}" y2="${f1(cp[1])}" stroke="${q.col}" stroke-width="4" stroke-dasharray="10 10" opacity=".85"/>`;
+  });
+  s+=`<line x1="${f1(P(CART_C[0],0)[0])}" y1="${f1(P(CART_C[0],0)[1])}" x2="${f1(P(CART_C[0],7.4)[0])}" y2="${f1(P(CART_C[0],7.4)[1])}" stroke="${C.red}" stroke-width="3" stroke-dasharray="3 9" opacity=".8"/>`;
+  SPAWN.forEach((q,i)=>{const p=P(q.x,q.y);
+    s+=El(p[0],p[1],64,23,q.col,{op:.35,s:q.col,sw:5})+El(p[0],p[1],46,16,'none',{s:'#fff',sw:3});
+    s+=Ci(p[0],p[1]+78,18,INK,{s:'#fff',sw:3})+T(p[0],p[1]+85,String(i+1),22,'#fff',{a:'middle',w:600,d:false});
+  });
+  return s;}
 function scene(st={}){
   let s=R(0,0,W,H,'#6D5A3C')+backWall()+floorTiles();
   s+=poly([P(-.35,0),P(0,0),P(0,8),P(-.35,8)],'#B98A4E',{s:INK,sw:3})+poly([P(14,0),P(14.35,0),P(14.35,8),P(14,8)],'#B98A4E',{s:INK,sw:3});
@@ -204,12 +218,15 @@ function scene(st={}){
   {const p=P(7.2,4.1,.82);s+=item('spray',p[0],p[1]-16,26);}
   // props, enemies
   s+=puddle(9.2,5.9)+signWet(9.2,5.5);
-  s+=enemy(P(11.3,5.4)[0],P(11.3,5.4)[1],'#8A5226','dirt');
-  s+=enemy(P(12.6,6.5)[0],P(12.6,6.5)[1],'#8B4FC8','slime');
+  if(!st.spawn){s+=enemy(P(11.3,5.4)[0],P(11.3,5.4)[1],'#8A5226','dirt');
+  s+=enemy(P(12.6,6.5)[0],P(12.6,6.5)[1],'#8B4FC8','slime');}
+  if(st.spawn)s+=spawnPads();
   s+=cart(3.2,4.5,st.layers||[],st.glow==='cart');
   // characters
+  if(st.spawn){SPAWN.forEach((q,i)=>{s+=hero(...P(q.x,q.y),q.col,q.kind,{name:q.n,ring:q.col});});}
+  else{
   s+=hero(...P(st.hx??5.2,st.hy??3.1),C.sweep,'sweep',{name:'Krit',carry:st.carry||[]});
-  s+=hero(...P(9.1,3.0),C.bubble,'bubble',{name:'Mai',ring:C.cyan,carry:st.mateCarry||['soap']});
+  s+=hero(...P(9.1,3.0),C.bubble,'bubble',{name:'Mai',ring:C.cyan,carry:st.mateCarry||['soap']});}
   return s;}
 const scale=(a)=>a;
 
@@ -359,6 +376,10 @@ document.querySelector('#legend tbody').innerHTML=lg.map(r=>`<tr><td>${r[0]}</td
  g+=R(W/2-560,H/2-150,1120,300,'#1FA6A0',{r:44,s:'#fff',sw:12})+T(W/2,H/2-40,'หมดเวลา!',150,'#fff',{a:'middle',w:600,st:INK,sw:14})+T(W/2,H/2+90,'กำลังส่งกองไปทดสอบ…',54,'#fff',{a:'middle',d:false});
  g+=hud({ctx:'full',timeLeft:0,time:'0:00'});
  frame('P05','หมดเวลา → ส่งทดสอบอัตโนมัติ','กองที่ซ้อนอยู่ถูกส่งเอง ไม่มีการลงโทษ แล้วต่อด้วยช่วงทดสอบแบ่งครึ่งจอ (S25) ปุ่มทั้งหมดปิดใช้ระหว่างนี้',g,'g-moments');}
+
+{let g=scene({spawn:true,layers:[],glow:'cart'});
+ g+=hud({ctx:'pick',timeLeft:1,time:'1:30',score:0,budget:150});
+ frame('P06','จุดเริ่ม (Spawn) — ยุติธรรมและสมดุล','จุดเริ่ม 4 จุดเรียงแถวเดียวกัน (แถว y=2.4) สมมาตรรอบแกนแดงของรถเข็น ระยะถึงรถเท่ากันเป็นคู่ (1↔4, 2↔3) ทุกคนเริ่มมือว่างและหันเข้าหาห้อง ศัตรูเกิดหลังคำว่า "ลุย!" 2.5 วิ ห่างจุดเริ่มทุกจุด ≥ 4 ช่อง สลับจุดเริ่มทุกรอบ (ผู้เล่น i → จุด (i + รอบ) mod จำนวนคน)',g,'g-moments');}
 
 /* ---------- camera diagrams ---------- */
 {const side=document.getElementById('cam-side');
