@@ -33,6 +33,10 @@ function InitModule(ctx, logger, nk, initializer) {
   // Nakama finds RPCs by reading this function, so every registerRpc must sit here, not in a helper.
   initializer.registerRpc('bob_log_event', rpcLogEvent);
   initializer.registerRpc('bob_analytics', rpcAnalytics);
+  initializer.registerRpc('bob_create_match', rpcCreateMatch);
+  initializer.registerMatch('bob_coop', { matchInit: matchInit, matchJoinAttempt: matchJoinAttempt, matchJoin: matchJoin,
+    matchLeave: matchLeave, matchLoop: matchLoop, matchTerminate: matchTerminate, matchSignal: matchSignal });
+  initializer.registerMatchmakerMatched(mpMatchmakerMatched);
   createAnalyticsTables(nk);
   logger.info('Battle of the Brooms module loaded');
 }

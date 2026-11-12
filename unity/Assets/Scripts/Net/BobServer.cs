@@ -40,8 +40,14 @@ namespace Bob.Net
             await socket.ConnectAsync(session, appearOnline: true);
         }
 
-        /// <summary>Creates a new Nakama match (relayed for now; a server-authoritative match handler comes later).</summary>
+        /// <summary>The realtime socket (after ConnectAsync). BobOnline runs the multiplayer match over it.</summary>
+        public ISocket Realtime => socket;
+
+        /// <summary>Creates a relayed Nakama match. For the real game use BobOnline (server-authoritative 'bob_coop').</summary>
         public Task<IMatch> CreateMatchAsync() => socket.CreateMatchAsync();
+
+        /// <summary>Creates a private server-authoritative 'bob_coop' match. Reply: {"match_id":"..."}. seed 0 = random room.</summary>
+        public Task<string> CreateMatchRpcAsync(int seed = 0) => Rpc("bob_create_match", seed > 0 ? $"{{\"seed\":{seed}}}" : "{}");
 
         public Task<IMatch> JoinMatchAsync(string matchId) => socket.JoinMatchAsync(matchId);
 
