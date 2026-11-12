@@ -140,8 +140,7 @@ Tests:
 Known gaps: Thai text uses the OS font (Leelawadee UI on Windows, Noto Sans Thai on Android) through legacy uGUI Text,
 so tone marks can sit slightly off; shipping Mitr / IBM Plex Sans Thai as a TextMeshPro asset fixes that. The art is
 the 2D placeholder set; the 3D toon pipeline in `art/docs/03_Unity_Spec.md` replaces it later. Touch controls (joystick,
-drag) are written for phones but so far tested only in the Editor; the bot test does not cover drag. Not yet built: the
-split-screen before/after test view (GDD 9), pushing the cart, passing items, the item rest table (GDD 20).
+drag) are written for phones but so far tested only in the Editor; the bot test does not cover drag. Solo extras (`Game/BobGame.Extras.cs`): walk into the cart to push it (park it near the shelves), an item rest table on the left (stash a hand part by tapping its slot near the table, tap the table or press T to take it back), and a 4.5 s split-screen test view (ours vs the rival, enemies react, stat bars fill) before the score cards; tap to skip. Not yet built: passing items to a team-mate and the table/cart push online (both need server ops in `server/match.js`).
 
 
 ## Leonardo art (12 Nov 2026)
