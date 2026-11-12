@@ -72,11 +72,12 @@ namespace Bob.Game
                 {
                     var sr = MakeSprite("tile", floor, "floor_tile", new Vector2(x * 0.5f + 0.25f, y * 0.5f + 0.25f), 0.5f, false);
                     sr.sortingOrder = -2000;
+                    sr.color = new Color(1f, 1f, 1f, 0.4f); // the themed room picture's own floor shows through (3/4 look)
                     if (!art.Has("floor_tile")) sr.color = (x + y) % 2 == 0 ? BobUi.Floor : BobUi.Hex("#EAD7A0");
                     floorTiles.Add(sr);
                 }
             var border = MakeSprite("RoomBorder", worldRoot, null, new Vector2(RoomW / 2, RoomH / 2), 1, false);
-            border.transform.localScale = new Vector3(RoomW + 0.12f, RoomH + 0.12f, 1); border.color = BobUi.Ink; border.sortingOrder = -2100;
+            border.transform.localScale = new Vector3(RoomW + 0.12f, RoomH + 0.12f, 1); border.color = new Color(BobUi.Ink.r, BobUi.Ink.g, BobUi.Ink.b, 0.45f); border.sortingOrder = -2100;
 
             for (int i = 0; i < 4; i++)
             {
@@ -336,10 +337,11 @@ namespace Bob.Game
             cam.transform.position = c;
             if (themeBg != null && themeBg.sprite != null)
             {
+                // 3/4 look: the room picture is scaled so ITS floor (lower part) lies under the play area and its walls run off the top.
                 var size = themeBg.sprite.bounds.size;
-                float k = Mathf.Max(V * cam.aspect / Mathf.Max(0.01f, size.x), V / Mathf.Max(0.01f, size.y)) * 1.03f;
+                float h = 11.5f, k = Mathf.Max(h / Mathf.Max(0.01f, size.y), V * cam.aspect * 1.05f / Mathf.Max(0.01f, size.x));
                 themeBg.transform.localScale = Vector3.one * k;
-                themeBg.transform.position = new Vector3(c.x, c.y, 0);
+                themeBg.transform.position = new Vector3(RoomW / 2, -0.8f + size.y * k / 2, 0);
             }
         }
 
