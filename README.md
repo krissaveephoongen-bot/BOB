@@ -9,10 +9,11 @@ Playable prototype: https://claude.ai/artifact/M9orSH3LFGbYboRm7QAkHn
 | --- | --- | --- |
 | `prototype/index.html` | Browser prototype, solo vs a simulated rival. Holds the rules (parts, reactions, enemies, scoring). | Tested with `node prototype/test.js` |
 | `server/` | Nakama 3.22.0 + Postgres 16 in Docker. `modules/index.js` is generated from the prototype rules by `build-module.js`; `rpc.js` holds the RPCs. | Tested with `server/smoke-test.sh` |
+| `unity/` | Unity 6000.6.8f1 project (open this folder in Unity Hub). Nakama SDK + uGUI in `Packages/manifest.json`; sprites/audio in `Assets/Art`, `Assets/Audio`. | Play-mode smoke test passes (Bob > Run Smoke Test) |
 | `unity/Assets/Scripts/` | `Rules/BobRules.cs` (client copy of the rules, pure C#), `Net/BobServer.cs` (Nakama wrapper: sign in, socket, match, RPCs), `Dev/BobSmokeTest.cs` (Play-mode end-to-end check). | Compiled and checked against the server by `unity-check/` |
 | `dashboard/index.html` | Balance dashboard: reads `bob_analytics` from the local Nakama and charts part, character, round and room stats. | Checked in Chromium, light and dark |
 | `unity-check/` | .NET console app: spot checks + C#-vs-server parity on random stacks. | 275 stacks, 0 mismatches |
-| `art/` | Logo and character concept drafts, `make.js` regenerates them. | Concept only |
+| `art/` | Official concept boards and production docs (`docs/`), sprite sources (`source/`) and generator tools (`tools/`). Unity-ready copies live in `unity/Assets`. | Concept / placeholder |
 
 ## Run
 
