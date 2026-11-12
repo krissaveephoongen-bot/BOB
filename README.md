@@ -142,3 +142,7 @@ so tone marks can sit slightly off; shipping Mitr / IBM Plex Sans Thai as a Text
 the 2D placeholder set; the 3D toon pipeline in `art/docs/03_Unity_Spec.md` replaces it later. Touch controls (joystick,
 drag) are written for phones but so far tested only in the Editor; the bot test does not cover drag. Not yet built: the
 split-screen before/after test view (GDD 9), pushing the cart, passing items, the item rest table (GDD 20).
+
+
+## Leonardo art (12 Nov 2026)
+Background-removed cutouts live in `bob-art/cutouts*` (project files, see `docs/12_RAW_Cutouts.md`). Imported so far: 8 parts, 10 items and the cart (`unity/Assets/Art/Sprites`). Needs the Unity Editor licence (Hub sign-in) to reimport and run `Bob > Run Game Test`.
