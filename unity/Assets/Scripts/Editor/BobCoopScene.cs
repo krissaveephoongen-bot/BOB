@@ -18,6 +18,53 @@ namespace Bob.EditorTools
         public const string ScenePath = "Assets/Scenes/Coop.unity";
         const string LibraryPath = "Assets/Art/BobArtLibrary.asset", AudioPrefab = "Assets/Art/BobAudio.prefab", GameScene = "Assets/Scenes/Game.unity";
 
+        // Bot test: start the other players first (cd server && node mp-host.js 2 ../unity/Logs/bob-mp-match.txt).
+        // Command line (no -batchmode, needs a Game view): -executeMethod Bob.EditorTools.BobCoopScene.RunTest
+        [MenuItem("Bob/Run Coop Test")]
+        public static void RunTestFromMenu() { SessionState.SetBool("Bob.CoopExit", false); BeginTest(); }
+
+        public static void RunTest() { SessionState.SetBool("Bob.CoopExit", true); BeginTest(); }
+
+        static double deadline;
+
+        static void BeginTest()
+        {
+            if (!File.Exists(ScenePath)) Build();
+            EditorSceneManager.OpenScene(ScenePath);
+            SessionState.SetBool(BobCoopGame.AutoKey, true);
+            Application.logMessageReceived -= OnLog; Application.logMessageReceived += OnLog;
+            deadline = EditorApplication.timeSinceStartup + 300;
+            EditorApplication.update -= Watchdog; EditorApplication.update += Watchdog;
+            EditorApplication.EnterPlaymode();
+        }
+
+        [InitializeOnLoadMethod]
+        static void Hook()
+        {
+            if (!SessionState.GetBool(BobCoopGame.AutoKey, false)) return;
+            Application.logMessageReceived -= OnLog; Application.logMessageReceived += OnLog;
+            deadline = EditorApplication.timeSinceStartup + 300;
+            EditorApplication.update -= Watchdog; EditorApplication.update += Watchdog;
+        }
+
+        static void Watchdog() { if (EditorApplication.timeSinceStartup > deadline) { Debug.LogError("[BobCoopTest] TIMEOUT"); Finish(1); } }
+
+        static void OnLog(string msg, string stack, LogType type)
+        {
+            if (msg.StartsWith("COOP TEST PASSED")) Finish(0);
+            else if (msg.StartsWith("COOP TEST FAILED")) Finish(1);
+            else if (type == LogType.Exception && stack.Contains("Bob.")) { Debug.LogError("[BobCoopTest] exception in game code: " + msg); Finish(1); }
+        }
+
+        static void Finish(int code)
+        {
+            Application.logMessageReceived -= OnLog; EditorApplication.update -= Watchdog;
+            SessionState.SetBool(BobCoopGame.AutoKey, false);
+            bool exit = SessionState.GetBool("Bob.CoopExit", false); SessionState.SetBool("Bob.CoopExit", false);
+            EditorApplication.ExitPlaymode();
+            if (exit) EditorApplication.delayCall += () => EditorApplication.Exit(code);
+        }
+
         [MenuItem("Bob/Build Coop Scene")]
         public static void Build()
         {

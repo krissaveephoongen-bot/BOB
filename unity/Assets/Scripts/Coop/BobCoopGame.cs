@@ -65,6 +65,7 @@ namespace Bob.Coop
             BuildWorld();
             BuildHud();
             Connect();
+            if (AutoRequested()) StartCoroutine(AutoPlayCoop());
         }
 
         async void OnDestroy()
