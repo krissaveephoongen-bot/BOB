@@ -25,6 +25,8 @@ namespace Bob.Game
         static readonly Vector2 PlayerStart = new Vector2(4f, 0.6f);
 
         Camera cam;
+        SpriteRenderer themeBg;
+        static readonly string[] RoundThemes = { "lobby_rental_room", "lobby_condo", "lobby_coffee_shop", "lobby_kitchen" }; // GDD chapters: rental room, condo, cafe
         Transform worldRoot, cartT, cartLayers, enemyRoot, handIcons, targetMarker;
         SpriteRenderer[] stationSr = new SpriteRenderer[4];
         SpriteRenderer cartSr, playerSr;
@@ -60,6 +62,8 @@ namespace Bob.Game
                 new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
 
             worldRoot = new GameObject("Room").transform;
+            themeBg = MakeSprite("ThemeBackdrop", worldRoot, null, new Vector2(RoomW / 2, RoomH / 2 + 0.35f), 0f, false);
+            themeBg.sortingOrder = -3000;
 
             // Floor: 0.5 u tiles; dirty tiles show where the enemies have been (cleaned on a round win).
             var floor = new GameObject("Floor").transform; floor.SetParent(worldRoot);
@@ -175,6 +179,16 @@ namespace Bob.Game
             bool dirty = R != null;
             foreach (var t in floorTiles) t.sprite = art.Get(dirty && rng.NextDouble() < 0.45 ? "floor_tile_dirty" : "floor_tile");
 
+            if (themeBg != null)
+            {
+                var key = RoundThemes[Mathf.Clamp(R != null ? roundNo - 1 : 0, 0, RoundThemes.Length - 1)];
+                if (art.Has(key))
+                {
+                    themeBg.sprite = art.Get(key);
+                    float h = 8.8f, k = h / Mathf.Max(0.01f, themeBg.sprite.bounds.size.y);
+                    themeBg.transform.localScale = Vector3.one * k;
+                }
+            }
             cartRect = CartHome; PlaceCart(); ClearTable();
             pos = PlayerStart; target = null; stuck = 0; near = null; nearCart = false; nearTable = false;
             handShown = -1;
@@ -308,14 +322,25 @@ namespace Bob.Game
 
         void FitCamera()
         {
-            // The room sits between the side columns (order ticket left, cart + buttons right) and the top / bottom strips.
+            // Full-screen world (mobile landscape): the camera fills the safe area and the HUD floats on top. The room is fitted
+            // into the free band between the side columns (order ticket, cart) and the top / bottom strips; the themed room
+            // picture behind it fills the rest of the screen.
             var sa = Screen.safeArea; float W = Mathf.Max(1, Screen.width), H = Mathf.Max(1, Screen.height);
-            float x0 = sa.xMin / W + SideCol * sa.width / W, x1 = sa.xMax / W - SideCol * sa.width / W;
-            float y0 = sa.yMin / H + BottomStrip * sa.height / H, y1 = sa.yMax / H - TopStrip * sa.height / H;
-            cam.rect = new Rect(x0, y0, Mathf.Max(0.1f, x1 - x0), Mathf.Max(0.1f, y1 - y0));
+            cam.rect = new Rect(sa.xMin / W, sa.yMin / H, Mathf.Max(0.1f, sa.width / W), Mathf.Max(0.1f, sa.height / H));
             float needW = RoomW + 0.3f, needH = RoomH + 0.9f; // + room above the back stations for their art
-            cam.orthographicSize = Mathf.Max(needH / 2, needW / 2 / Mathf.Max(0.1f, cam.aspect));
-            cam.transform.position = new Vector3(RoomW / 2, RoomH / 2 + 0.35f, -10);
+            float fh = Mathf.Max(0.3f, 1f - TopStrip - BottomStrip), fw = Mathf.Max(0.3f, 1f - 2 * SideCol);
+            float V = Mathf.Max(needH / fh, needW / (Mathf.Max(0.1f, cam.aspect) * fw)); // world height of the whole view
+            cam.orthographicSize = V / 2;
+            float roomY = RoomH / 2 + 0.35f, bandCentre = (BottomStrip + 1f - TopStrip) / 2f;
+            var c = new Vector3(RoomW / 2, roomY - (bandCentre - 0.5f) * V, -10);
+            cam.transform.position = c;
+            if (themeBg != null && themeBg.sprite != null)
+            {
+                var size = themeBg.sprite.bounds.size;
+                float k = Mathf.Max(V * cam.aspect / Mathf.Max(0.01f, size.x), V / Mathf.Max(0.01f, size.y)) * 1.03f;
+                themeBg.transform.localScale = Vector3.one * k;
+                themeBg.transform.position = new Vector3(c.x, c.y, 0);
+            }
         }
 
         // ---------------------------------------------------------------- reacting to the rules
