@@ -1,4 +1,5 @@
-// Verifies the Unity-side scripts without Unity: (1) rule spot checks, (2) C# rules vs the live Nakama server on random stacks.
+// Verifies the Unity-side scripts without Unity: (1) rule spot checks, (2) C# rules vs the live Nakama server on random stacks,
+// (3) the co-op moves with three BobOnline clients (CoopCheck.cs).
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,7 +30,9 @@ static class Program
         var match = await srv.CreateMatchAsync();
         Check("match created", !string.IsNullOrEmpty(match.Id));
         var mseed = BobServer.SeedFromMatchId(match.Id);
-        using (var mr = JsonDocument.Parse(await srv.ScoreStackAsync(mseed, 1, "[\"cloth\"]", BobRules.RoundBudget, 0.5, false)))
+        // The server only scores parts offered in that round (PR #3), so score the room's first offered part.
+        string first; using (var r1 = JsonDocument.Parse(await srv.MakeRoundAsync(mseed, 1))) first = r1.RootElement.GetProperty("offer")[0].GetString();
+        using (var mr = JsonDocument.Parse(await srv.ScoreStackAsync(mseed, 1, "[\"" + first + "\"]", BobRules.RoundBudget, 0.5, false)))
             Console.WriteLine($"match {match.Id} seed {mseed}: score {mr.RootElement.GetProperty("score").GetProperty("total").GetInt32()}");
         var rnd = new Random(7); int compared = 0, mismatch = 0;
         for (int seed = 1; seed <= 25; seed++)
@@ -80,6 +83,7 @@ static class Program
         var rv = BobMatch.Rival(BobMatch.MakeRound(1, 42), 42, BobRules.RoundBudget);
         Check("rival plays a stack", rv != null && BobRules.CountLayers(rv.Stack) > 0);
         await srv.CloseAsync();
+        fails += await CoopCheck.Run("127.0.0.1");
         return fails + mismatch == 0 ? 0 : 1;
     }
 }

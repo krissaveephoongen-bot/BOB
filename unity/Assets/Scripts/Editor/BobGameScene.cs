@@ -26,6 +26,12 @@ namespace Bob.EditorTools
         public static void Build()
         {
             var lib = BuildLibrary();
+            // Mobile player settings: landscape only, plain http to the local / LAN Nakama allowed.
+            PlayerSettings.productName = "Battle of the Brooms";
+            PlayerSettings.defaultInterfaceOrientation = UIOrientation.AutoRotation;
+            PlayerSettings.allowedAutorotateToPortrait = false; PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
+            PlayerSettings.allowedAutorotateToLandscapeLeft = true; PlayerSettings.allowedAutorotateToLandscapeRight = true;
+            PlayerSettings.insecureHttpOption = InsecureHttpOption.AlwaysAllowed;
             if (AssetDatabase.LoadAssetAtPath<GameObject>(AudioPrefab) == null) BobArtMenu.BuildAudioPrefab();
 
             Directory.CreateDirectory("Assets/Scenes");
@@ -79,6 +85,12 @@ namespace Bob.EditorTools
 
         public static void RunTest() { SessionState.SetBool(ExitKey, true); BeginTest(); }
 
+        // Online: start the bots first (cd server && node mp-host.js 2 ../unity/Logs/bob-mp-match.txt), then run this.
+        [MenuItem("Bob/Run Online Test")]
+        public static void RunOnlineTestFromMenu() { SessionState.SetBool(ExitKey, false); SessionState.SetBool(BobGame.OnlineKey, true); BeginTest(); }
+
+        public static void RunOnlineTest() { SessionState.SetBool(ExitKey, true); SessionState.SetBool(BobGame.OnlineKey, true); BeginTest(); }
+
         static void BeginTest()
         {
             if (!File.Exists(ScenePath)) Build();
@@ -112,7 +124,7 @@ namespace Bob.EditorTools
         {
             Application.logMessageReceived -= OnLog;
             EditorApplication.update -= Watchdog;
-            SessionState.SetBool(BobGame.AutoKey, false);
+            SessionState.SetBool(BobGame.AutoKey, false); SessionState.SetBool(BobGame.OnlineKey, false);
             bool exit = SessionState.GetBool(ExitKey, false);
             SessionState.SetBool(ExitKey, false);
             EditorApplication.ExitPlaymode();

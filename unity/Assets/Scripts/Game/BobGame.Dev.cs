@@ -10,7 +10,16 @@ namespace Bob.Game
 {
     public partial class BobGame
     {
-        public const string AutoKey = "Bob.AutoGame";
+        public const string AutoKey = "Bob.AutoGame", OnlineKey = "Bob.AutoOnline";
+
+        bool OnlineTestRequested()
+        {
+#if UNITY_EDITOR
+            return UnityEditor.SessionState.GetBool(OnlineKey, false);
+#else
+            return false;
+#endif
+        }
 
         bool AutoRequested()
         {
@@ -45,6 +54,7 @@ namespace Bob.Game
             Debug.Log("[BobGameBot] waiting for the server check");
             yield return WaitFor(() => netNote != "กำลังเชื่อมต่อเซิร์ฟเวอร์…", 12f);
             Debug.Log("[BobGameBot] " + netNote);
+            if (OnlineTestRequested()) { yield return AutoPlayOnline(); yield break; }
             yield return new WaitForSeconds(0.5f);
             Shot("1-title");
             yield return new WaitForSeconds(0.3f);
@@ -55,6 +65,7 @@ namespace Bob.Game
                 yield return WaitFor(() => phase == Phase.Intro, 15f);
                 if (roundNo == 1) { Shot("2-intro"); yield return new WaitForSeconds(0.3f); }
                 BeginBuild();
+                yield return WaitFor(() => phase == Phase.Build, 6f);
                 var plan = BobMatch.AiBest(R.Offer, R, budget, 400, new Mulberry(seed + roundNo), 0.8);
                 Debug.Log($"[BobGameBot] round {roundNo} enemies {string.Join(",", R.Enemies)} plan {string.Join(",", plan.Stack)}");
                 for (int i = 0; i < plan.Stack.Count; i++)
@@ -64,6 +75,7 @@ namespace Bob.Game
                     var r = StationRects[si];
                     var stand = new Vector2(r.center.x, si < 2 ? r.yMin - 0.25f : r.yMax + 0.25f);
                     yield return WalkTo(stand, () => near == StationIds[si]);
+                    if (roundNo == 1 && i == 0) { yield return new WaitForSeconds(0.4f); Shot("3a-shelf"); yield return new WaitForSeconds(0.2f); }
                     PickUp(id);
                     yield return new WaitForSeconds(0.15f);
                     var side = new Vector2(r.center.x < RoomW / 2 ? CartRect.xMin - 0.3f : CartRect.xMax + 0.3f, CartRect.center.y);

@@ -77,6 +77,45 @@
    "anim": "cheer"
   },
   {
+   "path": "Sprites/Characters/sweep/sweep_faces",
+   "w": 256,
+   "h": 256,
+   "frames": 8,
+   "fps": 1,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.5
+   ],
+   "group": "characters",
+   "hero": "sweep",
+   "labels": [
+    "happy",
+    "wink",
+    "angry",
+    "surprised",
+    "cry",
+    "effort",
+    "dizzy",
+    "joy"
+   ],
+   "still": true
+  },
+  {
+   "path": "Sprites/Characters/sweep/sweep_back",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "fps": 1,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "group": "characters",
+   "hero": "sweep"
+  },
+  {
    "path": "Sprites/Characters/sweep/sweep_portrait",
    "w": 256,
    "h": 256,
@@ -158,6 +197,45 @@
    "group": "characters",
    "owner": "bubble",
    "anim": "cheer"
+  },
+  {
+   "path": "Sprites/Characters/bubble/bubble_faces",
+   "w": 256,
+   "h": 256,
+   "frames": 8,
+   "fps": 1,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.5
+   ],
+   "group": "characters",
+   "hero": "bubble",
+   "labels": [
+    "happy",
+    "wink",
+    "angry",
+    "surprised",
+    "cry",
+    "effort",
+    "dizzy",
+    "joy"
+   ],
+   "still": true
+  },
+  {
+   "path": "Sprites/Characters/bubble/bubble_back",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "fps": 1,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "group": "characters",
+   "hero": "bubble"
   },
   {
    "path": "Sprites/Characters/bubble/bubble_portrait",
@@ -243,6 +321,45 @@
    "anim": "cheer"
   },
   {
+   "path": "Sprites/Characters/spray/spray_faces",
+   "w": 256,
+   "h": 256,
+   "frames": 8,
+   "fps": 1,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.5
+   ],
+   "group": "characters",
+   "hero": "spray",
+   "labels": [
+    "happy",
+    "wink",
+    "angry",
+    "surprised",
+    "cry",
+    "effort",
+    "dizzy",
+    "joy"
+   ],
+   "still": true
+  },
+  {
+   "path": "Sprites/Characters/spray/spray_back",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "fps": 1,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "group": "characters",
+   "hero": "spray"
+  },
+  {
    "path": "Sprites/Characters/spray/spray_portrait",
    "w": 256,
    "h": 256,
@@ -326,6 +443,45 @@
    "anim": "cheer"
   },
   {
+   "path": "Sprites/Characters/press/press_faces",
+   "w": 256,
+   "h": 256,
+   "frames": 8,
+   "fps": 1,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.5
+   ],
+   "group": "characters",
+   "hero": "press",
+   "labels": [
+    "happy",
+    "wink",
+    "angry",
+    "surprised",
+    "cry",
+    "effort",
+    "dizzy",
+    "joy"
+   ],
+   "still": true
+  },
+  {
+   "path": "Sprites/Characters/press/press_back",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "fps": 1,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.06
+   ],
+   "group": "characters",
+   "hero": "press"
+  },
+  {
    "path": "Sprites/Characters/press/press_portrait",
    "w": 256,
    "h": 256,
@@ -344,9 +500,24 @@
     0.5,
     0.15
    ],
+   "anim": "idle",
    "group": "enemies",
-   "owner": "stain",
-   "anim": "idle"
+   "owner": "stain"
+  },
+  {
+   "path": "Sprites/Enemies/stain/stain_attack",
+   "w": 256,
+   "h": 256,
+   "frames": 5,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "anim": "attack",
+   "group": "enemies",
+   "owner": "stain"
   },
   {
    "path": "Sprites/Enemies/stain/stain_hit",
@@ -359,9 +530,9 @@
     0.5,
     0.15
    ],
+   "anim": "hit",
    "group": "enemies",
-   "owner": "stain",
-   "anim": "hit"
+   "owner": "stain"
   },
   {
    "path": "Sprites/Enemies/stain/stain_defeat",
@@ -374,9 +545,32 @@
     0.5,
     0.15
    ],
+   "anim": "defeat",
    "group": "enemies",
-   "owner": "stain",
-   "anim": "defeat"
+   "owner": "stain"
+  },
+  {
+   "path": "Sprites/Enemies/stain/stain_spawn",
+   "w": 256,
+   "h": 256,
+   "frames": 5,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "anim": "spawn",
+   "group": "enemies",
+   "owner": "stain"
+  },
+  {
+   "path": "Sprites/Enemies/stain/stain_portrait",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "enemies",
+   "owner": "stain"
   },
   {
    "path": "Sprites/Enemies/dust/dust_idle",
@@ -389,9 +583,24 @@
     0.5,
     0.15
    ],
+   "anim": "idle",
    "group": "enemies",
-   "owner": "dust",
-   "anim": "idle"
+   "owner": "dust"
+  },
+  {
+   "path": "Sprites/Enemies/dust/dust_attack",
+   "w": 256,
+   "h": 256,
+   "frames": 5,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "anim": "attack",
+   "group": "enemies",
+   "owner": "dust"
   },
   {
    "path": "Sprites/Enemies/dust/dust_hit",
@@ -404,9 +613,9 @@
     0.5,
     0.15
    ],
+   "anim": "hit",
    "group": "enemies",
-   "owner": "dust",
-   "anim": "hit"
+   "owner": "dust"
   },
   {
    "path": "Sprites/Enemies/dust/dust_defeat",
@@ -419,9 +628,32 @@
     0.5,
     0.15
    ],
+   "anim": "defeat",
    "group": "enemies",
-   "owner": "dust",
-   "anim": "defeat"
+   "owner": "dust"
+  },
+  {
+   "path": "Sprites/Enemies/dust/dust_spawn",
+   "w": 256,
+   "h": 256,
+   "frames": 5,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "anim": "spawn",
+   "group": "enemies",
+   "owner": "dust"
+  },
+  {
+   "path": "Sprites/Enemies/dust/dust_portrait",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "enemies",
+   "owner": "dust"
   },
   {
    "path": "Sprites/Enemies/grease/grease_idle",
@@ -434,9 +666,24 @@
     0.5,
     0.15
    ],
+   "anim": "idle",
    "group": "enemies",
-   "owner": "grease",
-   "anim": "idle"
+   "owner": "grease"
+  },
+  {
+   "path": "Sprites/Enemies/grease/grease_attack",
+   "w": 256,
+   "h": 256,
+   "frames": 5,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "anim": "attack",
+   "group": "enemies",
+   "owner": "grease"
   },
   {
    "path": "Sprites/Enemies/grease/grease_hit",
@@ -449,9 +696,9 @@
     0.5,
     0.15
    ],
+   "anim": "hit",
    "group": "enemies",
-   "owner": "grease",
-   "anim": "hit"
+   "owner": "grease"
   },
   {
    "path": "Sprites/Enemies/grease/grease_defeat",
@@ -464,9 +711,32 @@
     0.5,
     0.15
    ],
+   "anim": "defeat",
    "group": "enemies",
-   "owner": "grease",
-   "anim": "defeat"
+   "owner": "grease"
+  },
+  {
+   "path": "Sprites/Enemies/grease/grease_spawn",
+   "w": 256,
+   "h": 256,
+   "frames": 5,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "anim": "spawn",
+   "group": "enemies",
+   "owner": "grease"
+  },
+  {
+   "path": "Sprites/Enemies/grease/grease_portrait",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "enemies",
+   "owner": "grease"
   },
   {
    "path": "Sprites/Enemies/rust/rust_idle",
@@ -479,9 +749,24 @@
     0.5,
     0.15
    ],
+   "anim": "idle",
    "group": "enemies",
-   "owner": "rust",
-   "anim": "idle"
+   "owner": "rust"
+  },
+  {
+   "path": "Sprites/Enemies/rust/rust_attack",
+   "w": 256,
+   "h": 256,
+   "frames": 5,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "anim": "attack",
+   "group": "enemies",
+   "owner": "rust"
   },
   {
    "path": "Sprites/Enemies/rust/rust_hit",
@@ -494,9 +779,9 @@
     0.5,
     0.15
    ],
+   "anim": "hit",
    "group": "enemies",
-   "owner": "rust",
-   "anim": "hit"
+   "owner": "rust"
   },
   {
    "path": "Sprites/Enemies/rust/rust_defeat",
@@ -509,9 +794,32 @@
     0.5,
     0.15
    ],
+   "anim": "defeat",
    "group": "enemies",
-   "owner": "rust",
-   "anim": "defeat"
+   "owner": "rust"
+  },
+  {
+   "path": "Sprites/Enemies/rust/rust_spawn",
+   "w": 256,
+   "h": 256,
+   "frames": 5,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "anim": "spawn",
+   "group": "enemies",
+   "owner": "rust"
+  },
+  {
+   "path": "Sprites/Enemies/rust/rust_portrait",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "enemies",
+   "owner": "rust"
   },
   {
    "path": "Sprites/Enemies/scale/scale_idle",
@@ -524,9 +832,24 @@
     0.5,
     0.15
    ],
+   "anim": "idle",
    "group": "enemies",
-   "owner": "scale",
-   "anim": "idle"
+   "owner": "scale"
+  },
+  {
+   "path": "Sprites/Enemies/scale/scale_attack",
+   "w": 256,
+   "h": 256,
+   "frames": 5,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "anim": "attack",
+   "group": "enemies",
+   "owner": "scale"
   },
   {
    "path": "Sprites/Enemies/scale/scale_hit",
@@ -539,9 +862,9 @@
     0.5,
     0.15
    ],
+   "anim": "hit",
    "group": "enemies",
-   "owner": "scale",
-   "anim": "hit"
+   "owner": "scale"
   },
   {
    "path": "Sprites/Enemies/scale/scale_defeat",
@@ -554,9 +877,281 @@
     0.5,
     0.15
    ],
+   "anim": "defeat",
    "group": "enemies",
-   "owner": "scale",
-   "anim": "defeat"
+   "owner": "scale"
+  },
+  {
+   "path": "Sprites/Enemies/scale/scale_spawn",
+   "w": 256,
+   "h": 256,
+   "frames": 5,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "anim": "spawn",
+   "group": "enemies",
+   "owner": "scale"
+  },
+  {
+   "path": "Sprites/Enemies/scale/scale_portrait",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "enemies",
+   "owner": "scale"
+  },
+  {
+   "path": "Sprites/Enemies/trash/trash_idle",
+   "w": 256,
+   "h": 256,
+   "frames": 8,
+   "fps": 10,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "anim": "idle",
+   "group": "enemies",
+   "owner": "trash"
+  },
+  {
+   "path": "Sprites/Enemies/trash/trash_attack",
+   "w": 256,
+   "h": 256,
+   "frames": 5,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "anim": "attack",
+   "group": "enemies",
+   "owner": "trash"
+  },
+  {
+   "path": "Sprites/Enemies/trash/trash_hit",
+   "w": 256,
+   "h": 256,
+   "frames": 4,
+   "fps": 14,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "anim": "hit",
+   "group": "enemies",
+   "owner": "trash"
+  },
+  {
+   "path": "Sprites/Enemies/trash/trash_defeat",
+   "w": 256,
+   "h": 256,
+   "frames": 8,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "anim": "defeat",
+   "group": "enemies",
+   "owner": "trash"
+  },
+  {
+   "path": "Sprites/Enemies/trash/trash_spawn",
+   "w": 256,
+   "h": 256,
+   "frames": 5,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "anim": "spawn",
+   "group": "enemies",
+   "owner": "trash"
+  },
+  {
+   "path": "Sprites/Enemies/trash/trash_portrait",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "enemies",
+   "owner": "trash"
+  },
+  {
+   "path": "Sprites/Enemies/germ/germ_idle",
+   "w": 256,
+   "h": 256,
+   "frames": 8,
+   "fps": 10,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "anim": "idle",
+   "group": "enemies",
+   "owner": "germ"
+  },
+  {
+   "path": "Sprites/Enemies/germ/germ_attack",
+   "w": 256,
+   "h": 256,
+   "frames": 5,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "anim": "attack",
+   "group": "enemies",
+   "owner": "germ"
+  },
+  {
+   "path": "Sprites/Enemies/germ/germ_hit",
+   "w": 256,
+   "h": 256,
+   "frames": 4,
+   "fps": 14,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "anim": "hit",
+   "group": "enemies",
+   "owner": "germ"
+  },
+  {
+   "path": "Sprites/Enemies/germ/germ_defeat",
+   "w": 256,
+   "h": 256,
+   "frames": 8,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "anim": "defeat",
+   "group": "enemies",
+   "owner": "germ"
+  },
+  {
+   "path": "Sprites/Enemies/germ/germ_spawn",
+   "w": 256,
+   "h": 256,
+   "frames": 5,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "anim": "spawn",
+   "group": "enemies",
+   "owner": "germ"
+  },
+  {
+   "path": "Sprites/Enemies/germ/germ_portrait",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "enemies",
+   "owner": "germ"
+  },
+  {
+   "path": "Sprites/Enemies/boss/boss_idle",
+   "w": 512,
+   "h": 512,
+   "frames": 8,
+   "fps": 10,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "anim": "idle",
+   "group": "enemies",
+   "owner": "boss"
+  },
+  {
+   "path": "Sprites/Enemies/boss/boss_attack",
+   "w": 512,
+   "h": 512,
+   "frames": 5,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "anim": "attack",
+   "group": "enemies",
+   "owner": "boss"
+  },
+  {
+   "path": "Sprites/Enemies/boss/boss_hit",
+   "w": 512,
+   "h": 512,
+   "frames": 4,
+   "fps": 14,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "anim": "hit",
+   "group": "enemies",
+   "owner": "boss"
+  },
+  {
+   "path": "Sprites/Enemies/boss/boss_defeat",
+   "w": 512,
+   "h": 512,
+   "frames": 8,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "anim": "defeat",
+   "group": "enemies",
+   "owner": "boss"
+  },
+  {
+   "path": "Sprites/Enemies/boss/boss_spawn",
+   "w": 512,
+   "h": 512,
+   "frames": 5,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.15
+   ],
+   "anim": "spawn",
+   "group": "enemies",
+   "owner": "boss"
+  },
+  {
+   "path": "Sprites/Enemies/boss/boss_portrait",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "enemies",
+   "owner": "boss"
   },
   {
    "path": "Sprites/Parts/part_cloth",
@@ -1052,6 +1647,843 @@
     0.5
    ],
    "group": "fx"
+  },
+  {
+   "path": "Sprites/Items/item_coin",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "items"
+  },
+  {
+   "path": "Sprites/Items/item_star",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "items"
+  },
+  {
+   "path": "Sprites/Items/item_gem",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "items"
+  },
+  {
+   "path": "Sprites/Items/item_heart",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "items"
+  },
+  {
+   "path": "Sprites/Items/item_stopwatch",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "items"
+  },
+  {
+   "path": "Sprites/Items/item_magnet",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "items"
+  },
+  {
+   "path": "Sprites/Items/item_bubble",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "items"
+  },
+  {
+   "path": "Sprites/Items/item_chest_closed",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "items"
+  },
+  {
+   "path": "Sprites/Items/item_chest_open",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "items"
+  },
+  {
+   "path": "Sprites/Items/item_trophy",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "items"
+  },
+  {
+   "path": "Sprites/Items/item_coin_spin",
+   "w": 192,
+   "h": 192,
+   "frames": 8,
+   "fps": 12,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.5
+   ],
+   "group": "items"
+  },
+  {
+   "path": "Sprites/Props/School/wet_sign",
+   "w": 128,
+   "h": 192,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ]
+  },
+  {
+   "path": "Sprites/Props/School/cone",
+   "w": 128,
+   "h": 160,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ]
+  },
+  {
+   "path": "Sprites/Props/School/bucket",
+   "w": 160,
+   "h": 160,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ]
+  },
+  {
+   "path": "Sprites/Props/School/trash_bag",
+   "w": 160,
+   "h": 160,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ]
+  },
+  {
+   "path": "Sprites/Props/School/trash_bin",
+   "w": 160,
+   "h": 192,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ]
+  },
+  {
+   "path": "Sprites/Props/School/recycle_bin",
+   "w": 160,
+   "h": 192,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ]
+  },
+  {
+   "path": "Sprites/Props/School/toilet_paper",
+   "w": 128,
+   "h": 128,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ]
+  },
+  {
+   "path": "Sprites/Props/School/spray_blue",
+   "w": 96,
+   "h": 160,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ]
+  },
+  {
+   "path": "Sprites/Props/School/desk",
+   "w": 256,
+   "h": 224,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ]
+  },
+  {
+   "path": "Sprites/Props/School/chair",
+   "w": 128,
+   "h": 224,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ]
+  },
+  {
+   "path": "Sprites/Props/School/blackboard",
+   "w": 384,
+   "h": 256,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ]
+  },
+  {
+   "path": "Sprites/Props/School/locker",
+   "w": 256,
+   "h": 320,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ]
+  },
+  {
+   "path": "Sprites/Props/School/window",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ]
+  },
+  {
+   "path": "Sprites/Props/School/cafe_table",
+   "w": 384,
+   "h": 224,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ]
+  },
+  {
+   "path": "Sprites/Props/School/cafe_chair",
+   "w": 128,
+   "h": 192,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ]
+  },
+  {
+   "path": "Sprites/Props/School/food_stall",
+   "w": 512,
+   "h": 320,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ]
+  },
+  {
+   "path": "Sprites/Props/School/slide",
+   "w": 384,
+   "h": 320,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ]
+  },
+  {
+   "path": "Sprites/Props/School/bench",
+   "w": 320,
+   "h": 192,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ]
+  },
+  {
+   "path": "Sprites/Props/School/tree",
+   "w": 320,
+   "h": 384,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ]
+  },
+  {
+   "path": "Sprites/Props/School/bush",
+   "w": 256,
+   "h": 160,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ]
+  },
+  {
+   "path": "Sprites/Props/School/boss_door",
+   "w": 384,
+   "h": 384,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ]
+  },
+  {
+   "path": "Sprites/Props/School/pipe",
+   "w": 384,
+   "h": 192,
+   "frames": 1,
+   "group": "props",
+   "pivot": [
+    0.5,
+    0.06
+   ]
+  },
+  {
+   "path": "Sprites/Environments/Floors/floor_school",
+   "w": 128,
+   "h": 128,
+   "frames": 1,
+   "group": "env",
+   "tile": true
+  },
+  {
+   "path": "Sprites/Environments/Floors/floor_school_dirty",
+   "w": 128,
+   "h": 128,
+   "frames": 1,
+   "group": "env",
+   "tile": true
+  },
+  {
+   "path": "Sprites/Environments/Floors/floor_wood",
+   "w": 128,
+   "h": 128,
+   "frames": 1,
+   "group": "env",
+   "tile": true
+  },
+  {
+   "path": "Sprites/Environments/Floors/floor_wood_dirty",
+   "w": 128,
+   "h": 128,
+   "frames": 1,
+   "group": "env",
+   "tile": true
+  },
+  {
+   "path": "Sprites/Environments/Floors/floor_cafeteria",
+   "w": 128,
+   "h": 128,
+   "frames": 1,
+   "group": "env",
+   "tile": true
+  },
+  {
+   "path": "Sprites/Environments/Floors/floor_cafeteria_dirty",
+   "w": 128,
+   "h": 128,
+   "frames": 1,
+   "group": "env",
+   "tile": true
+  },
+  {
+   "path": "Sprites/Environments/Floors/floor_grass",
+   "w": 128,
+   "h": 128,
+   "frames": 1,
+   "group": "env",
+   "tile": true
+  },
+  {
+   "path": "Sprites/Environments/Floors/floor_grass_dirty",
+   "w": 128,
+   "h": 128,
+   "frames": 1,
+   "group": "env",
+   "tile": true
+  },
+  {
+   "path": "Sprites/Environments/Floors/floor_sand",
+   "w": 128,
+   "h": 128,
+   "frames": 1,
+   "group": "env",
+   "tile": true
+  },
+  {
+   "path": "Sprites/Environments/Floors/floor_sand_dirty",
+   "w": 128,
+   "h": 128,
+   "frames": 1,
+   "group": "env",
+   "tile": true
+  },
+  {
+   "path": "Sprites/Environments/Floors/floor_boiler",
+   "w": 128,
+   "h": 128,
+   "frames": 1,
+   "group": "env",
+   "tile": true
+  },
+  {
+   "path": "Sprites/Environments/Floors/floor_boiler_dirty",
+   "w": 128,
+   "h": 128,
+   "frames": 1,
+   "group": "env",
+   "tile": true
+  },
+  {
+   "path": "Sprites/Environments/Decals/decal_mud",
+   "w": 128,
+   "h": 128,
+   "frames": 1,
+   "group": "env"
+  },
+  {
+   "path": "Sprites/Environments/Decals/decal_slime",
+   "w": 128,
+   "h": 128,
+   "frames": 1,
+   "group": "env"
+  },
+  {
+   "path": "Sprites/Environments/Decals/decal_goo",
+   "w": 128,
+   "h": 128,
+   "frames": 1,
+   "group": "env"
+  },
+  {
+   "path": "Sprites/Environments/Decals/decal_trash",
+   "w": 128,
+   "h": 128,
+   "frames": 1,
+   "group": "env"
+  },
+  {
+   "path": "Sprites/Environments/Decals/decal_germ",
+   "w": 128,
+   "h": 128,
+   "frames": 1,
+   "group": "env"
+  },
+  {
+   "path": "Sprites/Environments/Decals/decal_puddle",
+   "w": 128,
+   "h": 128,
+   "frames": 1,
+   "group": "env"
+  },
+  {
+   "path": "Sprites/Environments/Backdrops/bg_school",
+   "w": 768,
+   "h": 432,
+   "frames": 1,
+   "group": "env"
+  },
+  {
+   "path": "Sprites/Environments/Backdrops/bg_school_dirty",
+   "w": 768,
+   "h": 432,
+   "frames": 1,
+   "group": "env"
+  },
+  {
+   "path": "Sprites/Environments/Backdrops/bg_classroom",
+   "w": 768,
+   "h": 432,
+   "frames": 1,
+   "group": "env"
+  },
+  {
+   "path": "Sprites/Environments/Backdrops/bg_classroom_dirty",
+   "w": 768,
+   "h": 432,
+   "frames": 1,
+   "group": "env"
+  },
+  {
+   "path": "Sprites/Environments/Backdrops/bg_cafeteria",
+   "w": 768,
+   "h": 432,
+   "frames": 1,
+   "group": "env"
+  },
+  {
+   "path": "Sprites/Environments/Backdrops/bg_cafeteria_dirty",
+   "w": 768,
+   "h": 432,
+   "frames": 1,
+   "group": "env"
+  },
+  {
+   "path": "Sprites/Environments/Backdrops/bg_playground",
+   "w": 768,
+   "h": 432,
+   "frames": 1,
+   "group": "env"
+  },
+  {
+   "path": "Sprites/Environments/Backdrops/bg_playground_dirty",
+   "w": 768,
+   "h": 432,
+   "frames": 1,
+   "group": "env"
+  },
+  {
+   "path": "Sprites/Environments/Backdrops/bg_boiler",
+   "w": 768,
+   "h": 432,
+   "frames": 1,
+   "group": "env"
+  },
+  {
+   "path": "Sprites/Environments/Backdrops/bg_boiler_dirty",
+   "w": 768,
+   "h": 432,
+   "frames": 1,
+   "group": "env"
+  },
+  {
+   "path": "Sprites/FX/fx_splash",
+   "w": 256,
+   "h": 256,
+   "frames": 7,
+   "fps": 16,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.5
+   ],
+   "group": "fx"
+  },
+  {
+   "path": "Sprites/FX/fx_swipe",
+   "w": 256,
+   "h": 256,
+   "frames": 6,
+   "fps": 18,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.5
+   ],
+   "group": "fx"
+  },
+  {
+   "path": "Sprites/FX/fx_spray_mist",
+   "w": 256,
+   "h": 256,
+   "frames": 6,
+   "fps": 14,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.5
+   ],
+   "group": "fx"
+  },
+  {
+   "path": "Sprites/FX/fx_hit",
+   "w": 256,
+   "h": 256,
+   "frames": 5,
+   "fps": 16,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.5
+   ],
+   "group": "fx"
+  },
+  {
+   "path": "Sprites/FX/fx_tornado",
+   "w": 256,
+   "h": 256,
+   "frames": 8,
+   "fps": 14,
+   "loop": true,
+   "pivot": [
+    0.5,
+    0.5
+   ],
+   "group": "fx"
+  },
+  {
+   "path": "Sprites/FX/fx_bubble_dome",
+   "w": 256,
+   "h": 256,
+   "frames": 8,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.5
+   ],
+   "group": "fx"
+  },
+  {
+   "path": "Sprites/FX/fx_time_freeze",
+   "w": 256,
+   "h": 256,
+   "frames": 8,
+   "fps": 12,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.5
+   ],
+   "group": "fx"
+  },
+  {
+   "path": "Sprites/FX/fx_clean_wave",
+   "w": 256,
+   "h": 256,
+   "frames": 8,
+   "fps": 14,
+   "loop": false,
+   "pivot": [
+    0.5,
+    0.5
+   ],
+   "group": "fx"
+  },
+  {
+   "path": "Sprites/UI/logo_bob",
+   "w": 1024,
+   "h": 640,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/ui_button_play",
+   "w": 256,
+   "h": 116,
+   "frames": 1,
+   "group": "ui",
+   "border": [
+    44,
+    44,
+    44,
+    44
+   ]
+  },
+  {
+   "path": "Sprites/UI/ui_button_blue",
+   "w": 256,
+   "h": 116,
+   "frames": 1,
+   "group": "ui",
+   "border": [
+    44,
+    44,
+    44,
+    44
+   ]
+  },
+  {
+   "path": "Sprites/UI/ui_button_skill",
+   "w": 256,
+   "h": 256,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/ui_button_round",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/ui_portrait_frame",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/ui_ribbon",
+   "w": 384,
+   "h": 96,
+   "frames": 1,
+   "group": "ui",
+   "border": [
+    56,
+    16,
+    56,
+    16
+   ]
+  },
+  {
+   "path": "Sprites/UI/ui_panel_blue",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "ui",
+   "border": [
+    52,
+    40,
+    40,
+    40
+   ]
+  },
+  {
+   "path": "Sprites/UI/icon_heart",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/icon_coin",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/icon_gem",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/Skills/icon_skill_sweep",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "ui",
+   "owner": "sweep"
+  },
+  {
+   "path": "Sprites/UI/CharacterSelect/card_sweep",
+   "w": 256,
+   "h": 328,
+   "frames": 1,
+   "group": "ui",
+   "owner": "sweep"
+  },
+  {
+   "path": "Sprites/UI/Skills/icon_skill_bubble",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "ui",
+   "owner": "bubble"
+  },
+  {
+   "path": "Sprites/UI/CharacterSelect/card_bubble",
+   "w": 256,
+   "h": 328,
+   "frames": 1,
+   "group": "ui",
+   "owner": "bubble"
+  },
+  {
+   "path": "Sprites/UI/Skills/icon_skill_spray",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "ui",
+   "owner": "spray"
+  },
+  {
+   "path": "Sprites/UI/CharacterSelect/card_spray",
+   "w": 256,
+   "h": 328,
+   "frames": 1,
+   "group": "ui",
+   "owner": "spray"
+  },
+  {
+   "path": "Sprites/UI/Skills/icon_skill_press",
+   "w": 192,
+   "h": 192,
+   "frames": 1,
+   "group": "ui",
+   "owner": "press"
+  },
+  {
+   "path": "Sprites/UI/CharacterSelect/card_press",
+   "w": 256,
+   "h": 328,
+   "frames": 1,
+   "group": "ui",
+   "owner": "press"
+  },
+  {
+   "path": "Sprites/UI/StageSelect/stage_school",
+   "w": 384,
+   "h": 304,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/StageSelect/stage_classroom",
+   "w": 384,
+   "h": 304,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/StageSelect/stage_cafeteria",
+   "w": 384,
+   "h": 304,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/StageSelect/stage_playground",
+   "w": 384,
+   "h": 304,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/StageSelect/stage_boiler",
+   "w": 384,
+   "h": 304,
+   "frames": 1,
+   "group": "ui"
   }
  ]
 }

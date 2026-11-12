@@ -63,6 +63,23 @@ MonoBehaviour:
     - {fileID: -8013126656383262214, guid: 690e635b5b1bcbb4ead536f73559288d, type: 3}
     fps: 10
     loop: 0
+  - name: sweep_faces
+    frames:
+    - {fileID: -4925623770067027761, guid: fef28ec90cfc9194795b77cd0986fdb7, type: 3}
+    - {fileID: 6080065069260316870, guid: fef28ec90cfc9194795b77cd0986fdb7, type: 3}
+    - {fileID: 1692357286296674852, guid: fef28ec90cfc9194795b77cd0986fdb7, type: 3}
+    - {fileID: 4321973642299538450, guid: fef28ec90cfc9194795b77cd0986fdb7, type: 3}
+    - {fileID: 6493348590948918856, guid: fef28ec90cfc9194795b77cd0986fdb7, type: 3}
+    - {fileID: 7785138003579900109, guid: fef28ec90cfc9194795b77cd0986fdb7, type: 3}
+    - {fileID: -1768347643055384433, guid: fef28ec90cfc9194795b77cd0986fdb7, type: 3}
+    - {fileID: 2882012569328723094, guid: fef28ec90cfc9194795b77cd0986fdb7, type: 3}
+    fps: 1
+    loop: 0
+  - name: sweep_back
+    frames:
+    - {fileID: 21300000, guid: 34871785cfa015d4ebbac78866135171, type: 3}
+    fps: 1
+    loop: 0
   - name: sweep_portrait
     frames:
     - {fileID: 21300000, guid: 4226dbf47eeffa44ab22efaaacef054a, type: 3}
@@ -117,6 +134,23 @@ MonoBehaviour:
     - {fileID: 1981941589305473005, guid: 835769046a489a642bb6f992e5a6c4e6, type: 3}
     - {fileID: -7039633144850207167, guid: 835769046a489a642bb6f992e5a6c4e6, type: 3}
     fps: 10
+    loop: 0
+  - name: bubble_faces
+    frames:
+    - {fileID: 5511752388291626084, guid: 0c660fcd58277834aa28647a9a27a832, type: 3}
+    - {fileID: 2016758601296030224, guid: 0c660fcd58277834aa28647a9a27a832, type: 3}
+    - {fileID: -1213417934853886218, guid: 0c660fcd58277834aa28647a9a27a832, type: 3}
+    - {fileID: 6441290971459789702, guid: 0c660fcd58277834aa28647a9a27a832, type: 3}
+    - {fileID: 2958854954647974930, guid: 0c660fcd58277834aa28647a9a27a832, type: 3}
+    - {fileID: -4605862059544678727, guid: 0c660fcd58277834aa28647a9a27a832, type: 3}
+    - {fileID: 6560095315061295657, guid: 0c660fcd58277834aa28647a9a27a832, type: 3}
+    - {fileID: 5603647997237650957, guid: 0c660fcd58277834aa28647a9a27a832, type: 3}
+    fps: 1
+    loop: 0
+  - name: bubble_back
+    frames:
+    - {fileID: 21300000, guid: d2d3d9015ffaf57489b1ff8169bc850f, type: 3}
+    fps: 1
     loop: 0
   - name: bubble_portrait
     frames:
@@ -173,6 +207,23 @@ MonoBehaviour:
     - {fileID: -1981494321321309290, guid: 3cef606e5133d9e40a3ff71baba264bd, type: 3}
     fps: 10
     loop: 0
+  - name: spray_faces
+    frames:
+    - {fileID: 8664154209071032720, guid: 009a14cafd8a70e4ab755965728565a7, type: 3}
+    - {fileID: -3645224229446775071, guid: 009a14cafd8a70e4ab755965728565a7, type: 3}
+    - {fileID: -1379805059738448410, guid: 009a14cafd8a70e4ab755965728565a7, type: 3}
+    - {fileID: 3312796900624320303, guid: 009a14cafd8a70e4ab755965728565a7, type: 3}
+    - {fileID: 3368043763489067511, guid: 009a14cafd8a70e4ab755965728565a7, type: 3}
+    - {fileID: 3703752245535528442, guid: 009a14cafd8a70e4ab755965728565a7, type: 3}
+    - {fileID: 9142259110232166987, guid: 009a14cafd8a70e4ab755965728565a7, type: 3}
+    - {fileID: 4430114965293729100, guid: 009a14cafd8a70e4ab755965728565a7, type: 3}
+    fps: 1
+    loop: 0
+  - name: spray_back
+    frames:
+    - {fileID: 21300000, guid: c9669d39cd741b740adc06eba0617ee3, type: 3}
+    fps: 1
+    loop: 0
   - name: spray_portrait
     frames:
     - {fileID: 21300000, guid: ce144432710cdb94abd0b29f2b38e2ce, type: 3}
@@ -228,6 +279,23 @@ MonoBehaviour:
     - {fileID: -7913507944846686773, guid: 3c6d6e2cde10a2845952af2a6e4d016f, type: 3}
     fps: 10
     loop: 0
+  - name: press_faces
+    frames:
+    - {fileID: 3926634519386973878, guid: 8e7830ce5901a6742862b0ccd50a4667, type: 3}
+    - {fileID: 8622011729688968654, guid: 8e7830ce5901a6742862b0ccd50a4667, type: 3}
+    - {fileID: -1148395606375380285, guid: 8e7830ce5901a6742862b0ccd50a4667, type: 3}
+    - {fileID: -1588203293992206708, guid: 8e7830ce5901a6742862b0ccd50a4667, type: 3}
+    - {fileID: 4945097649568961413, guid: 8e7830ce5901a6742862b0ccd50a4667, type: 3}
+    - {fileID: -1681837648273204459, guid: 8e7830ce5901a6742862b0ccd50a4667, type: 3}
+    - {fileID: -5876677975669631505, guid: 8e7830ce5901a6742862b0ccd50a4667, type: 3}
+    - {fileID: -6560186177363082700, guid: 8e7830ce5901a6742862b0ccd50a4667, type: 3}
+    fps: 1
+    loop: 0
+  - name: press_back
+    frames:
+    - {fileID: 21300000, guid: 5553d57e26f85834a8fb69173ac938c3, type: 3}
+    fps: 1
+    loop: 0
   - name: press_portrait
     frames:
     - {fileID: 21300000, guid: ffec4f2b0630bae42aca031140c89d4b, type: 3}
@@ -245,6 +313,15 @@ MonoBehaviour:
     - {fileID: 8416364666291498345, guid: 3fb3809e3a77f7a41b71667de9ba2f77, type: 3}
     fps: 10
     loop: 1
+  - name: stain_attack
+    frames:
+    - {fileID: 8640564099935310508, guid: 4bbaad5d89f5e124d964f9810e4bc0b5, type: 3}
+    - {fileID: -8708486966869803528, guid: 4bbaad5d89f5e124d964f9810e4bc0b5, type: 3}
+    - {fileID: 4313827213138387661, guid: 4bbaad5d89f5e124d964f9810e4bc0b5, type: 3}
+    - {fileID: 3806604433031186757, guid: 4bbaad5d89f5e124d964f9810e4bc0b5, type: 3}
+    - {fileID: -2245503863327208928, guid: 4bbaad5d89f5e124d964f9810e4bc0b5, type: 3}
+    fps: 12
+    loop: 0
   - name: stain_hit
     frames:
     - {fileID: 2344483193653783522, guid: 2ff65c334f8043b4abe9062e4eb3c4df, type: 3}
@@ -265,6 +342,20 @@ MonoBehaviour:
     - {fileID: 1478353490685718379, guid: f5b4ffb243311f64d86b3eab3b18199a, type: 3}
     fps: 12
     loop: 0
+  - name: stain_spawn
+    frames:
+    - {fileID: 5157374241811747582, guid: 6b9d62f68d0a1894e80dea97bb717948, type: 3}
+    - {fileID: -3351107236923013957, guid: 6b9d62f68d0a1894e80dea97bb717948, type: 3}
+    - {fileID: -1027420857205049961, guid: 6b9d62f68d0a1894e80dea97bb717948, type: 3}
+    - {fileID: 9115321746023732257, guid: 6b9d62f68d0a1894e80dea97bb717948, type: 3}
+    - {fileID: 3322898111289517874, guid: 6b9d62f68d0a1894e80dea97bb717948, type: 3}
+    fps: 12
+    loop: 0
+  - name: stain_portrait
+    frames:
+    - {fileID: 21300000, guid: b6ca9ccc10d15b644840d8e2ef91d186, type: 3}
+    fps: 10
+    loop: 1
   - name: dust_idle
     frames:
     - {fileID: -3293687771866203972, guid: cb0ea3c7c4cadb94496b3194154f8788, type: 3}
@@ -277,6 +368,15 @@ MonoBehaviour:
     - {fileID: -3527333269397689652, guid: cb0ea3c7c4cadb94496b3194154f8788, type: 3}
     fps: 10
     loop: 1
+  - name: dust_attack
+    frames:
+    - {fileID: 8583293687623929545, guid: 77b535335b2dcf3488fcf5744dfe7c69, type: 3}
+    - {fileID: -4564026221774843142, guid: 77b535335b2dcf3488fcf5744dfe7c69, type: 3}
+    - {fileID: -1227417212299702457, guid: 77b535335b2dcf3488fcf5744dfe7c69, type: 3}
+    - {fileID: 2766032622796244040, guid: 77b535335b2dcf3488fcf5744dfe7c69, type: 3}
+    - {fileID: 2446131693437680273, guid: 77b535335b2dcf3488fcf5744dfe7c69, type: 3}
+    fps: 12
+    loop: 0
   - name: dust_hit
     frames:
     - {fileID: -7235701082342507544, guid: cdbd4b0fdc1948746a44787c171bbdcd, type: 3}
@@ -297,6 +397,20 @@ MonoBehaviour:
     - {fileID: 771176469861295689, guid: 984354b1990b6d54fb496cd58f99c8d4, type: 3}
     fps: 12
     loop: 0
+  - name: dust_spawn
+    frames:
+    - {fileID: 5702873336987696761, guid: e6da35ced13cc1247b037e85b5cdb879, type: 3}
+    - {fileID: 5809215911195187893, guid: e6da35ced13cc1247b037e85b5cdb879, type: 3}
+    - {fileID: -234539915804295909, guid: e6da35ced13cc1247b037e85b5cdb879, type: 3}
+    - {fileID: -7232828036068070810, guid: e6da35ced13cc1247b037e85b5cdb879, type: 3}
+    - {fileID: -471881578170203649, guid: e6da35ced13cc1247b037e85b5cdb879, type: 3}
+    fps: 12
+    loop: 0
+  - name: dust_portrait
+    frames:
+    - {fileID: 21300000, guid: 7dbf47be1f4045e4bb80cf092bba0045, type: 3}
+    fps: 10
+    loop: 1
   - name: grease_idle
     frames:
     - {fileID: -8418677364672639404, guid: 3bf6d967ebd4d354f9a4496d92cace05, type: 3}
@@ -309,6 +423,15 @@ MonoBehaviour:
     - {fileID: 7226969455823046189, guid: 3bf6d967ebd4d354f9a4496d92cace05, type: 3}
     fps: 10
     loop: 1
+  - name: grease_attack
+    frames:
+    - {fileID: 2944646095454097749, guid: 8760445dada192d4a9c984968009d4a5, type: 3}
+    - {fileID: -3668136986864747508, guid: 8760445dada192d4a9c984968009d4a5, type: 3}
+    - {fileID: -1194273413743622413, guid: 8760445dada192d4a9c984968009d4a5, type: 3}
+    - {fileID: 6628860544647219494, guid: 8760445dada192d4a9c984968009d4a5, type: 3}
+    - {fileID: 1007432589704704405, guid: 8760445dada192d4a9c984968009d4a5, type: 3}
+    fps: 12
+    loop: 0
   - name: grease_hit
     frames:
     - {fileID: 8609329069395159990, guid: e4d39f8d535abb54da472ea081469590, type: 3}
@@ -329,6 +452,20 @@ MonoBehaviour:
     - {fileID: -2720041899539235956, guid: 50bc7e0e2c98be2428e3fdba43df29cc, type: 3}
     fps: 12
     loop: 0
+  - name: grease_spawn
+    frames:
+    - {fileID: -5920929034401007967, guid: 4d1c0f8692c66f1439d4c21bad284137, type: 3}
+    - {fileID: 5991780610562102143, guid: 4d1c0f8692c66f1439d4c21bad284137, type: 3}
+    - {fileID: -2430730740478452333, guid: 4d1c0f8692c66f1439d4c21bad284137, type: 3}
+    - {fileID: 5856907322680297896, guid: 4d1c0f8692c66f1439d4c21bad284137, type: 3}
+    - {fileID: -2021616031617978911, guid: 4d1c0f8692c66f1439d4c21bad284137, type: 3}
+    fps: 12
+    loop: 0
+  - name: grease_portrait
+    frames:
+    - {fileID: 21300000, guid: 5657dbf121b252f4081ccdf02be3ccb9, type: 3}
+    fps: 10
+    loop: 1
   - name: rust_idle
     frames:
     - {fileID: -7122557008595068865, guid: 781c603ca3ec71e4e8077980a7f46261, type: 3}
@@ -341,6 +478,15 @@ MonoBehaviour:
     - {fileID: 4653436279933535193, guid: 781c603ca3ec71e4e8077980a7f46261, type: 3}
     fps: 10
     loop: 1
+  - name: rust_attack
+    frames:
+    - {fileID: -4591895925871712718, guid: 6d036d3522d169c40be039ebdbaa9ce9, type: 3}
+    - {fileID: -3273581446540850258, guid: 6d036d3522d169c40be039ebdbaa9ce9, type: 3}
+    - {fileID: 181542462178192302, guid: 6d036d3522d169c40be039ebdbaa9ce9, type: 3}
+    - {fileID: -4431870723251906252, guid: 6d036d3522d169c40be039ebdbaa9ce9, type: 3}
+    - {fileID: 6118760481582643527, guid: 6d036d3522d169c40be039ebdbaa9ce9, type: 3}
+    fps: 12
+    loop: 0
   - name: rust_hit
     frames:
     - {fileID: 2667748756637526959, guid: c1227f2a62b6c6d47bf8a813bf648325, type: 3}
@@ -361,6 +507,20 @@ MonoBehaviour:
     - {fileID: -2672605917333315597, guid: 44bdcf10b74192e44ae64b75fb5631a7, type: 3}
     fps: 12
     loop: 0
+  - name: rust_spawn
+    frames:
+    - {fileID: -4533498193701787189, guid: 77cac950796927e4c86302a35a924d5c, type: 3}
+    - {fileID: -4282706331840949611, guid: 77cac950796927e4c86302a35a924d5c, type: 3}
+    - {fileID: 2726198872035088945, guid: 77cac950796927e4c86302a35a924d5c, type: 3}
+    - {fileID: -5664665071664974167, guid: 77cac950796927e4c86302a35a924d5c, type: 3}
+    - {fileID: 5211518273912093890, guid: 77cac950796927e4c86302a35a924d5c, type: 3}
+    fps: 12
+    loop: 0
+  - name: rust_portrait
+    frames:
+    - {fileID: 21300000, guid: a090fe7b90a867543aa8d227c888791a, type: 3}
+    fps: 10
+    loop: 1
   - name: scale_idle
     frames:
     - {fileID: 9206759220641180276, guid: bc8988b90c2677847b72f42fd581b047, type: 3}
@@ -373,6 +533,15 @@ MonoBehaviour:
     - {fileID: 2837649341784610567, guid: bc8988b90c2677847b72f42fd581b047, type: 3}
     fps: 10
     loop: 1
+  - name: scale_attack
+    frames:
+    - {fileID: -4879933100853705785, guid: 0e12a0e7c7fe4614d96608cdeb54833b, type: 3}
+    - {fileID: -9139696472070457778, guid: 0e12a0e7c7fe4614d96608cdeb54833b, type: 3}
+    - {fileID: 6812250945512075297, guid: 0e12a0e7c7fe4614d96608cdeb54833b, type: 3}
+    - {fileID: 8909029097745314276, guid: 0e12a0e7c7fe4614d96608cdeb54833b, type: 3}
+    - {fileID: 9053397369732182394, guid: 0e12a0e7c7fe4614d96608cdeb54833b, type: 3}
+    fps: 12
+    loop: 0
   - name: scale_hit
     frames:
     - {fileID: 203716199142407936, guid: 7d0a7e0f1e4191f41aaef64d5466c732, type: 3}
@@ -393,6 +562,185 @@ MonoBehaviour:
     - {fileID: 2457332742408321869, guid: 1717f0057edcadd44a9c085051b75258, type: 3}
     fps: 12
     loop: 0
+  - name: scale_spawn
+    frames:
+    - {fileID: 2971799463442038082, guid: f3bd866c592772d448a47ac9a9420cc6, type: 3}
+    - {fileID: -6969794838565915265, guid: f3bd866c592772d448a47ac9a9420cc6, type: 3}
+    - {fileID: 6858539578099408771, guid: f3bd866c592772d448a47ac9a9420cc6, type: 3}
+    - {fileID: 4080726351310904466, guid: f3bd866c592772d448a47ac9a9420cc6, type: 3}
+    - {fileID: 4076900134501230622, guid: f3bd866c592772d448a47ac9a9420cc6, type: 3}
+    fps: 12
+    loop: 0
+  - name: scale_portrait
+    frames:
+    - {fileID: 21300000, guid: 1baa1aa8b2b3a2144abd574b20bbc381, type: 3}
+    fps: 10
+    loop: 1
+  - name: trash_idle
+    frames:
+    - {fileID: 8578212198400814292, guid: 8022a9132fd983a4ca9455194009e196, type: 3}
+    - {fileID: 5855972424247174707, guid: 8022a9132fd983a4ca9455194009e196, type: 3}
+    - {fileID: -4021091208975726035, guid: 8022a9132fd983a4ca9455194009e196, type: 3}
+    - {fileID: 135697579600018635, guid: 8022a9132fd983a4ca9455194009e196, type: 3}
+    - {fileID: 2149246208717632833, guid: 8022a9132fd983a4ca9455194009e196, type: 3}
+    - {fileID: 689140890078006046, guid: 8022a9132fd983a4ca9455194009e196, type: 3}
+    - {fileID: -3568307524096748221, guid: 8022a9132fd983a4ca9455194009e196, type: 3}
+    - {fileID: 8707803456286891613, guid: 8022a9132fd983a4ca9455194009e196, type: 3}
+    fps: 10
+    loop: 1
+  - name: trash_attack
+    frames:
+    - {fileID: -2410150780749071639, guid: b5ce2d38baf3efe40aaa5b1d445b6df4, type: 3}
+    - {fileID: 4085672202767849173, guid: b5ce2d38baf3efe40aaa5b1d445b6df4, type: 3}
+    - {fileID: 870902266168511666, guid: b5ce2d38baf3efe40aaa5b1d445b6df4, type: 3}
+    - {fileID: 8976317478544820765, guid: b5ce2d38baf3efe40aaa5b1d445b6df4, type: 3}
+    - {fileID: -902594136657795520, guid: b5ce2d38baf3efe40aaa5b1d445b6df4, type: 3}
+    fps: 12
+    loop: 0
+  - name: trash_hit
+    frames:
+    - {fileID: -162142122574384241, guid: 95eceaa562ed9354aa87fd934d874369, type: 3}
+    - {fileID: -271414250353554877, guid: 95eceaa562ed9354aa87fd934d874369, type: 3}
+    - {fileID: -1718428934324563668, guid: 95eceaa562ed9354aa87fd934d874369, type: 3}
+    - {fileID: -3741685929847723644, guid: 95eceaa562ed9354aa87fd934d874369, type: 3}
+    fps: 14
+    loop: 0
+  - name: trash_defeat
+    frames:
+    - {fileID: 3795217880174711578, guid: 95a84dad6fb28bf47a6b67befa218f27, type: 3}
+    - {fileID: -287157263296291526, guid: 95a84dad6fb28bf47a6b67befa218f27, type: 3}
+    - {fileID: -199842478208891112, guid: 95a84dad6fb28bf47a6b67befa218f27, type: 3}
+    - {fileID: -4702426352596772238, guid: 95a84dad6fb28bf47a6b67befa218f27, type: 3}
+    - {fileID: 6956827616216659990, guid: 95a84dad6fb28bf47a6b67befa218f27, type: 3}
+    - {fileID: 7943015384802873759, guid: 95a84dad6fb28bf47a6b67befa218f27, type: 3}
+    - {fileID: 7720198155170970652, guid: 95a84dad6fb28bf47a6b67befa218f27, type: 3}
+    - {fileID: 1343472471122050227, guid: 95a84dad6fb28bf47a6b67befa218f27, type: 3}
+    fps: 12
+    loop: 0
+  - name: trash_spawn
+    frames:
+    - {fileID: -2486697859274239163, guid: ab2a28005b2b87d419d6165b62ddbf9e, type: 3}
+    - {fileID: 8499013993908462359, guid: ab2a28005b2b87d419d6165b62ddbf9e, type: 3}
+    - {fileID: -7425564354474586129, guid: ab2a28005b2b87d419d6165b62ddbf9e, type: 3}
+    - {fileID: -15953959439598808, guid: ab2a28005b2b87d419d6165b62ddbf9e, type: 3}
+    - {fileID: 6831892314817114257, guid: ab2a28005b2b87d419d6165b62ddbf9e, type: 3}
+    fps: 12
+    loop: 0
+  - name: trash_portrait
+    frames:
+    - {fileID: 21300000, guid: e3102eb33b1ed5f4b9f63d278638cd99, type: 3}
+    fps: 10
+    loop: 1
+  - name: germ_idle
+    frames:
+    - {fileID: 8607704126212339038, guid: 2d48bb2ba1b84cc49a1f5ed9b50f5f93, type: 3}
+    - {fileID: 764458095999034080, guid: 2d48bb2ba1b84cc49a1f5ed9b50f5f93, type: 3}
+    - {fileID: 902388471855785763, guid: 2d48bb2ba1b84cc49a1f5ed9b50f5f93, type: 3}
+    - {fileID: 9043043344842663227, guid: 2d48bb2ba1b84cc49a1f5ed9b50f5f93, type: 3}
+    - {fileID: 8684277140653245989, guid: 2d48bb2ba1b84cc49a1f5ed9b50f5f93, type: 3}
+    - {fileID: 3698496274320806842, guid: 2d48bb2ba1b84cc49a1f5ed9b50f5f93, type: 3}
+    - {fileID: -2795460317730548290, guid: 2d48bb2ba1b84cc49a1f5ed9b50f5f93, type: 3}
+    - {fileID: -2224672895950750886, guid: 2d48bb2ba1b84cc49a1f5ed9b50f5f93, type: 3}
+    fps: 10
+    loop: 1
+  - name: germ_attack
+    frames:
+    - {fileID: 593949839524077734, guid: 2f94687e62674d844a6e8a847ac91ab4, type: 3}
+    - {fileID: -8872116968250900708, guid: 2f94687e62674d844a6e8a847ac91ab4, type: 3}
+    - {fileID: 7374689116939732419, guid: 2f94687e62674d844a6e8a847ac91ab4, type: 3}
+    - {fileID: 8581797996836572508, guid: 2f94687e62674d844a6e8a847ac91ab4, type: 3}
+    - {fileID: 4534901476122090160, guid: 2f94687e62674d844a6e8a847ac91ab4, type: 3}
+    fps: 12
+    loop: 0
+  - name: germ_hit
+    frames:
+    - {fileID: 255229986254757398, guid: 6e3ed7c25d9304e4186f45173f29d662, type: 3}
+    - {fileID: 1346760712871214339, guid: 6e3ed7c25d9304e4186f45173f29d662, type: 3}
+    - {fileID: -1455043733875187206, guid: 6e3ed7c25d9304e4186f45173f29d662, type: 3}
+    - {fileID: -6133591674416926003, guid: 6e3ed7c25d9304e4186f45173f29d662, type: 3}
+    fps: 14
+    loop: 0
+  - name: germ_defeat
+    frames:
+    - {fileID: 1642055246474452982, guid: 210dbf306a979594a94af671065d0b58, type: 3}
+    - {fileID: 3445223655228555374, guid: 210dbf306a979594a94af671065d0b58, type: 3}
+    - {fileID: -1915568402172958798, guid: 210dbf306a979594a94af671065d0b58, type: 3}
+    - {fileID: 4318401538375611756, guid: 210dbf306a979594a94af671065d0b58, type: 3}
+    - {fileID: -3054691224806612028, guid: 210dbf306a979594a94af671065d0b58, type: 3}
+    - {fileID: 3900591202193159629, guid: 210dbf306a979594a94af671065d0b58, type: 3}
+    - {fileID: 699013007625377110, guid: 210dbf306a979594a94af671065d0b58, type: 3}
+    - {fileID: -8602709432549804350, guid: 210dbf306a979594a94af671065d0b58, type: 3}
+    fps: 12
+    loop: 0
+  - name: germ_spawn
+    frames:
+    - {fileID: -5643915003408977698, guid: fa29008b941c6a5498730ae361470247, type: 3}
+    - {fileID: -7685237067794525691, guid: fa29008b941c6a5498730ae361470247, type: 3}
+    - {fileID: -6997624816176121422, guid: fa29008b941c6a5498730ae361470247, type: 3}
+    - {fileID: -1996383739707784305, guid: fa29008b941c6a5498730ae361470247, type: 3}
+    - {fileID: 3331790293269555478, guid: fa29008b941c6a5498730ae361470247, type: 3}
+    fps: 12
+    loop: 0
+  - name: germ_portrait
+    frames:
+    - {fileID: 21300000, guid: 0dc63b6a9fd79794cb931aad9bff6a11, type: 3}
+    fps: 10
+    loop: 1
+  - name: boss_idle
+    frames:
+    - {fileID: 5742144190005862570, guid: be3c03d961347974f87b05c625434584, type: 3}
+    - {fileID: -3085074806657409077, guid: be3c03d961347974f87b05c625434584, type: 3}
+    - {fileID: 3406571612866355325, guid: be3c03d961347974f87b05c625434584, type: 3}
+    - {fileID: -7339561905887146232, guid: be3c03d961347974f87b05c625434584, type: 3}
+    - {fileID: -6372691395590605432, guid: be3c03d961347974f87b05c625434584, type: 3}
+    - {fileID: -1890665946331242197, guid: be3c03d961347974f87b05c625434584, type: 3}
+    - {fileID: 378265039724654620, guid: be3c03d961347974f87b05c625434584, type: 3}
+    - {fileID: 6254880924463439412, guid: be3c03d961347974f87b05c625434584, type: 3}
+    fps: 10
+    loop: 1
+  - name: boss_attack
+    frames:
+    - {fileID: 8320824912735345967, guid: f8dc8799300e4614bb7510cf75322245, type: 3}
+    - {fileID: -3975016362501032488, guid: f8dc8799300e4614bb7510cf75322245, type: 3}
+    - {fileID: -649678722289502472, guid: f8dc8799300e4614bb7510cf75322245, type: 3}
+    - {fileID: -514692836225630516, guid: f8dc8799300e4614bb7510cf75322245, type: 3}
+    - {fileID: 8958798872038287775, guid: f8dc8799300e4614bb7510cf75322245, type: 3}
+    fps: 12
+    loop: 0
+  - name: boss_hit
+    frames:
+    - {fileID: -3318020018173710339, guid: 1e1bcbdc6bab33044b19706f190f2fe0, type: 3}
+    - {fileID: 5157355519914836162, guid: 1e1bcbdc6bab33044b19706f190f2fe0, type: 3}
+    - {fileID: 6351300234396588216, guid: 1e1bcbdc6bab33044b19706f190f2fe0, type: 3}
+    - {fileID: 6841073792797900436, guid: 1e1bcbdc6bab33044b19706f190f2fe0, type: 3}
+    fps: 14
+    loop: 0
+  - name: boss_defeat
+    frames:
+    - {fileID: 6363039262114589204, guid: 0a154b430ddc9b84daba035ec24685db, type: 3}
+    - {fileID: 3398501323736545968, guid: 0a154b430ddc9b84daba035ec24685db, type: 3}
+    - {fileID: -4974235299432309114, guid: 0a154b430ddc9b84daba035ec24685db, type: 3}
+    - {fileID: -6748276859240505507, guid: 0a154b430ddc9b84daba035ec24685db, type: 3}
+    - {fileID: -8498987081862935812, guid: 0a154b430ddc9b84daba035ec24685db, type: 3}
+    - {fileID: -3704893731607520629, guid: 0a154b430ddc9b84daba035ec24685db, type: 3}
+    - {fileID: 5394883637815140258, guid: 0a154b430ddc9b84daba035ec24685db, type: 3}
+    - {fileID: 3388462364946179508, guid: 0a154b430ddc9b84daba035ec24685db, type: 3}
+    fps: 12
+    loop: 0
+  - name: boss_spawn
+    frames:
+    - {fileID: 1238861955384274422, guid: 4f6b112a72c45ff42bcb5ce7bdf5d4f9, type: 3}
+    - {fileID: -4295848096166908992, guid: 4f6b112a72c45ff42bcb5ce7bdf5d4f9, type: 3}
+    - {fileID: -3266014963054413494, guid: 4f6b112a72c45ff42bcb5ce7bdf5d4f9, type: 3}
+    - {fileID: -5543018577191246192, guid: 4f6b112a72c45ff42bcb5ce7bdf5d4f9, type: 3}
+    - {fileID: -6225383394118040627, guid: 4f6b112a72c45ff42bcb5ce7bdf5d4f9, type: 3}
+    fps: 12
+    loop: 0
+  - name: boss_portrait
+    frames:
+    - {fileID: 21300000, guid: c7d23827ff87a65418140ec3b16025a1, type: 3}
+    fps: 10
+    loop: 1
   - name: part_cloth
     frames:
     - {fileID: 21300000, guid: 963b2ef61cb087d47bf8e43268dce216, type: 3}
@@ -675,4 +1023,524 @@ MonoBehaviour:
     - {fileID: -6765150611502731537, guid: 8901ccf6fc466494e83e83b3cb6e240a, type: 3}
     - {fileID: -6026874581427943597, guid: 8901ccf6fc466494e83e83b3cb6e240a, type: 3}
     fps: 8
+    loop: 1
+  - name: item_coin
+    frames:
+    - {fileID: 21300000, guid: 10a18f2963a481f4995da539d58cf679, type: 3}
+    fps: 10
+    loop: 1
+  - name: item_star
+    frames:
+    - {fileID: 21300000, guid: 95cd70ce7ac9bc444b3968c2f3762e92, type: 3}
+    fps: 10
+    loop: 1
+  - name: item_gem
+    frames:
+    - {fileID: 21300000, guid: e24d4c11ac8fb3b4e8b736d1333042e8, type: 3}
+    fps: 10
+    loop: 1
+  - name: item_heart
+    frames:
+    - {fileID: 21300000, guid: a732377a797fc10439fb2a4a8d643f9a, type: 3}
+    fps: 10
+    loop: 1
+  - name: item_stopwatch
+    frames:
+    - {fileID: 21300000, guid: eb45eab50cd68b447b3e2b4bce5d6f93, type: 3}
+    fps: 10
+    loop: 1
+  - name: item_magnet
+    frames:
+    - {fileID: 21300000, guid: c554ac66eae0b4645b8d5b4bb008feee, type: 3}
+    fps: 10
+    loop: 1
+  - name: item_bubble
+    frames:
+    - {fileID: 21300000, guid: 49affed9f26d56343a5e3d1d2ce17851, type: 3}
+    fps: 10
+    loop: 1
+  - name: item_chest_closed
+    frames:
+    - {fileID: 21300000, guid: d854848608ee1184ea0c6a9eaa6b2a89, type: 3}
+    fps: 10
+    loop: 1
+  - name: item_chest_open
+    frames:
+    - {fileID: 21300000, guid: 86d02be874087a240ab568b00a24bb6e, type: 3}
+    fps: 10
+    loop: 1
+  - name: item_trophy
+    frames:
+    - {fileID: 21300000, guid: b939c91adf9653b4bb209a519227bb32, type: 3}
+    fps: 10
+    loop: 1
+  - name: item_coin_spin
+    frames:
+    - {fileID: -6196455880495929315, guid: 31d829bef3f243144a63c19f30a207c5, type: 3}
+    - {fileID: 2673064814197799222, guid: 31d829bef3f243144a63c19f30a207c5, type: 3}
+    - {fileID: -7476560390604442809, guid: 31d829bef3f243144a63c19f30a207c5, type: 3}
+    - {fileID: -3079725306647014399, guid: 31d829bef3f243144a63c19f30a207c5, type: 3}
+    - {fileID: -6058031221775158312, guid: 31d829bef3f243144a63c19f30a207c5, type: 3}
+    - {fileID: 6151079983656980308, guid: 31d829bef3f243144a63c19f30a207c5, type: 3}
+    - {fileID: -8813970622648262424, guid: 31d829bef3f243144a63c19f30a207c5, type: 3}
+    - {fileID: -4902520142211232800, guid: 31d829bef3f243144a63c19f30a207c5, type: 3}
+    fps: 12
+    loop: 1
+  - name: wet_sign
+    frames:
+    - {fileID: 21300000, guid: 4846a26df6cde8145bec48df28ceeaeb, type: 3}
+    fps: 10
+    loop: 1
+  - name: cone
+    frames:
+    - {fileID: 21300000, guid: cac7d3d5ddacbad4fb70ecd96b7d5872, type: 3}
+    fps: 10
+    loop: 1
+  - name: bucket
+    frames:
+    - {fileID: 21300000, guid: 69a3fd6cf81b5d64593fda28e22900b2, type: 3}
+    fps: 10
+    loop: 1
+  - name: trash_bag
+    frames:
+    - {fileID: 21300000, guid: 31affa2932e543c4ab3e18ef42be8b8c, type: 3}
+    fps: 10
+    loop: 1
+  - name: trash_bin
+    frames:
+    - {fileID: 21300000, guid: 66036428c1dd63741b1014430a10da02, type: 3}
+    fps: 10
+    loop: 1
+  - name: recycle_bin
+    frames:
+    - {fileID: 21300000, guid: ce4660d2213fdea4180050a0d5e3768f, type: 3}
+    fps: 10
+    loop: 1
+  - name: toilet_paper
+    frames:
+    - {fileID: 21300000, guid: 761539e40452d624e8812ffc8b5e4c0f, type: 3}
+    fps: 10
+    loop: 1
+  - name: spray_blue
+    frames:
+    - {fileID: 21300000, guid: 246e411edeff1c948af0ae5b80dd5c2e, type: 3}
+    fps: 10
+    loop: 1
+  - name: desk
+    frames:
+    - {fileID: 21300000, guid: 5d6fea9db21d8e044b784a49e512cb9d, type: 3}
+    fps: 10
+    loop: 1
+  - name: chair
+    frames:
+    - {fileID: 21300000, guid: 73507a7a4e477ba4293e52ce84397369, type: 3}
+    fps: 10
+    loop: 1
+  - name: blackboard
+    frames:
+    - {fileID: 21300000, guid: 3d310598d85c14f46bea4ed0a214f286, type: 3}
+    fps: 10
+    loop: 1
+  - name: locker
+    frames:
+    - {fileID: 21300000, guid: e969352bbdec3784db5e171203ed3bdd, type: 3}
+    fps: 10
+    loop: 1
+  - name: window
+    frames:
+    - {fileID: 21300000, guid: 3c33374bd6777fe44a5af4c2b8ef8462, type: 3}
+    fps: 10
+    loop: 1
+  - name: cafe_table
+    frames:
+    - {fileID: 21300000, guid: 940da69b270f88b46bd470e6d9694df8, type: 3}
+    fps: 10
+    loop: 1
+  - name: cafe_chair
+    frames:
+    - {fileID: 21300000, guid: 7fd91bd0b0688374493a3c28d4602e21, type: 3}
+    fps: 10
+    loop: 1
+  - name: food_stall
+    frames:
+    - {fileID: 21300000, guid: 0a47d3717348eac4a9543b2432221b4f, type: 3}
+    fps: 10
+    loop: 1
+  - name: slide
+    frames:
+    - {fileID: 21300000, guid: 9bc75e4822b494c4db8d2c0b5d6322bc, type: 3}
+    fps: 10
+    loop: 1
+  - name: bench
+    frames:
+    - {fileID: 21300000, guid: 8c1e02a3717fc4d4a8e04aebc21e76e0, type: 3}
+    fps: 10
+    loop: 1
+  - name: tree
+    frames:
+    - {fileID: 21300000, guid: 2f54735e9918b5a468ce8d45df9427c4, type: 3}
+    fps: 10
+    loop: 1
+  - name: bush
+    frames:
+    - {fileID: 21300000, guid: 416a37e1f5dfca840b96fd66ac656415, type: 3}
+    fps: 10
+    loop: 1
+  - name: boss_door
+    frames:
+    - {fileID: 21300000, guid: c64065cc081776d448c3465239dd1b30, type: 3}
+    fps: 10
+    loop: 1
+  - name: pipe
+    frames:
+    - {fileID: 21300000, guid: 4416410a38b3c4e4bbce5c9b13865492, type: 3}
+    fps: 10
+    loop: 1
+  - name: floor_school
+    frames:
+    - {fileID: 21300000, guid: e5ca7f237d32113419b0ffe68e1e863a, type: 3}
+    fps: 10
+    loop: 1
+  - name: floor_school_dirty
+    frames:
+    - {fileID: 21300000, guid: ad4f2175a884ab544abff2b70fc2b15f, type: 3}
+    fps: 10
+    loop: 1
+  - name: floor_wood
+    frames:
+    - {fileID: 21300000, guid: b1a78fa2243b51945b93b3781f4306c2, type: 3}
+    fps: 10
+    loop: 1
+  - name: floor_wood_dirty
+    frames:
+    - {fileID: 21300000, guid: 6bd49f8c82ddda5438d2716c0db3e86a, type: 3}
+    fps: 10
+    loop: 1
+  - name: floor_cafeteria
+    frames:
+    - {fileID: 21300000, guid: 4f45bcd12dc659f468a5aaf84b7356c7, type: 3}
+    fps: 10
+    loop: 1
+  - name: floor_cafeteria_dirty
+    frames:
+    - {fileID: 21300000, guid: 98b9036a341fd354581716642f3d4716, type: 3}
+    fps: 10
+    loop: 1
+  - name: floor_grass
+    frames:
+    - {fileID: 21300000, guid: bbf899dda75a740489be073c9bf8b8ce, type: 3}
+    fps: 10
+    loop: 1
+  - name: floor_grass_dirty
+    frames:
+    - {fileID: 21300000, guid: 56270092914b44042b91271dec63361d, type: 3}
+    fps: 10
+    loop: 1
+  - name: floor_sand
+    frames:
+    - {fileID: 21300000, guid: 082b03d45fd5b1b49aea5e586edb916a, type: 3}
+    fps: 10
+    loop: 1
+  - name: floor_sand_dirty
+    frames:
+    - {fileID: 21300000, guid: f6b76a6e1e71f3b49bccd07d3cd296d3, type: 3}
+    fps: 10
+    loop: 1
+  - name: floor_boiler
+    frames:
+    - {fileID: 21300000, guid: 93b663f4bf7fa8e4f86ba22549609998, type: 3}
+    fps: 10
+    loop: 1
+  - name: floor_boiler_dirty
+    frames:
+    - {fileID: 21300000, guid: 18b5dbe32c680c341adb3437d5b9886f, type: 3}
+    fps: 10
+    loop: 1
+  - name: decal_mud
+    frames:
+    - {fileID: 21300000, guid: 7ceab40060fe8584d95d04159e0c4d29, type: 3}
+    fps: 10
+    loop: 1
+  - name: decal_slime
+    frames:
+    - {fileID: 21300000, guid: 8d336b3b10477b94db38e3db25c48575, type: 3}
+    fps: 10
+    loop: 1
+  - name: decal_goo
+    frames:
+    - {fileID: 21300000, guid: 1511c348d07863240953834e5e8de914, type: 3}
+    fps: 10
+    loop: 1
+  - name: decal_trash
+    frames:
+    - {fileID: 21300000, guid: c55f647d0ca8f1c44bd2be63ec3d2912, type: 3}
+    fps: 10
+    loop: 1
+  - name: decal_germ
+    frames:
+    - {fileID: 21300000, guid: 02bf16c5ac681a84fa43fac780e51eb3, type: 3}
+    fps: 10
+    loop: 1
+  - name: decal_puddle
+    frames:
+    - {fileID: 21300000, guid: 684f0db0474ecdf489a54f5028e30787, type: 3}
+    fps: 10
+    loop: 1
+  - name: bg_school
+    frames:
+    - {fileID: 21300000, guid: a54d8dd6d48043c4b8d656b98e2a89ce, type: 3}
+    fps: 10
+    loop: 1
+  - name: bg_school_dirty
+    frames:
+    - {fileID: 21300000, guid: 1b53eaac7f7fad54792a8ef04844ee86, type: 3}
+    fps: 10
+    loop: 1
+  - name: bg_classroom
+    frames:
+    - {fileID: 21300000, guid: 01945ef18b6e83d4eb2aaedec3a17610, type: 3}
+    fps: 10
+    loop: 1
+  - name: bg_classroom_dirty
+    frames:
+    - {fileID: 21300000, guid: 3c683be25ec99424693c8ccef20b189c, type: 3}
+    fps: 10
+    loop: 1
+  - name: bg_cafeteria
+    frames:
+    - {fileID: 21300000, guid: 7f741521c30634c41bddb727d62fcadc, type: 3}
+    fps: 10
+    loop: 1
+  - name: bg_cafeteria_dirty
+    frames:
+    - {fileID: 21300000, guid: 79219bbea1327e648ae73a4501840762, type: 3}
+    fps: 10
+    loop: 1
+  - name: bg_playground
+    frames:
+    - {fileID: 21300000, guid: 79554888adf26464da9179b545cb4893, type: 3}
+    fps: 10
+    loop: 1
+  - name: bg_playground_dirty
+    frames:
+    - {fileID: 21300000, guid: 8fc0a1841f1c698459f21d53be1811e7, type: 3}
+    fps: 10
+    loop: 1
+  - name: bg_boiler
+    frames:
+    - {fileID: 21300000, guid: 90cdafc09c1e2d041aa587362673c477, type: 3}
+    fps: 10
+    loop: 1
+  - name: bg_boiler_dirty
+    frames:
+    - {fileID: 21300000, guid: dcd25f12b82e3004c9c6ccdcf230b60c, type: 3}
+    fps: 10
+    loop: 1
+  - name: fx_splash
+    frames:
+    - {fileID: 167866504463145037, guid: 8e9c48fc4f184474e9deb536132d905e, type: 3}
+    - {fileID: -3680854067685732631, guid: 8e9c48fc4f184474e9deb536132d905e, type: 3}
+    - {fileID: 6832876941473378000, guid: 8e9c48fc4f184474e9deb536132d905e, type: 3}
+    - {fileID: -1900967354775950733, guid: 8e9c48fc4f184474e9deb536132d905e, type: 3}
+    - {fileID: 7268523017320393230, guid: 8e9c48fc4f184474e9deb536132d905e, type: 3}
+    - {fileID: 4795096200280210451, guid: 8e9c48fc4f184474e9deb536132d905e, type: 3}
+    - {fileID: -6954753530169324211, guid: 8e9c48fc4f184474e9deb536132d905e, type: 3}
+    fps: 16
+    loop: 0
+  - name: fx_swipe
+    frames:
+    - {fileID: -2239098145370150432, guid: 594d1d7dbc7256b4d94ea4fd98a82360, type: 3}
+    - {fileID: -3761328344990084874, guid: 594d1d7dbc7256b4d94ea4fd98a82360, type: 3}
+    - {fileID: -5269787360567714678, guid: 594d1d7dbc7256b4d94ea4fd98a82360, type: 3}
+    - {fileID: 2958875625884143832, guid: 594d1d7dbc7256b4d94ea4fd98a82360, type: 3}
+    - {fileID: 987471706571909068, guid: 594d1d7dbc7256b4d94ea4fd98a82360, type: 3}
+    - {fileID: 3980981630400507766, guid: 594d1d7dbc7256b4d94ea4fd98a82360, type: 3}
+    fps: 18
+    loop: 0
+  - name: fx_spray_mist
+    frames:
+    - {fileID: 6098270447537295402, guid: a38868bf4b9e10e4e8cc5f80ff305e47, type: 3}
+    - {fileID: 4833050677487573931, guid: a38868bf4b9e10e4e8cc5f80ff305e47, type: 3}
+    - {fileID: 82693900992012627, guid: a38868bf4b9e10e4e8cc5f80ff305e47, type: 3}
+    - {fileID: -49360069711234872, guid: a38868bf4b9e10e4e8cc5f80ff305e47, type: 3}
+    - {fileID: 6857269687648821960, guid: a38868bf4b9e10e4e8cc5f80ff305e47, type: 3}
+    - {fileID: 7314514229324277797, guid: a38868bf4b9e10e4e8cc5f80ff305e47, type: 3}
+    fps: 14
+    loop: 1
+  - name: fx_hit
+    frames:
+    - {fileID: 5976835674048115325, guid: d9d38aee37bc9314489e855afa28d9e5, type: 3}
+    - {fileID: -339487260149740885, guid: d9d38aee37bc9314489e855afa28d9e5, type: 3}
+    - {fileID: 6749046335190897451, guid: d9d38aee37bc9314489e855afa28d9e5, type: 3}
+    - {fileID: 2056474645432928713, guid: d9d38aee37bc9314489e855afa28d9e5, type: 3}
+    - {fileID: -8541588917222342602, guid: d9d38aee37bc9314489e855afa28d9e5, type: 3}
+    fps: 16
+    loop: 0
+  - name: fx_tornado
+    frames:
+    - {fileID: -5176519986370192543, guid: 4b4ae7d17f11e234caa34db23b3d401f, type: 3}
+    - {fileID: -4031310300797991834, guid: 4b4ae7d17f11e234caa34db23b3d401f, type: 3}
+    - {fileID: -3499232665440258209, guid: 4b4ae7d17f11e234caa34db23b3d401f, type: 3}
+    - {fileID: 4902766515954406342, guid: 4b4ae7d17f11e234caa34db23b3d401f, type: 3}
+    - {fileID: -4103067473555060679, guid: 4b4ae7d17f11e234caa34db23b3d401f, type: 3}
+    - {fileID: 5924958492728633199, guid: 4b4ae7d17f11e234caa34db23b3d401f, type: 3}
+    - {fileID: 7988964074644463817, guid: 4b4ae7d17f11e234caa34db23b3d401f, type: 3}
+    - {fileID: -1462821666448272427, guid: 4b4ae7d17f11e234caa34db23b3d401f, type: 3}
+    fps: 14
+    loop: 1
+  - name: fx_bubble_dome
+    frames:
+    - {fileID: 4732034328125320956, guid: a01c0f357e9038249a201db3d6f7c617, type: 3}
+    - {fileID: -6223140875892334469, guid: a01c0f357e9038249a201db3d6f7c617, type: 3}
+    - {fileID: -5731653698146756962, guid: a01c0f357e9038249a201db3d6f7c617, type: 3}
+    - {fileID: 8642614539377940734, guid: a01c0f357e9038249a201db3d6f7c617, type: 3}
+    - {fileID: -8261033059745617986, guid: a01c0f357e9038249a201db3d6f7c617, type: 3}
+    - {fileID: 3650018677584460151, guid: a01c0f357e9038249a201db3d6f7c617, type: 3}
+    - {fileID: 401815229102336432, guid: a01c0f357e9038249a201db3d6f7c617, type: 3}
+    - {fileID: -1307511956819451773, guid: a01c0f357e9038249a201db3d6f7c617, type: 3}
+    fps: 12
+    loop: 0
+  - name: fx_time_freeze
+    frames:
+    - {fileID: 5093174675744279753, guid: 91c2811ee7206ff4db9e08e4a5b1b920, type: 3}
+    - {fileID: 684230683808463794, guid: 91c2811ee7206ff4db9e08e4a5b1b920, type: 3}
+    - {fileID: 1968579122247818896, guid: 91c2811ee7206ff4db9e08e4a5b1b920, type: 3}
+    - {fileID: 4236391913001680475, guid: 91c2811ee7206ff4db9e08e4a5b1b920, type: 3}
+    - {fileID: -586043042719338088, guid: 91c2811ee7206ff4db9e08e4a5b1b920, type: 3}
+    - {fileID: -3407543775837296917, guid: 91c2811ee7206ff4db9e08e4a5b1b920, type: 3}
+    - {fileID: 8779529977450705150, guid: 91c2811ee7206ff4db9e08e4a5b1b920, type: 3}
+    - {fileID: -8168131559250573426, guid: 91c2811ee7206ff4db9e08e4a5b1b920, type: 3}
+    fps: 12
+    loop: 0
+  - name: fx_clean_wave
+    frames:
+    - {fileID: 6865429751335730154, guid: f5778430ceb151b41a65db9940112c00, type: 3}
+    - {fileID: -1186783244441208985, guid: f5778430ceb151b41a65db9940112c00, type: 3}
+    - {fileID: 3228824937294321579, guid: f5778430ceb151b41a65db9940112c00, type: 3}
+    - {fileID: 4918777907329035243, guid: f5778430ceb151b41a65db9940112c00, type: 3}
+    - {fileID: 5239025141230130210, guid: f5778430ceb151b41a65db9940112c00, type: 3}
+    - {fileID: -191306975426404953, guid: f5778430ceb151b41a65db9940112c00, type: 3}
+    - {fileID: 2362969941702624047, guid: f5778430ceb151b41a65db9940112c00, type: 3}
+    - {fileID: 5724500530026525553, guid: f5778430ceb151b41a65db9940112c00, type: 3}
+    fps: 14
+    loop: 0
+  - name: logo_bob
+    frames:
+    - {fileID: 21300000, guid: fc8c2c82b948f5147920094aa65abdbf, type: 3}
+    fps: 10
+    loop: 1
+  - name: ui_button_play
+    frames:
+    - {fileID: 21300000, guid: 96d5e5f62f621e84c8de8818f2594e4c, type: 3}
+    fps: 10
+    loop: 1
+  - name: ui_button_blue
+    frames:
+    - {fileID: 21300000, guid: 440b38ffcda181f43b9edfb7dfd89297, type: 3}
+    fps: 10
+    loop: 1
+  - name: ui_button_skill
+    frames:
+    - {fileID: 21300000, guid: f5984f4f6d924ef4b8a83ac99f6ddc06, type: 3}
+    fps: 10
+    loop: 1
+  - name: ui_button_round
+    frames:
+    - {fileID: 21300000, guid: 274c1ef61ddc3214d93c5ec598569b32, type: 3}
+    fps: 10
+    loop: 1
+  - name: ui_portrait_frame
+    frames:
+    - {fileID: 21300000, guid: 93b998ec8779f154087e6a68920cb405, type: 3}
+    fps: 10
+    loop: 1
+  - name: ui_ribbon
+    frames:
+    - {fileID: 21300000, guid: e9acce145ea39b540bb2258c9eb938aa, type: 3}
+    fps: 10
+    loop: 1
+  - name: ui_panel_blue
+    frames:
+    - {fileID: 21300000, guid: 018237a51d45e2643954250a67bdf3b7, type: 3}
+    fps: 10
+    loop: 1
+  - name: icon_heart
+    frames:
+    - {fileID: 21300000, guid: 71538adce200ea442a42e6e45e4c37d8, type: 3}
+    fps: 10
+    loop: 1
+  - name: icon_coin
+    frames:
+    - {fileID: 21300000, guid: ef57396ff64b9c54d938f3cd4aee26e1, type: 3}
+    fps: 10
+    loop: 1
+  - name: icon_gem
+    frames:
+    - {fileID: 21300000, guid: 9b4d1909e5019fa4a877f1f1fd84bcdd, type: 3}
+    fps: 10
+    loop: 1
+  - name: icon_skill_sweep
+    frames:
+    - {fileID: 21300000, guid: a7b8b672d8ba35947bff9d20c4d9db20, type: 3}
+    fps: 10
+    loop: 1
+  - name: card_sweep
+    frames:
+    - {fileID: 21300000, guid: 928d368f32c098d44bf5f3a109c7aef9, type: 3}
+    fps: 10
+    loop: 1
+  - name: icon_skill_bubble
+    frames:
+    - {fileID: 21300000, guid: 0c38f5226d2dc1b41978e51171283a52, type: 3}
+    fps: 10
+    loop: 1
+  - name: card_bubble
+    frames:
+    - {fileID: 21300000, guid: 6f4c3d53eca45804abdc8c5e3c06ca77, type: 3}
+    fps: 10
+    loop: 1
+  - name: icon_skill_spray
+    frames:
+    - {fileID: 21300000, guid: 233bf55cf8c298542a9c329e71bc08ed, type: 3}
+    fps: 10
+    loop: 1
+  - name: card_spray
+    frames:
+    - {fileID: 21300000, guid: 53cb959fbee2a3e47b6ee6894fd38fdc, type: 3}
+    fps: 10
+    loop: 1
+  - name: icon_skill_press
+    frames:
+    - {fileID: 21300000, guid: 2d47cbfb69de51943b179ef5cf2471c0, type: 3}
+    fps: 10
+    loop: 1
+  - name: card_press
+    frames:
+    - {fileID: 21300000, guid: 66e0eb4f0a84fc84aaa2a404ca25cc03, type: 3}
+    fps: 10
+    loop: 1
+  - name: stage_school
+    frames:
+    - {fileID: 21300000, guid: 7ce1eac262f1d534c8de08b41a5f1f2e, type: 3}
+    fps: 10
+    loop: 1
+  - name: stage_classroom
+    frames:
+    - {fileID: 21300000, guid: a37e5369e2eb0584985c090bdcd15023, type: 3}
+    fps: 10
+    loop: 1
+  - name: stage_cafeteria
+    frames:
+    - {fileID: 21300000, guid: 682de405e3d167f48be92b5ea270a3bf, type: 3}
+    fps: 10
+    loop: 1
+  - name: stage_playground
+    frames:
+    - {fileID: 21300000, guid: 96db0f02c60376b42bd47c2a837f0aae, type: 3}
+    fps: 10
+    loop: 1
+  - name: stage_boiler
+    frames:
+    - {fileID: 21300000, guid: 49e1fd6e9e5c302409769752b4a2533e, type: 3}
+    fps: 10
     loop: 1

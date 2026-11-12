@@ -1,0 +1,46 @@
+# Runs on every push and pull request: the Nakama match server with bots, the C# client checks, and a type-check
+# of the Unity scripts (no Unity licence needed). Unity itself is not compiled here; that still happens on the PC.
+name: Server and client checks
+on:
+  push:
+    branches: [main, 'claude/**', 'feature/**']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      NO_PROXY: 127.0.0.1
+      no_proxy: 127.0.0.1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Server module is up to date with prototype + match.js
+        run: |
+          cd server && node build-module.js
+          git diff --exit-code -- modules/index.js || (echo "::error::run 'node server/build-module.js' and commit server/modules/index.js" && exit 1)
+      - name: Start Nakama + Postgres
+        run: |
+          cd server && docker compose up -d
+          for i in $(seq 1 60); do
+            [ "$(curl -s -o /dev/null -m 3 -w '%{http_code}' http://127.0.0.1:7350/healthcheck)" = "200" ] && exit 0; sleep 2
+          done
+          docker compose logs nakama | tail -50; exit 1
+      - name: Co-op test (4 bots)
+        run: node server/coop-test.js
+      - name: Multiplayer test (2, 3, 4 players)
+        run: for n in 2 3 4; do node server/mp-test.js $n; done
+      - name: C# client checks (rules parity, rooms, co-op)
+        run: cd unity-check && dotnet run
+      - name: Type-check Unity scripts
+        run: cd unity-typecheck && dotnet build -nologo
+      - name: Nakama logs on failure
+        if: failure()
+        run: cd server && docker compose logs nakama | tail -200

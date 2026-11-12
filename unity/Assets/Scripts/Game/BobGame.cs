@@ -29,7 +29,7 @@ namespace Bob.Game
         public const float RoundTime = 100f, FreezeTime = 8f;
         public const int Hand = BobRules.HandSolo;
 
-        enum Phase { Title, Loading, Intro, Build, Scoring, Test, Result }
+        enum Phase { Title, Loading, Intro, Countdown, Build, Scoring, Test, Result, Lobby }
 
         sealed class LastRound
         {
@@ -46,6 +46,8 @@ namespace Bob.Game
         bool abUsed, shield, swapMode;
         ScoreResult preview;
         LastRound last;
+        readonly List<bool> results = new List<bool>();
+        bool soundOn = true, musicOn = true, connecting;
 
         BobServer server;
         bool online;
@@ -59,14 +61,31 @@ namespace Bob.Game
         {
             if (art == null) { art = ScriptableObject.CreateInstance<BobArtLibrary>(); Debug.LogWarning("[BobGame] no art library: run Bob > Build Game Scene"); }
             BobUi.Art = art;
-            try { var c = PlayerPrefs.GetString("bob.char", "sweep"); if (BobMatch.Chars.Any(x => x.Id == c)) charId = c; } catch (Exception) { }
+            try
+            {
+                var c = PlayerPrefs.GetString("bob.char", "sweep"); if (BobMatch.Chars.Any(x => x.Id == c)) charId = c;
+                coins = PlayerPrefs.GetInt("bob.coins", 0);
+                soundOn = PlayerPrefs.GetInt("bob.sound", 1) == 1; musicOn = PlayerPrefs.GetInt("bob.music", 1) == 1;
+                var h = PlayerPrefs.GetString("bob.host", ""); if (!string.IsNullOrWhiteSpace(h)) host = h.Trim();
+#if UNITY_EDITOR
+                // tests can point the Editor at a second Nakama (server/docker-compose.test.yml): BOB_PORT=7360
+                if (int.TryParse(Environment.GetEnvironmentVariable("BOB_PORT"), out var envPort)) port = envPort;
+#endif
+            }
+            catch (Exception) { }
             Application.targetFrameRate = 60;
+            Screen.sleepTimeout = SleepTimeout.NeverSleep;
+            // landscape only, either way round
+            Screen.autorotateToPortrait = false; Screen.autorotateToPortraitUpsideDown = false;
+            Screen.autorotateToLandscapeLeft = true; Screen.autorotateToLandscapeRight = true;
+            if (!Application.isEditor) Screen.orientation = ScreenOrientation.AutoRotation;
         }
 
         void Start()
         {
             sfxReady = FindFirstObjectByType<BobSfx>() != null;
-            if (sfxReady) BobSfx.Music(true);
+            AudioListener.volume = soundOn ? 1 : 0;
+            if (sfxReady) BobSfx.Music(musicOn);
             BuildWorld();
             BuildHud();
             RenderAll();
@@ -77,6 +96,7 @@ namespace Bob.Game
         async void Connect()
         {
             if (!useServer) { netNote = "ออฟไลน์: คิดคะแนนในเครื่อง"; RenderAll(); return; }
+            connecting = true; online = false; netNote = "กำลังเชื่อมต่อ " + host + "…"; RenderAll();
             try
             {
                 server = new BobServer("http", host, port, serverKey);
@@ -89,13 +109,16 @@ namespace Bob.Game
                 online = false; netNote = "ออฟไลน์: คิดคะแนนในเครื่อง";
                 Debug.LogWarning("[BobGame] server not reachable, playing offline: " + e.Message);
             }
+            connecting = false;
             RenderAll();
         }
 
         void Update()
         {
+            if (Input.GetKeyDown(KeyCode.Escape)) OnBack();
             TickInput();
-            if (phase == Phase.Build)
+            TickOnline();
+            if (phase == Phase.Build && overlay == Overlay.None && !Online) // online, the server runs the clock
             {
                 if (freeze > 0) freeze = Mathf.Max(0, freeze - Time.deltaTime); else time -= Time.deltaTime;
                 if (time <= 0) { time = 0; if (stack.Count == 0) Toast("หมดเวลา! ส่งรถเข็นเปล่า"); Submit(); }
@@ -117,7 +140,31 @@ namespace Bob.Game
             await t;
         }
 
-        void Sfx(string name) { if (sfxReady) BobSfx.Play(name); }
+        void Sfx(string name) { if (sfxReady && soundOn) BobSfx.Play(name); }
+
+        static void Buzz()
+        {
+#if UNITY_ANDROID || UNITY_IOS
+            Handheld.Vibrate();
+#endif
+        }
+
+        void SetSound(bool on) { soundOn = on; AudioListener.volume = on ? 1 : 0; PlayerPrefs.SetInt("bob.sound", on ? 1 : 0); PlayerPrefs.Save(); }
+        void SetMusic(bool on) { musicOn = on; if (sfxReady) BobSfx.Music(on); PlayerPrefs.SetInt("bob.music", on ? 1 : 0); PlayerPrefs.Save(); }
+        void SetHost(string h)
+        {
+            h = (h ?? "").Trim(); if (h.Length == 0) return;
+            host = h; PlayerPrefs.SetString("bob.host", h); PlayerPrefs.Save();
+            Connect();
+        }
+
+        /// <summary>Android back button / Esc: close overlay, pause during a round, else go home.</summary>
+        void OnBack()
+        {
+            if (overlay != Overlay.None) SetOverlay(phase == Phase.Build && overlay == Overlay.Settings ? Overlay.Pause : Overlay.None);
+            else if (phase == Phase.Build) SetOverlay(Overlay.Pause);
+            else if (phase == Phase.Intro || phase == Phase.Test || phase == Phase.Result) ToTitle();
+        }
 
         EvalResult Ev() => BobRules.EvalStack(stack, R?.Enemies, shield);
         int BudgetLeft => budget - BobRules.StackCost(stack);
@@ -148,9 +195,11 @@ namespace Bob.Game
 
         void StartMatch()
         {
+            if (Online) { LeaveOnline(); FindOnline(); return; } // "play again" online = find a new match
             matchId = "u" + DateTime.UtcNow.Ticks.ToString("x") + UnityEngine.Random.Range(0, 0xFFFF).ToString("x");
             seed = UnityEngine.Random.Range(1, 8388608);
-            roundNo = 0; wins = 0; losses = 0; carry = 0; rivalCarry = 0;
+            roundNo = 0; wins = 0; losses = 0; carry = 0; rivalCarry = 0; results.Clear();
+            Time.timeScale = 1;
             Sfx("ui_confirm");
             Log("match_start", $"{{\"seed\":{seed},\"char\":\"{charId}\"}}");
             NextRound();
@@ -174,12 +223,31 @@ namespace Bob.Game
             phase = Phase.Intro; RenderAll();
         }
 
-        void BeginBuild() { phase = Phase.Build; Sfx("round_start"); RenderAll(); }
+        void BeginBuild()
+        {
+            if (phase != Phase.Intro) return;
+            phase = Phase.Countdown; RenderAll();
+            StartCoroutine(Countdown());
+        }
+
+        System.Collections.IEnumerator Countdown()
+        {
+            countdownRt.gameObject.SetActive(true);
+            foreach (var s in new[] { "3", "2", "1", "ลุย!" })
+            {
+                countdownText.text = s; Sfx(s == "ลุย!" ? "round_start" : "timer_tick");
+                StartCoroutine(BobTween.Pop(countdownRt, 0.3f, 1.3f));
+                yield return new WaitForSeconds(s == "ลุย!" ? 0.5f : 0.6f);
+            }
+            countdownRt.gameObject.SetActive(false);
+            phase = Phase.Build; RenderAll();
+        }
 
         void PickUp(string id)
         {
             if (phase != Phase.Build) return;
-            if (hand.Count >= Hand) { Toast("มือเต็มแล้ว ถือได้ " + Hand + " ชิ้น"); Sfx("drop_invalid"); return; }
+            if (Online) { OnlinePick(id); return; }
+            if (hand.Count >= HandMax) { Toast("มือเต็มแล้ว ถือได้ " + HandMax + " ชิ้น"); Sfx("drop_invalid"); return; }
             hand.Add(id); Sfx("pickup"); PopHand(); RenderAll();
         }
 
@@ -187,6 +255,7 @@ namespace Bob.Game
         {
             if (phase != Phase.Build || i < 0 || i >= hand.Count) return;
             if (!nearCart) { Toast("เดินไปที่รถเข็นก่อน"); Sfx("drop_invalid"); return; }
+            if (Online) { OnlinePlace(i); return; }
             var id = hand[i];
             var why = BobRules.WhyCannotPlace(stack, id, BudgetLeft);
             if (why != null) { Toast(why); Sfx("drop_invalid"); return; }
@@ -202,14 +271,16 @@ namespace Bob.Game
         {
             if (phase != Phase.Build || stack.Count == 0) return;
             if (!nearCart) { Toast("เดินไปที่รถเข็นก่อน"); return; }
+            if (Online) { OnlineLift(); return; }
             var id = stack[stack.Count - 1]; stack.RemoveAt(stack.Count - 1);
-            if (hand.Count < Hand) hand.Add(id); else Toast("มือเต็ม ชิ้นนี้ถูกวางคืนชั้น");
+            if (hand.Count < HandMax) hand.Add(id); else Toast("มือเต็ม ชิ้นนี้ถูกวางคืนชั้น");
             preview = null; Sfx("lift_layer"); RenderAll();
         }
 
         void SwapAt(int i) // swap layer i with the one above it (Sweep's ability)
         {
             if (i < 0 || i >= stack.Count - 1) return;
+            if (Online) { swapMode = false; mp.Ability(i); RenderAll(); return; } // the server swaps the team cart
             var a = stack.ToList(); (a[i], a[i + 1]) = (a[i + 1], a[i]);
             bool bad = BobRules.IsMethod(a[0]);
             for (int k = 1; k < a.Count; k++) if (BobRules.IsMethod(a[k]) && BobRules.IsMethod(a[k - 1])) bad = true;
@@ -230,6 +301,7 @@ namespace Bob.Game
         void UseAbility()
         {
             if (phase != Phase.Build || abUsed) return;
+            if (Online) { OnlineAbility(); return; }
             switch (charId)
             {
                 case "sweep":
@@ -249,6 +321,7 @@ namespace Bob.Game
         async void Submit()
         {
             if (phase != Phase.Build) return;
+            if (Online) { OnlineSubmit(); return; }
             phase = Phase.Scoring; RenderAll();
             var e = Ev(); int left = BudgetLeft; double tf = Mathf.Clamp01(time / RoundTime);
             var mine = BobRules.TotalScore(e, R.Need, left, budget, tf);
@@ -271,6 +344,7 @@ namespace Bob.Game
             var rv = BobMatch.Rival(R, seed, rb);
             bool win = mine.Total > rv.Score.Total || (mine.Total == rv.Score.Total && left >= rb - rv.Ev.Cost);
             if (win) wins++; else losses++;
+            results.Add(win);
             carry = Mathf.Max(0, left); rivalCarry = Mathf.Max(0, rb - rv.Ev.Cost);
             last = new LastRound { Ev = e, Stats = stats, Mine = mine, Rival = rv, Win = win, FromServer = fromServer, Stack = stack.ToList() };
             Log("round_result", "{" +
@@ -287,17 +361,19 @@ namespace Bob.Game
 
         void AfterTest()
         {
+            if (Online && !MatchOver) { Toast("รอเซิร์ฟเวอร์เริ่มรอบถัดไป…"); return; }
             if (MatchOver)
             {
                 gain = wins > losses ? 30 : 20; coins += gain;
-                Log("match_end", $"{{\"wins\":{wins},\"losses\":{losses},\"rounds\":{roundNo},\"coins\":{gain},\"char\":\"{charId}\"}}");
+                try { PlayerPrefs.SetInt("bob.coins", coins); PlayerPrefs.Save(); } catch (Exception) { }
+                Log("match_end", $"{{\"wins\":{wins},\"losses\":{losses},\"rounds\":{roundNo},\"coins\":{gain},\"char\":\"{charId}\",\"mode\":\"{(Online ? "online" : "solo")}\"}}");
                 Sfx("coin");
                 phase = Phase.Result; RenderAll();
             }
             else NextRound();
         }
 
-        void ToTitle() { phase = Phase.Title; R = null; ResetRoomForRound(); Sfx("ui_cancel"); RenderAll(); }
+        void ToTitle() { LeaveOnline(); Time.timeScale = 1; StopAllCoroutines(); countdownRt.gameObject.SetActive(false); phase = Phase.Title; R = null; ResetRoomForRound(); Sfx("ui_cancel"); RenderAll(); }
 
         void RenderAll() { RenderWorld(); RenderHud(); }
 

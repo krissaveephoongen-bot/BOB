@@ -178,22 +178,63 @@ namespace Bob.Game
 
         // ---------------------------------------------------------------- per frame
 
+        // Floating joystick: appears where the thumb lands in the left column, under the order ticket.
+        const float JoyRadius = 110f, JoyDead = 0.15f;
+        bool joyActive; int joyFinger = -99; Vector2 joyOrigin, joyVec;
+
+        static bool OverUi(int pointerId) =>
+            EventSystem.current != null && (pointerId >= 0 ? EventSystem.current.IsPointerOverGameObject(pointerId) : EventSystem.current.IsPointerOverGameObject());
+
+        static bool InJoyZone(Vector2 p) => p.x < Screen.width * (SideCol + 0.04f) && p.y < Screen.height * 0.6f;
+
+        void JoyBegin(int id, Vector2 p) { joyActive = true; joyFinger = id; joyOrigin = p; joyVec = Vector2.zero; target = null; }
+        void JoyMove(Vector2 p)
+        {
+            float px = JoyRadius * Screen.height / 1080f;
+            var d = (p - joyOrigin) / Mathf.Max(1, px);
+            joyVec = d.magnitude > 1 ? d.normalized : d;
+        }
+
+        void Tap(Vector2 p)
+        {
+            if (!cam.pixelRect.Contains(p)) return;
+            var w = cam.ScreenToWorldPoint(p);
+            if (w.x < -0.3f || w.x > RoomW + 0.3f || w.y < -0.3f || w.y > RoomH + 0.3f) return;
+            target = new Vector2(Mathf.Clamp(w.x, 0.18f, RoomW - 0.18f), Mathf.Clamp(w.y, 0.18f, RoomH - 0.18f)); stuck = 0;
+        }
+
         void TickInput()
         {
-            if (phase != Phase.Build) return;
+            if (phase != Phase.Build || overlay != Overlay.None) { joyActive = false; return; }
             // keyboard shortcuts: 1-3 place from hand, Q lift the top layer, F ability, Enter submit
-            for (int i = 0; i < Hand; i++) if (Input.GetKeyDown(KeyCode.Alpha1 + i)) Place(i);
+            for (int i = 0; i < HandMax; i++) if (Input.GetKeyDown(KeyCode.Alpha1 + i)) Place(i);
             if (Input.GetKeyDown(KeyCode.Q)) LiftTop();
             if (Input.GetKeyDown(KeyCode.F)) UseAbility();
             if (Input.GetKeyDown(KeyCode.Return) && BobRules.CountLayers(stack) > 0) Submit();
 
-            bool down = Input.GetMouseButtonDown(0);
-            if (!down) return;
-            bool overUi = EventSystem.current != null &&
-                          (Input.touchCount > 0 ? EventSystem.current.IsPointerOverGameObject(Input.GetTouch(0).fingerId) : EventSystem.current.IsPointerOverGameObject());
-            if (overUi || !cam.pixelRect.Contains(Input.mousePosition)) return;
-            var w = cam.ScreenToWorldPoint(Input.mousePosition);
-            target = new Vector2(Mathf.Clamp(w.x, 0.18f, RoomW - 0.18f), Mathf.Clamp(w.y, 0.18f, RoomH - 0.18f)); stuck = 0;
+            if (Input.touchCount > 0)
+            {
+                for (int i = 0; i < Input.touchCount; i++)
+                {
+                    var t = Input.GetTouch(i);
+                    if (t.phase == TouchPhase.Began)
+                    {
+                        if (OverUi(t.fingerId)) continue;
+                        if (!joyActive && InJoyZone(t.position)) JoyBegin(t.fingerId, t.position);
+                        else Tap(t.position);
+                    }
+                    else if (joyActive && t.fingerId == joyFinger)
+                    {
+                        if (t.phase == TouchPhase.Ended || t.phase == TouchPhase.Canceled) joyActive = false; else JoyMove(t.position);
+                    }
+                }
+                return;
+            }
+            // mouse (Editor / desktop): same behaviour
+            Vector2 mp = Input.mousePosition;
+            if (Input.GetMouseButtonDown(0) && !OverUi(-1)) { if (InJoyZone(mp)) JoyBegin(-1, mp); else Tap(mp); }
+            else if (joyActive && Input.GetMouseButton(0)) JoyMove(mp);
+            else if (joyActive) joyActive = false;
         }
 
         static (float d, Vector2 c) RectDist(Vector2 p, Rect r)
@@ -213,6 +254,7 @@ namespace Bob.Game
                 if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) v.y -= 1;
                 if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) v.x -= 1;
                 if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) v.x += 1;
+                if (v == Vector2.zero && joyActive && joyVec.magnitude > JoyDead) v = joyVec; // analogue: partial tilt walks slower
                 if (v != Vector2.zero) target = null;
                 else if (target.HasValue) { var d = target.Value - pos; if (d.magnitude < 0.05f) target = null; else v = d.normalized; }
             }
@@ -220,7 +262,7 @@ namespace Bob.Game
 
             if (v != Vector2.zero)
             {
-                var old = pos; float sp = Speed * dt;
+                var old = pos; float sp = Speed * dt * Mathf.Clamp(v.magnitude, 0.45f, 1f);
                 pos += v.normalized * sp;
                 pos.x = Mathf.Clamp(pos.x, 0.18f, RoomW - 0.18f); pos.y = Mathf.Clamp(pos.y, 0.18f, RoomH - 0.18f);
                 foreach (var r in Solids())
@@ -258,12 +300,14 @@ namespace Bob.Game
 
         void FitCamera()
         {
-            // Room on the left 60% of the screen, under the top bar; the side panel takes the rest.
-            float topBar = HudTopFraction, bottom = HudBottomFraction;
-            bool wide = Screen.width >= Screen.height;
-            cam.rect = wide ? new Rect(0, bottom, PanelLeftFraction, 1 - topBar - bottom) : new Rect(0, 0.5f, 1, 0.5f - topBar);
-            float needW = RoomW + 0.5f, needH = RoomH + 1.0f;
+            // The room sits between the side columns (order ticket left, cart + buttons right) and the top / bottom strips.
+            var sa = Screen.safeArea; float W = Mathf.Max(1, Screen.width), H = Mathf.Max(1, Screen.height);
+            float x0 = sa.xMin / W + SideCol * sa.width / W, x1 = sa.xMax / W - SideCol * sa.width / W;
+            float y0 = sa.yMin / H + BottomStrip * sa.height / H, y1 = sa.yMax / H - TopStrip * sa.height / H;
+            cam.rect = new Rect(x0, y0, Mathf.Max(0.1f, x1 - x0), Mathf.Max(0.1f, y1 - y0));
+            float needW = RoomW + 0.3f, needH = RoomH + 0.9f; // + room above the back stations for their art
             cam.orthographicSize = Mathf.Max(needH / 2, needW / 2 / Mathf.Max(0.1f, cam.aspect));
+            cam.transform.position = new Vector3(RoomW / 2, RoomH / 2 + 0.35f, -10);
         }
 
         // ---------------------------------------------------------------- reacting to the rules
@@ -323,7 +367,7 @@ namespace Bob.Game
                 StartCoroutine(BobTween.FloatUp(tm.transform, 0.6f, 1.4f));
                 y += 0.22f;
                 if (f.Sum >= 0) { Sfx("reaction_good"); SpawnFx("fx_sparkle", CartTop); }
-                else { Sfx("reaction_bad"); SpawnFx(f.Text.Contains("ฟู่") ? "fx_fizz" : "fx_poof", CartTop); StartCoroutine(BobTween.Shake(cartT, 0.06f)); }
+                else { Sfx("reaction_bad"); SpawnFx(f.Text.Contains("ฟู่") ? "fx_fizz" : "fx_poof", CartTop); StartCoroutine(BobTween.Shake(cartT, 0.06f)); Buzz(); }
             }
         }
 
