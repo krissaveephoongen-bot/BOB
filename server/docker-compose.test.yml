@@ -1,0 +1,7 @@
+# Second local Nakama for testing a branch without touching the main one: ports 7360-7362, its own database.
+# docker compose -p bobtest -f docker-compose.yml -f docker-compose.test.yml up -d
+services:
+  nakama:
+    ports: !override
+      - "7360:7350"
+      - "7361:7351"

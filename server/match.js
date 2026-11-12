@@ -4,8 +4,8 @@
 // Clients only send intents (move, pick, place, lift, submit); the server checks them and owns the state.
 // Each team plays in its own copy of the same room (GDD 20), so both teams use the same coordinates.
 // Opcodes, client -> server: 1 MOVE {x,y}  2 PICK {id}  3 PLACE {i}  4 LIFT {}  5 READY {char, ready?, team?}  6 SUBMIT {vote?} (a vote; half the team sends the cart)
-//                            7 PUSH {on}  8 PASS {i, to?}  9 TABLE {put:i} or {take:k}  14 ABILITY {swap?:i} (once per player per round)
-// Opcodes, server -> client: 10 STATE (full snapshot)  11 POS {time,p:[{id,x,y}],c:[{x,y}]} every tick  12 RESULT (round result)  13 ERROR {t}  15 PEEK {total, stats} (Spray's preview, sender only)
+//                            7 PUSH {on}  8 PASS {i, to?}  9 TABLE {put:i} or {take:k}  14 ABILITY {swap?:i} or {i} (once per player per round)
+// Opcodes, server -> client: 10 STATE (full snapshot)  11 POS {time,p:[{id,x,y}],c:[{x,y}]} every tick  12 RESULT (round result)  13 ERROR {t}  15 PEEK {total, pass, stats} (Spray's preview, sender only)
 // Each team has its own clock (t.time) so Press can stop it; POS.tt carries both. s.time = the longer one, for old clients.
 var OP = { MOVE: 1, PICK: 2, PLACE: 3, LIFT: 4, READY: 5, SUBMIT: 6, PUSH: 7, PASS: 8, TABLE: 9, STATE: 10, POS: 11, RESULT: 12, ERROR: 13, ABILITY: 14, PEEK: 15 };
 var MP_FREEZE = 8; // Press: seconds the team's clock stops
@@ -48,7 +48,7 @@ function mpSend(d, op, obj, to) { d.broadcastMessage(op, JSON.stringify(obj), to
 function mpSnapshot(s) {
   // Arrays of plain objects (no maps) so Unity's JsonUtility can read every message.
   var players = Object.keys(s.players).sort().map(function (k) { var p = s.players[k];
-    return { id: k, name: p.name, team: p.team, char: p.char, ready: p.ready, online: !!p.presence, x: p.x, y: p.y, hand: p.hand, vote: !!p.vote, ab: !!p.abUsed }; });
+    return { id: k, name: p.name, team: p.team, char: p.char, ready: p.ready, online: !!p.presence, x: p.x, y: p.y, hand: p.hand, vote: !!p.vote, ab: !!p.abUsed, abUsed: !!p.abUsed }; }); // ab and abUsed: same flag (Coop scene / Game scene)
   // cx, cy: the team's cart; pusher: user id pushing it ('' = nobody); table: parts parked on the team's table.
   return { phase: s.phase, seed: s.seed, round: s.round, time: s.time, room: s.room, players: players,
     teams: s.teams.map(function (t) { return { stack: t.stack, budget: t.budget, wins: t.wins, submitted: t.submitted,
@@ -214,9 +214,8 @@ function matchLoop(ctx, logger, nk, d, tick, s, messages) {
         if (p.abUsed) { err = 'ใช้ความสามารถพิเศษไปแล้วในรอบนี้'; break; }
         var used = true;
         if (p.char === 'sweep') { // swap layer i with the one above it
-          var si = q.swap | 0;
-          if (q.swap == null || si < 0 || si >= t.stack.length - 1) { err = 'เลือกชั้นที่จะสลับ'; used = false; }
-          else if (mpDist(p.x, p.y, cartRect(t)) > NEAR) { err = 'เดินไปที่รถเข็นก่อน'; used = false; }
+          var sv = q.swap != null ? q.swap : q.i, si = sv | 0;
+          if (sv == null || si < 0 || si >= t.stack.length - 1) { err = t.stack.length < 2 ? 'ต้องมีอย่างน้อย 2 ชิ้นบนรถเข็น' : 'เลือกชั้นที่จะสลับ'; used = false; }
           else {
             var sw = t.stack.slice(); var tmp = sw[si]; sw[si] = sw[si + 1]; sw[si + 1] = tmp;
             var bad = isMethod(sw[0]); for (var k2 = 1; k2 < sw.length; k2++) if (isMethod(sw[k2]) && isMethod(sw[k2 - 1])) bad = true;
@@ -227,7 +226,7 @@ function matchLoop(ctx, logger, nk, d, tick, s, messages) {
         else if (p.char === 'spray') {
           var pe = evalStack(t.stack, s.room.enemies, !!t.shield);
           var ps = totalScore(pe.stats, s.room.spec, t.budget - pe.cost, t.budget, Math.max(0, Math.min(1, t.time / ROUND_TIME)));
-          mpSend(d, OP.PEEK, { total: ps.total, stats: pe.stats }, [m.sender]);
+          mpSend(d, OP.PEEK, { total: ps.total, pass: ps.pass, stats: pe.stats }, [m.sender]);
         } else { err = 'ฮีโร่นี้ไม่มีความสามารถพิเศษ'; used = false; }
         if (used) {
           p.abUsed = true; dirty = true;

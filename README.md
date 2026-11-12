@@ -89,8 +89,8 @@ created by the Nakama module on start. Code: `server/analytics.js`.
   quick match only) and the **Co-op scene** (`Coop/`, written in the cloud, type-checked only) which also has the private room
   screen, team switch, push / pass / table, hold-to-send vote and the split-screen test. Plan: port those features into the
   Game scene's online mode on the PC and keep the Co-op scene as the reference (see "Needs the PC").
-- Online: abilities and reconnect run on the server and in the Co-op scene, but the Game scene's online mode still has its ability
-  button off and does not rejoin (port with the rest). No Quick Ping or voice chat.
+- Online: abilities run on the server and in both front-ends. Reconnect after the app is closed works in the Co-op scene only
+  (`BobOnline.RejoinAsync`); the Game scene's online mode does not rejoin yet. No Quick Ping or voice chat.
 - Scrub and Wash abilities, obstacles other than the sofa, the shelves and the table, the other 7 scenes; Party / Community modes.
 - Balance: every number is an untested starting value. `node server/balance-sim.js` compares the hero abilities
   (results and suggested tweaks: `art/docs/13_Balance_Sim.md`); nothing has been changed from it yet.
@@ -125,11 +125,11 @@ The server owns a multiplayer match: phones send intents, the server checks them
 | 2 PICK / 3 PLACE / 4 LIFT | client → server | `{id}` / `{i}` hand index / `{}` |
 | 5 READY / 6 SUBMIT | client → server | `{char,ready,team?}` in the lobby / `{vote?}` (a vote to send) |
 | 7 PUSH / 8 PASS / 9 TABLE | client → server | `{on}` grab or let go of the cart / `{i,to?}` hand index, team-mate id / `{put:i}` or `{take:k}` |
-| 14 ABILITY | client → server | `{}` or `{swap:i}` (Sweep: swap layer i with the one above) |
+| 14 ABILITY | client → server | `{}`, `{swap:i}` or `{i}` (Sweep: swap layer i with the one above; ignored by the others) |
 | 10 STATE | server → clients | phase, round, room, players[] (with `vote`, `ab` = ability used), teams[] (stack, `cx,cy` cart, `pusher`, `table`, `time`, `freeze`, `shield`) |
 | 11 POS | server → clients | `{time,tt:[t0,t1],p:[{id,x,y}],c:[{x,y}]}` team clocks, players and both carts, every tick (10 Hz) during build |
 | 12 RESULT / 13 ERROR | server → clients | per-round scores and winner / Thai refusal text for one player |
-| 15 PEEK | server → one client | `{total,stats}` Spray's preview of the team's cart |
+| 15 PEEK | server → one client | `{total,pass,stats}` Spray's preview of the team's cart (`BobOnline.OnPeek` / `OnPreview`) |
 
 Room layout (world units, y up; both server and Unity): stations tool `[0.3,4.06,2.0,4.7]`, chem `[6.0,4.06,7.7,4.7]`,
 energy `[0.3,0.3,2.0,0.94]`, method `[6.0,0.3,7.7,0.94]`; table `[3.5,4.2,4.5,4.7]`; sofa `[3.0,0.85,5.0,1.15]`; cart 0.9 × 0.64 starting at (4.0, 2.53).
@@ -142,9 +142,11 @@ GitHub Actions (`.github/workflows/server-tests.yml`) runs all of these, plus th
 Note for server code: Nakama keeps match state as Go values between ticks, so `array.push` / `splice` on state can be
 lost. Always assign a new array (`t.table = t.table.concat([x])`, `without(a, i)`).
 
-**In the Unity scene** (`Scripts/Game/BobGame.Online.cs`): title button **ออนไลน์ 2-4 คน** → matchmaker → lobby (both teams, heroes, Ready) → rounds. The scene copies the server state into the normal game fields, so the HUD, cart card and result screens are the same as solo. Team-mates walk in your room with what they carry; the other team plays the same room in its own copy, and its layer count and submit show in the top bar. The server runs the clock (pause does not stop it) and ends the round when both teams submit.
+**In the Unity scene** (`Scripts/Game/BobGame.Online.cs`): title button **ออนไลน์ 2-4 คน** → matchmaker → lobby (both teams, heroes, Ready) → rounds. The scene copies the server state into the normal game fields, so the HUD, cart card and result screens are the same as solo. Team-mates walk in your room with what they carry; the other team plays the same room in its own copy, and its layer count and submit show in the top bar. The server runs each team's clock (pause does not stop it) and ends the round when both teams submit.
 
 More tests:
+- Server only: `cd server && node mp-test.js 4` (bots walk, pick, place, use their ability, submit; must print PASS).
+- To test a branch without touching the main server: `docker compose -p bobtest -f docker-compose.yml -f docker-compose.test.yml up -d` (Nakama on 7360), then `BOB_HOST=127.0.0.1:7360 node mp-test.js 4`; the Editor follows `BOB_PORT=7360`.
 - Unity + bots: `cd server && node mp-host.js 2 ../unity/Logs/bob-mp-match.txt`, then menu **Bob > Run Online Test** (or `-executeMethod Bob.EditorTools.BobGameScene.RunOnlineTest`). The Unity bot joins with one bot team-mate against one bot, must print GAME TEST PASSED; screenshots `unity/Logs/bob-game-online-*.png`.
 
 ## Co-op scene (Unity)

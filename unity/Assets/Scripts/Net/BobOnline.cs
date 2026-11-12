@@ -19,7 +19,7 @@ namespace Bob.Net
     public sealed class MpSpec { public MpNeed need; public string[] notes; }
     public sealed class MpRoom { public int round; public string[] enemies; public string[] offer; public MpSpec spec; }
     /// <summary>vote: this player voted to send the cart this round.</summary>
-    public sealed class MpPlayer { public string id, name, @char; public int team; public bool ready, online, vote, ab; public float x, y; public string[] hand; }
+    public sealed class MpPlayer { public string id, name, @char; public int team; public bool ready, online, vote, ab, abUsed; public float x, y; public string[] hand; } // ab == abUsed: ability used this round
     /// <summary>cx, cy: the team's cart (it can be pushed); pusher: user id pushing it, "" = nobody; table: parts parked on the team's table.</summary>
     public sealed class MpTeam { public string[] stack; public int budget, wins; public bool submitted; public float cx, cy; public string pusher; public string[] table;
         public float time, freeze; public bool shield; } // time: the team's own clock (Press stops it for `freeze` s); shield: Bubble's
@@ -36,7 +36,8 @@ namespace Bob.Net
     /// <summary>winner: team 0 or 1, or -1 for a draw. over: the match has ended (best of 3).</summary>
     public sealed class MpResult { public int round, winner; public MpTeamResult[] teams; public int[] wins; public bool over; }
     sealed class MpError { public string t; }
-    [Serializable] public sealed class MpPeek { public int total; public MpStats stats; } // Spray's private preview
+    [Serializable] public sealed class MpPeek { public int total; public bool pass; public MpStats stats; } // Spray's private preview
+    public sealed class MpPreview { public int total; public bool pass; }
 
     public sealed class BobOnline
     {
@@ -59,6 +60,8 @@ namespace Bob.Net
         public event Action<string> OnRefused;
         /// <summary>Spray's ability: what the team's cart would score now (only this player gets it).</summary>
         public event Action<MpPeek> OnPeek;
+        /// <summary>Same message as OnPeek, in the shape the Game scene's online mode reads.</summary>
+        public event Action<MpPreview> OnPreview;
 
         BobOnline(ISocket socket, string me)
         {
@@ -203,7 +206,7 @@ namespace Bob.Net
                         }
                         OnPositions?.Invoke(p); break;
                     case OpResult: LastResult = json.FromJson<MpResult>(); if (LastResult.over) SavedMatchId = null; OnResult?.Invoke(LastResult); break;
-                    case OpPeek: OnPeek?.Invoke(json.FromJson<MpPeek>()); break;
+                    case OpPeek: { var pk = json.FromJson<MpPeek>(); OnPeek?.Invoke(pk); OnPreview?.Invoke(new MpPreview { total = pk.total, pass = pk.pass }); break; }
                     case OpError: OnRefused?.Invoke(json.FromJson<MpError>().t); break;
                 }
             }
