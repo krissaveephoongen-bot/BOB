@@ -25,6 +25,8 @@ namespace Bob.Game
         static readonly Vector2 PlayerStart = new Vector2(4f, 0.6f);
 
         Camera cam;
+        SpriteRenderer themeBg;
+        static readonly string[] RoundThemes = { "lobby_rental_room", "lobby_condo", "lobby_coffee_shop", "lobby_kitchen" }; // GDD chapters: rental room, condo, cafe
         Transform worldRoot, cartT, cartLayers, enemyRoot, handIcons, targetMarker;
         SpriteRenderer[] stationSr = new SpriteRenderer[4];
         SpriteRenderer cartSr, playerSr;
@@ -60,6 +62,8 @@ namespace Bob.Game
                 new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
 
             worldRoot = new GameObject("Room").transform;
+            themeBg = MakeSprite("ThemeBackdrop", worldRoot, null, new Vector2(RoomW / 2, RoomH / 2 + 0.35f), 0f, false);
+            themeBg.sortingOrder = -3000;
 
             // Floor: 0.5 u tiles; dirty tiles show where the enemies have been (cleaned on a round win).
             var floor = new GameObject("Floor").transform; floor.SetParent(worldRoot);
@@ -175,6 +179,16 @@ namespace Bob.Game
             bool dirty = R != null;
             foreach (var t in floorTiles) t.sprite = art.Get(dirty && rng.NextDouble() < 0.45 ? "floor_tile_dirty" : "floor_tile");
 
+            if (themeBg != null)
+            {
+                var key = RoundThemes[Mathf.Clamp(R != null ? roundNo - 1 : 0, 0, RoundThemes.Length - 1)];
+                if (art.Has(key))
+                {
+                    themeBg.sprite = art.Get(key);
+                    float h = 8.8f, k = h / Mathf.Max(0.01f, themeBg.sprite.bounds.size.y);
+                    themeBg.transform.localScale = Vector3.one * k;
+                }
+            }
             cartRect = CartHome; PlaceCart(); ClearTable();
             pos = PlayerStart; target = null; stuck = 0; near = null; nearCart = false; nearTable = false;
             handShown = -1;

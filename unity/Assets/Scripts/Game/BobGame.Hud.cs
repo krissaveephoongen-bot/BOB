@@ -131,6 +131,7 @@ namespace Bob.Game
             BobUi.Pin((RectTransform)pause.transform, Vector2.one, Vector2.one, new Vector2(-18, -18), new Vector2(104, 96));
             var pi = BobUi.Img(pause.transform, "icon_pause", 56); BobUi.Pin(pi.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(56, 56));
             if (!art.Has("icon_pause")) pause.GetComponentInChildren<Text>().text = "II";
+            Bob.UI.BobHitArea.Ensure(pause.targetGraphic, 144f); // UX spec 1.2: touch area >= 144u without growing the picture
         }
 
         void BuildOrderTicket()
