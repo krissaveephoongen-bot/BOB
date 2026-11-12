@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """Battle of the Brooms: placeholder sound effects, synthesised from code (no samples, no licences).
 
-    python3 tools/make_sfx.py      (needs numpy)
+    python3 art/tools/make_sfx.py      (needs numpy)
 
-Writes 16-bit mono 44.1 kHz WAVs to unity/Assets/Audio/SFX and a short placeholder music loop to
+Writes 16-bit mono 44.1 kHz WAVs to unity/Assets/Audio/SFX (and bob-audio-list.json) and a short placeholder music loop to
 unity/Assets/Audio/Music. Every sound is deterministic (fixed random seed) so a rerun gives the same files.
 """
 import os, wave, json
 import numpy as np
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# repo root (art/tools/ -> art/ -> repo), so the files land straight in the Unity project
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUT = os.path.join(ROOT, "unity", "Assets", "Audio")
 SR = 44100
 rng = np.random.default_rng(7)
@@ -156,8 +157,23 @@ def make():
             parts.append(at(kick, t0 + k * beat, total))
     save("music_placeholder_loop", mix(*parts), folder="Music", peak=0.7)
 
+def make_coop():
+    """Co-op sounds (GDD 4 and 20). Made after make() so the shared random stream, and every older file, stays the same."""
+    d = .32; n = int(d * SR)  # pass a part to a team-mate: short rising whoosh + soft pluck
+    save("pass_part", mix(bandpass(noise(d), np.linspace(600, 3000, n), 7000) * np.sin(np.linspace(0, np.pi, n)) * .6,
+                          at(pluck(79, .18, "sin", .5, .07), .16, d)))
+    d = .22; n = int(d * SR)  # park a part on the table: wooden knock
+    save("table_put", sine(np.linspace(420, 260, n), d) * expdecay(n, .03) + .4 * bandpass(noise(d), 800, 3000) * expdecay(n, .012))
+    d = .3; n = int(d * SR)   # grab the cart handle: metal clack + wheel start
+    save("cart_grab", sine(np.linspace(900, 700, n), d) * expdecay(n, .02) * .6 + .5 * lowpass(noise(d), 300) * env(n, .01, .1, .3, .1))
+    save("lobby_join", mix(at(pluck(72, .14, "sin", .5, .07), 0, .45), at(pluck(79, .14, "sin", .5, .07), .09, .45),
+                           at(pluck(84, .25, "sin", .5, .12), .18, .45)))
+    save("ready_on", mix(at(pluck(76, .1, "sq", .35, .05), 0, .3), at(pluck(84, .18, "sq", .35, .08), .07, .3)))
+    save("vote_tick", sine(1200, .06) * expdecay(int(.06 * SR), .015) + sine(1800, .06) * .4 * expdecay(int(.06 * SR), .01))
+
 if __name__ == "__main__":
     make()
+    make_coop()
     with open(os.path.join(OUT, "bob-audio-list.json"), "w") as fh:
         json.dump(LIST, fh, indent=1)
     print(len(LIST), "sounds written to", OUT)

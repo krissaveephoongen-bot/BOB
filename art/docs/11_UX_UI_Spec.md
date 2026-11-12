@@ -692,6 +692,8 @@ flowchart LR
 - หน้าจอ: `UiScreen` (OnShow/OnHide/OnBack) + `UiRouter` แบบ stack (push/pop/replace) Android Back = `UiRouter.Back()` ซึ่งเรียก popup บนสุดก่อน
 - Layout: ใช้ anchor + `HorizontalLayoutGroup`/`GridLayoutGroup` สำหรับรายการ, ใช้ `LayoutElement.minWidth/minHeight` บังคับขนาดเป้ากด, รายการยาว (เพื่อน, จดหมาย, ร้าน) ใช้ virtualized scroll (pool แถว) ไม่สร้างทุกแถว
 
+> **สถานะโค้ด (12 พ.ย. 2026, branch `claude/project-thread-el5mme`):** มีแล้วใน `unity/Assets/Scripts/UI/` — `BobUiTheme` (token ข้อ 2 ทั้งหมด + `Motion()` สำหรับลดการเคลื่อนไหว), `BobSafeArea` (ข้อ 1.3), `BobHitArea` (ขยาย hit area ด้วย `raycastPadding` ให้ถึง 144u/160u, ข้อ 1.2), `BobHoldButton` (BTN-Submit กดค้าง 0.6 วิ วงเติม, ปิดได้ด้วย `bob.holdSubmit`) ใช้จริงในฉาก co-op (`Scripts/Coop/`: S14 ห้องทีม, S22 HUD, S25 แบ่งครึ่งจอ) ยังไม่ได้ย้าย HUD คนเดียวของ PR #2 มาใช้ และยังไม่ได้ทำ `ThemedImage/ThemedText`, `BobButton`, `UiRouter`, TextMeshPro — ยังไม่ได้คอมไพล์ใน Unity
+
 ### 10.4 Sprite, ฟอนต์, เสียง
 
 - Sprite Atlas `SA_UI` 2048² (ASTC 6×6, ไม่มี mipmap) แยก `SA_UI_Icons`, `SA_UI_Heroes`, `SA_UI_Shop` (โหลดเมื่อเข้าร้าน)
