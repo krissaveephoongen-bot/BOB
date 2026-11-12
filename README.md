@@ -12,6 +12,7 @@ Playable prototype: https://claude.ai/artifact/M9orSH3LFGbYboRm7QAkHn
 | `unity/` | Unity 6000.6.8f1 project (open this folder in Unity Hub). Nakama SDK + uGUI in `Packages/manifest.json`; sprites/audio in `Assets/Art`, `Assets/Audio`. | Play-mode smoke test passes (Bob > Run Smoke Test) |
 | `unity/Assets/Scripts/` | `Rules/BobRules.cs` (client copy of the rules, pure C#), `Net/BobServer.cs` (Nakama wrapper: sign in, socket, match, RPCs), `Dev/BobSmokeTest.cs` (Play-mode end-to-end check). | Compiled and checked against the server by `unity-check/` |
 | `unity/Assets/Scenes/Game.unity` | **Playable single-player scene**: room, 4 stations, cart, sofa, hero (tap / WASD), pick up, stack 5 layers + 2 methods, live stat bars, abilities, 3 rounds vs the simulated rival. Room and our score come from the local Nakama (`bob_make_round`, `bob_score_stack`); offline it uses the same rules locally. Code in `Scripts/Game/`, rival + rooms in `Rules/BobMatch.cs`. | Bot plays a full match: menu **Bob > Run Game Test** |
+| `server/match.js` + `unity/Assets/Scripts/Net/BobOnline.cs` | **Real-time multiplayer** (`bob_coop`): server-authoritative match for 2-4 players in two teams, one shared cart per team, best of 3. See [Multiplayer](#multiplayer). | Bots play full matches: `node server/mp-test.js 4` |
 | `dashboard/index.html` | Balance dashboard: reads `bob_analytics` from the local Nakama and charts part, character, round and room stats. | Checked in Chromium, light and dark |
 | `unity-check/` | .NET console app: spot checks + C#-vs-server parity on random stacks. | 275 stacks, 0 mismatches |
 | `art/` | Official concept boards and production docs (`docs/`), sprite sources (`source/`) and generator tools (`tools/`). Unity-ready copies live in `unity/Assets`. | Concept / placeholder |
@@ -82,12 +83,34 @@ created by the Nakama module on start. Code: `server/analytics.js`.
 
 ## Not done yet
 
-- Real-time match handler (movement sync, 2-4 players). Matches are relayed today; the server only scores a finished stack.
+- Multiplayer in the scene: draw the other players and each team's cart from `BobOnline`, plus a lobby screen. The server side and the client network layer are done.
+- Multiplayer server does not block walking through stations or the sofa yet (it only caps speed and keeps players in the room).
 - Unity scene, character controller, drag-and-drop, UI. Only rules and networking wrapper exist.
 - Scrub and Wash abilities, cart pushing, obstacles other than the sofa, the other 7 scenes.
 - Balance: every number is an untested starting value.
 - Development passwords, the `defaultkey` server key and the `defaulthttpkey` HTTP key must be replaced before any deployment.
 - Analytics: no retention or archiving yet; Unity client does not send `bob_log_event` yet (only `stack_scored` is logged from Unity).
+
+## Multiplayer
+
+The server owns a multiplayer match: phones send intents, the server checks them and broadcasts the state. Code: `server/match.js` (bundled into `modules/index.js` by `build-module.js`), client layer `unity/Assets/Scripts/Net/BobOnline.cs`.
+
+- 2-4 players, auto-split into two teams. One seed per match, so both teams get the same room each round.
+- Each team shares one cart; each player holds at most 2 parts (`BobRules.HandTeam`).
+- The server checks walking speed, distance to a station (pick) or the cart (place, lift), budget, 5 layers and 2 methods.
+- A round ends when both teams submit or the 100 s clock runs out; best of 3, ties go to the team with more budget left.
+- Join by matchmaker (`BobOnline.FindAsync`, 2-4 players) or a private room (`bob_create_match` RPC, `BobOnline.CreateAsync` / `JoinAsync` with the match id).
+
+| Op | Direction | Payload |
+| --- | --- | --- |
+| 1 MOVE | client → server | `{x,y}` world units, about 10 per second |
+| 2 PICK / 3 PLACE / 4 LIFT | client → server | `{id}` / `{i}` hand index / `{}` |
+| 5 READY / 6 SUBMIT | client → server | `{char,ready}` in the lobby / `{}` |
+| 10 STATE | server → clients | phase, round, room, players[], teams[] (shared stacks) |
+| 11 POS | server → clients | `{time,p:[{id,x,y}]}` every tick (10 Hz) during build |
+| 12 RESULT / 13 ERROR | server → clients | per-round scores and winner / Thai refusal text for one player |
+
+Test: start the server, then `cd server && node mp-test.js 4` (bots walk, pick, place, submit; must print PASS).
 
 ## Play the Unity scene
 
