@@ -250,6 +250,7 @@ namespace Bob.Game
         void Place(int i)
         {
             if (phase != Phase.Build || i < 0 || i >= hand.Count) return;
+            if (!Online && nearTable && !nearCart) { StashOnTable(i); return; }
             if (!nearCart) { Toast("เดินไปที่รถเข็นก่อน"); Sfx("drop_invalid"); return; }
             if (Online) { OnlinePlace(i); return; }
             var id = hand[i];

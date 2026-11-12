@@ -90,7 +90,7 @@ namespace Bob.Game
                 yield return WaitFor(() => phase == Phase.Test, 15f);
                 if (last.FromServer) serverScored++;
                 Debug.Log($"[BobGameBot] round {roundNo}: us {last.Mine.Total} ({(last.FromServer ? "server" : "local")}) vs rival {last.Rival.Score.Total} -> {(last.Win ? "win" : "lose")}");
-                if (roundNo == 1) { yield return new WaitForSeconds(0.4f); Shot("4-test"); yield return new WaitForSeconds(0.3f); }
+                if (roundNo == 1) { yield return new WaitForSeconds(0.8f); Shot("4a-split"); yield return new WaitForSeconds(SplitTime); Shot("4-test"); yield return new WaitForSeconds(0.3f); }
                 bool over = MatchOver;
                 AfterTest();
                 if (over) break;

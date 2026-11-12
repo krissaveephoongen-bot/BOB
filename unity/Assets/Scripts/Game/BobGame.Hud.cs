@@ -459,6 +459,8 @@ namespace Bob.Game
             bool show = phase != Phase.Build && phase != Phase.Countdown;
             modalRoot.gameObject.SetActive(show);
             if (!show) return;
+            if (phase == Phase.Test && shownPhase != Phase.Test) testStart = Time.unscaledTime;
+            shownPhase = phase;
             BobUi.Clear(screenRoot);
             switch (phase)
             {
@@ -466,7 +468,7 @@ namespace Bob.Game
                 case Phase.Loading: Busy("กำลังเตรียมห้อง…", online ? "ขอใบงานรอบ " + roundNo + " จากเซิร์ฟเวอร์" : "สุ่มห้องในเครื่อง"); break;
                 case Phase.Scoring: Busy("กำลังทดสอบความสะอาด…", online ? "เซิร์ฟเวอร์กำลังคิดคะแนน" : "คิดคะแนนในเครื่อง"); break;
                 case Phase.Intro: RoomTicket(); break;
-                case Phase.Test: RoundResult(); break;
+                case Phase.Test: if (SplitActive) SplitView(); else RoundResult(); break;
                 case Phase.Result: MatchResult(); break;
                 case Phase.Lobby: Lobby(); break;
             }
