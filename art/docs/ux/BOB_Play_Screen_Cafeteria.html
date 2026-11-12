@@ -1,0 +1,390 @@
+<title>BOB Play Screen</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mitr:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap">
+<style>
+/* Layout: one hero frame (20:9 phone) with layer toggles, a legend, four moment frames, then the camera spec. */
+:root{
+  --bg:#F4F6FB; --panel:#FFFFFF; --fg:#0B1A3A; --muted:#55607A; --line:#D7DDEA; --accent:#1A6FC4; --chip:#E8EEF8;
+  --display:"Mitr","IBM Plex Sans Thai",system-ui,sans-serif;
+  --body:"IBM Plex Sans Thai","Noto Sans Thai",system-ui,sans-serif;
+  --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0B1222;--panel:#121B30;--fg:#E8EDF8;--muted:#9AA6C2;--line:#26324D;--accent:#6CB2FF;--chip:#1B2742;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0B1222;--panel:#121B30;--fg:#E8EDF8;--muted:#9AA6C2;--line:#26324D;--accent:#6CB2FF;--chip:#1B2742;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.6}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:1280px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 64px}
+h1,h2,h3{font-family:var(--display);font-weight:600;text-wrap:balance;margin:0}
+h1{font-size:clamp(26px,4vw,38px)} h2{font-size:23px} h3{font-size:17px;font-weight:500}
+p{margin:0;max-width:72ch} .lead{color:var(--muted);margin-top:8px}
+section{padding-top:34px;display:grid;gap:14px}
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);margin:18px 0 4px}
+nav .row{display:flex;gap:10px 16px;flex-wrap:wrap;padding-block:10px;align-items:center;font-size:14px}
+nav label{display:flex;gap:6px;align-items:center;cursor:pointer;background:var(--chip);padding:5px 12px;border-radius:999px}
+figure{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;gap:10px;min-width:0}
+figure svg{width:100%;height:auto;display:block;border-radius:10px;background:#0b1a3a}
+figcaption{display:grid;gap:4px}
+figcaption .id{font-family:var(--mono);font-size:12px;color:var(--accent)}
+figcaption p{font-size:14px;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,540px),1fr));gap:18px}
+.tblwrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 10px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--display);font-weight:500}
+td:first-child{font-family:var(--mono);font-size:13px;color:var(--accent);white-space:nowrap}
+.layer{display:none} body.on-anno .anno{display:inline} body.on-safe .safe{display:inline} body.on-zones .zone{display:inline} body.on-grid .grid{display:inline}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr));gap:18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:10px;align-content:start;min-width:0}
+.card svg{width:100%;height:auto;border-radius:10px}
+.meta{font-size:13px;color:var(--muted)}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>BOB · หน้าจอเล่น ฉากโรงอาหาร</h1>
+    <p class="lead">หน้าจอเล่นใหม่ในมุมกล้อง 3/4 บนลงล่างแบบ Overcooked: ผังห้องตรงแกน ไม่หมุนเป็นข้าวหลามตัด ทั้งหมดวาดบนกรอบ 2340×1080u (มือถือ 19.5:9) สเปกเต็มอยู่ใน <code>art/docs/11_UX_UI_Spec.md</code> หัวข้อ 5A</p>
+  </header>
+  <nav aria-label="ตัวเลือกภาพ"><div class="row">
+    <label><input type="checkbox" id="t-anno" checked> หมายเลขอธิบาย</label>
+    <label><input type="checkbox" id="t-safe"> Safe area</label>
+    <label><input type="checkbox" id="t-zones"> โซนนิ้วโป้ง</label>
+    <label><input type="checkbox" id="t-grid"> กริดห้อง 14×8</label>
+  </div></nav>
+
+  <section id="main"><div id="g-main" class="grid2" style="grid-template-columns:1fr"></div>
+    <div class="tblwrap"><table id="legend"><thead><tr><th>#</th><th>ส่วน</th><th>ขนาด / ตำแหน่ง</th><th>พฤติกรรม</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section id="states"><h2>ปุ่มหลักที่เปลี่ยนตามบริบท</h2>
+    <p class="lead">ปุ่มใหญ่ล่างขวาเปลี่ยนไอคอนและป้ายตามสิ่งที่ยืนอยู่ใกล้ ผู้เล่นรู้ก่อนแตะว่าจะเกิดอะไร (กฎ 6 แบบ) ลากวางแบบเดิมในหัวข้อ 9 ของ GDD ยังใช้ได้คู่กัน</p>
+    <div class="cards"><div class="card"><svg viewBox="0 0 1500 330" id="ctx" role="img" aria-label="สถานะปุ่มหลัก"></svg><p class="meta">วงกลม 224u · ป้าย 40u · มือเต็ม = เทา แตะแล้วบอกเหตุผล</p></div></div>
+  </section>
+
+  <section id="moments"><h2>ช่วงเวลาสำคัญในฉากเดียวกัน</h2><div class="grid2" id="g-moments"></div></section>
+
+  <section id="camera"><h2>มุมกล้องและผังห้อง</h2>
+    <div class="cards">
+      <div class="card"><h3>ด้านข้าง: กล้องก้ม 55°</h3><svg viewBox="0 0 720 360" id="cam-side" role="img" aria-label="มุมกล้องด้านข้าง"></svg><p class="meta">Orthographic · size 4.5 · pitch 55° · หมุน 0° (ผังตรงแกน) ระยะพื้นลึกหด ×0.82 ความสูงวัตถุ ×0.57</p></div>
+      <div class="card"><h3>ด้านบน: ตรงแกน ไม่ใช่ข้าวหลามตัด</h3><svg viewBox="0 0 720 360" id="cam-top" role="img" aria-label="เทียบมุมตรงแกนกับข้าวหลามตัด"></svg><p class="meta">จอยสติ๊กดันขึ้น = ตัวละครเดินไปด้านหลังห้อง ตรงกับสายตา ถ้าหมุนเป็นข้าวหลามตัด ทิศจะเฉียงและนิ้วต้องแปลงเอง</p></div>
+      <div class="card"><h3>งบพื้นที่จอ (1920u อ้างอิง, สูง 1080u)</h3>
+        <div class="tblwrap" style="border:none;padding:0"><table><thead><tr><th>ค่า</th><th>เลข</th><th>เหตุผล</th></tr></thead><tbody>
+          <tr><td>ห้อง</td><td>14×8 tile</td><td>ตามขนาดด่านมาตรฐานใน 02_Asset_List</td></tr>
+          <tr><td>1 tile</td><td>104u</td><td>ตัวละครสูง ~140u อ่านออกบนจอ 6 นิ้ว (≥ 120u)</td></tr>
+          <tr><td>แถบบน HUD</td><td>0–200u</td><td>ห้องเริ่มที่ 190u ของบนผนังหลังเท่านั้น</td></tr>
+          <tr><td>มุมล่างซ้าย/ขวา</td><td>460×460u</td><td>ห้ามวางจุดโต้ตอบ (ตามนิ้วโป้ง)</td></tr>
+          <tr><td>ความกว้างห้อง</td><td>1456u</td><td>เหลือขอบซ้ายขวา ~440u ให้ปุ่มบนจอ 20:9</td></tr>
+        </tbody></table></div></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+const W=2340,H=1080,SL=156,SR=2292,ST=24,SB=996;
+const U=104,KY=0.82,KZ=0.57,OX=442,OY=309;
+const INK='#041E4F';
+const C={ink:INK,frame:'#2E4484',cream:'#FEEECF',surface:'#FFFDF5',gold:'#F6C431',orange:'#FD7713',blue:'#1A6FC4',sky:'#3695F2',red:'#FB2F44',green:'#178A4F',danger:'#D81E36',muted:'#5A5F7A',grey:'#C9CFDD',spark:'#3DDC84',
+ tool:'#F4A340',chem:'#4EA8DE',energy:'#EF476F',method:'#9B7EDE',sweep:'#F79A2E',bubble:'#3D8FE0',cyan:'#19B6D9'};
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const f1=v=>(Math.round(v*10)/10);
+const P=(x,y,z=0)=>[OX+x*U,OY+y*U*KY-z*U*KZ];
+const pts=a=>a.map(p=>f1(p[0])+','+f1(p[1])).join(' ');
+const poly=(a,f,o={})=>`<polygon points="${pts(a)}" fill="${f}"${o.s?` stroke="${o.s}" stroke-width="${o.sw||3}" stroke-linejoin="round"`:''}${o.op!=null?` opacity="${o.op}"`:''}/>`;
+const R=(x,y,w,h,f,o={})=>`<rect x="${f1(x)}" y="${f1(y)}" width="${f1(w)}" height="${f1(h)}" rx="${o.r||0}" fill="${f}"${o.s?` stroke="${o.s}" stroke-width="${o.sw||4}"`:''}${o.dash?` stroke-dasharray="${o.dash}"`:''}${o.op!=null?` opacity="${o.op}"`:''}/>`;
+const Ci=(x,y,r,f,o={})=>`<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(r)}" fill="${f}"${o.s?` stroke="${o.s}" stroke-width="${o.sw||4}"`:''}${o.op!=null?` opacity="${o.op}"`:''}${o.dash?` stroke-dasharray="${o.dash}"`:''}/>`;
+const El=(x,y,rx,ry,f,o={})=>`<ellipse cx="${f1(x)}" cy="${f1(y)}" rx="${rx}" ry="${ry}" fill="${f}"${o.s?` stroke="${o.s}" stroke-width="${o.sw||4}"`:''}${o.op!=null?` opacity="${o.op}"`:''}/>`;
+const T=(x,y,t,sz=40,f=INK,o={})=>`<text x="${f1(x)}" y="${f1(y)}" font-size="${sz}" fill="${f}" text-anchor="${o.a||'start'}" font-family="${o.d===false?'IBM Plex Sans Thai,system-ui':'Mitr,IBM Plex Sans Thai,system-ui'}" font-weight="${o.w||500}" dominant-baseline="middle"${o.st?` stroke="${o.st}" stroke-width="${o.sw||8}" paint-order="stroke" stroke-linejoin="round"`:''}>${esc(t)}</text>`;
+
+/* ---------- world drawing ---------- */
+function box(x,y,w,d,h,c,glow){
+  const t=[P(x,y,h),P(x+w,y,h),P(x+w,y+d,h),P(x,y+d,h)];
+  const fr=[P(x,y+d,h),P(x+w,y+d,h),P(x+w,y+d,0),P(x,y+d,0)];
+  let s=poly(fr,c.front,{s:INK,sw:3})+poly(t,c.top,{s:INK,sw:3});
+  if(glow)s+=poly(t,'none',{s:'#fff',sw:9})+poly(fr,'none',{s:'#fff',sw:9});
+  return s;}
+function shadow(x,y,rx,ry){const p=P(x,y,0);return El(p[0],p[1],rx,ry,INK,{op:.22});}
+function floorTiles(){
+  let s='';
+  for(let j=0;j<8;j++)for(let i=0;i<14;i++){
+    s+=poly([P(i,j),P(i+1,j),P(i+1,j+1),P(i,j+1)],(i+j)%2?'#EAD9B0':'#F4E6C3');}
+  // blue runner stripe like the cafeteria concept
+  s+=poly([P(0,3.6),P(14,3.6),P(14,4.6),P(0,4.6)],'#BFD9F2',{op:.35});
+  return s;}
+function dirt(x,y,r,op=.5){const p=P(x,y);return El(p[0],p[1],r,r*KY,'#8A5226',{op})+El(p[0]+r*.35,p[1]-r*.12,r*.5,r*.35,'#6E3F1B',{op:op*.9});}
+function backWall(){
+  const a=P(0,0,2.2),b=P(14,0,2.2),c=P(14,0,0),d=P(0,0,0);
+  let s=poly([a,b,c,d],'#F2C98E',{s:INK,sw:3});
+  const m=P(0,0,1.1),n=P(14,0,1.1);
+  s+=poly([m,n,c,d],'#7DB3E3',{op:.9});
+  for(let i=0;i<5;i++){const x=1+i*2.6;const q=P(x,0,1.5),r2=P(x+1.6,0,1.5),t2=P(x+1.6,0,2.05),u2=P(x,0,2.05);
+    s+=poly([q,r2,t2,u2],'#BFE1FF',{s:INK,sw:3})+`<line x1="${f1((q[0]+r2[0])/2)}" y1="${f1(t2[1])}" x2="${f1((q[0]+r2[0])/2)}" y2="${f1(q[1])}" stroke="${INK}" stroke-width="3"/>`;}
+  // menu board and clock
+  const mb=P(6.2,0,1.95),mb2=P(8.8,0,1.95),mb3=P(8.8,0,1.3),mb4=P(6.2,0,1.3);
+  s+=poly([mb,mb2,mb3,mb4],'#2E5E4E',{s:INK,sw:3})+T((mb[0]+mb2[0])/2,mb[1]+22,'เมนูวันนี้',24,'#fff',{a:'middle',d:false});
+  return s;}
+function item(k,cx,cy,r,ring=true){
+  let s=ring?Ci(cx,cy,r,'#fff',{s:INK,sw:Math.max(2,r/9)}):'';
+  const u=r/20;
+  const g={
+   sponge:()=>R(cx-11*u,cy-9*u,22*u,18*u,'#F7D44C',{r:4*u,s:INK,sw:1.6*u})+Ci(cx-3*u,cy-2*u,2*u,'#C79A1C')+Ci(cx+4*u,cy+3*u,2*u,'#C79A1C'),
+   cloth:()=>R(cx-11*u,cy-9*u,22*u,18*u,'#7CC0F0',{r:3*u,s:INK,sw:1.6*u})+`<path d="M${cx-11*u} ${cy} h${22*u}" stroke="${INK}" stroke-width="${1.4*u}"/>`,
+   brush:()=>R(cx-3*u,cy-12*u,6*u,16*u,'#B07A3A',{s:INK,sw:1.4*u})+R(cx-10*u,cy+3*u,20*u,8*u,'#F2D17A',{r:2*u,s:INK,sw:1.4*u}),
+   spray:()=>R(cx-7*u,cy-4*u,14*u,16*u,'#F59BC0',{r:4*u,s:INK,sw:1.6*u})+R(cx-3*u,cy-12*u,10*u,6*u,'#E5E8F0',{r:2*u,s:INK,sw:1.4*u}),
+   soap:()=>R(cx-7*u,cy-6*u,14*u,17*u,'#4DC2B4',{r:5*u,s:INK,sw:1.6*u})+R(cx-3*u,cy-12*u,6*u,6*u,'#E5E8F0',{s:INK,sw:1.4*u}),
+   vinegar:()=>R(cx-6*u,cy-6*u,12*u,17*u,'#E8C48A',{r:5*u,s:INK,sw:1.6*u})+R(cx-3*u,cy-12*u,6*u,6*u,'#B07A3A',{s:INK,sw:1.4*u}),
+   hot:()=>`<path d="M${cx} ${cy-12*u} C${cx+13*u} ${cy+1*u} ${cx+10*u} ${cy+11*u} ${cx} ${cy+11*u} C${cx-10*u} ${cy+11*u} ${cx-13*u} ${cy+1*u} ${cx} ${cy-12*u} Z" fill="#EF476F" stroke="${INK}" stroke-width="${1.6*u}"/>`,
+   steam:()=>`<path d="M${cx-7*u} ${cy+8*u} q-5 -6 0 -10 q5 -5 0 -10 M${cx+1*u} ${cy+8*u} q-5 -6 0 -10 q5 -5 0 -10 M${cx+9*u} ${cy+8*u} q-5 -6 0 -10 q5 -5 0 -10" fill="none" stroke="#7A86A8" stroke-width="${2.4*u}" stroke-linecap="round"/>`,
+   fan:()=>Ci(cx,cy,3*u,'#9AA6C2',{s:INK,sw:1.4*u})+[0,120,240].map(a=>`<ellipse cx="${f1(cx+Math.cos(a*Math.PI/180)*8*u)}" cy="${f1(cy+Math.sin(a*Math.PI/180)*8*u)}" rx="${6*u}" ry="${3*u}" transform="rotate(${a} ${f1(cx+Math.cos(a*Math.PI/180)*8*u)} ${f1(cy+Math.sin(a*Math.PI/180)*8*u)})" fill="#BFD0EA" stroke="${INK}" stroke-width="${1.2*u}"/>`).join('')
+  };
+  return s+(g[k]?g[k]():'');}
+const fam={sponge:C.tool,cloth:C.tool,brush:C.tool,spray:C.tool,soap:C.chem,vinegar:C.chem,hot:C.energy,steam:C.energy,fan:C.energy};
+function station(x,y,w,kinds,glow,label,anno){
+  let s=shadow(x+w/2,y+1.05,w*U*.55,14)+box(x,y,w,1,0.9,{top:'#F7DDA6',front:'#D9A15C'},glow);
+  kinds.forEach((k,i)=>{const px=x+(i+.5)*w/kinds.length;const p=P(px,y+.5,1.15);s+=R(p[0]-26,p[1]+14,52,16,'#B9863F',{r:5,s:INK,sw:2.5})+item(k,p[0],p[1]-6,24);});
+  return s;}
+function sink(x,y,w){
+  let s=shadow(x+w/2,y+1.05,w*U*.55,14)+box(x,y,w,1,0.9,{top:'#CFD8E6',front:'#8FA0BA'});
+  const q=[P(x+.2,y+.2,.9),P(x+w-.2,y+.2,.9),P(x+w-.2,y+.8,.9),P(x+.2,y+.8,.9)];
+  s+=poly(q,'#7DB7E8',{s:INK,sw:3});
+  const t=P(x+w/2,y+.18,1.25);s+=`<path d="M${f1(t[0]-14)} ${f1(t[1]+24)} v-26 q0 -16 16 -16 h14" fill="none" stroke="#6C7A94" stroke-width="9" stroke-linecap="round"/>`;
+  return s;}
+function bin(x,y){
+  const p=P(x+.5,y+.62,0);
+  return shadow(x+.5,y+.9,40,12)+box(x+.1,y+.2,.8,.7,.8,{top:'#4D5668',front:'#7C879C'})+poly([P(x+.2,y+.3,.8),P(x+.8,y+.3,.8),P(x+.8,y+.6,.8),P(x+.2,y+.6,.8)],'#161B2A')+T(p[0],p[1]-10,'ทิ้ง',22,'#fff',{a:'middle',d:false});}
+function hero(fx,fy,col,kind,o={}){
+  let s=El(fx,fy,52,19,'none',{s:o.ring||C.cyan,sw:7})+El(fx,fy,40,13,INK,{op:.25});
+  s+=R(fx-24,fy-24,18,24,'#2A2D4A',{r:7})+R(fx+6,fy-24,18,24,'#2A2D4A',{r:7});
+  s+=R(fx-32,fy-84,64,66,col,{r:22,s:INK,sw:4})+R(fx-20,fy-70,40,48,C.cream,{r:12});
+  s+=Ci(fx-35,fy-60,10,'#FADDC1',{s:INK,sw:3})+Ci(fx+35,fy-60,10,'#FADDC1',{s:INK,sw:3});
+  s+=Ci(fx,fy-114,42,'#FADDC1',{s:INK,sw:4});
+  if(kind==='sweep'){s+=R(fx-42,fy-136,84,20,C.red,{r:10,s:INK,sw:3})+Ci(fx+40,fy-124,9,C.red,{s:INK,sw:2});}
+  if(kind==='bubble'){s+=Ci(fx-36,fy-148,20,'#8A5530',{s:INK,sw:3})+Ci(fx+36,fy-148,20,'#8A5530',{s:INK,sw:3})+`<path d="M${fx-42} ${fy-128} q42 -34 84 0 v6 h-84z" fill="#8A5530" stroke="${INK}" stroke-width="3"/>`;}
+  s+=Ci(fx-14,fy-110,6,INK)+Ci(fx+14,fy-110,6,INK)+Ci(fx-26,fy-98,6,'#F7A1A1',{op:.9})+Ci(fx+26,fy-98,6,'#F7A1A1',{op:.9})+`<path d="M${fx-6} ${fy-96} q6 6 12 0" stroke="${INK}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+  const items=o.carry||[];
+  items.forEach((k,i)=>{const cx=fx+(i-(items.length-1)/2)*58;s+=item(k,cx,fy-196,26);});
+  if(items.length)s+=`<path d="M${fx-10} ${fy-166} l10 12 l10 -12z" fill="#fff" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/>`;
+  if(o.name)s+=R(fx-48,fy+14,96,34,'#fff',{r:17,s:INK,sw:3})+T(fx,fy+32,o.name,24,INK,{a:'middle',w:600});
+  return s;}
+function enemy(fx,fy,col,k){
+  let s=El(fx,fy,62,20,INK,{op:.22});
+  s+=`<path d="M${fx-58} ${fy-6} q0 -78 58 -78 q58 0 58 78 q-14 12 -29 0 q-15 12 -29 0 q-15 12 -29 0 q-14 12 -29 0z" fill="${col}" stroke="${INK}" stroke-width="4"/>`;
+  s+=Ci(fx-22,fy-50,15,'#fff',{s:INK,sw:3})+Ci(fx+22,fy-50,15,'#fff',{s:INK,sw:3})+Ci(fx-20,fy-48,7,INK)+Ci(fx+20,fy-48,7,INK);
+  s+=`<path d="M${fx-36} ${fy-74} l26 10 M${fx+36} ${fy-74} l-26 10" stroke="${INK}" stroke-width="6" stroke-linecap="round"/><path d="M${fx-16} ${fy-26} q16 12 32 0" stroke="${INK}" stroke-width="4" fill="#fff" stroke-linejoin="round"/>`;
+  if(k==='slime')s+=Ci(fx-34,fy-30,8,'#fff',{op:.45});
+  return s;}
+function cart(x,y,layers,glow){
+  let s=shadow(x+.75,y+1.15,86,16);
+  s+=box(x,y,1.5,1.0,.38,{top:'#D8DEE9',front:'#9AA6C2'},glow);
+  [[.12,1.0],[1.16,1.0]].forEach(w=>{const p=P(x+w[0]+.12,y+w[1],0);s+=Ci(p[0],p[1]-6,12,'#2A2D4A',{s:INK,sw:3});});
+  const hp=P(x+.1,y+.1,.4);s+=`<path d="M${f1(hp[0])} ${f1(hp[1])} l-6 -64 h${f1(U*1.3)} l-6 64" fill="none" stroke="#6C7A94" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>`;
+  layers.forEach((l,i)=>{const z=.38+i*.19;
+    s+=box(x+.16,y+.14,1.18,.72,.17,{top:l.c,front:l.c2||l.c},false).replace(/<polygon/g,'<polygon');
+    const p=P(x+.75,y+.86,z+.09);s+=item(l.k,p[0],p[1]-2,15);
+  });
+  return s;}
+function puddle(x,y){const p=P(x,y);return El(p[0],p[1],74,26,'#7DB7E8',{s:'#4A8BC4',sw:3,op:.8})+El(p[0]-16,p[1]-6,22,7,'#fff',{op:.6});}
+function signWet(x,y){
+  const p=P(x,y,0);
+  return El(p[0],p[1],26,8,INK,{op:.25})+`<path d="M${p[0]-26} ${p[1]} l14 -62 h24 l14 62 z" fill="#F6C431" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/><path d="M${p[0]} ${p[1]-50} v-14" stroke="${INK}" stroke-width="0"/>`+T(p[0],p[1]-26,'!',30,INK,{a:'middle',w:600});}
+function bubble(x,y,w,t,c='#fff'){return R(x-w/2,y-30,w,60,c,{r:30,s:INK,sw:4})+`<path d="M${x-10} ${y+30} l10 16 l10 -16z" fill="${c}" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/>`+T(x,y+2,t,28,INK,{a:'middle',d:false,w:600});}
+function ring(x,y,r,pct,col){const c=2*Math.PI*r;return Ci(x,y,r,'none',{s:'#fff',sw:13,op:.85})+`<circle cx="${f1(x)}" cy="${f1(y)}" r="${r}" fill="none" stroke="${col}" stroke-width="10" stroke-dasharray="${f1(c*pct)} ${f1(c)}" transform="rotate(-90 ${f1(x)} ${f1(y)})" stroke-linecap="round"/>`;}
+
+function scene(st={}){
+  let s=R(0,0,W,H,'#6D5A3C')+backWall()+floorTiles();
+  s+=poly([P(-.35,0),P(0,0),P(0,8),P(-.35,8)],'#B98A4E',{s:INK,sw:3})+poly([P(14,0),P(14.35,0),P(14.35,8),P(14,8)],'#B98A4E',{s:INK,sw:3});
+  // dirt decals
+  s+=dirt(2.3,2.6,60,.35)+dirt(9.6,6.3,76,.55)+dirt(12.1,5.0,66,.5)+dirt(6.6,6.6,40,.3);
+  // back counters
+  s+=station(0,0,3.4,['sponge','cloth','brush'],false)+station(3.4,0,2.8,['soap','vinegar'],st.glow==='chem')+sink(6.2,0,2)+station(8.2,0,3.2,['hot','steam','fan'],false)+bin(11.6,0)+box(12.6,0,1.4,1,.9,{top:'#F7DDA6',front:'#D9A15C'});
+  // left cafeteria table (obstacle) and island
+  s+=shadow(.5,4.1,60,16)+box(0,1.4,1.1,2.7,.8,{top:'#E4EEF9',front:'#9FB9D6'});
+  [1.9,2.8,3.5].forEach(y=>{const p=P(.55,y,.88);s+=El(p[0],p[1],30,10,'#fff',{s:INK,sw:3});});
+  s+=shadow(7.2,4.7,130,16)+box(5.9,3.7,2.6,1,.82,{top:'#F7DDA6',front:'#D9A15C'},st.glow==='island');
+  {const p=P(7.2,4.1,.82);s+=item('spray',p[0],p[1]-16,26);}
+  // props, enemies
+  s+=puddle(9.2,5.9)+signWet(9.2,5.5);
+  s+=enemy(P(11.3,5.4)[0],P(11.3,5.4)[1],'#8A5226','dirt');
+  s+=enemy(P(12.6,6.5)[0],P(12.6,6.5)[1],'#8B4FC8','slime');
+  s+=cart(3.2,4.5,st.layers||[],st.glow==='cart');
+  // characters
+  s+=hero(...P(st.hx??5.2,st.hy??3.1),C.sweep,'sweep',{name:'Krit',carry:st.carry||[]});
+  s+=hero(...P(9.1,3.0),C.bubble,'bubble',{name:'Mai',ring:C.cyan,carry:st.mateCarry||['soap']});
+  return s;}
+const scale=(a)=>a;
+
+/* ---------- HUD ---------- */
+function btn(x,y,w,h,label,k,sz){const m={primary:[C.gold,INK],secondary:[C.blue,'#fff'],success:[C.green,'#fff'],tertiary:[C.cream,C.frame],dis:[C.grey,C.muted]};const [f,t]=m[k];sz=sz||Math.min(54,h*.36);
+  return R(x,y+9,w,h,INK,{r:h/2,op:k==='dis'?0:.35})+R(x,y,w,h,f,{r:h/2,s:k==='tertiary'?C.frame:INK})+(k==='primary'?R(x+12,y+10,w-24,h*.36,'#fff',{r:h/3,op:.28}):'')+T(x+w/2,y+h/2+2,label,sz,t,{a:'middle',w:600});}
+function ib(x,y,d,glyph,f=C.frame){return Ci(x,y+6,d/2,INK,{op:.35})+Ci(x,y,d/2,f,{s:INK})+glyph;}
+const gPause=(x,y)=>R(x-18,y-20,12,40,'#fff',{r:3})+R(x+6,y-20,12,40,'#fff',{r:3});
+const gBook=(x,y)=>R(x-22,y-18,44,36,'#fff',{r:4})+T(x,y+2,'?',34,C.frame,{a:'middle',w:600});
+function chipC(x,y,w,label,col){return R(x,y,w,96,C.surface,{r:48,s:INK,sw:4})+Ci(x+48,y+48,30,col,{s:INK,sw:3})+T(x+92,y+50,label,44,INK,{w:600});}
+function mini(x,y,w,v,t,col,icon){let s=Ci(x+15,y+15,15,col,{s:INK,sw:2.5})+R(x+38,y+2,w-38,26,'#E6DCC2',{r:13,s:INK,sw:2.5})+R(x+38,y+2,(w-38)*v,26,col,{r:13});
+  const tx=x+38+(w-38)*t;s+=R(tx-2.5,y-4,5,38,INK);return s;}
+function hud(st={}){
+  let s='';
+  // 1 order ticket
+  s+=R(SL,ST+4,452,200,C.surface,{r:26,s:INK,sw:4});
+  s+=R(SL+14,ST+4,424,14,'#E6DCC2',{r:7})+R(SL+14,ST+4,424*(st.timeLeft??.62),14,st.timeLeft<.25?C.danger:C.green,{r:7});
+  s+=T(SL+26,ST+44,'โรงอาหาร',34,INK,{w:600});
+  s+=`<g transform="translate(${SL+278},${ST+42}) scale(.5)">${Ci(30,0,0,'none')}</g>`;
+  s+=El(SL+316,ST+54,22,18,'#8A5226',{s:INK,sw:3})+Ci(SL+309,ST+50,5,'#fff')+Ci(SL+323,ST+50,5,'#fff')+El(SL+372,ST+54,22,18,'#8B4FC8',{s:INK,sw:3})+Ci(SL+365,ST+50,5,'#fff')+Ci(SL+379,ST+50,5,'#fff');
+  s+=mini(SL+24,ST+88,200,.72,.6,'#E8724A')+mini(SL+240,ST+88,196,.4,.5,'#4EA8DE')+mini(SL+24,ST+138,200,.55,.3,'#F6C431')+mini(SL+240,ST+138,196,.2,.45,'#9B7EDE');
+  // 6 mate tray
+  s+=R(SL,ST+222,300,84,C.surface,{r:42,s:INK,sw:4})+Ci(SL+42,ST+264,28,C.bubble,{s:INK,sw:3})+T(SL+86,ST+264,'ฟอง',30,INK,{w:600})+item('soap',SL+196,ST+264,24)+item('steam',SL+250,ST+264,24);
+  // 2 match pill
+  const cx=W/2;
+  s+=R(cx-420,ST,840,104,C.surface,{r:52,s:INK,sw:5});
+  s+=`<path d="M${cx-420} ${ST+52} a52 52 0 0 1 52 -52 h200 v104 h-200 a52 52 0 0 1 -52 -52z" fill="${C.cyan}" stroke="${INK}" stroke-width="5"/>`;
+  s+=T(cx-300,ST+54,'ทีมเรา',32,INK,{a:'middle',w:600})+T(cx-190,ST+56,String(st.score??86),54,'#fff',{a:'middle',w:600,st:INK,sw:7});
+  s+=Ci(cx-80,ST+52,0,'none')+T(cx,ST+56,st.time||'1:12',58,st.timeLeft<.25?C.danger:INK,{a:'middle',w:600});
+  s+=`<path d="M${cx+420} ${ST+52} a52 52 0 0 0 -52 -52 h-200 v104 h200 a52 52 0 0 0 52 -52z" fill="${C.orange}" stroke="${INK}" stroke-width="5"/>`;
+  s+=T(cx+300,ST+54,'คู่แข่ง',32,INK,{a:'middle',w:600})+T(cx+190,ST+56,'?',54,'#fff',{a:'middle',w:600,st:INK,sw:7});
+  [0,1,2].forEach(i=>s+=Ci(cx-40+i*40,ST+128,13,i===0?C.green:'#fff',{s:INK,sw:3.5}));
+  // 3 top right
+  s+=chipC(SR-560,ST+4,250,String(st.budget??120),C.gold)+ib(SR-210,ST+60,128,gBook(SR-210,ST+60))+ib(SR-64,ST+60,128,gPause(SR-64,ST+60));
+  // 9 hand tray
+  [['sponge'],['soap'],[]].forEach((k,i)=>{const x=cx-260+i*184;s+=R(x,SB-176,160,176,k.length?C.surface:'none',{r:26,s:k.length?INK:'#8A7E66',sw:k.length?5:4,dash:k.length?null:'14 10'});
+    if(k.length){s+=item(k[0],x+80,SB-108,40)+R(x+30,SB-16,100,9,fam[k[0]],{r:4});}});
+  // 8 ping
+  s+=ib(cx+390,SB-88,144,T(cx+390,SB-86,'…',58,'#fff',{a:'middle',w:600}),C.surface).replace(/fill="#fff"/,'fill="#fff"');
+  // 4 joystick
+  const jx=SL+250,jy=SB-170;
+  s+=Ci(jx,jy,130,INK,{op:.22,s:'#fff',sw:3})+Ci(jx+(st.jx||0),jy+(st.jy||0),60,'#fff',{s:INK,sw:4,op:.95});
+  // 5 primary / 6 ability / 7 submit
+  const px=SR-130,py=SB-130;
+  s+=primary(px,py,st.ctx||'place');
+  s+=Ci(SR-350,SB-118+8,84,INK,{op:.35})+Ci(SR-350,SB-118,84,C.frame,{s:C.sweep,sw:10})+T(SR-350,SB-124,'จัดทัพ',26,'#fff',{a:'middle',w:600})+`<path d="M${SR-382} ${SB-100} h60 m-14 -12 l14 12 l-14 12" stroke="#fff" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 -6)"/>`;
+  s+=R(SR-390,SB-482,320,124,C.green,{r:62,s:INK,sw:5})+ring(SR-330,SB-420,34,st.hold??0,C.gold)+T(SR-190,SB-420,'ส่งทดสอบ',38,'#fff',{a:'middle',w:600})+T(SR-230,SB-340,'กดค้าง 0.6 วิ',26,INK,{a:'middle',d:false,st:'#fff',sw:7});
+  return s;}
+function glove(x,y,sc,col){return `<g transform="translate(${x} ${y}) scale(${sc})"><rect x="-26" y="-6" width="52" height="40" rx="14" fill="${col}" stroke="${INK}" stroke-width="5"/>`+[-22,-8,6,20].map((dx,i)=>`<rect x="${dx-6}" y="${-34-(i===1||i===2?8:0)}" width="12" height="${34+(i===1||i===2?8:0)}" rx="6" fill="${col}" stroke="${INK}" stroke-width="4"/>`).join('')+`<rect x="-40" y="4" width="22" height="12" rx="6" fill="${col}" stroke="${INK}" stroke-width="4" transform="rotate(-35 -29 10)"/></g>`;}
+function primary(px,py,ctx){
+  const map={pick:['หยิบ',C.gold,'hand'],place:['วาง',C.gold,'down'],lift:['ยก',C.gold,'up'],trash:['ทิ้ง',C.orange,'trash'],pass:['ส่งต่อ',C.gold,'right'],full:['มือเต็ม',C.grey,'hand']};
+  const [lab,col,ic]=map[ctx]||map.place;
+  let s=Ci(px,py+10,112,INK,{op:.35})+Ci(px,py,112,col,{s:INK,sw:6})+Ci(px-18,py-26,60,'#fff',{op:.25});
+  const fg=ctx==='full'?C.muted:INK;
+  if(ic==='hand')s+=glove(px,py-22,1.05,ctx==='full'?'#E5E8F0':'#fff');
+  if(ic==='down')s+=`<path d="M${px} ${py-58} v62 m-24 -22 l24 24 l24 -24" stroke="${fg}" stroke-width="14" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+  if(ic==='up')s+=`<path d="M${px} ${py+4} v-62 m-24 22 l24 -24 l24 24" stroke="${fg}" stroke-width="14" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+  if(ic==='right')s+=`<path d="M${px-52} ${py-26} h86 m-24 -24 l24 24 l-24 24" stroke="${fg}" stroke-width="14" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+  if(ic==='trash')s+=R(px-34,py-50,68,66,'#fff',{r:8,s:INK,sw:5})+R(px-44,py-60,88,12,'#fff',{r:5,s:INK,sw:5});
+  s+=T(px,py+62,lab,44,fg,{a:'middle',w:600});
+  return s;}
+
+/* ---------- overlays ---------- */
+function overlays(){
+  let s=`<g class="layer safe">`+R(0,0,132,H,'#000',{op:.35})+R(W-48,0,48,H,'#000',{op:.2})+R(0,H-60,W,60,'#000',{op:.2})+R(SL,ST,SR-SL,SB-ST,'none',{s:'#FF3B8B',sw:4,dash:'18 14'})+T(66,H/2,'รอยบาก',28,'#fff',{a:'middle',d:false})+`</g>`;
+  s+=`<g class="layer zone"><path d="M${SL} ${SB} L${SL} ${SB-520} Q${SL+700} ${SB-500} ${SL+800} ${SB} Z" fill="#3DDC84" opacity=".28"/><path d="M${SR} ${SB} L${SR} ${SB-520} Q${SR-700} ${SB-500} ${SR-800} ${SB} Z" fill="#3DDC84" opacity=".28"/>`+R(SL,SB-460,460,460,'none',{s:'#FF3B8B',sw:5,dash:'14 10'})+R(SR-460,SB-460,460,460,'none',{s:'#FF3B8B',sw:5,dash:'14 10'})+T(SL+230,SB-480,'มุมนี้ไม่วางจุดโต้ตอบ',30,'#7A0F3F',{a:'middle',w:600,st:'#fff',sw:7})+`</g>`;
+  s+=`<g class="layer grid">`;
+  for(let i=0;i<=14;i++){const a=P(i,0),b=P(i,8);s+=`<line x1="${f1(a[0])}" y1="${f1(a[1])}" x2="${f1(b[0])}" y2="${f1(b[1])}" stroke="#fff" stroke-width="2" opacity=".5"/>`;}
+  for(let j=0;j<=8;j++){const a=P(0,j),b=P(14,j);s+=`<line x1="${f1(a[0])}" y1="${f1(a[1])}" x2="${f1(b[0])}" y2="${f1(b[1])}" stroke="#fff" stroke-width="2" opacity=".5"/>`;}
+  for(let i=0;i<14;i+=2){const p=P(i+.5,.5);s+=T(p[0],p[1]+80,String(i),22,'#fff',{a:'middle',d:false});}
+  s+=`</g>`;return s;}
+const ANN=[
+ [1,SL+226,ST+104,'ใบงานห้อง (ตั๋วแขวนบนซ้าย)','กว้าง 452 × สูง 200u ที่ SafeArea มุมบนซ้าย','ศัตรู + แถบค่า 4 ตัวพร้อมเส้นเป้า แถบบนเขียว→แดงตามเวลา แตะ = ขยายเป็นใบงานเต็ม'],
+ [2,W/2,ST+52,'ป้ายสถานะแมตช์ (pill กลางบน)','840 × 104u กึ่งกลางบน','ทีมเรา (ฟ้า) | เวลา | คู่แข่ง "?" (ส้ม) จุดรอบอยู่ใต้ ≤ 15 วิ เวลาแดง + สั่น'],
+ [3,SR-340,ST+50,'งบ · สมุดสูตร · หยุด','งบ 250×96 · ปุ่มกลม 128u (hit 144u) มุมบนขวา','? เปิดตารางปฏิกิริยาแบบเร็ว หยุด = ออนไลน์เวลาไม่หยุด'],
+ [4,SL+250,SB-170,'จอยสติ๊กลอยซ้าย','ฐาน 260u ปุ่ม 120u โซนรับนิ้ว 40% × 60%','เกิดใต้นิ้วที่แตะ dead zone 12% ดันขึ้น = เดินไปหลังห้อง'],
+ [5,SR-130,SB-130,'ปุ่มหลักตามบริบท','วงกลม 224u (hit 240u) มุมล่างขวา','หยิบ / วาง / ยก / ทิ้ง / ส่งต่อ เปลี่ยนตามของที่อยู่ใกล้ และไฮไลต์เป้าในฉาก'],
+ [6,SR-350,SB-118,'ปุ่มทักษะ','วงกลม 168u (hit 176u) บนเส้นโค้งนิ้วโป้ง','ใช้ได้รอบละครั้ง ใช้แล้วเป็นเทา "ใช้แล้ว" ทั้งสองทีมเห็น'],
+ [7,SR-230,SB-420,'ส่งทดสอบ (กดค้าง)','320 × 124u อยู่สูงกว่าปุ่มหลักเพื่อกันกดพลาด','กดค้าง 0.6 วิ วงรอบเติม ทีมหลายคน = โหวต'],
+ [8,W/2+390,SB-88,'Quick Ping','วงกลม 144u ข้างช่องมือ','ลากไปช่องในวงล้อ 6 ช่อง ข้อความบวกเท่านั้น'],
+ [9,W/2-80,SB-88,'ช่องมือ 3 ช่อง','160 × 176u ห่าง 24u กึ่งกลางล่าง','ลากไปรถเข็นหรือเพื่อน ของที่ถือโผล่เหนือหัวด้วย'],
+ [10,SL+150,ST+264,'ถาดของเพื่อน','300 × 84u ใต้ใบงาน','เห็นว่าเพื่อนถืออะไร แตะไอคอน = ping ขอให้วาง'],
+ [11,P(5.2,3.1)[0],P(5.2,3.1)[1]-232,'ของที่ถือ (ลอยเหนือหัว)','ไอคอน 52u ลอยเหนือหัวตัวละคร','ให้เห็นแม้ไม่มองถาดมือ (diegetic)'],
+ [12,P(3.95,4.5,0)[0],P(3.95,4.5,0)[1]-125,'รถเข็นและชั้นที่ซ้อน','ชั้นซ้อนจริงบนตัวรถ ไอคอนชั้นละ 30u','ประกายเขียว/ส้มระหว่างชั้น เห็นการ์ดรายละเอียดเมื่อเดินเข้าใกล้'],
+ [13,P(5.2,3.1)[0]+10,P(5.2,3.1)[1]+36,'วงทีมใต้เท้า + ชื่อ','วงรี 104 × 38u สีฟ้า','แยกทีมได้ในเสี้ยววินาที ชื่อแสดงแค่ชื่อ ไม่มีสถิติ'],
+];
+function annotations(){
+  let s=`<g class="layer anno">`;
+  ANN.forEach(a=>{s+=Ci(a[1],a[2],24,'#FF3B8B',{s:'#fff',sw:4})+T(a[1],a[3]?a[2]+2:a[2],String(a[0]),28,'#fff',{a:'middle',w:600});});
+  return s+'</g>';}
+function frame(id,title,desc,inner,target,annoOn){
+  const fig=document.createElement('figure');
+  fig.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(id+' '+title)}">${inner}${overlays()}${annoOn?annotations():''}</svg><figcaption><span class="id">${esc(id)}</span><h3>${esc(title)}</h3><p>${desc}</p></figcaption>`;
+  document.getElementById(target).appendChild(fig);}
+
+/* ---------- main frame ---------- */
+const stMain={layers:[{k:'sponge',c:'#F7D44C',c2:'#D7B230'},{k:'soap',c:'#4DC2B4',c2:'#2E8C80'},{k:'hot',c:'#F28AA2',c2:'#C45A74'}],carry:['vinegar','steam'],glow:'cart',ctx:'place',hold:0,timeLeft:.62,jx:30,jy:-26};
+let main=scene(stMain);
+// cart reaction sparks + context hint + proximity card
+{const cp=P(3.95,5.5,.38);
+ main+=Ci(cp[0]+80,cp[1]-42,22,C.spark,{s:INK,sw:3.5})+T(cp[0]+80,cp[1]-40,'+',32,INK,{a:'middle',w:600});
+ main+=bubble(P(5.2,3.1)[0]+20,P(5.2,3.1)[1]-292,200,'แตะ = วางบนรถ');
+ // proximity card
+ const x=600,y=398;
+ main+=R(x,y,300,282,C.surface,{r:24,s:INK,sw:4,op:.97})+T(x+24,y+34,'รถเข็น 3/5',30,INK,{w:600});
+ [{k:'hot',n:'น้ำร้อน',c:'#F28AA2'},{k:'soap',n:'สบู่',c:'#4DC2B4'},{k:'sponge',n:'ฟองน้ำ',c:'#F7D44C'}].reverse().forEach((r,i)=>{const yy=y+58+i*58;main+=R(x+16,yy,268,48,'#FFF3D6',{r:14,s:INK,sw:2.5})+T(x+30,yy+25,String(3-i),24,C.muted)+item(r.k,x+84,yy+24,17)+T(x+116,yy+25,r.n,26,INK,{d:false});});
+ main+=R(x+16,y+58+3*58-6,268,48,'none',{r:14,s:'#B9B0A0',sw:2.5,dash:'10 8'})+T(x+150,y+58+3*58+19,'ว่าง',24,C.muted,{a:'middle',d:false});
+ main+=Ci(x+262,y+58+58,16,C.spark,{s:INK,sw:3})+T(x+262,y+58+60,'+',24,INK,{a:'middle',w:600});
+}
+main+=hud(stMain);
+frame('P01','หน้าจอเล่นหลัก — ฉากโรงอาหาร มุม 3/4','ผู้เล่นถือน้ำส้มสายชูกับไอน้ำ ยืนใกล้รถเข็น ปุ่มหลักจึงเป็น "วาง" และรถเข็นถูกไฮไลต์ ใช้ปุ่ม "แสดง/ซ่อน" ด้านบนเพื่อดูหมายเลข safe area โซนนิ้วโป้ง และกริดห้อง',main,'g-main',true);
+const lg=[
+ ['1','ใบงานห้อง','452×200u บนซ้าย','ศัตรู + แถบค่า 4 ตัวพร้อมเส้นเป้า แถบเวลาบนเปลี่ยนเขียว→แดง'],
+ ['2','ป้ายสถานะแมตช์','840×104u กลางบน','คะแนนทีมเรา | เวลา | คู่แข่ง ? (เปิดตอนทดสอบ) จุดรอบใต้ป้าย'],
+ ['3','งบ · สมุดสูตร · หยุด','250×96 และ 128u กลม บนขวา','? = ตารางปฏิกิริยาแบบเร็ว'],
+ ['4','จอยสติ๊กลอย','260/120u ล่างซ้าย','ขึ้น = ไปหลังห้อง ปรับขนาดและตรึงตำแหน่งได้ในตั้งค่า'],
+ ['5','ปุ่มหลักตามบริบท','224u ล่างขวา','หยิบ วาง ยก ทิ้ง ส่งต่อ มือเต็ม; ไฮไลต์เป้าในฉากขอบขาว'],
+ ['6','ทักษะ','168u บนเส้นโค้งโป้ง','รอบละครั้ง'],
+ ['7','ส่งทดสอบ','320×124u เหนือปุ่มหลัก','กดค้าง 0.6 วิ มีวงเติม'],
+ ['8','Quick Ping','144u ข้างช่องมือ','วงล้อ 6 ช่อง'],
+ ['9','ช่องมือ','160×176u ×3','ลากวางได้ ถือได้ 2 ชิ้น (Solo 3)'],
+ ['10','ถาดของเพื่อน','300×84u ใต้ใบงาน','แตะไอคอน = ping'],
+ ['11','ของที่ถือ','ไอคอน 52u เหนือหัว','เห็นในฉากโดยไม่ต้องมองถาด'],
+ ['12','รถเข็นในฉาก','1.5×1.0 tile','ชั้นซ้อนเห็นจริงบนรถ + การ์ดรายชั้นเมื่อยืนใกล้'],
+ ['13','วงทีม + ชื่อ','วงรี 104×38u ใต้เท้า','ฟ้า = ทีมเรา']];
+document.querySelector('#legend tbody').innerHTML=lg.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('');
+
+/* ---------- context states ---------- */
+{let s=R(0,0,1500,330,'#F5E4B8',{r:14});
+ [['pick','หยิบ','ยืนใกล้ชั้นวาง มือว่าง'],['place','วาง','ถือของ ใกล้รถเข็น'],['lift','ยก','มือว่าง ใกล้รถเข็น'],['trash','ทิ้ง','ถือของ ใกล้ถังขยะ'],['pass','ส่งต่อ','ถือของ ใกล้เพื่อน'],['full','มือเต็ม','ถือครบ ใกล้ชั้นวาง']].forEach((c,i)=>{const x=125+i*250;s+=primary(x,125,c[0]);s+=T(x,258,c[2],22,INK,{a:'middle',d:false});s+=T(x,298,c[0],18,C.muted,{a:'middle',d:false});});
+ document.getElementById('ctx').innerHTML=s;}
+
+/* ---------- moments ---------- */
+{let g=scene({layers:[],carry:[]});g+=R(0,0,W,H,INK,{op:.4});g+=T(W/2,H/2-30,'ลุย!',300,'#6FD34A',{a:'middle',w:600,st:'#fff',sw:26});g+=T(W/2,H/2+170,'รอบที่ 1 · ซ้อนให้ผ่านสเปก',58,'#fff',{a:'middle',d:false,st:INK,sw:10});g+=hud({ctx:'pick',timeLeft:1,time:'1:30',score:0,budget:150});
+ frame('P02','เริ่มรอบ (หลังนับ 3-2-1)','ข้อความกลางจอใหญ่และอยู่ไม่เกิน 1 วินาที ปุ่มกดได้ทันทีหลังคำว่า "ลุย!" ไม่บล็อก input ระหว่างแอนิเมชัน',g,'g-moments');}
+{let g=scene({layers:[{k:'sponge',c:'#F7D44C',c2:'#D7B230'},{k:'hot',c:'#F28AA2',c2:'#C45A74'}],carry:['soap'],hx:4.9,hy:3.2,glow:'chem'});
+ g+=bubble(P(9.1,3.0)[0],P(9.1,3.0)[1]-260,300,'ช่วยวางสบู่ที!',C.gold);
+ g+=Ci(960,640,260,'#fff',{op:.92,s:INK,sw:4});['ช่วยวาง','ฉันไปเอง','ยกชั้นบน','ใกล้หมดเวลา','เยี่ยม!','ขอบคุณ'].forEach((t,i)=>{const a=-Math.PI/2+i*Math.PI/3;g+=R(960+Math.cos(a)*170-80,640+Math.sin(a)*170-26,160,52,i===0?C.gold:C.cream,{r:26,s:INK,sw:3})+T(960+Math.cos(a)*170,640+Math.sin(a)*170+2,t,26,INK,{a:'middle',d:false,w:600});});g+=Ci(960,640,48,C.frame,{s:INK});
+ g+=hud({ctx:'pick',timeLeft:.4,time:'0:42'});
+ frame('P03','Quick Ping ในแมตช์','เพื่อนแตะไอคอนสบู่ในถาดของเพื่อน ฝั่งเราเห็นข้อความเหนือหัวเพื่อน 2.5 วินาที วงล้อเปิดจากปุ่ม … ข้อความบวกเท่านั้น',g,'g-moments');}
+{let g=scene({layers:[{k:'sponge',c:'#F7D44C',c2:'#D7B230'},{k:'soap',c:'#4DC2B4',c2:'#2E8C80'},{k:'hot',c:'#F28AA2',c2:'#C45A74'},{k:'steam',c:'#B9A4EE',c2:'#8F77CF'}],carry:[],hx:4.2,hy:6.4,glow:'cart',jx:0,jy:0});
+ g+=Ci(P(4.0,5.5,.38)[0]+88,P(4.0,5.5,.38)[1]-70,22,C.orange,{s:INK,sw:3.5})+T(P(4.0,5.5,.38)[0]+88,P(4.0,5.5,.38)[1]-68,'−',32,INK,{a:'middle',w:600});
+ g+=bubble(P(4.2,6.4)[0],P(4.2,6.4)[1]-190,240,'ชั้น 3-4 หักล้าง',C.orange);
+ g+=hud({ctx:'lift',hold:.72,timeLeft:.2,time:'0:18',score:86});
+ frame('P04','ใกล้หมดเวลา · กดส่งทดสอบค้าง','ปุ่มหลักเป็น "ยก" เพราะมือว่างและยืนใกล้รถเข็น ปฏิกิริยาหักล้างเป็นประกายส้มพร้อมเครื่องหมายลบ เวลาและแถบใบงานเป็นแดง วงรอบปุ่มส่งเติม 72%',g,'g-moments');}
+{let g=scene({layers:[{k:'sponge',c:'#F7D44C',c2:'#D7B230'},{k:'soap',c:'#4DC2B4',c2:'#2E8C80'},{k:'hot',c:'#F28AA2',c2:'#C45A74'}],carry:[]});g+=R(0,0,W,H,INK,{op:.5});
+ g+=R(W/2-560,H/2-150,1120,300,'#1FA6A0',{r:44,s:'#fff',sw:12})+T(W/2,H/2-40,'หมดเวลา!',150,'#fff',{a:'middle',w:600,st:INK,sw:14})+T(W/2,H/2+90,'กำลังส่งกองไปทดสอบ…',54,'#fff',{a:'middle',d:false});
+ g+=hud({ctx:'full',timeLeft:0,time:'0:00'});
+ frame('P05','หมดเวลา → ส่งทดสอบอัตโนมัติ','กองที่ซ้อนอยู่ถูกส่งเอง ไม่มีการลงโทษ แล้วต่อด้วยช่วงทดสอบแบ่งครึ่งจอ (S25) ปุ่มทั้งหมดปิดใช้ระหว่างนี้',g,'g-moments');}
+
+/* ---------- camera diagrams ---------- */
+{const side=document.getElementById('cam-side');
+ const ang=55*Math.PI/180;
+ let s=R(0,0,720,360,'#EAF2FB')+`<line x1="60" y1="290" x2="660" y2="290" stroke="${INK}" stroke-width="5"/>`;
+ s+=R(300,230,120,60,'#D9A15C',{s:INK,sw:4})+Ci(360,205,26,'#FADDC1',{s:INK,sw:4});
+ const cx=560,cy=290-420*Math.sin(ang)*0.55,cz=360;
+ s+=`<g transform="translate(560 70) rotate(${-(90-55)+0} 0 0)"><rect x="-34" y="-22" width="68" height="44" rx="8" fill="${C.frame}" stroke="${INK}" stroke-width="4"/><circle cx="-34" cy="0" r="14" fill="#9AA6C2" stroke="${INK}" stroke-width="3"/></g>`;
+ s+=`<line x1="540" y1="90" x2="380" y2="215" stroke="${C.orange}" stroke-width="5" stroke-dasharray="14 10"/>`;
+ s+=`<path d="M470 290 A110 110 0 0 0 441 214" fill="none" stroke="${C.red}" stroke-width="5"/>`+T(500,258,'55°',34,C.red,{w:600});
+ s+=T(60,40,'Orthographic · size 4.5',30,INK,{w:600})+T(60,80,'หมุนรอบแกนตั้ง 0°',26,C.muted,{d:false});
+ s+=T(360,330,'ผู้เล่น',24,INK,{a:'middle',d:false})+T(560,36,'กล้อง',24,INK,{a:'middle',d:false});
+ side.innerHTML=s;}
+{const top=document.getElementById('cam-top');
+ let s=R(0,0,720,360,'#EAF2FB');
+ // axis-aligned
+ s+=R(40,70,260,190,'#F4E6C3',{s:INK,sw:4});for(let i=1;i<6;i++)s+=`<line x1="${40+i*43.3}" y1="70" x2="${40+i*43.3}" y2="260" stroke="${INK}" stroke-width="1.5" opacity=".4"/>`;for(let j=1;j<4;j++)s+=`<line x1="40" y1="${70+j*47.5}" x2="300" y2="${70+j*47.5}" stroke="${INK}" stroke-width="1.5" opacity=".4"/>`;
+ s+=`<path d="M170 235 v-70 m-14 18 l14 -18 l14 18" stroke="${C.green}" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`+T(170,290,'ตรงแกน (ใช้ในเกมนี้)',26,C.green,{a:'middle',w:600})+T(170,322,'ขึ้น = ไปหลังห้อง ตรงจอยสติ๊ก',22,C.muted,{a:'middle',d:false});
+ // diamond
+ s+=`<polygon points="530,60 650,150 530,250 410,150" fill="#F4E6C3" stroke="${INK}" stroke-width="4"/>`;
+ s+=`<path d="M530 205 l34 -40 m-4 22 l4 -22 l-22 -4" stroke="${C.danger}" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round" transform="translate(-10 4)"/>`+T(530,290,'ข้าวหลามตัด (ไม่ใช้)',26,C.danger,{a:'middle',w:600})+T(530,322,'ขึ้น = เฉียง นิ้วต้องแปลงเอง',22,C.muted,{a:'middle',d:false});
+ top.innerHTML=s;}
+
+/* ---------- toggles ---------- */
+const map={'t-anno':'on-anno','t-safe':'on-safe','t-zones':'on-zones','t-grid':'on-grid'};
+const apply=()=>{Object.keys(map).forEach(k=>document.body.classList.toggle(map[k],document.getElementById(k).checked));};
+Object.keys(map).forEach(k=>document.getElementById(k).addEventListener('change',apply));apply();
+})();
+</script>
