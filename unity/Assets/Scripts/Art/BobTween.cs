@@ -26,11 +26,12 @@ namespace Bob.Art
             var s0 = t.localScale;
             for (float e = 0; e < dur; e += Time.deltaTime)
             {
+                if (t == null) yield break;
                 float k = e / dur;
                 float s = k < 0.4f ? Mathf.Lerp(1, peak, EaseOutCubic(k / 0.4f)) : Mathf.Lerp(peak, 1, EaseOutBack((k - 0.4f) / 0.6f));
                 t.localScale = s0 * s; yield return null;
             }
-            t.localScale = s0;
+            if (t != null) t.localScale = s0;
         }
 
         public static IEnumerator Squash(Transform t, float dur = 0.3f, float amount = 0.3f)
@@ -38,10 +39,11 @@ namespace Bob.Art
             var s0 = t.localScale;
             for (float e = 0; e < dur; e += Time.deltaTime)
             {
+                if (t == null) yield break;
                 float k = e / dur, w = (1 - EaseOutElastic(k)) * amount;
                 t.localScale = new Vector3(s0.x * (1 + w), s0.y * (1 - w), s0.z); yield return null;
             }
-            t.localScale = s0;
+            if (t != null) t.localScale = s0;
         }
 
         public static IEnumerator Shake(Transform t, float strength = 0.08f, float dur = 0.3f)
@@ -49,10 +51,11 @@ namespace Bob.Art
             var p0 = t.localPosition;
             for (float e = 0; e < dur; e += Time.deltaTime)
             {
+                if (t == null) yield break;
                 float k = 1 - e / dur;
                 t.localPosition = p0 + (Vector3)(Random.insideUnitCircle * strength * k); yield return null;
             }
-            t.localPosition = p0;
+            if (t != null) t.localPosition = p0;
         }
 
         public static IEnumerator FloatUp(Transform t, float height = 0.6f, float dur = 0.8f, bool destroy = true)
@@ -62,6 +65,7 @@ namespace Bob.Art
             var sr = t.GetComponent<SpriteRenderer>();
             for (float e = 0; e < dur; e += Time.deltaTime)
             {
+                if (t == null) yield break;
                 float k = e / dur;
                 t.localPosition = p0 + Vector3.up * height * EaseOutCubic(k);
                 float a = k < 0.6f ? 1 : 1 - (k - 0.6f) / 0.4f;
@@ -69,7 +73,7 @@ namespace Bob.Art
                 if (sr) { var c = sr.color; c.a = a; sr.color = c; }
                 yield return null;
             }
-            if (destroy) Object.Destroy(t.gameObject);
+            if (destroy && t != null) Object.Destroy(t.gameObject);
         }
 
         public static IEnumerator MoveArc(Transform t, Vector3 to, float dur = 0.35f, float arc = 0.8f)
@@ -77,17 +81,18 @@ namespace Bob.Art
             var from = t.position;
             for (float e = 0; e < dur; e += Time.deltaTime)
             {
+                if (t == null) yield break;
                 float k = EaseOutCubic(e / dur);
                 t.position = Vector3.Lerp(from, to, k) + Vector3.up * arc * 4 * k * (1 - k); yield return null;
             }
-            t.position = to;
+            if (t != null) t.position = to;
         }
 
         /// <summary>Gentle idle bob for props and pickups (run forever; stop the coroutine to end it).</summary>
         public static IEnumerator Bob(Transform t, float amp = 0.05f, float speed = 3f)
         {
             var p0 = t.localPosition;
-            for (float e = 0; ; e += Time.deltaTime) { t.localPosition = p0 + Vector3.up * Mathf.Sin(e * speed) * amp; yield return null; }
+            for (float e = 0; t != null; e += Time.deltaTime) { t.localPosition = p0 + Vector3.up * Mathf.Sin(e * speed) * amp; yield return null; }
         }
     }
 }
