@@ -86,6 +86,14 @@ namespace Bob.Game
                 if (!art.Has("station_" + StationIds[i])) { sr.transform.localScale = new Vector3(r.width, r.height, 1); sr.transform.position = r.center; sr.color = BobUi.Family((Family)i); }
                 sr.sortingOrder = Order(r.yMin);
                 stationSr[i] = sr;
+                // the shelf picture is empty: the parts it offers sit on it
+                var onShelf = BobRules.Parts.Where(kv => kv.Value.Family == (Family)i).Select(kv => kv.Key).ToList();
+                for (int n = 0; n < onShelf.Count && art.Has("station_" + StationIds[i]); n++)
+                {
+                    float fx = r.center.x + (n - (onShelf.Count - 1) / 2f) * 0.36f;
+                    var ic = MakeSprite("Shelf_" + onShelf[n], worldRoot, "part_" + onShelf[n], new Vector2(fx, r.yMin + 0.46f), 0.3f, false);
+                    ic.sortingOrder = sr.sortingOrder + 1;
+                }
                 WorldLabel(StationNames[i], new Vector2(r.center.x, r.yMin - 0.16f), 0.032f, BobUi.Ink);
             }
 

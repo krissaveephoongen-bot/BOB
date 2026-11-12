@@ -55,8 +55,8 @@ namespace Bob.Game
 
         void BuildTable()
         {
-            string sp = art.Has("prop_desk") ? "prop_desk" : null;
-            tableSr = MakeSprite("RestTable", worldRoot, sp, new Vector2(TableRect.center.x, TableRect.yMin), TableRect.width, true);
+            string sp = art.Has("desk") ? "desk" : null; // Leonardo desk picture
+            tableSr = MakeSprite("RestTable", worldRoot, sp, new Vector2(TableRect.center.x, TableRect.yMin), TableRect.width * 1.15f, true);
             if (sp == null) { tableSr.transform.localScale = new Vector3(TableRect.width, TableRect.height, 1); tableSr.transform.position = TableRect.center; tableSr.color = BobUi.Hex("#C9A66B"); }
             tableSr.sortingOrder = Order(TableRect.yMin);
             WorldLabel("โต๊ะพักของ", new Vector2(TableRect.center.x, TableRect.yMin - 0.16f), 0.03f, BobUi.Ink);
