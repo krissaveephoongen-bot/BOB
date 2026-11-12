@@ -4,9 +4,11 @@
 // Clients only send intents (move, pick, place, lift, submit); the server checks them and owns the state.
 // Each team plays in its own copy of the same room (GDD 20), so both teams use the same coordinates.
 // Opcodes, client -> server: 1 MOVE {x,y}  2 PICK {id}  3 PLACE {i}  4 LIFT {}  5 READY {char, ready?, team?}  6 SUBMIT {vote?} (a vote; half the team sends the cart)
-//                            7 PUSH {on}  8 PASS {i, to?}  9 TABLE {put:i} or {take:k}
-// Opcodes, server -> client: 10 STATE (full snapshot)  11 POS {time,p:[{id,x,y}],c:[{x,y}]} every tick  12 RESULT (round result)  13 ERROR {t}
-var OP = { MOVE: 1, PICK: 2, PLACE: 3, LIFT: 4, READY: 5, SUBMIT: 6, PUSH: 7, PASS: 8, TABLE: 9, STATE: 10, POS: 11, RESULT: 12, ERROR: 13 };
+//                            7 PUSH {on}  8 PASS {i, to?}  9 TABLE {put:i} or {take:k}  14 ABILITY {swap?:i} (once per player per round)
+// Opcodes, server -> client: 10 STATE (full snapshot)  11 POS {time,p:[{id,x,y}],c:[{x,y}]} every tick  12 RESULT (round result)  13 ERROR {t}  15 PEEK {total, stats} (Spray's preview, sender only)
+// Each team has its own clock (t.time) so Press can stop it; POS.tt carries both. s.time = the longer one, for old clients.
+var OP = { MOVE: 1, PICK: 2, PLACE: 3, LIFT: 4, READY: 5, SUBMIT: 6, PUSH: 7, PASS: 8, TABLE: 9, STATE: 10, POS: 11, RESULT: 12, ERROR: 13, ABILITY: 14, PEEK: 15 };
+var MP_FREEZE = 8; // Press: seconds the team's clock stops
 var MP_TICK = 10, MP_MAX = 4, MP_HAND = 2, MP_TEST_SEC = 8, MP_SPEED = 2.3 * 1.25; // world units / s, with lag slack
 var MP_PUSH_SPEED = 0.8, MP_PASS_NEAR = 1.0, MP_TABLE_MAX = 4, MP_RADIUS = 0.16;
 // Room layout in world units [x0, y0, x1, y1], y up (the prototype's 800x500 px room / 100). Unity's Coop scene uses the same numbers.
@@ -46,26 +48,27 @@ function mpSend(d, op, obj, to) { d.broadcastMessage(op, JSON.stringify(obj), to
 function mpSnapshot(s) {
   // Arrays of plain objects (no maps) so Unity's JsonUtility can read every message.
   var players = Object.keys(s.players).sort().map(function (k) { var p = s.players[k];
-    return { id: k, name: p.name, team: p.team, char: p.char, ready: p.ready, online: !!p.presence, x: p.x, y: p.y, hand: p.hand, vote: !!p.vote }; });
+    return { id: k, name: p.name, team: p.team, char: p.char, ready: p.ready, online: !!p.presence, x: p.x, y: p.y, hand: p.hand, vote: !!p.vote, ab: !!p.abUsed }; });
   // cx, cy: the team's cart; pusher: user id pushing it ('' = nobody); table: parts parked on the team's table.
   return { phase: s.phase, seed: s.seed, round: s.round, time: s.time, room: s.room, players: players,
     teams: s.teams.map(function (t) { return { stack: t.stack, budget: t.budget, wins: t.wins, submitted: t.submitted,
-      cx: t.cx, cy: t.cy, pusher: t.pusher || '', table: t.table }; }) };
+      cx: t.cx, cy: t.cy, pusher: t.pusher || '', table: t.table,
+      time: t.time, freeze: t.freeze, shield: !!t.shield }; }) };
 }
 function mpBroadcast(d, s) { mpSend(d, OP.STATE, mpSnapshot(s)); }
 
 function mpStartRound(s) {
   s.round++; s.room = makeRound(s.round, s.seed); s.phase = 'build'; s.time = ROUND_TIME;
   s.teams.forEach(function (t) { t.stack = []; t.budget = ROUND_BUDGET + Math.floor(t.carry / 2); t.submitted = false;
-    t.cx = CART_START[0]; t.cy = CART_START[1]; t.pusher = null; t.table = []; });
-  Object.keys(s.players).forEach(function (k) { var p = s.players[k]; p.hand = []; p.vote = false; p.x = p.team ? 4.6 : 3.4; p.y = 0.6; });
+    t.cx = CART_START[0]; t.cy = CART_START[1]; t.pusher = null; t.table = [];
+    t.time = ROUND_TIME; t.freeze = 0; t.shield = false; t.submitTime = null; });
+  Object.keys(s.players).forEach(function (k) { var p = s.players[k]; p.hand = []; p.vote = false; p.abUsed = false; p.x = p.team ? 4.6 : 3.4; p.y = 0.6; });
 }
 
 function mpScoreRound(d, s, logger, nk) {
-  var timeFrac = Math.max(0, Math.min(1, s.time / ROUND_TIME));
   var res = s.teams.map(function (t, i) {
-    var ev = evalStack(t.stack, s.room.enemies, false);
-    var sc = totalScore(ev.stats, s.room.spec, t.budget - ev.cost, t.budget, t.submitTime != null ? t.submitTime : timeFrac);
+    var ev = evalStack(t.stack, s.room.enemies, !!t.shield);
+    var sc = totalScore(ev.stats, s.room.spec, t.budget - ev.cost, t.budget, t.submitTime != null ? t.submitTime : 0);
     return { team: i, stack: t.stack, stats: ev.stats, effects: ev.fx, cost: ev.cost, score: sc, left: t.budget - ev.cost };
   });
   var a = res[0], b = res[1];
@@ -82,7 +85,7 @@ function matchInit(ctx, logger, nk, params) {
   var seed = parseInt(params && params.seed, 10) || (1 + Math.floor(Math.random() * 8388607));
   var s = { seed: seed, round: 0, phase: 'lobby', time: ROUND_TIME, room: null, players: {}, label: 'mp' + seed, testLeft: 0,
     teams: [0, 1].map(function () { return { stack: [], budget: ROUND_BUDGET, carry: 0, wins: 0, submitted: false,
-      cx: CART_START[0], cy: CART_START[1], pusher: null, table: [] }; }) };
+      cx: CART_START[0], cy: CART_START[1], pusher: null, table: [], time: ROUND_TIME, freeze: 0, shield: false }; }) };
   return { state: s, tickRate: MP_TICK, label: JSON.stringify({ mode: 'bob_coop', open: true }) };
 }
 function matchJoinAttempt(ctx, logger, nk, d, tick, s, presence, metadata) {
@@ -206,13 +209,39 @@ function matchLoop(ctx, logger, nk, d, tick, s, messages) {
           else { p.hand = p.hand.concat([t.table[ti]]); t.table = without(t.table, ti); dirty = true; }
         }
         break;
+      case OP.ABILITY: { // the hero's ability, once per player per round (GDD 6)
+        if (s.phase !== 'build' || t.submitted) break;
+        if (p.abUsed) { err = 'ใช้ความสามารถพิเศษไปแล้วในรอบนี้'; break; }
+        var used = true;
+        if (p.char === 'sweep') { // swap layer i with the one above it
+          var si = q.swap | 0;
+          if (q.swap == null || si < 0 || si >= t.stack.length - 1) { err = 'เลือกชั้นที่จะสลับ'; used = false; }
+          else if (mpDist(p.x, p.y, cartRect(t)) > NEAR) { err = 'เดินไปที่รถเข็นก่อน'; used = false; }
+          else {
+            var sw = t.stack.slice(); var tmp = sw[si]; sw[si] = sw[si + 1]; sw[si + 1] = tmp;
+            var bad = isMethod(sw[0]); for (var k2 = 1; k2 < sw.length; k2++) if (isMethod(sw[k2]) && isMethod(sw[k2 - 1])) bad = true;
+            if (bad) { err = 'สลับแล้ววิธีใช้ไม่มีชิ้นส่วนรองรับ'; used = false; } else t.stack = sw;
+          }
+        } else if (p.char === 'bubble') t.shield = true;
+        else if (p.char === 'press') t.freeze = MP_FREEZE;
+        else if (p.char === 'spray') {
+          var pe = evalStack(t.stack, s.room.enemies, !!t.shield);
+          var ps = totalScore(pe.stats, s.room.spec, t.budget - pe.cost, t.budget, Math.max(0, Math.min(1, t.time / ROUND_TIME)));
+          mpSend(d, OP.PEEK, { total: ps.total, stats: pe.stats }, [m.sender]);
+        } else { err = 'ฮีโร่นี้ไม่มีความสามารถพิเศษ'; used = false; }
+        if (used) {
+          p.abUsed = true; dirty = true;
+          logEvent(nk, logger, m.sender.userId, s.label, 'ability_used', { round: s.round, char: p.char, ability: CHARS[p.char].ab, mode: 'mp' });
+        }
+        break;
+      }
       case OP.SUBMIT:
         // UX spec BTN-Submit: in a team it is a vote, and the cart is sent when at least half of the online team-mates voted.
         if (s.phase === 'build' && !t.submitted) {
           p.vote = q.vote !== false; dirty = true;
           var mates = 0, votes = 0;
           Object.keys(s.players).forEach(function (k) { var o = s.players[k]; if (o.team !== p.team || !o.presence) return; mates++; if (o.vote) votes++; });
-          if (votes * 2 >= mates) { t.submitted = true; t.pusher = null; t.submitTime = s.time / ROUND_TIME; }
+          if (votes * 2 >= mates) { t.submitted = true; t.pusher = null; t.submitTime = Math.max(0, Math.min(1, t.time / ROUND_TIME)); }
         }
         break;
     }
@@ -229,9 +258,14 @@ function matchLoop(ctx, logger, nk, d, tick, s, messages) {
       logEvent(nk, logger, null, s.label, 'match_start', { seed: s.seed, players: ids.length, mode: 'mp' });
     }
   } else if (s.phase === 'build') {
-    s.time -= dt;
-    if (s.time <= 0 || (s.teams[0].submitted && s.teams[1].submitted)) { s.time = Math.max(0, s.time); mpScoreRound(d, s, logger, nk); dirty = true; }
-    mpSend(d, OP.POS, { time: s.time, p: ids.map(function (k) { return { id: k, x: +s.players[k].x.toFixed(2), y: +s.players[k].y.toFixed(2) }; }),
+    s.teams.forEach(function (t) {
+      if (t.submitted) return;
+      if (t.freeze > 0) t.freeze = Math.max(0, t.freeze - dt); else t.time = Math.max(0, t.time - dt);
+      if (t.time <= 0) { t.submitted = true; t.pusher = null; t.submitTime = 0; dirty = true; } // time is up: the cart goes as it is
+    });
+    s.time = Math.max(s.teams[0].time, s.teams[1].time);
+    if (s.teams[0].submitted && s.teams[1].submitted) { mpScoreRound(d, s, logger, nk); dirty = true; }
+    mpSend(d, OP.POS, { time: s.time, tt: [+s.teams[0].time.toFixed(2), +s.teams[1].time.toFixed(2)], p: ids.map(function (k) { return { id: k, x: +s.players[k].x.toFixed(2), y: +s.players[k].y.toFixed(2) }; }),
       c: s.teams.map(function (t) { return { x: +t.cx.toFixed(2), y: +t.cy.toFixed(2) }; }) });
   } else if (s.phase === 'test') {
     s.testLeft -= dt; if (s.testLeft <= 0) { mpStartRound(s); dirty = true; }

@@ -238,7 +238,7 @@ namespace Bob.Coop
         {
             var me = net?.MePlayer; var team = net?.MyCart; if (me == null || team == null) return "";
             var (spot, fam) = Nearby(); var mate = MateInReach();
-            return spot + fam + "|" + string.Join(",", me.hand ?? new string[0]) + "|" + string.Join(",", team.table ?? new string[0]) + "|" + team.pusher + "|" + (mate?.id ?? "") + "|" + team.submitted;
+            return spot + fam + "|" + string.Join(",", me.hand ?? new string[0]) + "|" + string.Join(",", team.table ?? new string[0]) + "|" + team.pusher + "|" + (mate?.id ?? "") + "|" + team.submitted + "|" + me.ab;
         }
 
         /// <summary>The parts of the hand and the right-hand actions depend on where I stand; rebuilt when that changes.</summary>
@@ -286,15 +286,41 @@ namespace Bob.Coop
                 for (int k = 0; k < items.Length; k++) { int kk = k; Btn(ctxPanel, "หยิบ " + PartName(items[k]) + " จากโต๊ะ", BobUi.Surface, () => TakeFromTable(kk), 140, 520, T.caption); }
                 if (items.Length == 0) BobUi.Size(BobUi.Label(ctxPanel, "โต๊ะว่าง แตะของในมือเพื่อพักไว้ให้เพื่อน", T.caption, T.inkMuted, TextAnchor.MiddleRight), 90, 90);
             }
+            // the hero's ability, once a round (GDD 6); Sweep picks the pair of layers at the cart
+            if (!me.ab && !team.submitted)
+            {
+                var abName = BobMatch.Chars.FirstOrDefault(c => c.Id == me.@char)?.Ability ?? "ความสามารถพิเศษ";
+                if (me.@char == "sweep")
+                {
+                    var st = team.stack ?? new string[0];
+                    if (spot == Spot.Cart) for (int i = 0; i < st.Length - 1; i++) { int ii = i; Btn(ctxPanel, $"{abName}: สลับ {PartName(st[i])} ↔ {PartName(st[i + 1])}", BobUi.Sun, () => UseAbility(ii), 120, 520, T.caption); }
+                }
+                else Btn(ctxPanel, abName, BobUi.Sun, () => UseAbility(-1), 140, 520);
+            }
             BobHitArea.EnsureAll(ctxPanel, T.hitInMatch); BobHitArea.EnsureAll(handRow, T.hitInMatch);
         }
+
+        void UseAbility(int swap)
+        {
+            if (net == null) return;
+            net.Ability(swap); Sfx("ability_activate"); Buzz();
+            switch (charId)
+            {
+                case "bubble": Toast("โล่ฟอง! กันปฏิกิริยาหักล้างที่แรงที่สุดให้ทั้งทีม"); Sfx("bubble_pop"); break;
+                case "press": Toast("รีดเวลา! นาฬิกาของทีมหยุด 8 วินาที"); Sfx("steam_hiss"); break;
+                case "spray": Sfx("spray_psst"); break; // the score arrives in OnPeek
+            }
+        }
+
+        void OnPeek(MpPeek p) { Toast("เล็งเป้า! กองนี้จะได้ " + p.total + " คะแนน"); }
 
         void RenderTimer()
         {
             if (timerText == null || net?.State == null) return;
-            var t = Mathf.CeilToInt(Mathf.Max(0, net.State.time));
+            var mine = net.MyCart; // each team has its own clock (Press stops it)
+            var t = Mathf.CeilToInt(Mathf.Max(0, mine != null ? mine.time : net.State.time));
             timerText.text = $"{t / 60}:{t % 60:00}";
-            timerText.color = t <= 10 ? T.danger : T.ink;
+            timerText.color = mine != null && mine.freeze > 0 ? T.goodSpark : t <= 10 ? T.danger : T.ink;
         }
 
         // S25: split screen, left = our team, right = the other team; no buttons (watch only)

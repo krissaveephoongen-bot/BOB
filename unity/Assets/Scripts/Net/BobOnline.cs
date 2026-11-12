@@ -19,15 +19,16 @@ namespace Bob.Net
     public sealed class MpSpec { public MpNeed need; public string[] notes; }
     public sealed class MpRoom { public int round; public string[] enemies; public string[] offer; public MpSpec spec; }
     /// <summary>vote: this player voted to send the cart this round.</summary>
-    public sealed class MpPlayer { public string id, name, @char; public int team; public bool ready, online, vote; public float x, y; public string[] hand; }
+    public sealed class MpPlayer { public string id, name, @char; public int team; public bool ready, online, vote, ab; public float x, y; public string[] hand; }
     /// <summary>cx, cy: the team's cart (it can be pushed); pusher: user id pushing it, "" = nobody; table: parts parked on the team's table.</summary>
-    public sealed class MpTeam { public string[] stack; public int budget, wins; public bool submitted; public float cx, cy; public string pusher; public string[] table; }
+    public sealed class MpTeam { public string[] stack; public int budget, wins; public bool submitted; public float cx, cy; public string pusher; public string[] table;
+        public float time, freeze; public bool shield; } // time: the team's own clock (Press stops it for `freeze` s); shield: Bubble's
     /// <summary>phase: lobby, build, test (between rounds), result (match over).</summary>
     public sealed class MpState { public string phase; public int seed, round; public float time; public MpRoom room; public MpPlayer[] players; public MpTeam[] teams; }
     public sealed class MpPos { public string id; public float x, y; }
     public sealed class MpCartPos { public float x, y; }
     /// <summary>c: each team's cart, by team index.</summary>
-    public sealed class MpPositions { public float time; public MpPos[] p; public MpCartPos[] c; }
+    public sealed class MpPositions { public float time; public float[] tt; public MpPos[] p; public MpCartPos[] c; }
     public sealed class MpStats { public int clean, gentle, speed, shine; }
     public sealed class MpScore { public bool pass; public double test, budget, time; public int total; }
     public sealed class MpEffect { public int[] d; public string t, src; public bool good, off; }
@@ -35,11 +36,12 @@ namespace Bob.Net
     /// <summary>winner: team 0 or 1, or -1 for a draw. over: the match has ended (best of 3).</summary>
     public sealed class MpResult { public int round, winner; public MpTeamResult[] teams; public int[] wins; public bool over; }
     sealed class MpError { public string t; }
+    [Serializable] public sealed class MpPeek { public int total; public MpStats stats; } // Spray's private preview
 
     public sealed class BobOnline
     {
-        public const long OpMove = 1, OpPick = 2, OpPlace = 3, OpLift = 4, OpReady = 5, OpSubmit = 6, OpPush = 7, OpPass = 8, OpTable = 9;
-        public const long OpState = 10, OpPos = 11, OpResult = 12, OpError = 13;
+        public const long OpMove = 1, OpPick = 2, OpPlace = 3, OpLift = 4, OpReady = 5, OpSubmit = 6, OpPush = 7, OpPass = 8, OpTable = 9, OpAbility = 14;
+        public const long OpState = 10, OpPos = 11, OpResult = 12, OpError = 13, OpPeek = 15;
         public const string MatchName = "bob_coop";
 
         readonly ISocket socket;
@@ -55,6 +57,8 @@ namespace Bob.Net
         public event Action<MpResult> OnResult;
         /// <summary>The server refused an intent; the text is Thai and ready to show as a toast.</summary>
         public event Action<string> OnRefused;
+        /// <summary>Spray's ability: what the team's cart would score now (only this player gets it).</summary>
+        public event Action<MpPeek> OnPeek;
 
         BobOnline(ISocket socket, string me)
         {
@@ -112,13 +116,33 @@ namespace Bob.Net
 
         // MatchId is set before the join answer arrives: the server broadcasts the lobby STATE for our own join first,
         // and Receive() drops messages for any other match id (the last player to join used to see an empty lobby).
-        async Task JoinById(string id) { MatchId = id; var m = await socket.JoinMatchAsync(id); MatchId = m.Id; }
+        async Task JoinById(string id) { MatchId = id; var m = await socket.JoinMatchAsync(id); MatchId = m.Id; SavedMatchId = m.Id; }
+
+        // ---------------------------------------------------------------- reconnect after the app was closed (GDD 10)
+        // The match id is kept on the phone until the match ends or the player leaves on purpose. The server keeps a
+        // dropped player's seat (same device id = same user), so joining the same id again puts them back in their team.
+#if UNITY_5_3_OR_NEWER
+        public static string SavedMatchId
+        {
+            get { var v = UnityEngine.PlayerPrefs.GetString("bob.match", ""); return v.Length > 0 ? v : null; }
+            set { if (value == null) UnityEngine.PlayerPrefs.DeleteKey("bob.match"); else UnityEngine.PlayerPrefs.SetString("bob.match", value); UnityEngine.PlayerPrefs.Save(); }
+        }
+#else
+        public static string SavedMatchId { get; set; }
+#endif
+        /// <summary>Back into the match this phone was in; null when there is none or it has ended.</summary>
+        public static async Task<BobOnline> RejoinAsync(BobServer server)
+        {
+            var id = SavedMatchId; if (id == null) return null;
+            try { return await JoinAsync(server, id); }
+            catch (Exception) { SavedMatchId = null; return null; }
+        }
 
         public async Task LeaveAsync()
         {
             socket.ReceivedMatchState -= Receive;
             if (MatchId != null) try { await socket.LeaveMatchAsync(MatchId); } catch (Exception) { }
-            MatchId = null;
+            MatchId = null; SavedMatchId = null;
         }
 
         // ---------------------------------------------------------------- intents (fire and forget; the server answers with STATE or ERROR)
@@ -144,6 +168,8 @@ namespace Bob.Net
         public void TablePut(int handIndex) => Send(OpTable, "{\"put\":" + handIndex + "}");
         /// <summary>Take a part from the team's table into your hand.</summary>
         public void TableTake(int tableIndex) => Send(OpTable, "{\"take\":" + tableIndex + "}");
+        /// <summary>Use the hero's ability (once a round). Sweep passes the layer to swap with the one above it.</summary>
+        public void Ability(int swapLayer = -1) => Send(OpAbility, swapLayer >= 0 ? "{\"swap\":" + swapLayer + "}" : "{}");
 
         static string F(float v) => v.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
 
@@ -172,9 +198,12 @@ namespace Bob.Net
                             foreach (var q in p.p) { var pl = State.players.FirstOrDefault(x => x.id == q.id); if (pl != null) { pl.x = q.x; pl.y = q.y; } }
                             if (p.c != null && State.teams != null)
                                 for (int i = 0; i < p.c.Length && i < State.teams.Length; i++) { State.teams[i].cx = p.c[i].x; State.teams[i].cy = p.c[i].y; }
+                            if (p.tt != null && State.teams != null)
+                                for (int i = 0; i < p.tt.Length && i < State.teams.Length; i++) State.teams[i].time = p.tt[i];
                         }
                         OnPositions?.Invoke(p); break;
-                    case OpResult: LastResult = json.FromJson<MpResult>(); OnResult?.Invoke(LastResult); break;
+                    case OpResult: LastResult = json.FromJson<MpResult>(); if (LastResult.over) SavedMatchId = null; OnResult?.Invoke(LastResult); break;
+                    case OpPeek: OnPeek?.Invoke(json.FromJson<MpPeek>()); break;
                     case OpError: OnRefused?.Invoke(json.FromJson<MpError>().t); break;
                 }
             }

@@ -1,9 +1,9 @@
 // End-to-end test of the co-op moves in 'bob_coop' against a local Nakama (node 22+, no packages): 4 bots, 2 teams of 2.
 // Run: node coop-test.js   Checks, per team: walls (stations are solid), passing a part to a team-mate, parking a part on the
 // team's table and taking it back, pushing the shared cart to a new spot, placing on the moved cart, and that a player
-// who drops mid-round leaves their parts on the table. Passes when every check holds and the match ends the same for all.
+// who drops mid-round leaves their parts on the table and can rejoin the same seat. Round 2 also checks the four abilities (GDD 6) and the per-team clock. Passes when every check holds and the match ends the same for all.
 const HOST = process.env.BOB_HOST || '127.0.0.1:7350', KEY = 'defaultkey';
-const OP = { MOVE: 1, PICK: 2, PLACE: 3, LIFT: 4, READY: 5, SUBMIT: 6, PUSH: 7, PASS: 8, TABLE: 9, STATE: 10, POS: 11, RESULT: 12, ERROR: 13 };
+const OP = { MOVE: 1, PICK: 2, PLACE: 3, LIFT: 4, READY: 5, SUBMIT: 6, PUSH: 7, PASS: 8, TABLE: 9, STATE: 10, POS: 11, RESULT: 12, ERROR: 13, ABILITY: 14, PEEK: 15 };
 const STATION = { tool: [1.15, 3.75], chem: [6.85, 3.75], energy: [1.15, 1.6], method: [6.85, 1.6] };
 const FAM = { cloth: 'tool', sponge: 'tool', brush: 'tool', broom: 'tool', soap: 'chem', vinegar: 'chem', soda: 'chem', polish: 'chem',
   hot: 'energy', steam: 'energy', scrub: 'energy', air: 'energy', soak: 'method', spray: 'method', circle: 'method' };
@@ -38,7 +38,8 @@ class Bot {
     if (op === OP.STATE) { const pm = {}; d.players.forEach(p => { pm[p.id] = p; this.pos[p.id] = [p.x, p.y]; }); d.players = pm; this.state = d; this.carts = d.teams.map(t => [t.cx, t.cy]); }
     if (op === OP.RESULT) this.results.push(d);
     if (op === OP.ERROR) this.errors.push(d.t);
-    if (op === OP.POS) { d.p.forEach(q => this.pos[q.id] = [q.x, q.y]); if (d.c) this.carts = d.c.map(c => [c.x, c.y]); if (this.state) this.state.time = d.time; }
+    if (op === OP.PEEK) this.peek = d;
+    if (op === OP.POS) { d.p.forEach(q => this.pos[q.id] = [q.x, q.y]); if (d.c) this.carts = d.c.map(c => [c.x, c.y]); if (this.state) { this.state.time = d.time; if (d.tt) d.tt.forEach((v, i) => this.state.teams[i].time = v); } }
   }
   req(body) { const cid = String(++this.cid); return new Promise((ok, bad) => { this.wait[cid] = { ok, bad }; this.ws.send(JSON.stringify({ cid, ...body })); }); }
   send(op, obj) { this.ws.send(JSON.stringify({ match_data_send: { match_id: this.matchId, op_code: String(op), data: b64(obj) } })); }
@@ -125,11 +126,31 @@ class Bot {
   await bots[0].until(() => bots.every(b => b.state.phase === 'build' && b.state.round === 2), 15000);
   const quitter = t1[1], stay = t1[0], off = stay.state.room.offer.filter(id => FAM[id] !== 'method');
   const qpart = off[0];
+  // Abilities, once per player per round
+  const by = c => bots.find(b => b.state.players[b.me].char === c);
+  const sweep = by('sweep'), bubble = by('bubble'), spray = by('spray'), press = by('press');
+  if (sweep) { sweep.send(OP.ABILITY, {}); check('sweep: a swap needs a layer', await sweep.until(() => sweep.errors.includes('เลือกชั้นที่จะสลับ')));
+    check('sweep: a refused swap does not use the ability', !sweep.state.players[sweep.me].ab); sweep.errors.length = 0; }
+  if (bubble) { bubble.send(OP.ABILITY, {}); check('bubble: the team gets the shield', await bubble.until(() => bubble.state.teams[bubble.team].shield)); }
+  if (spray) { spray.send(OP.ABILITY, {}); check('spray: a private score preview', await spray.until(() => spray.peek && typeof spray.peek.total === 'number'));
+    check('spray: only the user sees it', bots.every(b => b === spray || !b.peek)); }
+  if (press) {
+    press.send(OP.ABILITY, {}); await press.until(() => press.state.teams[press.team].freeze > 0);
+    await sleep(1500);
+    const mine = press.state.teams[press.team], other = press.state.teams[1 - press.team];
+    check('press: the team clock stops', mine.time > other.time + 1, `${mine.time.toFixed(1)} vs ${other.time.toFixed(1)}`);
+    press.send(OP.ABILITY, {}); check('an ability works once per round', await press.until(() => press.errors.includes('ใช้ความสามารถพิเศษไปแล้วในรอบนี้')));
+    press.errors.length = 0;
+  }
   await quitter.leaveSpawn();
   await quitter.walkTo(...STATION[FAM[qpart]]); quitter.send(OP.PICK, { id: qpart });
   await quitter.until(() => quitter.hand.length === 1);
   quitter.ws.close();
   check('a dropped player leaves their part on the table', await stay.until(() => stay.state.teams[1].table.includes(qpart), 4000));
+  // reconnect: the same user opens a new socket and joins the same match id -> back in the same team, mid-round
+  const back = new Bot(quitter.i, quitter.token); await back.open(); await back.join(quitter.matchId);
+  check('reconnect: back in the same seat mid-round', await back.until(() => back.state && back.state.phase === 'build' && back.state.players[back.me].online && back.team === 1, 4000));
+  bots[bots.indexOf(quitter)] = back;
   // the rest finish the match quickly: everyone left submits
   bots.filter(b => b !== quitter).forEach(b => b.send(OP.SUBMIT, {}));
   for (let round = 2; round <= 3; round++) {
@@ -139,14 +160,14 @@ class Bot {
     await bots[0].until(() => bots[0].state.phase === 'build' && bots[0].state.round === round + 1, 15000);
     bots.filter(b => b !== quitter).forEach(b => b.send(OP.SUBMIT, {}));
   }
-  const live = bots.filter(b => b !== quitter);
+  const live = bots.filter(b => b !== back);
   await sleep(300);
   const last = live[0].results[live[0].results.length - 1];
   check('match ends', last && last.over);
   check('every client saw the same results', live.every(b => JSON.stringify(b.results) === JSON.stringify(live[0].results)));
   const errs = bots.flatMap(b => b.errors);
   check('no refused moves on the happy path', errs.length === 0, errs.join(' | '));
-  live.forEach(b => b.ws.close());
+  bots.forEach(b => { try { b.ws.close(); } catch (e) {} });
   const failed = checks.filter(c => !c.ok);
   if (failed.length) { console.log('FAIL', failed.map(c => c.name).join('; ')); process.exit(1); }
   console.log(`PASS: ${checks.length} checks`);

@@ -83,6 +83,14 @@ namespace Bob.Coop
                 await WithTimeout(server.SignInAsync(SystemInfo.deviceUniqueIdentifier + "-bob-coop"), 5000);
                 await WithTimeout(server.ConnectAsync(), 5000);
                 Go(View.Menu, "ออนไลน์ (" + host + ")");
+                // the app was closed during a match: go straight back into the same seat (GDD 10)
+                if (BobOnline.SavedMatchId != null)
+                {
+                    Go(View.Searching, "กำลังกลับเข้าแมตช์เดิม…");
+                    var back = await BobOnline.RejoinAsync(server);
+                    if (back != null) { Attach(back); Toast("กลับเข้าแมตช์แล้ว"); }
+                    else Go(View.Menu, "แมตช์เดิมจบไปแล้ว");
+                }
             }
             catch (Exception e)
             {
@@ -129,6 +137,7 @@ namespace Bob.Coop
             net.OnPositions += OnPositions;
             net.OnResult += OnResult;
             net.OnRefused += t => { Toast(t); Sfx("drop_invalid"); Buzz(); };
+            net.OnPeek += OnPeek;
             lastResult = null; shownRound = -1; havePos = false;
             Go(View.Lobby, "");
             Sfx("lobby_join");
@@ -139,7 +148,7 @@ namespace Bob.Coop
         async void LeaveMatch()
         {
             var o = net; net = null;
-            if (o != null) { o.OnState -= OnState; o.OnPositions -= OnPositions; o.OnResult -= OnResult; try { await o.LeaveAsync(); } catch (Exception) { } }
+            if (o != null) { o.OnState -= OnState; o.OnPositions -= OnPositions; o.OnResult -= OnResult; o.OnPeek -= OnPeek; try { await o.LeaveAsync(); } catch (Exception) { } }
             SetSplit(false);
             Go(View.Menu, ""); Sfx("ui_cancel");
         }
