@@ -17,12 +17,14 @@ namespace Bob.Net
     public sealed class MpNeed { public int clean = -1, gentle = -1, speed = -1, shine = -1; }
     public sealed class MpSpec { public MpNeed need; public string[] notes; }
     public sealed class MpRoom { public int round; public string[] enemies; public string[] offer; public MpSpec spec; }
-    public sealed class MpPlayer { public string id, name, @char; public int team; public bool ready, online; public float x, y; public string[] hand; }
-    public sealed class MpTeam { public string[] stack; public int budget, wins; public bool submitted; }
+    public sealed class MpPlayer { public string id, name, @char; public int team; public bool ready, online, abUsed; public float x, y; public string[] hand; }
+    /// <summary>time: this team's own clock (Press freezes it for `freeze` s). shield: Bubble's shield is on.</summary>
+    public sealed class MpTeam { public string[] stack; public int budget, wins; public bool submitted, shield; public float time, freeze; }
     /// <summary>phase: lobby, build, test (between rounds), result (match over).</summary>
     public sealed class MpState { public string phase; public int seed, round; public float time; public MpRoom room; public MpPlayer[] players; public MpTeam[] teams; }
     public sealed class MpPos { public string id; public float x, y; }
-    public sealed class MpPositions { public float time; public MpPos[] p; }
+    public sealed class MpPositions { public float time; public float[] tt; public MpPos[] p; }
+    public sealed class MpPreview { public int total; public bool pass; }
     public sealed class MpStats { public int clean, gentle, speed, shine; }
     public sealed class MpScore { public bool pass; public double test, budget, time; public int total; }
     public sealed class MpEffect { public int[] d; public string t, src; public bool good, off; }
@@ -33,8 +35,8 @@ namespace Bob.Net
 
     public sealed class BobOnline
     {
-        public const long OpMove = 1, OpPick = 2, OpPlace = 3, OpLift = 4, OpReady = 5, OpSubmit = 6;
-        public const long OpState = 10, OpPos = 11, OpResult = 12, OpError = 13;
+        public const long OpMove = 1, OpPick = 2, OpPlace = 3, OpLift = 4, OpReady = 5, OpSubmit = 6, OpAbility = 7;
+        public const long OpState = 10, OpPos = 11, OpResult = 12, OpError = 13, OpPreview = 14;
         public const string MatchName = "bob_coop";
 
         readonly ISocket socket;
@@ -50,6 +52,8 @@ namespace Bob.Net
         public event Action<MpResult> OnResult;
         /// <summary>The server refused an intent; the text is Thai and ready to show as a toast.</summary>
         public event Action<string> OnRefused;
+        /// <summary>Spray's ability: what the team cart would score now (sent only to that player).</summary>
+        public event Action<MpPreview> OnPreview;
 
         BobOnline(ISocket socket, string me)
         {
@@ -124,6 +128,8 @@ namespace Bob.Net
         public void Lift() => Send(OpLift, "{}");
         /// <summary>Locks your team's cart for this round. The round is scored when both teams submit or time runs out.</summary>
         public void Submit() => Send(OpSubmit, "{}");
+        /// <summary>Your hero's ability, once per round. layer = Sweep's lower layer to swap with the one above; ignored by the others.</summary>
+        public void Ability(int layer = 0) => Send(OpAbility, "{\"i\":" + layer + "}");
 
         static string F(float v) => v.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
 
@@ -154,6 +160,7 @@ namespace Bob.Net
                         OnPositions?.Invoke(p); break;
                     case OpResult: LastResult = json.FromJson<MpResult>(); OnResult?.Invoke(LastResult); break;
                     case OpError: OnRefused?.Invoke(json.FromJson<MpError>().t); break;
+                    case OpPreview: OnPreview?.Invoke(json.FromJson<MpPreview>()); break;
                 }
             }
             catch (Exception e)

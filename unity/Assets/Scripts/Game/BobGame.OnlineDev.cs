@@ -38,7 +38,7 @@ namespace Bob.Game
             yield return WaitFor(() => mp.State != null && mp.State.players.Length >= 2, 10f);
             yield return new WaitForSeconds(0.5f); Shot("online-1-lobby");
             ToggleReady();
-            int scored = 0, sawMate = 0;
+            int scored = 0, sawMate = 0, usedAbility = 0;
             for (int round = 1; round <= 3; round++)
             {
                 yield return WaitFor(() => phase == Phase.Build && roundNo == round, 30f);
@@ -58,6 +58,10 @@ namespace Bob.Game
                 if (hand.Count > 0) Place(0);
                 yield return WaitFor(() => stack.Count > before, 3f);
                 yield return new WaitForSeconds(2.5f); // let the team-mate add theirs
+                if (charId != "sweep") UseAbility();
+                else if (stack.Count >= 2) { UseAbility(); SwapAt(0); }
+                yield return WaitFor(() => abUsed, 3f);
+                if (abUsed) usedAbility++;
                 if (round == 1) { Shot("online-3-cart"); yield return new WaitForSeconds(0.2f); }
                 Debug.Log($"[BobOnlineBot] round {round}: team cart {string.Join(",", stack)}, mates drawn {mates.Count}");
                 Submit();
@@ -71,9 +75,9 @@ namespace Bob.Game
             AfterTest();
             yield return WaitFor(() => phase == Phase.Result, 5f);
             yield return new WaitForSeconds(0.5f); Shot("online-5-result"); yield return new WaitForSeconds(0.3f);
-            bool ok = phase == Phase.Result && scored == roundNo && sawMate > 0;
-            Debug.Log(ok ? $"GAME TEST PASSED: online {wins}:{losses} in {roundNo} rounds, all scored by the server, team-mate drawn"
-                         : $"GAME TEST FAILED: phase {phase}, server scored {scored}/{roundNo}, mate seen in {sawMate} rounds");
+            bool ok = phase == Phase.Result && scored == roundNo && sawMate > 0 && usedAbility > 0;
+            Debug.Log(ok ? $"GAME TEST PASSED: online {wins}:{losses} in {roundNo} rounds, all scored by the server, team-mate drawn, ability used in {usedAbility} rounds"
+                         : $"GAME TEST FAILED: phase {phase}, server scored {scored}/{roundNo}, mate seen in {sawMate} rounds, ability used in {usedAbility}");
             LeaveOnline();
         }
     }

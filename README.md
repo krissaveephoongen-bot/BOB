@@ -83,7 +83,7 @@ created by the Nakama module on start. Code: `server/analytics.js`.
 
 ## Not done yet
 
-- Online: abilities are off (the server does not run them yet), no private-room screen (only quick match; `bob_create_match` exists), no reconnect after the app is closed.
+- Online: no private-room screen (only quick match; `bob_create_match` exists), no reconnect after the app is closed.
 - Unity scene, character controller, drag-and-drop, UI. Only rules and networking wrapper exist.
 - Scrub and Wash abilities, cart pushing, obstacles other than the sofa, the other 7 scenes.
 - Balance: every number is an untested starting value.
@@ -97,7 +97,8 @@ The server owns a multiplayer match: phones send intents, the server checks them
 - 2-4 players, auto-split into two teams. One seed per match, so both teams get the same room each round.
 - Each team shares one cart; each player holds at most 2 parts (`BobRules.HandTeam`).
 - The server checks walking speed, distance to a station (pick) or the cart (place, lift), budget, 5 layers and 2 methods.
-- A round ends when both teams submit or the 100 s clock runs out; best of 3, ties go to the team with more budget left.
+- Each team has its own 100 s clock. A team's cart is submitted when it taps submit or its clock runs out; the round is scored when both are in. Best of 3, ties go to the team with more budget left.
+- Abilities run on the server, once per player per round: Sweep swaps two layers of the team cart, Bubble shields the team cart (the worst bad reaction is cancelled at scoring), Spray gets a private score preview, Press stops its team's clock for 8 s.
 - Join by matchmaker (`BobOnline.FindAsync`, 2-4 players) or a private room (`bob_create_match` RPC, `BobOnline.CreateAsync` / `JoinAsync` with the match id).
 
 | Op | Direction | Payload |
@@ -105,16 +106,19 @@ The server owns a multiplayer match: phones send intents, the server checks them
 | 1 MOVE | client → server | `{x,y}` world units, about 10 per second |
 | 2 PICK / 3 PLACE / 4 LIFT | client → server | `{id}` / `{i}` hand index / `{}` |
 | 5 READY / 6 SUBMIT | client → server | `{char,ready}` in the lobby / `{}` |
+| 7 ABILITY | client → server | `{i}` (Sweep: lower layer to swap; ignored by the others) |
 | 10 STATE | server → clients | phase, round, room, players[], teams[] (shared stacks) |
-| 11 POS | server → clients | `{time,p:[{id,x,y}]}` every tick (10 Hz) during build |
+| 11 POS | server → clients | `{time,tt:[team0,team1],p:[{id,x,y}]}` every tick (10 Hz) during build |
+| 14 PREVIEW | server → one client | `{total,pass}` (Spray's ability) |
 | 12 RESULT / 13 ERROR | server → clients | per-round scores and winner / Thai refusal text for one player |
 
 - The server also pushes players out of stations, the cart and the sofa (same rects and radius as `BobGame.World`).
 
-**In the Unity scene** (`Scripts/Game/BobGame.Online.cs`): title button **ออนไลน์ 2-4 คน** → matchmaker → lobby (both teams, heroes, Ready) → rounds. The scene copies the server state into the normal game fields, so the HUD, cart card and result screens are the same as solo. Team-mates walk in your room with what they carry; the other team plays the same room in its own copy, and its layer count and submit show in the top bar. The server runs the clock (pause does not stop it) and ends the round when both teams submit.
+**In the Unity scene** (`Scripts/Game/BobGame.Online.cs`): title button **ออนไลน์ 2-4 คน** → matchmaker → lobby (both teams, heroes, Ready) → rounds. The scene copies the server state into the normal game fields, so the HUD, cart card and result screens are the same as solo. Team-mates walk in your room with what they carry; the other team plays the same room in its own copy, and its layer count and submit show in the top bar. The server runs each team's clock (pause does not stop it) and ends the round when both teams submit.
 
 Tests:
-- Server only: `cd server && node mp-test.js 4` (bots walk, pick, place, submit; must print PASS).
+- Server only: `cd server && node mp-test.js 4` (bots walk, pick, place, use their ability, submit; must print PASS).
+- To test a branch without touching the main server: `docker compose -p bobtest -f docker-compose.yml -f docker-compose.test.yml up -d` (Nakama on 7360), then `BOB_HOST=127.0.0.1:7360 node mp-test.js 4`; the Editor follows `BOB_PORT=7360`.
 - Unity + bots: `cd server && node mp-host.js 2 ../unity/Logs/bob-mp-match.txt`, then menu **Bob > Run Online Test** (or `-executeMethod Bob.EditorTools.BobGameScene.RunOnlineTest`). The Unity bot joins with one bot team-mate against one bot, must print GAME TEST PASSED; screenshots `unity/Logs/bob-game-online-*.png`.
 
 ## Play the Unity scene

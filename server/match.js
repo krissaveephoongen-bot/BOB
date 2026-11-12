@@ -2,9 +2,14 @@
 /* ============ MULTIPLAYER: server-authoritative match 'bob_coop' (2-4 players, two teams) ============ */
 // Every player in the match gets the same room per round (one seed). Each team shares one cart.
 // Clients only send intents (move, pick, place, lift, submit); the server checks them and owns the state.
-// Opcodes, client -> server: 1 MOVE {x,y}  2 PICK {id}  3 PLACE {i}  4 LIFT {}  5 READY {char}  6 SUBMIT {}
-// Opcodes, server -> client: 10 STATE (full snapshot)  11 POS {time,p:[{id,x,y}]} every tick  12 RESULT (round result)  13 ERROR {t}
-var OP = { MOVE: 1, PICK: 2, PLACE: 3, LIFT: 4, READY: 5, SUBMIT: 6, STATE: 10, POS: 11, RESULT: 12, ERROR: 13 };
+// Opcodes, client -> server: 1 MOVE {x,y}  2 PICK {id}  3 PLACE {i}  4 LIFT {}  5 READY {char}  6 SUBMIT {}  7 ABILITY {i}
+// Opcodes, server -> client: 10 STATE (full snapshot)  11 POS {time,tt:[t0,t1],p:[{id,x,y}]} every tick  12 RESULT (round result)
+//   13 ERROR {t}  14 PREVIEW {total,pass} (Spray's ability, to that player only)
+// Each team has its own clock (Press freezes only that team's). Abilities: once per player per round, the hero's own:
+// sweep swaps layer i with i+1, bubble shields the team's cart (worst bad reaction off at scoring), spray previews the
+// score, press stops the team clock for 8 s.
+var OP = { MOVE: 1, PICK: 2, PLACE: 3, LIFT: 4, READY: 5, SUBMIT: 6, ABILITY: 7, STATE: 10, POS: 11, RESULT: 12, ERROR: 13, PREVIEW: 14 };
+var MP_FREEZE = 8;
 var MP_TICK = 10, MP_MAX = 4, MP_HAND = 2, MP_TEST_SEC = 8, MP_SPEED = 2.3 * 1.25; // world units / s, with lag slack
 var STATION_FAM = { tool: [0.3, 4.06, 2.0, 4.7], chem: [6.0, 4.06, 7.7, 4.7], energy: [0.3, 0.3, 2.0, 0.94], method: [6.0, 0.3, 7.7, 0.94] };
 var CART = [3.55, 2.21, 4.45, 2.85], NEAR = 0.6;
@@ -29,23 +34,44 @@ function mpSend(d, op, obj, to) { d.broadcastMessage(op, JSON.stringify(obj), to
 function mpSnapshot(s) {
   // Arrays of plain objects (no maps) so Unity's JsonUtility can read every message.
   var players = Object.keys(s.players).sort().map(function (k) { var p = s.players[k];
-    return { id: k, name: p.name, team: p.team, char: p.char, ready: p.ready, online: !!p.presence, x: p.x, y: p.y, hand: p.hand }; });
+    return { id: k, name: p.name, team: p.team, char: p.char, ready: p.ready, online: !!p.presence, x: p.x, y: p.y, hand: p.hand, abUsed: !!p.abUsed }; });
   return { phase: s.phase, seed: s.seed, round: s.round, time: s.time, room: s.room, players: players,
-    teams: s.teams.map(function (t) { return { stack: t.stack, budget: t.budget, wins: t.wins, submitted: t.submitted }; }) };
+    teams: s.teams.map(function (t) { return { stack: t.stack, budget: t.budget, wins: t.wins, submitted: t.submitted, time: t.time, freeze: t.freeze, shield: t.shield }; }) };
 }
 function mpBroadcast(d, s) { mpSend(d, OP.STATE, mpSnapshot(s)); }
 
 function mpStartRound(s) {
   s.round++; s.room = makeRound(s.round, s.seed); s.phase = 'build'; s.time = ROUND_TIME;
-  s.teams.forEach(function (t) { t.stack = []; t.budget = ROUND_BUDGET + Math.floor(t.carry / 2); t.submitted = false; });
-  Object.keys(s.players).forEach(function (k) { var p = s.players[k]; p.hand = []; p.x = p.team ? 4.6 : 3.4; p.y = 0.6; });
+  s.teams.forEach(function (t) { t.stack = []; t.budget = ROUND_BUDGET + Math.floor(t.carry / 2); t.submitted = false; t.submitTime = null; t.time = ROUND_TIME; t.freeze = 0; t.shield = false; });
+  Object.keys(s.players).forEach(function (k) { var p = s.players[k]; p.hand = []; p.abUsed = false; p.x = p.team ? 4.6 : 3.4; p.y = 0.6; });
+}
+
+// One hero ability; returns a refusal text or null. q.i = Sweep's lower layer index.
+function mpAbility(d, s, p, t, q, sender) {
+  switch (p.char) {
+    case 'sweep': {
+      var i = q.i | 0, a = t.stack.slice();
+      if (i < 0 || i >= a.length - 1) return 'ต้องมีอย่างน้อย 2 ชิ้นบนรถเข็น';
+      var tmp = a[i]; a[i] = a[i + 1]; a[i + 1] = tmp;
+      var bad = isMethod(a[0]); for (var k = 1; k < a.length; k++) if (isMethod(a[k]) && isMethod(a[k - 1])) bad = true;
+      if (bad) return 'สลับแล้ววิธีใช้ไม่มีชิ้นส่วนรองรับ';
+      t.stack = a; return null;
+    }
+    case 'bubble': t.shield = true; return null;
+    case 'spray': {
+      var ev = evalStack(t.stack, s.room.enemies, !!t.shield);
+      var sc = totalScore(ev.stats, s.room.spec, t.budget - ev.cost, t.budget, Math.max(0, t.time) / ROUND_TIME);
+      mpSend(d, OP.PREVIEW, { total: sc.total, pass: sc.pass }, [sender]); return null;
+    }
+    case 'press': t.freeze = MP_FREEZE; return null;
+  }
+  return 'ตัวละครนี้ไม่มีความสามารถ';
 }
 
 function mpScoreRound(d, s, logger, nk) {
-  var timeFrac = Math.max(0, Math.min(1, s.time / ROUND_TIME));
   var res = s.teams.map(function (t, i) {
-    var ev = evalStack(t.stack, s.room.enemies, false);
-    var sc = totalScore(ev.stats, s.room.spec, t.budget - ev.cost, t.budget, t.submitTime != null ? t.submitTime : timeFrac);
+    var ev = evalStack(t.stack, s.room.enemies, !!t.shield);
+    var sc = totalScore(ev.stats, s.room.spec, t.budget - ev.cost, t.budget, t.submitTime != null ? t.submitTime : Math.max(0, Math.min(1, t.time / ROUND_TIME)));
     return { team: i, stack: t.stack, stats: ev.stats, effects: ev.fx, cost: ev.cost, score: sc, left: t.budget - ev.cost };
   });
   var a = res[0], b = res[1];
@@ -130,7 +156,13 @@ function matchLoop(ctx, logger, nk, d, tick, s, messages) {
         var top = t.stack.pop(); if (p.hand.length < MP_HAND) p.hand.push(top); dirty = true;
         break;
       case OP.SUBMIT:
-        if (s.phase === 'build' && !t.submitted) { t.submitted = true; t.submitTime = s.time / ROUND_TIME; dirty = true; }
+        if (s.phase === 'build' && !t.submitted) { t.submitted = true; t.submitTime = Math.max(0, t.time) / ROUND_TIME; dirty = true; }
+        break;
+      case OP.ABILITY:
+        if (s.phase !== 'build' || t.submitted) break;
+        if (p.abUsed) { err = 'ใช้ความสามารถไปแล้วในรอบนี้'; break; }
+        err = mpAbility(d, s, p, t, q, m.sender);
+        if (!err) { p.abUsed = true; dirty = true; logEvent(nk, logger, m.sender.userId, s.label, 'ability_used', { round: s.round, char: p.char, mode: 'mp' }); }
         break;
     }
     if (err) mpSend(d, OP.ERROR, { t: err }, [m.sender]);
@@ -146,9 +178,14 @@ function matchLoop(ctx, logger, nk, d, tick, s, messages) {
       logEvent(nk, logger, null, s.label, 'match_start', { seed: s.seed, players: ids.length, mode: 'mp' });
     }
   } else if (s.phase === 'build') {
-    s.time -= dt;
-    if (s.time <= 0 || (s.teams[0].submitted && s.teams[1].submitted)) { s.time = Math.max(0, s.time); mpScoreRound(d, s, logger, nk); dirty = true; }
-    mpSend(d, OP.POS, { time: s.time, p: ids.map(function (k) { return { id: k, x: +s.players[k].x.toFixed(2), y: +s.players[k].y.toFixed(2) }; }) });
+    s.teams.forEach(function (t) {
+      if (t.submitted) return;
+      if (t.freeze > 0) t.freeze = Math.max(0, t.freeze - dt); else t.time -= dt;
+      if (t.time <= 0) { t.time = 0; t.submitted = true; t.submitTime = 0; dirty = true; } // time up: the cart goes as it is
+    });
+    s.time = Math.max(s.teams[0].time, s.teams[1].time);
+    if (s.teams[0].submitted && s.teams[1].submitted) { mpScoreRound(d, s, logger, nk); dirty = true; }
+    mpSend(d, OP.POS, { time: s.time, tt: [+s.teams[0].time.toFixed(2), +s.teams[1].time.toFixed(2)], p: ids.map(function (k) { return { id: k, x: +s.players[k].x.toFixed(2), y: +s.players[k].y.toFixed(2) }; }) });
   } else if (s.phase === 'test') {
     s.testLeft -= dt; if (s.testLeft <= 0) { mpStartRound(s); dirty = true; }
   } else if (s.phase === 'result') {

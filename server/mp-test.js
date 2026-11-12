@@ -3,7 +3,7 @@
 // team's cart, places it and submits. Passes when all 3 rounds are scored and every bot sees the same results.
 const HOST = process.env.BOB_HOST || '127.0.0.1:7350', KEY = 'defaultkey';
 const N = Math.max(2, Math.min(4, +process.argv[2] || 2));
-const OP = { MOVE: 1, PICK: 2, PLACE: 3, LIFT: 4, READY: 5, SUBMIT: 6, STATE: 10, POS: 11, RESULT: 12, ERROR: 13 };
+const OP = { MOVE: 1, PICK: 2, PLACE: 3, LIFT: 4, READY: 5, SUBMIT: 6, ABILITY: 7, STATE: 10, POS: 11, RESULT: 12, ERROR: 13, PREVIEW: 14 };
 const STATION = { tool: [1.2, 3.75], chem: [6.8, 3.75], energy: [1.2, 1.25], method: [6.8, 1.25] };
 const FAM = { cloth: 'tool', sponge: 'tool', brush: 'tool', broom: 'tool', soap: 'chem', vinegar: 'chem', soda: 'chem', polish: 'chem',
   hot: 'energy', steam: 'energy', scrub: 'energy', air: 'energy', soak: 'method', spray: 'method', circle: 'method' };
@@ -37,6 +37,7 @@ class Bot {
     if (op === OP.STATE) { const pm = {}; d.players.forEach(p => pm[p.id] = p); d.players = pm; this.state = d; }
     if (op === OP.RESULT) this.results.push(d);
     if (op === OP.ERROR) this.errors.push(d.t);
+    if (op === OP.PREVIEW) this.previews = (this.previews || 0) + 1;
     if (op === OP.POS && this.state) { this.state.time = d.time; const me = d.p.find(q => q.id === this.me); if (me) this.server = [me.x, me.y]; }
   }
   req(body) { const cid = String(++this.cid); return new Promise((ok, bad) => { this.wait[cid] = { ok, bad }; this.ws.send(JSON.stringify({ cid, ...body })); }); }
@@ -68,6 +69,9 @@ class Bot {
     this.pos = [s.players[this.me].x, s.players[this.me].y];
     await this.route(...STATION[FAM[id]]); this.send(OP.PICK, { id }); await sleep(200);
     await this.route(...CART); this.send(OP.PLACE, { i: 0 }); await sleep(300);
+    // every hero uses its ability once (Sweep only when the cart has two layers to swap)
+    const me = this.state.players[this.me], cart = this.state.teams[team].stack;
+    if (this.abilities !== false && (me.char !== 'sweep' || cart.length >= 2)) { this.send(OP.ABILITY, { i: 0 }); this.used = (this.used || 0) + 1; await sleep(200); }
     if (submit && mates.indexOf(this.me) === mates.length - 1) { await sleep(400); this.send(OP.SUBMIT, {}); }
   }
 }
@@ -99,6 +103,9 @@ if (require.main === module) (async () => {
   }
   const same = bots.every(b => JSON.stringify(b.results) === JSON.stringify(bots[0].results));
   const errs = bots.flatMap(b => b.errors);
+  const spray = bots.find(b => b.state.players[b.me].char === 'spray');
+  console.log('abilities used', bots.map(b => (b.state.players[b.me].char) + ':' + (b.used || 0)).join(' '), '| spray previews', spray ? spray.previews || 0 : '-');
+  if (spray && (spray.previews || 0) !== (spray.used || 0)) errs.push('spray preview missing');
   const last = bots[0].results[bots[0].results.length - 1];
   bots.forEach(b => b.ws.close());
   console.log('errors', errs.length ? errs.join(' | ') : 'none');
