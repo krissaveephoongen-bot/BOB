@@ -37,6 +37,7 @@ namespace Bob.Game
         Button abilityBtn, submitBtn;
         Text abilityLabel;
         float toastUntil;
+        RectTransform cartCardRt;
         string popFor;
         int lastTick = -1;
         enum Overlay { None, Pause, Settings }
@@ -146,7 +147,7 @@ namespace Bob.Game
 
         void BuildCartCard()
         {
-            var card = Card(hudRoot, "CartCard");
+            var card = Card(hudRoot, "CartCard"); cartCardRt = card;
             card.anchorMin = new Vector2(1 - SideCol, 1); card.anchorMax = Vector2.one; card.pivot = new Vector2(1, 1);
             card.offsetMin = new Vector2(6, 0); card.offsetMax = new Vector2(-16, 0); card.anchoredPosition = new Vector2(-16, -128);
             VStack(card, 16, 12, 6);
@@ -227,7 +228,7 @@ namespace Bob.Game
         {
             if (phase != Phase.Build) return "";
             if (near != null) return "แตะชิ้นส่วนเพื่อหยิบ (ถือได้ " + Hand + " ชิ้น)";
-            if (nearCart && hand.Count > 0) return "แตะของในมือเพื่อวางบนรถเข็น ลำดับการซ้อนมีผล";
+            if (nearCart && hand.Count > 0) return "แตะหรือลากของในมือไปที่รถเข็น ลำดับการซ้อนมีผล";
             if (hand.Count > 0) return "เดินไปที่รถเข็นกลางห้องเพื่อวางของ";
             if (stack.Count == 0) return "ลากจอยซ้ายมือ หรือแตะพื้นเพื่อเดินไปที่ชั้นวาง";
             return "ดูใบงานซ้ายบน เส้นชมพูคือเป้า พร้อมแล้วกดส่งทดสอบ";
@@ -317,6 +318,12 @@ namespace Bob.Game
                 var nm = BobUi.Label(row, p.Name + badge, 22); nm.supportRichText = true; BobUi.Size(nm, 40, 40, 1);
                 if (swapMode && i < stack.Count - 1) SmallButton(row, "สลับ↑", BobUi.Sun, () => SwapAt(idx));
                 else if (top && nearCart && phase == Phase.Build) SmallButton(row, "ยกออก", BobUi.Surface, LiftTop);
+                if (top && !swapMode)
+                {
+                    // drag the top layer back to the hand to lift it (needs a raycast target on the row)
+                    var drag = row.gameObject.AddComponent<BobDrag>(); drag.icon = art.Get("part_" + id); drag.layer = hudRoot;
+                    drag.onDrop = sp => { if (!RectTransformUtility.RectangleContainsScreenPoint(handRow, sp, null)) return false; LiftTop(); return true; };
+                }
             }
             for (int k = e.Layers; k < BobRules.MaxLayers; k++)
             {
@@ -328,6 +335,14 @@ namespace Bob.Game
                 BobUi.Label(cartBody, (f.Off ? "× " : f.Good ? "▲ " : "▼ ") + f.Text, 18, f.Off ? BobUi.Muted : f.Good ? BobUi.Good : BobUi.Bad);
             if (!nearCart && phase == Phase.Build && (hand.Count > 0 || stack.Count > 0))
                 BobUi.Label(cartBody, "เดินไปใกล้รถเข็นเพื่อวางหรือยกออก", 18, BobUi.Muted, TextAnchor.MiddleCenter);
+        }
+
+        /// <summary>A drop counts as "on the cart" over the cart card or within reach of the cart in the room.</summary>
+        bool DroppedOnCart(Vector2 sp)
+        {
+            if (cartCardRt != null && RectTransformUtility.RectangleContainsScreenPoint(cartCardRt, sp, null)) return true;
+            var c = cam.WorldToScreenPoint(new Vector3(CartRect.center.x, CartRect.center.y + 0.3f, 0));
+            return Vector2.Distance(sp, c) < Screen.height * 0.14f;
         }
 
         void SmallButton(Transform parent, string text, Color c, UnityEngine.Events.UnityAction a)
@@ -351,6 +366,8 @@ namespace Bob.Game
                     var nm = BobUi.Label(b.transform, p.Name, 20, BobUi.Ink, TextAnchor.MiddleCenter); BobUi.Pin(nm.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 10), new Vector2(140, 34));
                     var fam = BobUi.Disc(b.transform, BobUi.Family(p.Family), 26); BobUi.Pin(fam.rectTransform, Vector2.one, Vector2.one, new Vector2(-10, -10), new Vector2(26, 26));
                     if (canPlace) StartCoroutine(Pulse(b.transform));
+                    var drag = b.gameObject.AddComponent<BobDrag>(); drag.icon = art.Get("part_" + id); drag.layer = hudRoot;
+                    drag.onDrop = sp => { if (!DroppedOnCart(sp)) return false; Place(idx); return true; };
                 }
                 else
                 {
