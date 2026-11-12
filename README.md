@@ -219,3 +219,10 @@ Everything above was done in the cloud; these steps need Unity, Docker Desktop o
 Background-removed cutouts live in `bob-art/cutouts*` (project files, see `docs/12_RAW_Cutouts.md`). Imported so far: 8 parts, 10 items and the cart (`unity/Assets/Art/Sprites`). Needs the Unity Editor licence (Hub sign-in) to reimport and run `Bob > Run Game Test`.
 
 Title and lobby screens now sit on the GDD-themed Leonardo room pictures (`Sprites/Environments/Lobby/lobby_{rental_room,condo,coffee_shop,kitchen}`; title = rental room, online lobby = condo). Match music is a CC0 loop; 20 sounds are CC0 (see `art/docs/12_Sound_Manifest.md`).
+
+## Android APK (prototype v1)
+
+Build: `Unity.exe -batchmode -quit -projectPath unity -executeMethod Bob.EditorTools.BobAndroidBuild.BuildApk` (or menu **Bob > Android > Build APK**). Output `Builds/BOB-prototype-v1.apk` (git-ignored; debug-signed, ARM64, IL2CPP, landscape, package `com.bob.battleofthebrooms`, min API 24).
+
+Install: copy the APK to the phone and open it (allow "install unknown apps"), or `adb install -r BOB-prototype-v1.apk`.
+Server: the game plays offline without a server. For online, start Docker + `start-server.ps1` on the PC, put the phone on the same Wi-Fi, allow port 7350 in Windows Firewall, then in the game open Settings and enter the PC's LAN IP (`ipconfig`, e.g. 192.168.x.x).
