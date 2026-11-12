@@ -172,15 +172,15 @@ namespace Bob.Game
         }
 
         /// <summary>A white card with an ink title row, laid out vertically. Returns the content parent.</summary>
-        public static VerticalLayoutGroup Box(Transform parent, string title, string small = null)
+        public static VerticalLayoutGroup Box(Transform parent, string title, string small = null, int titleSize = 24, int smallSize = 18)
         {
             var img = Panel(parent, Surface, "ui_panel", "Box");
             var v = img.gameObject.AddComponent<VerticalLayoutGroup>();
             v.padding = new RectOffset(16, 16, 12, 14); v.spacing = 6;
             v.childControlWidth = true; v.childControlHeight = true; v.childForceExpandWidth = true; v.childForceExpandHeight = false;
             var head = HBox(img.transform, 8, "Head"); head.childForceExpandHeight = false;
-            var t = Label(head.transform, title, 24, Ink, TextAnchor.MiddleLeft, FontStyle.Bold); Size(t, 30, 30, 1);
-            if (!string.IsNullOrEmpty(small)) { var s = Label(head.transform, small, 18, Muted, TextAnchor.MiddleRight); Size(s, 30, 30, 1); }
+            var t = Label(head.transform, title, titleSize, Ink, TextAnchor.MiddleLeft, FontStyle.Bold); Size(t, titleSize + 18, titleSize + 18, 1);
+            if (!string.IsNullOrEmpty(small)) { var s = Label(head.transform, small, smallSize, Muted, TextAnchor.MiddleRight); Size(s, smallSize + 18, smallSize + 18, 1); }
             return v;
         }
 

@@ -78,13 +78,13 @@ namespace Bob.Coop
                 var sr = Sprite("Station_" + id, v.root, "station_" + id, W(team, b.Cx, b.Y0), b.W);
                 if (!art.Has("station_" + id)) { sr.transform.localScale = new Vector3(b.W, b.H, 1); sr.transform.position = W(team, b.Cx, b.Cy); sr.color = BobUi.Family((Family)i); }
                 sr.sortingOrder = Order(b.Y0);
-                Label(BobCoopLayout.StationNames[i], W(team, b.Cx, b.Y0 - 0.16f), 0.032f, BobUi.Ink, v.root);
+                Label(BobCoopLayout.StationNames[i], W(team, b.Cx, b.Y0 < 2f ? b.Y0 - 0.12f : b.Y0 - 0.2f), 0.045f, BobUi.Ink, v.root); // bottom shelves: label closer, the floor ends just below them
             }
 
             var tb = BobCoopLayout.Table;
             var table = Sprite("Table", v.root, null, W(team, tb.Cx, tb.Cy), 1);
             table.transform.localScale = new Vector3(tb.W, tb.H, 1); table.color = BobUi.Hex("#C9925B"); table.sortingOrder = Order(tb.Y0);
-            Label("โต๊ะพักของ", W(team, tb.Cx, tb.Y1 + 0.16f), 0.03f, BobUi.Ink, v.root);
+            Label("โต๊ะพักของ", W(team, tb.Cx, tb.Y1 + 0.2f), 0.045f, BobUi.Ink, v.root);
             v.table = new GameObject("TableItems").transform; v.table.SetParent(v.root);
 
             var so = BobCoopLayout.Sofa;
@@ -96,7 +96,7 @@ namespace Bob.Coop
             if (!art.Has("cart")) { v.cartSr.transform.localScale = new Vector3(BobCoopLayout.CartW, BobCoopLayout.CartH, 1); v.cartSr.color = BobUi.Surface; }
             v.cart = v.cartSr.transform;
             v.cartLayers = new GameObject("CartLayers").transform; v.cartLayers.SetParent(v.root);
-            v.cartTag = Label("", Vector3.zero, 0.028f, BobUi.Ink, v.root);
+            v.cartTag = Label("", Vector3.zero, 0.045f, BobUi.Ink, v.root);
             v.enemies = new GameObject("Enemies").transform; v.enemies.SetParent(v.root);
             Label(team == 0 ? "ห้องของทีม 1" : "ห้องของทีม 2", W(team, BobCoopLayout.RoomW / 2, BobCoopLayout.RoomH + 0.25f), 0.04f, BobUi.Ink, v.root);
             return v;
@@ -213,7 +213,7 @@ namespace Bob.Coop
             a.sr.transform.localScale = Vector3.one * (0.95f / Mathf.Max(0.01f, a.sr.sprite.bounds.size.y));
             if (!art.Has(p.@char + "_idle")) { a.sr.transform.localScale = new Vector3(0.3f, 0.45f, 1); a.sr.color = BobUi.Hex(BobMatch.Char(p.@char).Color); }
             a.anim = a.sr.gameObject.AddComponent<BobSpriteAnimator>();
-            a.label = Label("", W(p.team, p.x, p.y + 1.05f), 0.026f, BobUi.Ink, null);
+            a.label = Label("", W(p.team, p.x, p.y + 1.25f), 0.045f, BobUi.Ink, null);
             a.handRoot = new GameObject("Hand").transform;
             return a;
         }
@@ -259,7 +259,7 @@ namespace Bob.Coop
                     a.shown = p.id == net.Me ? target : Vector2.Lerp(a.shown, target, 1 - Mathf.Exp(-12f * dt)); // others: smooth 10 Hz updates
                     var w = W(p.team, a.shown.x, a.shown.y);
                     a.t.position = w; a.sr.sortingOrder = Order(a.shown.y);
-                    a.label.transform.position = w + new Vector3(0, 1.05f, 0);
+                    a.label.transform.position = w + new Vector3(0, 1.25f, 0);
                     a.handRoot.position = w + new Vector3(0, 1.3f, 0);
                 }
             // test phase: wipe the dirt away, as far as the score says

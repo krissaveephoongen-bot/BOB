@@ -17,7 +17,9 @@ namespace Bob.Coop
     public partial class BobCoopGame
     {
         RectTransform hudRoot, safe, page, ctxPanel, handRow, toastRt, pageBg;
-        Text timerText, toastText;
+        Text timerText, toastText, pauseTime;
+        enum Ov { None, Pause, Confirm }
+        Ov ov = Ov.None;
         float toastUntil;
         string ctxKey;
         BobUiTheme T => BobUiTheme.Current;
@@ -63,7 +65,8 @@ namespace Bob.Coop
                 pageBg.SetAsFirstSibling();
             }
             page = BobUi.Stretch(BobUi.Rect("Page", safe));
-            timerText = null; ctxPanel = null; handRow = null; ctxKey = null;
+            timerText = null; pauseTime = null; ctxPanel = null; handRow = null; ctxKey = null;
+            if (screen != View.Build) ov = Ov.None;
             switch (screen)
             {
                 case View.Connecting: case View.Searching: Center(status, "กลับ", screen == View.Searching ? (Action)LeaveMatch : null); break;
@@ -96,27 +99,27 @@ namespace Bob.Coop
         void BuildMenu()
         {
             var col = BobUi.VBox(page, T.spaceS, 0, "Menu");
-            BobUi.Pin((RectTransform)col.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1200, 960));
-            BobUi.Size(BobUi.Label(col.transform, "เล่นออนไลน์กับเพื่อน", T.h1, T.ink, TextAnchor.MiddleCenter, FontStyle.Bold), 110, 110);
-            BobUi.Size(BobUi.Label(col.transform, status, T.caption, T.inkMuted, TextAnchor.MiddleCenter), 60, 60);
+            BobUi.Pin((RectTransform)col.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1200, 990));
+            BobUi.Size(BobUi.Label(col.transform, "เล่นออนไลน์กับเพื่อน", T.h1, T.ink, TextAnchor.MiddleCenter, FontStyle.Bold), 90, 90);
+            BobUi.Size(BobUi.Label(col.transform, status, T.caption, T.inkMuted, TextAnchor.MiddleCenter), 50, 50);
             if (screen == View.Menu)
             {
-                Btn(col.transform, "จับคู่อัตโนมัติ (2-4 คน)", BobUi.Sun, QuickMatch, 170, -1, T.buttonLg);
-                Btn(col.transform, "สร้างห้องส่วนตัว", BobUi.Surface, CreateRoom);
-                var row = BobUi.HBox(col.transform, T.spaceS, "Join"); BobUi.Size(row, 160, 160);
+                Btn(col.transform, "จับคู่อัตโนมัติ (2-4 คน)", BobUi.Sun, QuickMatch, 150, -1, T.buttonLg);
+                Btn(col.transform, "สร้างห้องส่วนตัว", BobUi.Surface, CreateRoom, 144);
+                var row = BobUi.HBox(col.transform, T.spaceS, "Join"); BobUi.Size(row, 144, 144);
                 var code = Field(row.transform, "รหัสห้อง", "");
-                Btn(row.transform, "เข้าห้อง", BobUi.Surface, () => JoinRoom(code.text), 160, 300);
+                Btn(row.transform, "เข้าห้อง", BobUi.Surface, () => JoinRoom(code.text), 144, 300);
             }
-            var hostRow = BobUi.HBox(col.transform, T.spaceS, "Host"); BobUi.Size(hostRow, 150, 150);
+            var hostRow = BobUi.HBox(col.transform, T.spaceS, "Host"); BobUi.Size(hostRow, 144, 144);
             var hostField = Field(hostRow.transform, "IP เซิร์ฟเวอร์", host);
-            Btn(hostRow.transform, screen == View.Offline ? "ลองใหม่" : "เชื่อมต่อ", BobUi.Surface, () => SetHost(hostField.text), 150, 300);
+            Btn(hostRow.transform, screen == View.Offline ? "ลองใหม่" : "เชื่อมต่อ", BobUi.Surface, () => SetHost(hostField.text), 144, 300);
             Btn(col.transform, "เล่นคนเดียว", BobUi.Surface, () => { if (Application.CanStreamedLevelBeLoaded("Game")) SceneManager.LoadScene("Game"); else Toast("ไม่มีฉาก Game ใน Build Settings"); }, 144);
         }
 
         InputField Field(Transform parent, string placeholder, string value)
         {
             var bg = BobUi.Panel(parent, BobUi.Surface, "ui_panel", "Field");
-            BobUi.Size(bg, 150, 150, 1);
+            BobUi.Size(bg, 144, 144, 1);
             var text = BobUi.Label(bg.transform, value, T.body, T.ink); BobUi.Stretch(text.rectTransform, 24, 8, 24, 8);
             text.supportRichText = false;
             var ph = BobUi.Label(bg.transform, placeholder, T.body, T.inkMuted); BobUi.Stretch(ph.rectTransform, 24, 8, 24, 8);
@@ -137,10 +140,10 @@ namespace Bob.Coop
             Btn(top.transform, "คัดลอกรหัส", BobUi.Surface, () => { GUIUtility.systemCopyBuffer = code; Toast("คัดลอกรหัสห้องแล้ว ส่งให้เพื่อนได้เลย"); }, 150, 320);
 
             var teams = BobUi.HBox(page, T.spaceL, "Teams");
-            var tr = (RectTransform)teams.transform; tr.anchorMin = new Vector2(0, 0.25f); tr.anchorMax = new Vector2(1, 0.83f); tr.offsetMin = tr.offsetMax = Vector2.zero;
+            var tr = (RectTransform)teams.transform; tr.anchorMin = new Vector2(0, 0.38f); tr.anchorMax = new Vector2(1, 0.83f); tr.offsetMin = tr.offsetMax = Vector2.zero;
             for (int t = 0; t < 2; t++)
             {
-                var box = BobUi.Box(teams.transform, t == 0 ? "ทีม 1" : "ทีม 2", t == (net?.MyTeam ?? -1) ? "ทีมของคุณ" : null);
+                var box = BobUi.Box(teams.transform, t == 0 ? "ทีม 1" : "ทีม 2", t == (net?.MyTeam ?? -1) ? "ทีมของคุณ" : null, T.caption, T.caption);
                 if (s?.players != null)
                     foreach (var p in s.players.Where(p => p.team == t))
                     {
@@ -155,12 +158,15 @@ namespace Bob.Coop
             }
 
             var heroes = BobUi.HBox(page, T.spaceS, "Heroes");
-            var hr = (RectTransform)heroes.transform; hr.anchorMin = new Vector2(0, 0.03f); hr.anchorMax = new Vector2(0.5f, 0.19f); hr.offsetMin = hr.offsetMax = Vector2.zero;
+            var hr = (RectTransform)heroes.transform; hr.anchorMin = new Vector2(0, 0.2f); hr.anchorMax = new Vector2(0.62f, 0.36f); hr.offsetMin = hr.offsetMax = Vector2.zero;
             foreach (var c in BobMatch.Chars)
             {
                 var id = c.Id;
-                var b = Btn(heroes.transform, c.Name, id == charId ? BobUi.Sun : BobUi.Surface, () => { PickChar(id); RenderHud(); });
+                var b = Btn(heroes.transform, c.Name, id == charId ? BobUi.Sun : BobUi.Surface, () => { PickChar(id); RenderHud(); }, 160, -1, T.caption);
                 b.interactable = !MeReady;
+                var hl = b.GetComponentInChildren<Text>(); hl.alignment = TextAnchor.MiddleLeft; BobUi.Stretch(hl.rectTransform, 112, 4, 8, 4);
+                var face = BobUi.Img(b.transform, id + "_portrait", 100, T.Hero(id));
+                BobUi.Pin(face.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(10, 0), new Vector2(100, 100));
             }
 
             var bottom = BobUi.HBox(page, T.spaceS, "Bottom");
@@ -169,8 +175,8 @@ namespace Bob.Coop
             Btn(bottom.transform, MeReady ? "ยกเลิกพร้อม" : "พร้อม ✓", MeReady ? BobUi.Surface : BobUi.Sun, ToggleReady, 180, 520, T.buttonLg);
             int n = s?.players?.Length ?? 0, ready = s?.players?.Count(p => p.ready) ?? 0;
             var hint = n < 2 ? "รอเพื่อนอีกอย่างน้อย 1 คน (ส่งรหัสห้องให้เพื่อน)" : ready < n ? $"พร้อมแล้ว {ready}/{n} คน เริ่มเมื่อทุกคนพร้อม" : "กำลังเริ่ม…";
-            var h = BobUi.Label(page, hint, T.caption, T.inkMuted, TextAnchor.MiddleRight);
-            BobUi.Pin(h.rectTransform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(0, 196), new Vector2(880, 60));
+            var h = BobUi.Label(page, hint, T.caption, T.inkMuted, TextAnchor.MiddleLeft);
+            BobUi.Pin(h.rectTransform, new Vector2(0, 0), new Vector2(0, 0), new Vector2(0, 60), new Vector2(900, 60));
         }
 
         // S22 in-match HUD for co-op
@@ -196,12 +202,12 @@ namespace Bob.Coop
             BobUi.Size(BobUi.Label(bar.transform, $"งบ {left}", T.h2, left < 0 ? T.danger : T.ink, TextAnchor.MiddleCenter), 110, 110, 0, 260);
             var wins = s.teams.Length > 1 ? $"ชนะ {s.teams[net.MyTeam].wins} : {s.teams[1 - net.MyTeam].wins}" : "";
             BobUi.Size(BobUi.Label(bar.transform, wins, T.h2, T.ink, TextAnchor.MiddleCenter), 110, 110, 0, 320);
-            var leave = Btn(page, "ออก", BobUi.Surface, LeaveMatch, 144, 200);
-            BobUi.Pin((RectTransform)leave.transform, new Vector2(0, 1), new Vector2(0, 1), Vector2.zero, new Vector2(200, 144));
+            var pause = Btn(page, "หยุด", BobUi.Surface, () => SetOv(Ov.Pause), 144, 200);
+            BobUi.Pin((RectTransform)pause.transform, new Vector2(1, 1), new Vector2(1, 1), Vector2.zero, new Vector2(200, 144));
             RenderTimer();
 
             // order ticket: what the room needs vs what our cart gives now (live bars, GDD 9)
-            var ticket = BobUi.Box(page, "ใบงาน", s.room?.enemies != null ? string.Join(" ", s.room.enemies.Select(e => BobMatch.Enemy(e).Name)) : null);
+            var ticket = BobUi.Box(page, "ใบงาน", s.room?.enemies != null ? string.Join(" ", s.room.enemies.Select(e => BobMatch.Enemy(e).Name)) : null, T.caption, T.caption);
             var trt = (RectTransform)ticket.transform; trt.anchorMin = new Vector2(0, 0.58f); trt.anchorMax = new Vector2(BobCoopGame.SideCol - 0.01f, 0.86f); trt.offsetMin = trt.offsetMax = Vector2.zero;
             var ev = BobRules.EvalStack(team.stack ?? new string[0], s.room?.enemies);
             var need = s.room?.spec?.need;
@@ -215,15 +221,28 @@ namespace Bob.Coop
             }
 
             // cart card: the shared stack, bottom layer first, and who voted to send
-            var cart = BobUi.Box(page, "รถเข็นของทีม", $"{BobRules.CountLayers(team.stack ?? new string[0])}/5 ชั้น");
+            var cart = BobUi.Box(page, "รถเข็นทีม", $"{BobRules.CountLayers(team.stack ?? new string[0])}/5 ชั้น", T.caption, T.caption);
             var crt = (RectTransform)cart.transform; crt.anchorMin = new Vector2(0, 0.26f); crt.anchorMax = new Vector2(BobCoopGame.SideCol - 0.01f, 0.57f); crt.offsetMin = crt.offsetMax = Vector2.zero;
             var stack = team.stack ?? new string[0];
-            for (int i = stack.Length - 1; i >= 0; i--) BobUi.Size(BobUi.Label(cart.transform, $"{i + 1}. {PartName(stack[i])}", T.caption, T.ink), 44, 44);
-            if (stack.Length == 0) BobUi.Size(BobUi.Label(cart.transform, "ยังว่าง เดินไปหยิบของที่ชั้นวาง", T.caption, T.inkMuted), 44, 44);
+            // top layer first: the part's icon, its name, and a marker where it reacts with the layer below (up = good, down = bad)
+            for (int i = stack.Length - 1; i >= 0; i--)
+            {
+                var row = BobUi.HBox(cart.transform, T.spaceS, "Layer"); row.childForceExpandWidth = false; row.childForceExpandHeight = false; row.childAlignment = TextAnchor.MiddleLeft;
+                BobUi.Size(row, 48, 48);
+                BobUi.Img(row.transform, "part_" + stack[i], 42);
+                BobUi.Size(BobUi.Label(row.transform, PartName(stack[i]), T.caption, T.ink), 48, 48, 1);
+                var here = ev.Fx.Where(f => f.Src != "enemy" && f.At == i).ToList();
+                if (here.Count > 0)
+                {
+                    bool good = here.Sum(f => f.Sum) >= 0;
+                    BobUi.Size(BobUi.Label(row.transform, good ? "▲" : "▼", T.caption, good ? T.success : T.danger, TextAnchor.MiddleRight, FontStyle.Bold), 48, 48, 0, 44);
+                }
+            }
+            if (stack.Length == 0) BobUi.Size(BobUi.Label(cart.transform, "ยังว่าง เดินไปหยิบของที่ชั้นวาง", T.caption, T.inkMuted), 100, 100);
 
             // hand: tap a part to put it on the cart / table / a team-mate, whichever is in reach
             handRow = (RectTransform)BobUi.HBox(page, T.spaceS, "Hand").transform;
-            BobUi.Pin(handRow, new Vector2(0.5f, 0), new Vector2(0.5f, 0), Vector2.zero, new Vector2(560, 190));
+            BobUi.Pin(handRow, new Vector2(0.5f, 0), new Vector2(0.5f, 0), Vector2.zero, new Vector2(720, 190));
 
             // context actions (station parts, cart, table) on the right, above the send button
             ctxPanel = (RectTransform)BobUi.VBox(page, T.spaceS, 0, "Context").transform;
@@ -240,6 +259,32 @@ namespace Bob.Coop
             hold.interactable = send.interactable;
 
             RenderContext();
+            if (ov != Ov.None) BuildOverlay();
+        }
+
+        void SetOv(Ov o) { ov = o; Sfx(o == Ov.None ? "ui_cancel" : "ui_tap"); RenderHud(); }
+
+        /// <summary>Pause (spec S24) and leave-confirm (P01). The match keeps running: the clock is the server's.</summary>
+        void BuildOverlay()
+        {
+            var dim = BobUi.Stretch(BobUi.Rect("Dim", page)); var di = dim.gameObject.AddComponent<Image>(); di.color = T.dim;
+            var card = BobUi.Box(page, ov == Ov.Pause ? "หยุดเกม" : "ออกจากแมตช์?", null, T.h2, T.caption);
+            var crt = (RectTransform)card.transform; BobUi.Pin(crt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1000, 660));
+            card.padding = new RectOffset(40, 40, 30, 30); card.spacing = T.spaceS;
+            if (ov == Ov.Pause)
+            {
+                pauseTime = BobUi.Label(card.transform, "", T.body, T.danger, TextAnchor.MiddleCenter, FontStyle.Bold); BobUi.Size(pauseTime, 70, 70);
+                BobUi.Size(BobUi.Label(card.transform, "ทีมยังเล่นต่อได้ระหว่างที่คุณเปิดหน้านี้", T.caption, T.inkMuted, TextAnchor.MiddleCenter), 56, 56);
+                Btn(card.transform, "เล่นต่อ", BobUi.Sun, () => SetOv(Ov.None), 160, -1, T.buttonLg);
+                Btn(card.transform, "ออกจากแมตช์", BobUi.Surface, () => SetOv(Ov.Confirm), 144);
+                RenderTimer();
+            }
+            else
+            {
+                BobUi.Size(BobUi.Label(card.transform, "ทีมจะเล่นต่อโดยไม่มีคุณ และคุณจะไม่ได้รางวัลแมตช์นี้", T.body, T.ink, TextAnchor.MiddleCenter), 130, 130);
+                Btn(card.transform, "อยู่ต่อ", BobUi.Sun, () => SetOv(Ov.None), 160, -1, T.buttonLg);
+                Btn(card.transform, "ออกเลย", BobUi.Surface, () => { ov = Ov.None; LeaveMatch(); }, 144);
+            }
         }
 
         string ContextKey()
@@ -266,11 +311,12 @@ namespace Bob.Coop
                 {
                     int k = i; var id = hand[i];
                     var verb = spot == Spot.Cart ? "วางบนรถ" : spot == Spot.Table ? "พักบนโต๊ะ" : mate != null ? "ส่งให้ " + Short(mate.name) : "ถืออยู่";
-                    var b = Btn(handRow, PartName(id) + "\n" + verb, spot == Spot.Cart ? BobUi.Sun : BobUi.Surface, () => UseHand(k), 190, 270, T.caption);
+                    var b = Btn(handRow, PartName(id) + "\n" + verb, spot == Spot.Cart ? BobUi.Sun : BobUi.Surface, () => UseHand(k), 190, 340, T.caption);
+                    var hl = b.GetComponentInChildren<Text>(); hl.alignment = TextAnchor.MiddleLeft; BobUi.Stretch(hl.rectTransform, 104, 6, 10, 6);
                     var icon = BobUi.Img(b.transform, "part_" + id, 80); icon.transform.SetAsFirstSibling();
-                    BobUi.Pin(icon.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -8), new Vector2(80, 80));
+                    BobUi.Pin(icon.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(14, 0), new Vector2(80, 80));
                 }
-                else BobUi.Size(BobUi.Panel(handRow, new Color(1, 1, 1, 0.35f), "ui_panel", "Empty"), 190, 190, 0, 270);
+                else BobUi.Size(BobUi.Panel(handRow, new Color(1, 1, 1, 0.35f), "ui_panel", "Empty"), 190, 190, 0, 340);
             }
 
             if (spot == Spot.Station && fam != null && !team.submitted)
@@ -328,6 +374,7 @@ namespace Bob.Coop
             var mine = net.MyCart; // each team has its own clock (Press stops it)
             var t = Mathf.CeilToInt(Mathf.Max(0, mine != null ? mine.time : net.State.time));
             timerText.text = $"{t / 60}:{t % 60:00}";
+            if (pauseTime != null) pauseTime.text = $"เวลาของทีมยังเดินอยู่ {t / 60}:{t % 60:00}";
             timerText.color = mine != null && mine.freeze > 0 ? T.goodSpark : t <= 10 ? T.danger : T.ink;
         }
 
@@ -352,13 +399,30 @@ namespace Bob.Coop
             BobUi.Pin(big.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 20), new Vector2(1600, 110));
         }
 
-        // S27 (simplified): match result, everyone in the team gets the same reward
+        // S27: match result with every round's score, the reward line, and the main button bottom-right
         void BuildResult()
         {
             var r = lastResult; int my = net?.MyTeam ?? 0;
             int a = r?.wins != null && r.wins.Length > 1 ? r.wins[my] : 0, b = r?.wins != null && r.wins.Length > 1 ? r.wins[1 - my] : 0;
             var title = a > b ? "ทีมเราชนะ!" : a < b ? "ทีมคู่แข่งชนะ เก่งมากทั้งสองทีม" : "เสมอกัน!";
-            Center($"{title}\nรอบที่ชนะ {a} : {b}\nรางวัลแบ่งเท่ากันทุกคนในทีม", "กลับเมนู", LeaveMatch);
+            var box = BobUi.Box(page, title, $"รอบที่ชนะ {a} : {b}", T.h2, T.body);
+            BobUi.Pin((RectTransform)box.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 60), new Vector2(1300, 540));
+            box.padding = new RectOffset(40, 40, 30, 30); box.spacing = T.spaceS;
+            foreach (var rr in roundResults.OrderBy(x => x.round))
+            {
+                var mine = rr.teams?.FirstOrDefault(t => t.team == my); var theirs = rr.teams?.FirstOrDefault(t => t.team != my);
+                var row = BobUi.HBox(box.transform, T.spaceS, "Round"); row.childForceExpandWidth = false; row.childForceExpandHeight = false; row.childAlignment = TextAnchor.MiddleLeft;
+                BobUi.Size(row, 90, 90);
+                bool win = rr.winner == my, draw = rr.winner < 0;
+                BobUi.Size(BobUi.Label(row.transform, $"รอบ {rr.round}", T.body, T.ink, TextAnchor.MiddleLeft, FontStyle.Bold), 90, 90, 0, 190);
+                BobUi.Size(BobUi.Label(row.transform, $"ทีมเรา {mine?.score?.total ?? 0}", T.body, T.ink), 90, 90, 1);
+                BobUi.Size(BobUi.Label(row.transform, $"คู่แข่ง {theirs?.score?.total ?? 0}", T.body, T.ink), 90, 90, 1);
+                BobUi.Size(BobUi.Label(row.transform, draw ? "เสมอ" : win ? "ชนะ ✓" : "แพ้", T.body, draw ? T.inkMuted : win ? T.success : T.danger, TextAnchor.MiddleRight, FontStyle.Bold), 90, 90, 0, 190);
+            }
+            if (roundResults.Count == 0) BobUi.Size(BobUi.Label(box.transform, "ไม่มีข้อมูลรอบ (เข้าแมตช์กลางทาง)", T.caption, T.inkMuted, TextAnchor.MiddleCenter), 70, 70);
+            BobUi.Size(BobUi.Label(box.transform, "รางวัลแบ่งเท่ากันทุกคนในทีม", T.caption, T.inkMuted, TextAnchor.MiddleCenter), 70, 70);
+            var home = Btn(page, "กลับเมนู", BobUi.Sun, LeaveMatch, 180, 440, T.buttonLg);
+            BobUi.Pin((RectTransform)home.transform, new Vector2(1, 0), new Vector2(1, 0), Vector2.zero, new Vector2(440, 180));
         }
 
         // ---------------------------------------------------------------- joystick + tap-to-walk (UX spec CTRL-Joystick, CTRL-TapToMove)

@@ -95,7 +95,14 @@ namespace Bob.Coop
                 if (net.State.teams[my].stack.Length > before) placed++;
                 net.Ability(); // the hero's ability, once per round (Sweep needs 2 layers; a refusal is fine)
                 yield return new WaitForSeconds(2.5f);
-                if (round == 1) CoopShot("4-cart");
+                if (round == 1)
+                {
+                    // a screenshot is taken at the end of the frame, so wait before changing the screen again
+                    CoopShot("4-cart"); yield return new WaitForSeconds(0.4f);
+                    SetOv(Ov.Pause); yield return new WaitForSeconds(0.4f); CoopShot("4b-pause"); yield return new WaitForSeconds(0.4f);
+                    SetOv(Ov.Confirm); yield return new WaitForSeconds(0.4f); CoopShot("4c-confirm"); yield return new WaitForSeconds(0.4f);
+                    SetOv(Ov.None); yield return new WaitForSeconds(0.2f);
+                }
                 net.Submit();
                 yield return CoopWait(() => net.LastResult != null && net.LastResult.round >= round, 40f);
                 if (net.LastResult == null || net.LastResult.round < round) { Debug.Log("COOP TEST FAILED: no result for round " + round); yield break; }
