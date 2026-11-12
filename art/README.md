@@ -8,6 +8,8 @@
 
 ## มีอะไรบ้าง
 
+> อัปเดต 12 พ.ย. 2026 (ภาพจริงจาก AI): `leonardo_raw/` มีภาพ RAW 740 ภาพจาก Leonardo.ai ครบทุกกลุ่ม (ฮีโร่ ศัตรู ไอเทม พร็อพ UI ฉาก 16:9 และหน้าจอ login/loading/lobby/menu/transition) + ฉากหลังล็อบบี้ 22 ฉาก `leonardo_raw/lobby_backgrounds/` + ชุดเติม 324 ภาพ (`parts/ cart/ equipment/ decals/ tiles/ vfx/` + ไอคอน ป๊อปอัป บอส app icon splash) + รอบสร้างใหม่ `_v2/_v3` สำหรับภาพที่ตัดพื้นหลังไม่ได้ (ดู `docs/10_Leonardo_RAW.md` (โฟลเดอร์ `leonardo_raw/` ขนาดราว 220 MB ไม่ได้เก็บใน git อยู่ที่ `C:\Users\Jakgrits\SweapBattle\bob-art\leonardo_raw\` และ project files ดาวน์โหลดซ้ำได้จาก gen id ในเอกสาร)) ยังไม่ลบพื้นหลัง ดู `docs/10_Leonardo_RAW.md`
+
 > อัปเดต 12 พ.ย. 2026: ปรับทั้งชุดตาม concept ใน `docs/concept/` แล้ว (ฮีโร่ ศัตรูใหม่ ไอเทม พร็อพโรงเรียน ฉาก VFX UI และ character sheet) รายการเต็มและสิ่งที่ยังต้องให้ศิลปินทำอยู่ใน `docs/06_Placeholder_Status.md` ตารางด้านล่างคือชุดแรก
 
 | หมวด | ไฟล์ | จำนวน |
