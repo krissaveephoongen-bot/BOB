@@ -93,15 +93,24 @@ created by the Nakama module on start. Code: `server/analytics.js`.
 
 1. Start the server (above), open `unity/` in Unity 6000.6.8f1 and open `Assets/Scenes/Game.unity`.
    If the scene is missing or the art changed, run **Bob > Build Game Scene** (rebuilds `Assets/Art/BobArtLibrary.asset`).
-2. Press Play. Pick a hero, then walk with a tap on the floor or WASD / arrows. Near a station, tap a part in the side
-   panel to pick it up (3 in hand). Near the cart, tap a part in your hand (or press 1-3) to stack it. Tap the top layer
-   (or Q) to lift it. F uses the hero's ability, Enter submits.
-3. The top bar shows `● ออนไลน์` when the room and our score come from Nakama. Without a server the game says
-   `○ ออฟไลน์` and scores locally with the same rules.
+2. Press Play. The main menu shows the hero; pick one of the four portraits, then **เล่น**. Each round opens with the
+   room brief (enemies, spec, budget), a 3-2-1 countdown, then the round. Landscape mobile layout:
+   - top left: order ticket (enemies + 4 live stat bars with the spec's target line);
+   - top centre: round pips, timer, score; top right: budget and pause;
+   - right: the cart stack (lift / Sweep's swap), then the ability button and a big **ส่งทดสอบ** (submit);
+   - bottom centre: the hand (3 slots); left: a floating joystick wherever the thumb lands.
+   Walk with the joystick, a tap on the floor, or WASD / arrows. Near a station its shelf pops up: tap a part to pick it.
+   Near the cart, tap or drag a hand part onto the cart (or press 1-3); drag the top layer back to the hand (or Q) to
+   lift it. F uses the ability, Enter submits, Esc / Android back pauses. Settings: sound, music, server address.
+3. The main menu shows `● ออนไลน์` when the room and our score come from Nakama. Without a server it says `○ ออฟไลน์`
+   and scores locally with the same rules. On a phone, enter the PC's LAN IP in Settings (http is allowed in the player
+   settings). Coins, hero, sound and server address are saved on the device.
 4. **Bob > Run Game Test** lets a bot play a full match in Play mode (Console: `GAME TEST PASSED`, screenshots in
    `unity/Logs/bob-game-*.png`). Command line, with the Editor closed on this project:
    `Unity.exe -projectPath unity -executeMethod Bob.EditorTools.BobGameScene.RunTest -logFile game-test.log`
 
 Known gaps: Thai text uses the OS font (Leelawadee UI on Windows, Noto Sans Thai on Android) through legacy uGUI Text,
 so tone marks can sit slightly off; shipping Mitr / IBM Plex Sans Thai as a TextMeshPro asset fixes that. The art is
-the 2D placeholder set; the 3D toon pipeline in `art/docs/03_Unity_Spec.md` replaces it later. No drag-and-drop yet (tap only).
+the 2D placeholder set; the 3D toon pipeline in `art/docs/03_Unity_Spec.md` replaces it later. Touch controls (joystick,
+drag) are written for phones but so far tested only in the Editor; the bot test does not cover drag. Not yet built: the
+split-screen before/after test view (GDD 9), pushing the cart, passing items, the item rest table (GDD 20).

@@ -26,6 +26,12 @@ namespace Bob.EditorTools
         public static void Build()
         {
             var lib = BuildLibrary();
+            // Mobile player settings: landscape only, plain http to the local / LAN Nakama allowed.
+            PlayerSettings.productName = "Battle of the Brooms";
+            PlayerSettings.defaultInterfaceOrientation = UIOrientation.AutoRotation;
+            PlayerSettings.allowedAutorotateToPortrait = false; PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
+            PlayerSettings.allowedAutorotateToLandscapeLeft = true; PlayerSettings.allowedAutorotateToLandscapeRight = true;
+            PlayerSettings.insecureHttpOption = InsecureHttpOption.AlwaysAllowed;
             if (AssetDatabase.LoadAssetAtPath<GameObject>(AudioPrefab) == null) BobArtMenu.BuildAudioPrefab();
 
             Directory.CreateDirectory("Assets/Scenes");
