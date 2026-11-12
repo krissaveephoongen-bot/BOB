@@ -3,7 +3,7 @@
 // Every player in the match gets the same room per round (one seed). Each team shares one cart.
 // Clients only send intents (move, pick, place, lift, submit); the server checks them and owns the state.
 // Each team plays in its own copy of the same room (GDD 20), so both teams use the same coordinates.
-// Opcodes, client -> server: 1 MOVE {x,y}  2 PICK {id}  3 PLACE {i}  4 LIFT {}  5 READY {char, ready?, team?}  6 SUBMIT {}
+// Opcodes, client -> server: 1 MOVE {x,y}  2 PICK {id}  3 PLACE {i}  4 LIFT {}  5 READY {char, ready?, team?}  6 SUBMIT {vote?} (a vote; half the team sends the cart)
 //                            7 PUSH {on}  8 PASS {i, to?}  9 TABLE {put:i} or {take:k}
 // Opcodes, server -> client: 10 STATE (full snapshot)  11 POS {time,p:[{id,x,y}],c:[{x,y}]} every tick  12 RESULT (round result)  13 ERROR {t}
 var OP = { MOVE: 1, PICK: 2, PLACE: 3, LIFT: 4, READY: 5, SUBMIT: 6, PUSH: 7, PASS: 8, TABLE: 9, STATE: 10, POS: 11, RESULT: 12, ERROR: 13 };
@@ -40,7 +40,7 @@ function mpSend(d, op, obj, to) { d.broadcastMessage(op, JSON.stringify(obj), to
 function mpSnapshot(s) {
   // Arrays of plain objects (no maps) so Unity's JsonUtility can read every message.
   var players = Object.keys(s.players).sort().map(function (k) { var p = s.players[k];
-    return { id: k, name: p.name, team: p.team, char: p.char, ready: p.ready, online: !!p.presence, x: p.x, y: p.y, hand: p.hand }; });
+    return { id: k, name: p.name, team: p.team, char: p.char, ready: p.ready, online: !!p.presence, x: p.x, y: p.y, hand: p.hand, vote: !!p.vote }; });
   // cx, cy: the team's cart; pusher: user id pushing it ('' = nobody); table: parts parked on the team's table.
   return { phase: s.phase, seed: s.seed, round: s.round, time: s.time, room: s.room, players: players,
     teams: s.teams.map(function (t) { return { stack: t.stack, budget: t.budget, wins: t.wins, submitted: t.submitted,
@@ -52,7 +52,7 @@ function mpStartRound(s) {
   s.round++; s.room = makeRound(s.round, s.seed); s.phase = 'build'; s.time = ROUND_TIME;
   s.teams.forEach(function (t) { t.stack = []; t.budget = ROUND_BUDGET + Math.floor(t.carry / 2); t.submitted = false;
     t.cx = CART_START[0]; t.cy = CART_START[1]; t.pusher = null; t.table = []; });
-  Object.keys(s.players).forEach(function (k) { var p = s.players[k]; p.hand = []; p.x = p.team ? 4.6 : 3.4; p.y = 0.6; });
+  Object.keys(s.players).forEach(function (k) { var p = s.players[k]; p.hand = []; p.vote = false; p.x = p.team ? 4.6 : 3.4; p.y = 0.6; });
 }
 
 function mpScoreRound(d, s, logger, nk) {
@@ -201,7 +201,13 @@ function matchLoop(ctx, logger, nk, d, tick, s, messages) {
         }
         break;
       case OP.SUBMIT:
-        if (s.phase === 'build' && !t.submitted) { t.submitted = true; t.pusher = null; t.submitTime = s.time / ROUND_TIME; dirty = true; }
+        // UX spec BTN-Submit: in a team it is a vote, and the cart is sent when at least half of the online team-mates voted.
+        if (s.phase === 'build' && !t.submitted) {
+          p.vote = q.vote !== false; dirty = true;
+          var mates = 0, votes = 0;
+          Object.keys(s.players).forEach(function (k) { var o = s.players[k]; if (o.team !== p.team || !o.presence) return; mates++; if (o.vote) votes++; });
+          if (votes * 2 >= mates) { t.submitted = true; t.pusher = null; t.submitTime = s.time / ROUND_TIME; }
+        }
         break;
     }
     if (err) mpSend(d, OP.ERROR, { t: err }, [m.sender]);
