@@ -64,8 +64,16 @@ namespace Bob.Net
         public Task<string> MakeRoundAsync(int seed, int round) => Rpc("bob_make_round", $"{{\"seed\":{seed},\"round\":{round}}}");
 
         /// <summary>The authoritative score for a stack. stackJson is a JSON array of part ids, bottom layer first.</summary>
-        public Task<string> ScoreStackAsync(int seed, int round, string stackJson, int budget, double timeFrac, bool shield) =>
+        /// <param name="match">Optional analytics label: 1-64 letters, digits, _ or -.</param>
+        /// <param name="character">Optional analytics label: sweep, bubble, spray or press.</param>
+        public Task<string> ScoreStackAsync(int seed, int round, string stackJson, int budget, double timeFrac, bool shield,
+            string match = null, string character = null) =>
             Rpc("bob_score_stack", $"{{\"seed\":{seed},\"round\":{round},\"stack\":{stackJson},\"budget\":{budget}," +
-                $"\"timeFrac\":{timeFrac.ToString(System.Globalization.CultureInfo.InvariantCulture)},\"shield\":{(shield ? "true" : "false")}}}");
+                $"\"timeFrac\":{timeFrac.ToString(System.Globalization.CultureInfo.InvariantCulture)},\"shield\":{(shield ? "true" : "false")}" +
+                (match != null ? $",\"match\":\"{match}\"" : "") + (character != null ? $",\"char\":\"{character}\"" : "") + "}");
+
+        /// <summary>Client analytics event: match_start, round_result, ability_used or match_end. dataJson is a JSON object.</summary>
+        public Task<string> LogEventAsync(string evt, string match, string dataJson) =>
+            Rpc("bob_log_event", $"{{\"event\":\"{evt}\",\"match\":\"{match}\",\"data\":{dataJson}}}");
     }
 }

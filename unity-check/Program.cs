@@ -60,6 +60,25 @@ static class Program
             }
         }
         Console.WriteLine($"server parity: {compared} stacks compared, {mismatch} mismatches");
+
+        // Offline rooms (BobMatch.MakeRound) must equal the server's bob_make_round for the same seed.
+        int rooms = 0, roomMismatch = 0;
+        foreach (var seed in new[] { 1, 2, 3, 7, 42, 999, 123456, 654321, 8388607 })
+        for (int round = 1; round <= 3; round++)
+        {
+            using var room = JsonDocument.Parse(await srv.MakeRoundAsync(seed, round));
+            var r = BobMatch.MakeRound(round, seed);
+            var offer = room.RootElement.GetProperty("offer").EnumerateArray().Select(x => x.GetString()).ToList();
+            var enemies = room.RootElement.GetProperty("enemies").EnumerateArray().Select(x => x.GetString()).ToList();
+            var need = room.RootElement.GetProperty("spec").GetProperty("need").EnumerateObject().ToDictionary(p => p.Name, p => p.Value.GetInt32());
+            bool same = offer.SequenceEqual(r.Offer) && enemies.SequenceEqual(r.Enemies)
+                        && need.Count == r.Need.Count && need.All(kv => r.Need.TryGetValue(kv.Key, out var v) && v == kv.Value);
+            rooms++; if (!same) { roomMismatch++; Console.WriteLine($"ROOM MISMATCH seed {seed} round {round}"); }
+        }
+        Console.WriteLine($"room parity: {rooms} rooms compared, {roomMismatch} mismatches");
+        mismatch += roomMismatch;
+        var rv = BobMatch.Rival(BobMatch.MakeRound(1, 42), 42, BobRules.RoundBudget);
+        Check("rival plays a stack", rv != null && BobRules.CountLayers(rv.Stack) > 0);
         await srv.CloseAsync();
         return fails + mismatch == 0 ? 0 : 1;
     }

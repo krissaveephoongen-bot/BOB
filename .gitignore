@@ -21,3 +21,4 @@ unity-check/obj/
 node_modules/
 .DS_Store
 Thumbs.db
+unity/.vscode/

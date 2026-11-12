@@ -11,6 +11,7 @@ Playable prototype: https://claude.ai/artifact/M9orSH3LFGbYboRm7QAkHn
 | `server/` | Nakama 3.22.0 + Postgres 16 in Docker. `modules/index.js` is generated from the prototype rules by `build-module.js`; `rpc.js` holds the RPCs. | Tested with `server/smoke-test.sh` |
 | `unity/` | Unity 6000.6.8f1 project (open this folder in Unity Hub). Nakama SDK + uGUI in `Packages/manifest.json`; sprites/audio in `Assets/Art`, `Assets/Audio`. | Play-mode smoke test passes (Bob > Run Smoke Test) |
 | `unity/Assets/Scripts/` | `Rules/BobRules.cs` (client copy of the rules, pure C#), `Net/BobServer.cs` (Nakama wrapper: sign in, socket, match, RPCs), `Dev/BobSmokeTest.cs` (Play-mode end-to-end check). | Compiled and checked against the server by `unity-check/` |
+| `unity/Assets/Scenes/Game.unity` | **Playable single-player scene**: room, 4 stations, cart, sofa, hero (tap / WASD), pick up, stack 5 layers + 2 methods, live stat bars, abilities, 3 rounds vs the simulated rival. Room and our score come from the local Nakama (`bob_make_round`, `bob_score_stack`); offline it uses the same rules locally. Code in `Scripts/Game/`, rival + rooms in `Rules/BobMatch.cs`. | Bot plays a full match: menu **Bob > Run Game Test** |
 | `dashboard/index.html` | Balance dashboard: reads `bob_analytics` from the local Nakama and charts part, character, round and room stats. | Checked in Chromium, light and dark |
 | `unity-check/` | .NET console app: spot checks + C#-vs-server parity on random stacks. | 275 stacks, 0 mismatches |
 | `art/` | Official concept boards and production docs (`docs/`), sprite sources (`source/`) and generator tools (`tools/`). Unity-ready copies live in `unity/Assets`. | Concept / placeholder |
@@ -87,3 +88,20 @@ created by the Nakama module on start. Code: `server/analytics.js`.
 - Balance: every number is an untested starting value.
 - Development passwords, the `defaultkey` server key and the `defaulthttpkey` HTTP key must be replaced before any deployment.
 - Analytics: no retention or archiving yet; Unity client does not send `bob_log_event` yet (only `stack_scored` is logged from Unity).
+
+## Play the Unity scene
+
+1. Start the server (above), open `unity/` in Unity 6000.6.8f1 and open `Assets/Scenes/Game.unity`.
+   If the scene is missing or the art changed, run **Bob > Build Game Scene** (rebuilds `Assets/Art/BobArtLibrary.asset`).
+2. Press Play. Pick a hero, then walk with a tap on the floor or WASD / arrows. Near a station, tap a part in the side
+   panel to pick it up (3 in hand). Near the cart, tap a part in your hand (or press 1-3) to stack it. Tap the top layer
+   (or Q) to lift it. F uses the hero's ability, Enter submits.
+3. The top bar shows `● ออนไลน์` when the room and our score come from Nakama. Without a server the game says
+   `○ ออฟไลน์` and scores locally with the same rules.
+4. **Bob > Run Game Test** lets a bot play a full match in Play mode (Console: `GAME TEST PASSED`, screenshots in
+   `unity/Logs/bob-game-*.png`). Command line, with the Editor closed on this project:
+   `Unity.exe -projectPath unity -executeMethod Bob.EditorTools.BobGameScene.RunTest -logFile game-test.log`
+
+Known gaps: Thai text uses the OS font (Leelawadee UI on Windows, Noto Sans Thai on Android) through legacy uGUI Text,
+so tone marks can sit slightly off; shipping Mitr / IBM Plex Sans Thai as a TextMeshPro asset fixes that. The art is
+the 2D placeholder set; the 3D toon pipeline in `art/docs/03_Unity_Spec.md` replaces it later. No drag-and-drop yet (tap only).
