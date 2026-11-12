@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: rust_attack
+  m_Name: 
   serializedVersion: 8
   m_Legacy: 0
   m_Compressed: 0
@@ -43,24 +43,8 @@ AnimationClip:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 0, y: 0, z: 0}
   m_ClipBindingConstant:
-    genericBindings:
-    - serializedVersion: 2
-      path: 0
-      attribute: 0
-      script: {fileID: 0}
-      typeID: 212
-      customType: 23
-      isPPtrCurve: 1
-      isIntCurve: 0
-      isSerializeReferenceCurve: 0
-      metaData: 0
-    pptrCurveMapping:
-    - {fileID: -4591895925871712718, guid: 6d036d3522d169c40be039ebdbaa9ce9, type: 3}
-    - {fileID: -3273581446540850258, guid: 6d036d3522d169c40be039ebdbaa9ce9, type: 3}
-    - {fileID: 181542462178192302, guid: 6d036d3522d169c40be039ebdbaa9ce9, type: 3}
-    - {fileID: -4431870723251906252, guid: 6d036d3522d169c40be039ebdbaa9ce9, type: 3}
-    - {fileID: 6118760481582643527, guid: 6d036d3522d169c40be039ebdbaa9ce9, type: 3}
-    - {fileID: 6118760481582643527, guid: 6d036d3522d169c40be039ebdbaa9ce9, type: 3}
+    genericBindings: []
+    pptrCurveMapping: []
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}

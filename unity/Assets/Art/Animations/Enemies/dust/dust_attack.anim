@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: dust_attack
+  m_Name: 
   serializedVersion: 8
   m_Legacy: 0
   m_Compressed: 0
@@ -43,24 +43,8 @@ AnimationClip:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 0, y: 0, z: 0}
   m_ClipBindingConstant:
-    genericBindings:
-    - serializedVersion: 2
-      path: 0
-      attribute: 0
-      script: {fileID: 0}
-      typeID: 212
-      customType: 23
-      isPPtrCurve: 1
-      isIntCurve: 0
-      isSerializeReferenceCurve: 0
-      metaData: 0
-    pptrCurveMapping:
-    - {fileID: 8583293687623929545, guid: 77b535335b2dcf3488fcf5744dfe7c69, type: 3}
-    - {fileID: -4564026221774843142, guid: 77b535335b2dcf3488fcf5744dfe7c69, type: 3}
-    - {fileID: -1227417212299702457, guid: 77b535335b2dcf3488fcf5744dfe7c69, type: 3}
-    - {fileID: 2766032622796244040, guid: 77b535335b2dcf3488fcf5744dfe7c69, type: 3}
-    - {fileID: 2446131693437680273, guid: 77b535335b2dcf3488fcf5744dfe7c69, type: 3}
-    - {fileID: 2446131693437680273, guid: 77b535335b2dcf3488fcf5744dfe7c69, type: 3}
+    genericBindings: []
+    pptrCurveMapping: []
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}

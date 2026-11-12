@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: fx_clean_wave
+  m_Name: 
   serializedVersion: 8
   m_Legacy: 0
   m_Compressed: 0
@@ -49,27 +49,8 @@ AnimationClip:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 0, y: 0, z: 0}
   m_ClipBindingConstant:
-    genericBindings:
-    - serializedVersion: 2
-      path: 0
-      attribute: 0
-      script: {fileID: 0}
-      typeID: 212
-      customType: 23
-      isPPtrCurve: 1
-      isIntCurve: 0
-      isSerializeReferenceCurve: 0
-      metaData: 0
-    pptrCurveMapping:
-    - {fileID: 6865429751335730154, guid: f5778430ceb151b41a65db9940112c00, type: 3}
-    - {fileID: -1186783244441208985, guid: f5778430ceb151b41a65db9940112c00, type: 3}
-    - {fileID: 3228824937294321579, guid: f5778430ceb151b41a65db9940112c00, type: 3}
-    - {fileID: 4918777907329035243, guid: f5778430ceb151b41a65db9940112c00, type: 3}
-    - {fileID: 5239025141230130210, guid: f5778430ceb151b41a65db9940112c00, type: 3}
-    - {fileID: -191306975426404953, guid: f5778430ceb151b41a65db9940112c00, type: 3}
-    - {fileID: 2362969941702624047, guid: f5778430ceb151b41a65db9940112c00, type: 3}
-    - {fileID: 5724500530026525553, guid: f5778430ceb151b41a65db9940112c00, type: 3}
-    - {fileID: 5724500530026525553, guid: f5778430ceb151b41a65db9940112c00, type: 3}
+    genericBindings: []
+    pptrCurveMapping: []
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}

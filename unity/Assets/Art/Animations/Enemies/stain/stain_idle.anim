@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: stain_idle
+  m_Name: 
   serializedVersion: 8
   m_Legacy: 0
   m_Compressed: 0
@@ -49,27 +49,8 @@ AnimationClip:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 0, y: 0, z: 0}
   m_ClipBindingConstant:
-    genericBindings:
-    - serializedVersion: 2
-      path: 0
-      attribute: 0
-      script: {fileID: 0}
-      typeID: 212
-      customType: 23
-      isPPtrCurve: 1
-      isIntCurve: 0
-      isSerializeReferenceCurve: 0
-      metaData: 0
-    pptrCurveMapping:
-    - {fileID: 1600114783743741070, guid: 3fb3809e3a77f7a41b71667de9ba2f77, type: 3}
-    - {fileID: 6373682047815692075, guid: 3fb3809e3a77f7a41b71667de9ba2f77, type: 3}
-    - {fileID: -3785400378089884999, guid: 3fb3809e3a77f7a41b71667de9ba2f77, type: 3}
-    - {fileID: -7890751731347229284, guid: 3fb3809e3a77f7a41b71667de9ba2f77, type: 3}
-    - {fileID: 5490739272080105563, guid: 3fb3809e3a77f7a41b71667de9ba2f77, type: 3}
-    - {fileID: 320637848935974444, guid: 3fb3809e3a77f7a41b71667de9ba2f77, type: 3}
-    - {fileID: 396482963296803484, guid: 3fb3809e3a77f7a41b71667de9ba2f77, type: 3}
-    - {fileID: 8416364666291498345, guid: 3fb3809e3a77f7a41b71667de9ba2f77, type: 3}
-    - {fileID: 1600114783743741070, guid: 3fb3809e3a77f7a41b71667de9ba2f77, type: 3}
+    genericBindings: []
+    pptrCurveMapping: []
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}

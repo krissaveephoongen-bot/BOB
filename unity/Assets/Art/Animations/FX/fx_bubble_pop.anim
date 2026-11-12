@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: fx_bubble_pop
+  m_Name: 
   serializedVersion: 8
   m_Legacy: 0
   m_Compressed: 0
@@ -45,25 +45,8 @@ AnimationClip:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 0, y: 0, z: 0}
   m_ClipBindingConstant:
-    genericBindings:
-    - serializedVersion: 2
-      path: 0
-      attribute: 0
-      script: {fileID: 0}
-      typeID: 212
-      customType: 23
-      isPPtrCurve: 1
-      isIntCurve: 0
-      isSerializeReferenceCurve: 0
-      metaData: 0
-    pptrCurveMapping:
-    - {fileID: -5516420291448775001, guid: cdaa72a893d6c8e47bf9439764970191, type: 3}
-    - {fileID: -4397439334659103227, guid: cdaa72a893d6c8e47bf9439764970191, type: 3}
-    - {fileID: -3020423487521437145, guid: cdaa72a893d6c8e47bf9439764970191, type: 3}
-    - {fileID: -9005262219623735579, guid: cdaa72a893d6c8e47bf9439764970191, type: 3}
-    - {fileID: 695459412847005739, guid: cdaa72a893d6c8e47bf9439764970191, type: 3}
-    - {fileID: 2353317181259756896, guid: cdaa72a893d6c8e47bf9439764970191, type: 3}
-    - {fileID: 2353317181259756896, guid: cdaa72a893d6c8e47bf9439764970191, type: 3}
+    genericBindings: []
+    pptrCurveMapping: []
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}

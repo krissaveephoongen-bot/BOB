@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: press_cheer
+  m_Name: 
   serializedVersion: 8
   m_Legacy: 0
   m_Compressed: 0
@@ -45,25 +45,8 @@ AnimationClip:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 0, y: 0, z: 0}
   m_ClipBindingConstant:
-    genericBindings:
-    - serializedVersion: 2
-      path: 0
-      attribute: 0
-      script: {fileID: 0}
-      typeID: 212
-      customType: 23
-      isPPtrCurve: 1
-      isIntCurve: 0
-      isSerializeReferenceCurve: 0
-      metaData: 0
-    pptrCurveMapping:
-    - {fileID: 3695186735712054259, guid: 3c6d6e2cde10a2845952af2a6e4d016f, type: 3}
-    - {fileID: -6675369596198668120, guid: 3c6d6e2cde10a2845952af2a6e4d016f, type: 3}
-    - {fileID: 1780438845618406934, guid: 3c6d6e2cde10a2845952af2a6e4d016f, type: 3}
-    - {fileID: 1846678015548253043, guid: 3c6d6e2cde10a2845952af2a6e4d016f, type: 3}
-    - {fileID: -2320187283045934289, guid: 3c6d6e2cde10a2845952af2a6e4d016f, type: 3}
-    - {fileID: -7913507944846686773, guid: 3c6d6e2cde10a2845952af2a6e4d016f, type: 3}
-    - {fileID: -7913507944846686773, guid: 3c6d6e2cde10a2845952af2a6e4d016f, type: 3}
+    genericBindings: []
+    pptrCurveMapping: []
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}
