@@ -29,7 +29,7 @@ namespace Bob.Game
         public const float RoundTime = 100f, FreezeTime = 8f;
         public const int Hand = BobRules.HandSolo;
 
-        enum Phase { Title, Loading, Intro, Countdown, Build, Scoring, Test, Result }
+        enum Phase { Title, Loading, Intro, Countdown, Build, Scoring, Test, Result, Lobby }
 
         sealed class LastRound
         {
@@ -113,7 +113,8 @@ namespace Bob.Game
         {
             if (Input.GetKeyDown(KeyCode.Escape)) OnBack();
             TickInput();
-            if (phase == Phase.Build && overlay == Overlay.None)
+            TickOnline();
+            if (phase == Phase.Build && overlay == Overlay.None && !Online) // online, the server runs the clock
             {
                 if (freeze > 0) freeze = Mathf.Max(0, freeze - Time.deltaTime); else time -= Time.deltaTime;
                 if (time <= 0) { time = 0; if (stack.Count == 0) Toast("หมดเวลา! ส่งรถเข็นเปล่า"); Submit(); }
@@ -190,6 +191,7 @@ namespace Bob.Game
 
         void StartMatch()
         {
+            if (Online) { LeaveOnline(); FindOnline(); return; } // "play again" online = find a new match
             matchId = "u" + DateTime.UtcNow.Ticks.ToString("x") + UnityEngine.Random.Range(0, 0xFFFF).ToString("x");
             seed = UnityEngine.Random.Range(1, 8388608);
             roundNo = 0; wins = 0; losses = 0; carry = 0; rivalCarry = 0; results.Clear();
@@ -240,7 +242,8 @@ namespace Bob.Game
         void PickUp(string id)
         {
             if (phase != Phase.Build) return;
-            if (hand.Count >= Hand) { Toast("มือเต็มแล้ว ถือได้ " + Hand + " ชิ้น"); Sfx("drop_invalid"); return; }
+            if (Online) { OnlinePick(id); return; }
+            if (hand.Count >= HandMax) { Toast("มือเต็มแล้ว ถือได้ " + HandMax + " ชิ้น"); Sfx("drop_invalid"); return; }
             hand.Add(id); Sfx("pickup"); PopHand(); RenderAll();
         }
 
@@ -248,6 +251,7 @@ namespace Bob.Game
         {
             if (phase != Phase.Build || i < 0 || i >= hand.Count) return;
             if (!nearCart) { Toast("เดินไปที่รถเข็นก่อน"); Sfx("drop_invalid"); return; }
+            if (Online) { OnlinePlace(i); return; }
             var id = hand[i];
             var why = BobRules.WhyCannotPlace(stack, id, BudgetLeft);
             if (why != null) { Toast(why); Sfx("drop_invalid"); return; }
@@ -263,8 +267,9 @@ namespace Bob.Game
         {
             if (phase != Phase.Build || stack.Count == 0) return;
             if (!nearCart) { Toast("เดินไปที่รถเข็นก่อน"); return; }
+            if (Online) { OnlineLift(); return; }
             var id = stack[stack.Count - 1]; stack.RemoveAt(stack.Count - 1);
-            if (hand.Count < Hand) hand.Add(id); else Toast("มือเต็ม ชิ้นนี้ถูกวางคืนชั้น");
+            if (hand.Count < HandMax) hand.Add(id); else Toast("มือเต็ม ชิ้นนี้ถูกวางคืนชั้น");
             preview = null; Sfx("lift_layer"); RenderAll();
         }
 
@@ -290,7 +295,7 @@ namespace Bob.Game
 
         void UseAbility()
         {
-            if (phase != Phase.Build || abUsed) return;
+            if (phase != Phase.Build || abUsed) { if (Online && phase == Phase.Build) Toast("ความสามารถพิเศษยังไม่เปิดในโหมดออนไลน์"); return; }
             switch (charId)
             {
                 case "sweep":
@@ -310,6 +315,7 @@ namespace Bob.Game
         async void Submit()
         {
             if (phase != Phase.Build) return;
+            if (Online) { OnlineSubmit(); return; }
             phase = Phase.Scoring; RenderAll();
             var e = Ev(); int left = BudgetLeft; double tf = Mathf.Clamp01(time / RoundTime);
             var mine = BobRules.TotalScore(e, R.Need, left, budget, tf);
@@ -349,18 +355,19 @@ namespace Bob.Game
 
         void AfterTest()
         {
+            if (Online && !MatchOver) { Toast("รอเซิร์ฟเวอร์เริ่มรอบถัดไป…"); return; }
             if (MatchOver)
             {
                 gain = wins > losses ? 30 : 20; coins += gain;
                 try { PlayerPrefs.SetInt("bob.coins", coins); PlayerPrefs.Save(); } catch (Exception) { }
-                Log("match_end", $"{{\"wins\":{wins},\"losses\":{losses},\"rounds\":{roundNo},\"coins\":{gain},\"char\":\"{charId}\"}}");
+                Log("match_end", $"{{\"wins\":{wins},\"losses\":{losses},\"rounds\":{roundNo},\"coins\":{gain},\"char\":\"{charId}\",\"mode\":\"{(Online ? "online" : "solo")}\"}}");
                 Sfx("coin");
                 phase = Phase.Result; RenderAll();
             }
             else NextRound();
         }
 
-        void ToTitle() { Time.timeScale = 1; StopAllCoroutines(); countdownRt.gameObject.SetActive(false); phase = Phase.Title; R = null; ResetRoomForRound(); Sfx("ui_cancel"); RenderAll(); }
+        void ToTitle() { LeaveOnline(); Time.timeScale = 1; StopAllCoroutines(); countdownRt.gameObject.SetActive(false); phase = Phase.Title; R = null; ResetRoomForRound(); Sfx("ui_cancel"); RenderAll(); }
 
         void RenderAll() { RenderWorld(); RenderHud(); }
 

@@ -83,8 +83,7 @@ created by the Nakama module on start. Code: `server/analytics.js`.
 
 ## Not done yet
 
-- Multiplayer in the scene: draw the other players and each team's cart from `BobOnline`, plus a lobby screen. The server side and the client network layer are done.
-- Multiplayer server does not block walking through stations or the sofa yet (it only caps speed and keeps players in the room).
+- Online: abilities are off (the server does not run them yet), no private-room screen (only quick match; `bob_create_match` exists), no reconnect after the app is closed.
 - Unity scene, character controller, drag-and-drop, UI. Only rules and networking wrapper exist.
 - Scrub and Wash abilities, cart pushing, obstacles other than the sofa, the other 7 scenes.
 - Balance: every number is an untested starting value.
@@ -110,7 +109,13 @@ The server owns a multiplayer match: phones send intents, the server checks them
 | 11 POS | server → clients | `{time,p:[{id,x,y}]}` every tick (10 Hz) during build |
 | 12 RESULT / 13 ERROR | server → clients | per-round scores and winner / Thai refusal text for one player |
 
-Test: start the server, then `cd server && node mp-test.js 4` (bots walk, pick, place, submit; must print PASS).
+- The server also pushes players out of stations, the cart and the sofa (same rects and radius as `BobGame.World`).
+
+**In the Unity scene** (`Scripts/Game/BobGame.Online.cs`): title button **ออนไลน์ 2-4 คน** → matchmaker → lobby (both teams, heroes, Ready) → rounds. The scene copies the server state into the normal game fields, so the HUD, cart card and result screens are the same as solo. Team-mates walk in your room with what they carry; the other team plays the same room in its own copy, and its layer count and submit show in the top bar. The server runs the clock (pause does not stop it) and ends the round when both teams submit.
+
+Tests:
+- Server only: `cd server && node mp-test.js 4` (bots walk, pick, place, submit; must print PASS).
+- Unity + bots: `cd server && node mp-host.js 2 ../unity/Logs/bob-mp-match.txt`, then menu **Bob > Run Online Test** (or `-executeMethod Bob.EditorTools.BobGameScene.RunOnlineTest`). The Unity bot joins with one bot team-mate against one bot, must print GAME TEST PASSED; screenshots `unity/Logs/bob-game-online-*.png`.
 
 ## Play the Unity scene
 

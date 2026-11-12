@@ -51,6 +51,9 @@ namespace Bob.Net
 
         public Task<IMatch> JoinMatchAsync(string matchId) => socket.JoinMatchAsync(matchId);
 
+        /// <summary>Opens the realtime socket unless it is already open.</summary>
+        public Task EnsureConnectedAsync() => socket != null && socket.IsConnected ? Task.CompletedTask : ConnectAsync();
+
         public Task CloseAsync() => socket != null ? socket.CloseAsync() : Task.CompletedTask;
 
         /// <summary>Stable room seed from a match id, so every player in the match gets the same room.</summary>

@@ -7,7 +7,8 @@ const OP = { MOVE: 1, PICK: 2, PLACE: 3, LIFT: 4, READY: 5, SUBMIT: 6, STATE: 10
 const STATION = { tool: [1.2, 3.75], chem: [6.8, 3.75], energy: [1.2, 1.25], method: [6.8, 1.25] };
 const FAM = { cloth: 'tool', sponge: 'tool', brush: 'tool', broom: 'tool', soap: 'chem', vinegar: 'chem', soda: 'chem', polish: 'chem',
   hot: 'energy', steam: 'energy', scrub: 'energy', air: 'energy', soak: 'method', spray: 'method', circle: 'method' };
-const CART = [4.0, 2.0];
+const CART = [3.3, 2.5]; // left of the cart, within reach
+// Bots walk in lanes so they never press into a station, the cart or the sofa: x = 2.6 / 5.4 up and down, y = 3.3 across.
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const b64 = o => Buffer.from(JSON.stringify(o)).toString('base64');
 
@@ -36,7 +37,7 @@ class Bot {
     if (op === OP.STATE) { const pm = {}; d.players.forEach(p => pm[p.id] = p); d.players = pm; this.state = d; }
     if (op === OP.RESULT) this.results.push(d);
     if (op === OP.ERROR) this.errors.push(d.t);
-    if (op === OP.POS && this.state) this.state.time = d.time;
+    if (op === OP.POS && this.state) { this.state.time = d.time; const me = d.p.find(q => q.id === this.me); if (me) this.server = [me.x, me.y]; }
   }
   req(body) { const cid = String(++this.cid); return new Promise((ok, bad) => { this.wait[cid] = { ok, bad }; this.ws.send(JSON.stringify({ cid, ...body })); }); }
   send(op, obj) { this.ws.send(JSON.stringify({ match_data_send: { match_id: this.matchId, op_code: String(op), data: b64(obj) } })); }
@@ -44,6 +45,10 @@ class Bot {
     this.matchId = matchId;
     const r = await this.req({ match_join: { match_id: matchId } });
     this.me = r.match.self.user_id;
+  }
+  async route(x, y) {
+    const lane = this.pos[0] < 4 ? 2.6 : 5.4;
+    for (const [wx, wy] of [[lane, this.pos[1]], [lane, 3.3], [x, 3.3], [x, y]]) await this.walkTo(wx, wy);
   }
   async walkTo(x, y) {
     for (let k = 0; k < 60; k++) {
@@ -54,20 +59,21 @@ class Bot {
       await sleep(100);
     }
   }
-  async playRound(round) {
+  async playRound(round, submit = true) {
     const s = this.state, team = s.players[this.me].team;
     // Each bot carries one part; team-mates pick different ones so the shared cart gets two layers.
     const mates = Object.keys(s.players).filter(k => s.players[k].team === team).sort();
     const offer = s.room.offer.filter(id => FAM[id] !== 'method');
     const id = offer[(mates.indexOf(this.me) + team * 2 + round) % offer.length];
     this.pos = [s.players[this.me].x, s.players[this.me].y];
-    await this.walkTo(...STATION[FAM[id]]); this.send(OP.PICK, { id }); await sleep(200);
-    await this.walkTo(...CART); this.send(OP.PLACE, { i: 0 }); await sleep(300);
-    if (mates.indexOf(this.me) === mates.length - 1) { await sleep(400); this.send(OP.SUBMIT, {}); }
+    await this.route(...STATION[FAM[id]]); this.send(OP.PICK, { id }); await sleep(200);
+    await this.route(...CART); this.send(OP.PLACE, { i: 0 }); await sleep(300);
+    if (submit && mates.indexOf(this.me) === mates.length - 1) { await sleep(400); this.send(OP.SUBMIT, {}); }
   }
 }
 
-(async () => {
+module.exports = { Bot, auth, OP, sleep, HOST };
+if (require.main === module) (async () => {
   const bots = [];
   for (let i = 0; i < N; i++) { const b = new Bot(i, await auth(i)); await b.open(); bots.push(b); }
   const r = await fetch(`http://${HOST}/v2/rpc/bob_create_match?unwrap`, {
