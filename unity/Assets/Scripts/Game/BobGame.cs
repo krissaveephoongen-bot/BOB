@@ -314,12 +314,12 @@ namespace Bob.Game
                     if (stack.Count < 2) { Toast("ต้องมีอย่างน้อย 2 ชิ้นบนรถเข็น"); return; }
                     swapMode = !swapMode; Sfx("ui_tap"); RenderAll(); return;
                 case "bubble":
-                    shield = true; Toast("โล่ฟอง! กันปฏิกิริยาหักล้างที่แรงที่สุด"); Sfx("bubble_pop"); SpawnFx("fx_bubble_pop", PlayerPos + Vector2.up * 0.5f); break;
+                    shield = true; Toast("โล่ฟอง! กันปฏิกิริยาหักล้างที่แรงที่สุด"); Sfx("bubble_pop"); SpawnFx("fx_bubble_pop", Raise(PlayerPos, 0.5f)); break;
                 case "spray":
                     preview = BobRules.TotalScore(Ev(), R.Need, BudgetLeft, budget, time / RoundTime);
                     Toast("เล็งเป้า! กองนี้จะได้ " + preview.Total + " คะแนน"); Sfx("spray_psst"); SpawnFx("fx_target", CartTop); break;
                 case "press":
-                    tasks.FreezeFor(FreezeTime); Toast("รีดเวลา! หยุดนาฬิกา 8 วินาที"); Sfx("steam_hiss"); SpawnFx("fx_steam", PlayerPos + Vector2.up * 0.5f); break;
+                    tasks.FreezeFor(FreezeTime); Toast("รีดเวลา! หยุดนาฬิกา 8 วินาที"); Sfx("steam_hiss"); SpawnFx("fx_steam", Raise(PlayerPos, 0.5f)); break;
             }
             MarkAbilityUsed(); Sfx("ability_activate"); RenderAll();
         }

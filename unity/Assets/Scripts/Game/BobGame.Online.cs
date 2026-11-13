@@ -217,9 +217,9 @@ namespace Bob.Game
                 case "sweep":
                     if (stack.Count < 2) { Toast("ต้องมีอย่างน้อย 2 ชิ้นบนรถเข็น"); return; }
                     swapMode = !swapMode; Sfx("ui_tap"); RenderAll(); return; // the swap itself goes through SwapAt
-                case "bubble": Toast("โล่ฟอง! กันปฏิกิริยาหักล้างที่แรงที่สุดให้ทั้งทีม"); Sfx("bubble_pop"); SpawnFx("fx_bubble_pop", PlayerPos + Vector2.up * 0.5f); break;
+                case "bubble": Toast("โล่ฟอง! กันปฏิกิริยาหักล้างที่แรงที่สุดให้ทั้งทีม"); Sfx("bubble_pop"); SpawnFx("fx_bubble_pop", Raise(PlayerPos, 0.5f)); break;
                 case "spray": Sfx("spray_psst"); SpawnFx("fx_target", CartTop); break; // the score arrives as OnPreview
-                case "press": Toast("รีดเวลา! หยุดนาฬิกาของทีม 8 วินาที"); Sfx("steam_hiss"); SpawnFx("fx_steam", PlayerPos + Vector2.up * 0.5f); break;
+                case "press": Toast("รีดเวลา! หยุดนาฬิกาของทีม 8 วินาที"); Sfx("steam_hiss"); SpawnFx("fx_steam", Raise(PlayerPos, 0.5f)); break;
             }
             mp.Ability(0); Sfx("ability_activate");
         }
@@ -238,11 +238,11 @@ namespace Bob.Game
             foreach (var m in mates.Values)
             {
                 if (m.Sr == null) continue;
-                Vector2 cur = m.Sr.transform.position;
+                Vector2 cur = m.Sr.transform.localPosition;
                 var next = Vector2.Lerp(cur, m.To, 1 - Mathf.Exp(-12f * Time.deltaTime));
                 bool walking = Vector2.Distance(cur, m.To) > 0.02f;
                 if (Mathf.Abs(next.x - cur.x) > 0.001f) m.Sr.flipX = next.x < cur.x;
-                m.Sr.transform.position = next; m.Sr.sortingOrder = Order(next.y);
+                m.Sr.transform.localPosition = next; m.Sr.sortingOrder = Order(next.y);
                 var anim = m.HandKey.Length > 0 ? "carry" : walking ? "walk" : "idle";
                 if (anim != m.Anim) { m.Anim = anim; var e = art.Find(m.Char + "_" + anim) ?? art.Find(m.Char + "_idle"); if (e != null) m.An.Play(e.frames, e.fps, e.loop); }
             }
@@ -273,7 +273,7 @@ namespace Bob.Game
                     mates[p.id] = m;
                 }
                 m.To = new Vector2(p.x, p.y);
-                if (s.phase == "build" && roundNo == s.round && Vector2.Distance(m.Sr.transform.position, m.To) > 1.5f) m.Sr.transform.position = m.To;
+                if (s.phase == "build" && roundNo == s.round && Vector2.Distance(m.Sr.transform.localPosition, m.To) > 1.5f) m.Sr.transform.localPosition = m.To;
                 var hk = string.Join(",", p.hand ?? new string[0]);
                 if (hk != m.HandKey)
                 {

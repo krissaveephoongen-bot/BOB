@@ -48,7 +48,26 @@ namespace Bob.Game
         int handShown = -1;
 
         Vector2 PlayerPos => pos;
-        Vector2 CartTop => new Vector2(CartRect.center.x, CartRect.yMin + 0.9f);
+        Vector3 CartTop => Raise(new Vector2(CartRect.center.x, CartRect.yMin), 0.9f);
+
+        // ---- 2.5D: the room is a real 3D floor (x right, room y = depth) seen by a tilted perspective camera; sprites stand up.
+        public const bool World3D = true;
+        const float CamPitch = 55f, CamFov = 30f;
+        static readonly System.Collections.Generic.HashSet<string> FlatNames =
+            new System.Collections.Generic.HashSet<string> { "tile", "RoomBorder", "Target", "TeamRing", "SpawnRing", "ThemeBackdrop", "Floor", "Shadow" };
+        float camFollowX = RoomW / 2;
+
+        /// <summary>A point `h` units above the floor point `floor` (room coordinates), in worldRoot's local space.</summary>
+        static Vector3 Raise(Vector2 floor, float h) => World3D ? new Vector3(floor.x, floor.y, -h) : new Vector3(floor.x, floor.y + h, 0);
+
+        /// <summary>Upright things (props, heroes, labels, FX) stand on the floor plane facing the camera; floor things stay flat.</summary>
+        void Stand(Transform t)
+        {
+            if (!World3D || worldRoot == null || t == null || FlatNames.Contains(t.name)) return;
+            if (t.parent != null && Quaternion.Angle(t.parent.rotation, worldRoot.rotation) < 0.1f) t.localRotation = Quaternion.Euler(CamPitch - 90f, 0, 0); // face the tilted camera (billboard), no squash
+        }
+
+        Vector3 ToWorld(Vector3 local) => worldRoot != null ? worldRoot.TransformPoint(local) : local;
 
         // ---------------------------------------------------------------- build
 
@@ -70,28 +89,30 @@ namespace Bob.Game
                 new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
 
             worldRoot = new GameObject("Room").transform;
+            if (World3D) { worldRoot.localRotation = Quaternion.Euler(90, 0, 0); cam.orthographic = false; cam.fieldOfView = CamFov; Build3DRoom(); }
             themeBg = MakeSprite("ThemeBackdrop", worldRoot, null, new Vector2(RoomW / 2, RoomH / 2 + 0.35f), 0f, false);
             themeBg.sortingOrder = -3000;
 
             // Floor: 0.5 u tiles; dirty tiles show where the enemies have been (cleaned on a round win).
-            var floor = new GameObject("Floor").transform; floor.SetParent(worldRoot);
+            var floor = new GameObject("Floor").transform; floor.SetParent(worldRoot, false);
             for (int y = 0; y < 10; y++)
                 for (int x = 0; x < 16; x++)
                 {
                     var sr = MakeSprite("tile", floor, "floor_tile", new Vector2(x * 0.5f + 0.25f, y * 0.5f + 0.25f), 0.5f, false);
                     sr.sortingOrder = -2000;
-                    sr.color = new Color(1f, 1f, 1f, 0.4f); // the themed room picture's own floor shows through (3/4 look)
+                    sr.color = new Color(1f, 1f, 1f, World3D ? 1f : 0.4f); // the themed room picture's own floor shows through (3/4 look)
                     if (!art.Has("floor_tile")) sr.color = (x + y) % 2 == 0 ? BobUi.Floor : BobUi.Hex("#EAD7A0");
                     floorTiles.Add(sr);
+                    if (World3D) sr.gameObject.SetActive(false);
                 }
             var border = MakeSprite("RoomBorder", worldRoot, null, new Vector2(RoomW / 2, RoomH / 2), 1, false);
-            border.transform.localScale = new Vector3(RoomW + 0.12f, RoomH + 0.12f, 1); border.color = new Color(BobUi.Ink.r, BobUi.Ink.g, BobUi.Ink.b, 0.45f); border.sortingOrder = -2100;
+            border.transform.localScale = new Vector3(RoomW + 0.12f, RoomH + 0.12f, 1); if (World3D) border.gameObject.SetActive(false); border.color = new Color(BobUi.Ink.r, BobUi.Ink.g, BobUi.Ink.b, 0.45f); border.sortingOrder = -2100;
 
             for (int i = 0; i < 4; i++)
             {
                 var r = StationRects[i];
                 var sr = MakeSprite("Station_" + StationIds[i], worldRoot, "station_" + StationIds[i], new Vector2(r.center.x, r.yMin), r.width, true);
-                if (!art.Has("station_" + StationIds[i])) { sr.transform.localScale = new Vector3(r.width, r.height, 1); sr.transform.position = r.center; sr.color = BobUi.Family((Family)i); }
+                if (!art.Has("station_" + StationIds[i])) { sr.transform.localScale = new Vector3(r.width, r.height, 1); sr.transform.localPosition = r.center; sr.color = BobUi.Family((Family)i); }
                 sr.sortingOrder = Order(r.yMin);
                 stationSr[i] = sr;
                 var shelfProp = sr.gameObject.AddComponent<StationProp>(); int si = i;
@@ -101,31 +122,32 @@ namespace Bob.Game
                 for (int n = 0; n < onShelf.Count && art.Has("station_" + StationIds[i]); n++)
                 {
                     float fx = r.center.x + (n - (onShelf.Count - 1) / 2f) * 0.36f;
-                    var ic = MakeSprite("Shelf_" + onShelf[n], worldRoot, "part_" + onShelf[n], new Vector2(fx, r.yMin + 0.46f), 0.3f, false);
+                    var ic = MakeSprite("Shelf_" + onShelf[n], worldRoot, "part_" + onShelf[n], Raise(new Vector2(fx, r.yMin - 0.03f), 0.46f), 0.3f, false);
                     ic.sortingOrder = sr.sortingOrder + 1;
                 }
                 WorldLabel(StationNames[i], new Vector2(r.center.x, r.yMin - 0.16f), 0.032f, BobUi.Ink);
             }
 
             var sofa = MakeSprite("Sofa", worldRoot, "sofa", new Vector2(SofaRect.center.x, SofaRect.yMin), SofaRect.width, true);
-            if (!art.Has("sofa")) { sofa.transform.localScale = new Vector3(SofaRect.width, SofaRect.height, 1); sofa.transform.position = SofaRect.center; sofa.color = BobUi.Surface; }
+            if (!art.Has("sofa")) { sofa.transform.localScale = new Vector3(SofaRect.width, SofaRect.height, 1); sofa.transform.localPosition = SofaRect.center; sofa.color = BobUi.Surface; }
             sofa.sortingOrder = Order(SofaRect.yMin);
 
             cartSr = MakeSprite("Cart", worldRoot, "cart", new Vector2(CartRect.center.x, CartRect.yMin), 1.2f, true);
-            if (!art.Has("cart")) { cartSr.transform.localScale = new Vector3(CartRect.width, CartRect.height, 1); cartSr.transform.position = CartRect.center; cartSr.color = BobUi.Surface; }
+            if (!art.Has("cart")) { cartSr.transform.localScale = new Vector3(CartRect.width, CartRect.height, 1); cartSr.transform.localPosition = CartRect.center; cartSr.color = BobUi.Surface; }
             cartSr.sortingOrder = Order(CartRect.yMin);
             cartT = cartSr.transform;
             var cartProp = cartSr.gameObject.AddComponent<StationProp>();
             cartProp.Configure(InteractableKind.Cart, "cart", NearCart, null); cartProp.BoundsProvider = () => cartRect;
             cartProp.PromptProvider = () => CtxText(ComputeCtx()); cartProp.OnInteract = _ => DoCtx(); detector.Register(cartProp);
             BuildTable();
-            cartLayers = new GameObject("CartLayers").transform; cartLayers.SetParent(worldRoot);
+            cartLayers = new GameObject("CartLayers").transform; cartLayers.SetParent(worldRoot, false);
 
-            enemyRoot = new GameObject("Enemies").transform; enemyRoot.SetParent(worldRoot);
+            enemyRoot = new GameObject("Enemies").transform; enemyRoot.SetParent(worldRoot, false);
 
             playerSr = MakeSprite("Hero", worldRoot, charId + "_idle", pos, 0f, true);
             playerAnim = playerSr.gameObject.AddComponent<BobSpriteAnimator>();
             handIcons = new GameObject("HandIcons").transform; handIcons.SetParent(playerSr.transform, false);
+            if (World3D) heroShadow = MakeShadow(worldRoot, pos, 0.55f);
             RefreshHero();
 
             targetMarker = MakeSprite("Target", worldRoot, "fx_target", Vector2.zero, 0.35f, false).transform;
@@ -139,9 +161,9 @@ namespace Bob.Game
         static int Order(float y) => Mathf.RoundToInt(-y * 100f);
 
         /// <summary>A sprite from the art library, scaled so its frame is `width` wide (or 1 u tall for width 0).</summary>
-        SpriteRenderer MakeSprite(string name, Transform parent, string sprite, Vector2 at, float width, bool bottomPivot)
+        SpriteRenderer MakeSprite(string name, Transform parent, string sprite, Vector3 at, float width, bool bottomPivot)
         {
-            var go = new GameObject(name); go.transform.SetParent(parent, false); go.transform.position = at;
+            var go = new GameObject(name); go.transform.SetParent(parent, false); go.transform.localPosition = at; Stand(go.transform);
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = sprite != null && art != null ? art.Get(sprite) : BobArtLibrary.White;
             var size = sr.sprite.bounds.size;
@@ -149,9 +171,9 @@ namespace Bob.Game
             return sr;
         }
 
-        TextMesh WorldLabel(string text, Vector2 at, float size, Color color, Transform parent = null)
+        TextMesh WorldLabel(string text, Vector3 at, float size, Color color, Transform parent = null)
         {
-            var go = new GameObject("Label"); go.transform.SetParent(parent != null ? parent : worldRoot, false); go.transform.position = at;
+            var go = new GameObject("Label"); go.transform.SetParent(parent != null ? parent : worldRoot, false); go.transform.localPosition = at; Stand(go.transform);
             var tm = go.AddComponent<TextMesh>();
             tm.font = BobUi.Font; tm.text = text; tm.fontSize = 48; tm.characterSize = size; tm.anchor = TextAnchor.MiddleCenter; tm.alignment = TextAlignment.Center; tm.color = color;
             var mr = go.GetComponent<MeshRenderer>(); mr.sharedMaterial = BobUi.Font.material; mr.sortingOrder = 3000;
@@ -192,6 +214,7 @@ namespace Bob.Game
                 sr.transform.localScale = Vector3.one * (0.95f / Mathf.Max(0.01f, sr.sprite.bounds.size.y));
                 if (idle == null) { sr.transform.localScale = new Vector3(0.6f, 0.5f, 1); sr.color = BobUi.Hex(BobMatch.Enemy(ids[i]).Color); }
                 sr.sortingOrder = Order(3.75f);
+                if (World3D) MakeShadow(holder, new Vector2(x, 3.75f), 0.7f);
                 var an = sr.gameObject.AddComponent<BobSpriteAnimator>();
                 if (idle != null) an.Play(idle.frames, idle.fps, true);
                 WorldLabel(BobMatch.Enemy(ids[i]).Name, new Vector2(x, 3.62f), 0.03f, BobUi.Ink, holder);
@@ -241,7 +264,14 @@ namespace Bob.Game
         void Tap(Vector2 p)
         {
             if (!cam.pixelRect.Contains(p)) return;
-            var w = cam.ScreenToWorldPoint(p);
+            Vector3 w;
+            if (World3D)
+            {
+                var ray = cam.ScreenPointToRay(p); var floor = new Plane(Vector3.up, Vector3.zero);
+                if (!floor.Raycast(ray, out var dist)) return;
+                w = worldRoot.InverseTransformPoint(ray.GetPoint(dist));
+            }
+            else w = cam.ScreenToWorldPoint(p);
             if (!Online && phase == Phase.Build && tableItems.Count > 0 && TableRect.Contains(w) && nearTable) { TakeFromTable(); return; }
             if (w.x < -0.3f || w.x > RoomW + 0.3f || w.y < -0.3f || w.y > RoomH + 0.3f) return;
             target = new Vector2(Mathf.Clamp(w.x, 0.18f, RoomW - 0.18f), Mathf.Clamp(w.y, 0.18f, RoomH - 0.18f)); stuck = 0;
@@ -310,7 +340,7 @@ namespace Bob.Game
             if (lastMove != Vector2.zero)
             {
                 if (!Online) PushCart(old);
-                stepT += dt; if (stepT > 0.32f) { stepT = 0; Sfx("footstep"); }
+                stepT += dt; if (stepT > 0.32f) { stepT = 0; Sfx("footstep"); if (World3D) SpawnFxSized("fx_poof", Raise(pos - lastMove.normalized * 0.12f, 0.05f), 0.28f); }
             }
 
             // nearest station / cart
@@ -321,7 +351,18 @@ namespace Bob.Game
             if (n != near || nc != nearCart || ntb != nearTable) { near = n; nearCart = nc; nearTable = ntb; if (phase == Phase.Build) Sfx("ui_tap"); RenderAll(); }
 
             // hero
-            playerSr.transform.position = pos;
+            playerSr.transform.localPosition = pos;
+            if (World3D)
+            {
+                // juice: lean into the walk, a small bounce per step, and a soft shadow that stays on the floor
+                float speedK = Mathf.Clamp01(lastMove.magnitude / Mathf.Max(0.0001f, Speed * dt));
+                heroLean = Mathf.Lerp(heroLean, -Mathf.Sign(lastMove.x) * 7f * speedK, 1 - Mathf.Exp(-12f * dt));
+                if (lastMove == Vector2.zero) heroLean = Mathf.Lerp(heroLean, 0, 1 - Mathf.Exp(-10f * dt));
+                playerSr.transform.localRotation = Quaternion.Euler(CamPitch - 90f, 0, heroLean);
+                float bounce = lastMove != Vector2.zero ? Mathf.Abs(Mathf.Sin(Time.time * 14f)) * 0.06f : 0f;
+                playerSr.transform.localPosition = Raise(pos, bounce);
+                if (heroShadow != null) { heroShadow.transform.localPosition = new Vector3(pos.x, pos.y, -0.005f); heroShadow.sortingOrder = Order(pos.y) - 2; }
+            }
             playerSr.sortingOrder = Order(pos.y);
             if (Mathf.Abs(lastMove.x) > 0.0005f) playerSr.flipX = lastMove.x < 0;
             SetHeroAnim(hand.Count > 0 ? "carry" : lastMove != Vector2.zero ? "walk" : phase == Phase.Result && wins > losses ? "cheer" : "idle");
@@ -331,7 +372,7 @@ namespace Bob.Game
             if (art.Has("cart")) cartSr.color = phase == Phase.Build && nearCart ? new Color(1f, 0.93f, 0.6f) : Color.white;
 
             targetMarker.gameObject.SetActive(target.HasValue);
-            if (target.HasValue) targetMarker.position = target.Value;
+            if (target.HasValue) targetMarker.localPosition = target.Value;
             TickSignals(dt);
         }
 
@@ -339,6 +380,7 @@ namespace Bob.Game
 
         void FitCamera()
         {
+            if (World3D) { FitCamera3D(); return; }
             // Full-screen world (mobile landscape): the camera fills the safe area and the HUD floats on top. The room is fitted
             // into the free band between the side columns (order ticket, cart) and the top / bottom strips; the themed room
             // picture behind it fills the rest of the screen.
@@ -361,6 +403,68 @@ namespace Bob.Game
             }
         }
 
+        void FitCamera3D()
+        {
+            var sa = Screen.safeArea; float W = Mathf.Max(1, Screen.width), H = Mathf.Max(1, Screen.height);
+            cam.rect = new Rect(sa.xMin / W, sa.yMin / H, Mathf.Max(0.1f, sa.width / W), Mathf.Max(0.1f, sa.height / H));
+            cam.fieldOfView = CamFov;
+            var rot = Quaternion.Euler(CamPitch, 0, 0); cam.transform.rotation = rot;
+            // fit the room's width (between the HUD side columns) and depth (between the top / bottom strips)
+            float vHalf = CamFov * 0.5f * Mathf.Deg2Rad, hHalf = Mathf.Atan(Mathf.Tan(vHalf) * Mathf.Max(0.1f, cam.aspect));
+            float fw = Mathf.Max(0.3f, 1f - 2 * SideCol), fh = Mathf.Max(0.3f, 1f - TopStrip - BottomStrip);
+            float dW = (RoomW + 0.6f) / 2f / (Mathf.Tan(hHalf) * fw);
+            float dH = (RoomH * Mathf.Sin(CamPitch * Mathf.Deg2Rad) + 1.4f) / 2f / (Mathf.Tan(vHalf) * fh);
+            float d = Mathf.Max(dW, dH);
+            // gentle follow: the camera drifts a little towards the hero, never far enough to hide a shelf
+            float wantX = Mathf.Lerp(RoomW / 2, pos.x, 0.18f);
+            camFollowX = Mathf.Lerp(camFollowX, wantX, 1 - Mathf.Exp(-3f * Time.unscaledDeltaTime));
+            var target = new Vector3(camFollowX, 0.35f, RoomH / 2 - 0.15f);
+            float bandShift = (BottomStrip - TopStrip) / 2f * 2f * d * Mathf.Tan(vHalf); // keep the room centred in the free band
+            cam.transform.position = target - rot * Vector3.forward * d - rot * Vector3.up * bandShift;
+            if (themeBg != null) themeBg.gameObject.SetActive(false);
+        }
+
+        /// <summary>Walls, ground and light around the floor (floor tiles stay the 2D sprites). The back wall shows the room picture.</summary>
+        void Build3DRoom()
+        {
+            var room3d = new GameObject("Room3D").transform;
+            Material Mat(Color c) { var m = new Material(Shader.Find("Standard")); m.color = c; m.SetFloat("_Glossiness", 0.1f); return m; }
+            GameObject Box(string n, Vector3 centre, Vector3 size, Color c)
+            {
+                var g = GameObject.CreatePrimitive(PrimitiveType.Cube); g.name = n; g.transform.SetParent(room3d, false);
+                g.transform.position = centre; g.transform.localScale = size; Destroy(g.GetComponent<Collider>());
+                g.GetComponent<MeshRenderer>().sharedMaterial = Mat(c); return g;
+            }
+            // ground outside the room, a plinth under the floor, walls (back high, sides low, front lip)
+            Box("Ground", new Vector3(RoomW / 2, -0.06f, RoomH / 2), new Vector3(40, 0.1f, 30), BobUi.Hex("#C9B48A"));
+            Box("Plinth", new Vector3(RoomW / 2, -0.03f, RoomH / 2), new Vector3(RoomW + 0.5f, 0.06f, RoomH + 0.5f), BobUi.Hex("#8C6A4A"));
+            Box("BackWall", new Vector3(RoomW / 2, 1.3f, RoomH + 0.2f), new Vector3(RoomW + 0.8f, 2.6f, 0.3f), BobUi.Hex("#F4E6C8"));
+            Box("WallL", new Vector3(-0.25f, 0.35f, RoomH / 2), new Vector3(0.3f, 0.7f, RoomH + 0.5f), BobUi.Hex("#EAD7B0"));
+            Box("WallR", new Vector3(RoomW + 0.25f, 0.35f, RoomH / 2), new Vector3(0.3f, 0.7f, RoomH + 0.5f), BobUi.Hex("#EAD7B0"));
+            Box("Lip", new Vector3(RoomW / 2, 0.06f, -0.22f), new Vector3(RoomW + 0.8f, 0.12f, 0.15f), BobUi.Hex("#8C6A4A"));
+            // the themed room picture as a mural on the back wall
+            if (art.Has("lobby_rental_room"))
+            {
+                var tex = art.Get("lobby_rental_room").texture;
+                var q = GameObject.CreatePrimitive(PrimitiveType.Quad); q.name = "WallPicture"; q.transform.SetParent(room3d, false);
+                Destroy(q.GetComponent<Collider>());
+                q.transform.position = new Vector3(RoomW / 2, 1.45f, RoomH + 0.04f); q.transform.localScale = new Vector3(RoomW + 0.6f, (RoomW + 0.6f) * 9f / 16f * 0.55f, 1);
+                var m = new Material(Shader.Find("Unlit/Texture")) { mainTexture = tex }; m.mainTextureScale = new Vector2(1, 0.55f); m.mainTextureOffset = new Vector2(0, 0.38f);
+                q.GetComponent<MeshRenderer>().sharedMaterial = m;
+            }
+            // wooden floor (Leonardo tile texture), the 2D floor tiles are hidden in 3D
+            var fl = GameObject.CreatePrimitive(PrimitiveType.Quad); fl.name = "FloorWood"; fl.transform.SetParent(room3d, false); Destroy(fl.GetComponent<Collider>());
+            fl.transform.position = new Vector3(RoomW / 2, 0.001f, RoomH / 2); fl.transform.rotation = Quaternion.Euler(90, 0, 0); fl.transform.localScale = new Vector3(RoomW, RoomH, 1);
+            var fm = new Material(Shader.Find("Standard")); fm.SetFloat("_Glossiness", 0.25f);
+            var ft = Resources.Load<Texture2D>("Textures/floor_wood"); if (ft != null) { fm.mainTexture = ft; fm.mainTextureScale = new Vector2(RoomW / 2.2f, RoomH / 2.2f); } else fm.color = BobUi.Hex("#C8935A");
+            fl.GetComponent<MeshRenderer>().sharedMaterial = fm;
+            floor3d = fm;
+            var lightGo = new GameObject("Sun"); lightGo.transform.SetParent(room3d, false);
+            var sun = lightGo.AddComponent<Light>(); sun.type = LightType.Directional; sun.intensity = 1.05f; sun.shadows = LightShadows.Soft; sun.color = new Color(1f, 0.96f, 0.88f);
+            lightGo.transform.rotation = Quaternion.Euler(50, -30, 0);
+            RenderSettings.ambientLight = new Color(0.62f, 0.6f, 0.58f);
+        }
+
         // ---------------------------------------------------------------- reacting to the rules
 
         void RenderWorld()
@@ -376,17 +480,17 @@ namespace Bob.Game
                     if (!BobRules.IsMethod(id))
                     {
                         float y = y0 + layer * 0.13f;
-                        var slab = MakeSprite("Layer_" + id, cartLayers, "cart_layer", new Vector2(CartRect.center.x, y), 0.78f, false);
+                        var slab = MakeSprite("Layer_" + id, cartLayers, "cart_layer", Raise(new Vector2(CartRect.center.x, CartRect.yMin - 0.03f), y - CartRect.yMin), 0.78f, false);
                         if (!art.Has("cart_layer")) slab.transform.localScale = new Vector3(0.74f, 0.1f, 1);
                         slab.color = BobUi.Family(p.Family); slab.sortingOrder = cartSr.sortingOrder + 1 + layer * 3;
-                        var icon = MakeSprite("Icon", cartLayers, "part_" + id, new Vector2(CartRect.center.x - 0.22f, y + 0.02f), 0.22f, false);
+                        var icon = MakeSprite("Icon", cartLayers, "part_" + id, Raise(new Vector2(CartRect.center.x - 0.22f, CartRect.yMin - 0.05f), y + 0.02f - CartRect.yMin), 0.22f, false);
                         icon.sortingOrder = slab.sortingOrder + 1;
                         layer++;
                     }
                     else
                     {
                         float y = y0 + Mathf.Max(0, layer - 1) * 0.13f + 0.02f;
-                        var icon = MakeSprite("Method_" + id, cartLayers, "part_" + id, new Vector2(CartRect.center.x + 0.24f, y), 0.2f, false);
+                        var icon = MakeSprite("Method_" + id, cartLayers, "part_" + id, Raise(new Vector2(CartRect.center.x + 0.24f, CartRect.yMin - 0.05f), y - CartRect.yMin), 0.2f, false);
                         icon.sortingOrder = cartSr.sortingOrder + 2 + Mathf.Max(0, layer - 1) * 3;
                     }
                 }
@@ -411,22 +515,55 @@ namespace Bob.Game
         void OnLayerPlaced(List<Effect> fresh)
         {
             StartCoroutine(BobTween.Squash(cartT));
-            float y = CartTop.y + 0.25f;
+            float h = 1.15f;
             foreach (var f in fresh)
             {
                 var col = f.Sum >= 0 ? BobUi.Good : BobUi.Bad;
-                var grp = new GameObject("Fx").transform; grp.SetParent(worldRoot, false); grp.position = new Vector2(CartRect.center.x, y);
-                WorldLabel(f.Text, grp.position, 0.026f, col, grp);
-                var fxIcon = MakeSprite("FxIcon", grp, f.Sum >= 0 ? "icon_check" : "icon_cross", grp.position + new Vector3(0, 0.17f, 0), 0.2f, false);
+                var anchor = new GameObject("FxAnchor").transform; anchor.SetParent(worldRoot, false);
+                anchor.localPosition = Raise(new Vector2(CartRect.center.x, CartRect.yMin - 0.1f), h); Stand(anchor);
+                var grp = new GameObject("FxGroup").transform; grp.SetParent(anchor, false);
+                WorldLabel(f.Text, Vector3.zero, 0.026f, col, grp);
+                var fxIcon = MakeSprite("FxIcon", grp, f.Sum >= 0 ? "icon_check" : "icon_cross", new Vector3(0, 0.17f, 0), 0.2f, false);
                 fxIcon.color = col; fxIcon.sortingOrder = 3000;
-                StartCoroutine(BobTween.FloatUp(grp, 0.6f, 1.4f));
-                y += 0.22f;
+                StartCoroutine(BobTween.FloatUp(grp, 0.6f, 1.4f)); Destroy(anchor.gameObject, 2f);
+                h += 0.22f;
                 if (f.Sum >= 0) { Sfx("reaction_good"); SpawnFx("fx_sparkle", CartTop); }
                 else { Sfx("reaction_bad"); SpawnFx(f.Text.Contains("ฟู่") ? "fx_fizz" : "fx_poof", CartTop); StartCoroutine(BobTween.Shake(cartT, 0.06f)); Buzz(); }
             }
         }
 
-        void SpawnFx(string name, Vector2 at)
+        Material floor3d;
+        float heroLean;
+        SpriteRenderer heroShadow;
+        static Sprite blob;
+
+        /// <summary>A soft round shadow sprite (made once in code).</summary>
+        SpriteRenderer MakeShadow(Transform parent, Vector2 at, float width)
+        {
+            if (blob == null)
+            {
+                const int N = 64; var tex = new Texture2D(N, N, TextureFormat.RGBA32, false); tex.wrapMode = TextureWrapMode.Clamp;
+                for (int y = 0; y < N; y++) for (int x = 0; x < N; x++)
+                    {
+                        float dx = (x + 0.5f) / N * 2 - 1, dy = (y + 0.5f) / N * 2 - 1, r = Mathf.Sqrt(dx * dx + dy * dy);
+                        tex.SetPixel(x, y, new Color(0, 0, 0, Mathf.Clamp01(1 - r) * 0.45f));
+                    }
+                tex.Apply(); blob = Sprite.Create(tex, new Rect(0, 0, N, N), new Vector2(0.5f, 0.5f), N);
+            }
+            var go = new GameObject("Shadow"); go.transform.SetParent(parent, false); go.transform.localPosition = new Vector3(at.x, at.y, -0.005f);
+            var sr = go.AddComponent<SpriteRenderer>(); sr.sprite = blob; go.transform.localScale = new Vector3(width, width * 0.55f, 1);
+            sr.sortingOrder = Order(at.y) - 2;
+            return sr;
+        }
+
+        void SpawnFxSized(string name, Vector3 at, float width)
+        {
+            var e = art.Find(name); if (e == null) return;
+            var sr = MakeSprite(name, worldRoot, name, at, width, false); sr.sortingOrder = 2800; sr.color = new Color(1, 1, 1, 0.7f);
+            var an = sr.gameObject.AddComponent<BobSpriteAnimator>(); an.destroyWhenDone = true; an.Play(e.frames, e.fps, false);
+        }
+
+        void SpawnFx(string name, Vector3 at)
         {
             var e = art.Find(name); if (e == null) return;
             var sr = MakeSprite(name, worldRoot, name, at, 0.7f, false); sr.sortingOrder = 2800;
@@ -445,7 +582,7 @@ namespace Bob.Game
             {
                 Sfx("enemy_defeat");
                 foreach (var t in floorTiles) t.sprite = art.Get("floor_tile");
-                SpawnFx("fx_sparkle", new Vector2(RoomW / 2, 3.8f)); SpawnFx("fx_sparkle", CartTop);
+                SpawnFx("fx_sparkle", Raise(new Vector2(RoomW / 2, 3.7f), 0.5f)); SpawnFx("fx_sparkle", CartTop);
             }
             else Sfx("enemy_hit");
         }

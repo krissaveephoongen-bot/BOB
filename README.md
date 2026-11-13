@@ -236,3 +236,6 @@ UX spec 5A in the solo scene (`BobGame.Extras.cs`): a contextual main button (à¸
 Modular scripts (`unity/Assets/Scripts/Modular/`: IInteractable, StationProp, InteractionDetector, PlayerController, TaskManager, MobileHUDController) now drive movement, what-is-near, the round clock and the HUD in the solo scene. Inspector setup guide: `art/docs/14_Modular_HUD_Setup.md`. The HUD also has the cart slot bar (5 icon slots, top right).
 
 All UI text is TextMeshPro now (`BobUi.Label`, fonts `Assets/Resources/Fonts/TMP`); set up with menu **Bob > TextMeshPro** (see `art/docs/14_Modular_HUD_Setup.md`). The server-address input keeps a legacy `Text` (InputField needs it).
+
+## 2.5D play scene (branch feature/scene-3d)
+The solo room is now a real 3D room (wood floor from the Leonardo tile, walls, the themed room picture as a back-wall mural, sun light) seen by a perspective camera pitched 55 degrees with a gentle follow; heroes, enemies, props and FX are the Leonardo sprites standing as camera-facing billboards with soft blob shadows. Walking leans and bounces the hero and leaves dust puffs. Game logic is unchanged (room coordinates x / y = depth); switch back with `World3D = false` in `BobGame.World.cs`.

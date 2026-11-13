@@ -18,15 +18,21 @@ namespace Bob.Game
         // ---------------------------------------------------------------- cart push
 
         bool pushHinted;
+        SpriteRenderer cartShadow;
         float nextPushHud;
 
         /// <summary>Put the cart sprite where cartRect says (bottom-pivot, or a coloured box without art).</summary>
         void PlaceCart()
         {
             if (cartT == null) return;
-            if (art.Has("cart")) cartT.position = new Vector3(cartRect.center.x, cartRect.yMin, 0);
-            else cartT.position = new Vector3(cartRect.center.x, cartRect.center.y, 0);
+            if (art.Has("cart")) cartT.localPosition = new Vector3(cartRect.center.x, cartRect.yMin, 0);
+            else cartT.localPosition = new Vector3(cartRect.center.x, cartRect.center.y, 0);
             cartSr.sortingOrder = Order(cartRect.yMin);
+            if (World3D)
+            {
+                if (cartShadow == null) cartShadow = MakeShadow(worldRoot, cartRect.center, 1.1f);
+                cartShadow.transform.localPosition = new Vector3(cartRect.center.x, cartRect.yMin + 0.12f, -0.005f); cartShadow.sortingOrder = Order(cartRect.yMin) - 2;
+            }
         }
 
         /// <summary>The hero walked into the cart: slide it along unless a shelf, the sofa, the table or a wall is in the way.</summary>
@@ -59,7 +65,7 @@ namespace Bob.Game
         {
             string sp = art.Has("desk") ? "desk" : null; // Leonardo desk picture
             tableSr = MakeSprite("RestTable", worldRoot, sp, new Vector2(TableRect.center.x, TableRect.yMin), TableRect.width * 1.15f, true);
-            if (sp == null) { tableSr.transform.localScale = new Vector3(TableRect.width, TableRect.height, 1); tableSr.transform.position = TableRect.center; tableSr.color = BobUi.Hex("#C9A66B"); }
+            if (sp == null) { tableSr.transform.localScale = new Vector3(TableRect.width, TableRect.height, 1); tableSr.transform.localPosition = TableRect.center; tableSr.color = BobUi.Hex("#C9A66B"); }
             tableSr.sortingOrder = Order(TableRect.yMin);
             WorldLabel("โต๊ะพักของ", new Vector2(TableRect.center.x, TableRect.yMin - 0.16f), 0.03f, BobUi.Ink);
             var tableProp = tableSr.gameObject.AddComponent<StationProp>();
@@ -93,7 +99,7 @@ namespace Bob.Game
             if (Online) return;
             for (int i = 0; i < tableItems.Count; i++)
             {
-                var ic = MakeSprite("T_" + tableItems[i], tableItemsRoot, "part_" + tableItems[i], new Vector2(TableRect.center.x - 0.16f + i * 0.32f, TableRect.yMin + 0.5f), 0.3f, false);
+                var ic = MakeSprite("T_" + tableItems[i], tableItemsRoot, "part_" + tableItems[i], Raise(new Vector2(TableRect.center.x - 0.16f + i * 0.32f, TableRect.yMin - 0.03f), 0.5f), 0.3f, false);
                 ic.sortingOrder = Order(TableRect.yMin) + 3;
             }
         }
@@ -147,14 +153,14 @@ namespace Bob.Game
             }
         }
 
-        Vector2? CtxTarget(Ctx c)
+        Vector3? CtxTarget(Ctx c)
         {
             switch (c)
             {
                 case Ctx.Place:
                 case Ctx.Lift: return CartTop;
                 case Ctx.Stash:
-                case Ctx.TakeTable: return new Vector2(TableRect.center.x, TableRect.yMax + 0.5f);
+                case Ctx.TakeTable: return Raise(new Vector2(TableRect.center.x, TableRect.yMin), 0.95f);
                 default: return null;
             }
         }
@@ -197,8 +203,8 @@ namespace Bob.Game
             teamRing.gameObject.SetActive(inGame); heroName.gameObject.SetActive(inGame);
             if (inGame)
             {
-                teamRing.color = new Color(hc.r, hc.g, hc.b, 0.85f); teamRing.transform.position = pos + new Vector2(0, 0.02f); teamRing.sortingOrder = Order(pos.y) - 1;
-                heroName.text = Hero.Name; heroName.transform.position = pos + new Vector2(0, -0.16f); heroName.color = hc;
+                teamRing.color = new Color(hc.r, hc.g, hc.b, 0.85f); teamRing.transform.localPosition = pos + new Vector2(0, 0.02f); teamRing.sortingOrder = Order(pos.y) - 1;
+                heroName.text = Hero.Name; heroName.transform.localPosition = pos + new Vector2(0, -0.16f); heroName.color = hc;
             }
             bool pre = R != null && (phase == Phase.Intro || phase == Phase.Countdown);
             spawnRing.gameObject.SetActive(pre); spawnLabel.gameObject.SetActive(pre);
@@ -207,7 +213,7 @@ namespace Bob.Game
             // the thing the main button will act on gets a bobbing star above it
             var tgt = CtxTarget(ctx);
             ctxArrow.gameObject.SetActive(tgt.HasValue);
-            if (tgt.HasValue) ctxArrow.transform.position = tgt.Value + new Vector2(0, 0.08f * Mathf.Sin(Time.unscaledTime * 6f));
+            if (tgt.HasValue) ctxArrow.transform.localPosition = tgt.Value + Raise(Vector2.zero, 0.08f * Mathf.Sin(Time.unscaledTime * 6f));
 
             // enemies appear 2.5 s after "ลุย!" (UX 5A.8) and never before everyone could move
             if (phase == Phase.Build && overlay == Overlay.None && !Online) buildElapsed += dt;
@@ -224,7 +230,7 @@ namespace Bob.Game
                 if (!withFx) continue;
                 var sp = art.Find(en.id + "_spawn");
                 if (sp != null) en.anim.Play(sp.frames, sp.fps, false);
-                SpawnFx("fx_poof", en.t.position + new Vector3(0, 0.4f, 0));
+                SpawnFx("fx_poof", Raise((Vector2)en.anim.transform.localPosition, 0.4f));
             }
             if (withFx) Sfx("enemy_spawn");
         }

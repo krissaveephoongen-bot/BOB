@@ -393,7 +393,7 @@ namespace Bob.Game
         bool DroppedOnCart(Vector2 sp)
         {
             if (cartCardRt != null && RectTransformUtility.RectangleContainsScreenPoint(cartCardRt, sp, null)) return true;
-            var c = cam.WorldToScreenPoint(new Vector3(CartRect.center.x, CartRect.center.y + 0.3f, 0));
+            var c = cam.WorldToScreenPoint(ToWorld(Raise(new Vector2(CartRect.center.x, CartRect.yMin), 0.6f)));
             return Vector2.Distance(sp, c) < Screen.height * 0.14f;
         }
 
@@ -488,8 +488,8 @@ namespace Bob.Game
             if (stationPop == null || !stationPop.gameObject.activeSelf || near == null) return;
             int si = System.Array.IndexOf(StationIds, near); var r = StationRects[si];
             bool topRow = si < 2;
-            var wp = new Vector3(r.center.x, topRow ? r.yMin - 0.15f : r.yMax + 0.7f, 0);
-            var sp = cam.WorldToScreenPoint(wp);
+            var wp = topRow ? Raise(new Vector2(r.center.x, r.yMin - 0.15f), 0f) : Raise(new Vector2(r.center.x, r.yMin), 1.3f);
+            var sp = cam.WorldToScreenPoint(ToWorld(wp));
             RectTransformUtility.ScreenPointToLocalPointInRectangle(hudRoot, sp, null, out var lp);
             stationPop.anchorMin = stationPop.anchorMax = new Vector2(0.5f, 0.5f);
             stationPop.pivot = new Vector2(0.5f, topRow ? 1 : 0);
