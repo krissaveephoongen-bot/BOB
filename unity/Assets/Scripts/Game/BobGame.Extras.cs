@@ -17,7 +17,8 @@ namespace Bob.Game
     {
         // ---------------------------------------------------------------- cart push
 
-        bool pushHinted;
+        bool pushHinted, pushedFrame;
+        Vector2 cartVel; float cartTilt, cartDust;
         SpriteRenderer cartShadow;
         float nextPushHud;
 
@@ -46,10 +47,45 @@ namespace Bob.Game
                       && !SofaRect.Overlaps(moved) && !TableRect.Overlaps(moved);
             if (ok) foreach (var r in StationRects) if (r.Overlaps(moved)) { ok = false; break; }
             if (!ok) { if (d > 0.0001f) pos = c + (pos - c) / d * Radius; return; } // blocked: the cart acts as a wall
+            cartVel = Time.deltaTime > 0.0001f ? Vector2.ClampMagnitude((moved.position - cartRect.position) / Time.deltaTime, 2.6f) : cartVel;
+            pushedFrame = true;
             cartRect = moved; PlaceCart();
             RenderWorld();
             if (Time.unscaledTime > nextPushHud) { nextPushHud = Time.unscaledTime + 0.1f; RenderHud(); }
             if (!pushHinted) { pushHinted = true; Toast("เข็นรถเข็นไปจอดใกล้จุดเก็บของได้"); }
+        }
+
+        bool CartSpotFree(Rect moved)
+        {
+            bool ok = moved.xMin >= 0.1f && moved.xMax <= RoomW - 0.1f && moved.yMin >= 0.1f && moved.yMax <= RoomH - 0.1f
+                      && !SofaRect.Overlaps(moved) && !TableRect.Overlaps(moved);
+            if (ok) foreach (var r in StationRects) if (r.Overlaps(moved)) return false;
+            return ok;
+        }
+
+        /// <summary>The cart keeps rolling after a push (friction), tilts into the turn, its load bounces, and it kicks up dust when fast.</summary>
+        void TickCart(float dt)
+        {
+            if (cartT == null || Online) return;
+            if (pushedFrame) pushedFrame = false;
+            else if (cartVel.sqrMagnitude > 0.0009f)
+            {
+                var moved = new Rect(cartRect.position + cartVel * dt, cartRect.size);
+                if (CartSpotFree(moved)) { cartRect = moved; PlaceCart(); RenderWorld(); }
+                else cartVel *= -0.25f; // bumps into a shelf
+                cartVel *= Mathf.Exp(-5f * dt);
+            }
+            else cartVel = Vector2.zero;
+            float tiltTarget = Mathf.Clamp(-cartVel.x * 5f, -10f, 10f);
+            cartTilt = Mathf.Lerp(cartTilt, tiltTarget, 1 - Mathf.Exp(-12f * dt));
+            cartT.localRotation = Quaternion.Euler(World3D ? CamPitch - 90f : 0f, 0, cartTilt);
+            float bounce = Mathf.Min(cartVel.magnitude, 2.5f) * 0.02f * Mathf.Abs(Mathf.Sin(Time.time * 18f));
+            if (cartLayers != null) cartLayers.localPosition = Raise(Vector2.zero, bounce);
+            if (World3D && cartVel.magnitude > 1.1f)
+            {
+                cartDust -= dt;
+                if (cartDust <= 0) { cartDust = 0.12f; SpawnFxSized("fx_poof", Raise(new Vector2(cartRect.center.x, cartRect.yMin) - cartVel.normalized * 0.3f, 0.05f), 0.3f); }
+            }
         }
 
         // ---------------------------------------------------------------- item rest table

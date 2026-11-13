@@ -16,6 +16,9 @@ namespace Bob.Modular
         [Tooltip("Slowest the analogue stick may walk, as a fraction of full speed")] public float minSpeedFactor = 0.45f;
         [Tooltip("Margin kept to the room walls")] public float wallMargin = 0.18f;
         public Rect room = new Rect(0, 0, 8, 5);
+        [Tooltip("Room units / s^2 when starting to walk")] public float acceleration = 16f;
+        [Tooltip("Room units / s^2 when letting go")] public float braking = 22f;
+        public Vector2 Velocity { get; set; }
 
         /// <summary>Solid rectangles to stay out of. Supplied by the game each frame.</summary>
         public Func<IEnumerable<Rect>> Solids;
@@ -40,18 +43,20 @@ namespace Bob.Modular
         /// <summary>Advance one frame. `input` is a direction (length 0..1); zero means "follow the tap target, if any".</summary>
         public void Step(Vector2 input, float dt)
         {
-            Vector2 dir = input; float mag = input.magnitude;
+            Vector2 dir = input; float mag = input.magnitude; float slow = 1f;
             if (dir == Vector2.zero && Target.HasValue)
             {
                 var d = Target.Value - Position;
                 if (d.magnitude < 0.05f) { Target = null; }
-                else { dir = d.normalized; mag = 1f; }
+                else { dir = d.normalized; mag = 1f; slow = Mathf.Clamp(d.magnitude / 0.35f, 0.3f, 1f); } // ease in to the spot
             }
-            if (dir == Vector2.zero) { LastMove = Vector2.zero; return; }
+            Vector2 desired = dir == Vector2.zero ? Vector2.zero : dir.normalized * speed * Mathf.Clamp(mag, minSpeedFactor, 1f) * slow;
+            Velocity = Vector2.MoveTowards(Velocity, desired, (desired == Vector2.zero ? braking : acceleration) * dt);
+            if (desired == Vector2.zero && Velocity.sqrMagnitude < 0.0009f) { Velocity = Vector2.zero; LastMove = Vector2.zero; return; }
 
             var old = Position;
-            float step = speed * dt * Mathf.Clamp(mag, minSpeedFactor, 1f);
-            var p = old + dir.normalized * step;
+            float step = Velocity.magnitude * dt;
+            var p = old + Velocity * dt;
             p.x = Mathf.Clamp(p.x, room.xMin + wallMargin, room.xMax - wallMargin);
             p.y = Mathf.Clamp(p.y, room.yMin + wallMargin, room.yMax - wallMargin);
             if (Solids != null)
@@ -64,6 +69,7 @@ namespace Bob.Modular
                 }
             }
             Position = p;
+            if (dt > 0.0001f) Velocity = (p - old) / dt; // a wall or shelf takes the speed away
             if (Target.HasValue)
             {
                 // blocked on the way (a shelf in the path): give up after 0.4 s instead of pushing forever

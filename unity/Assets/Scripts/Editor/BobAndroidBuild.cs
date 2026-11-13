@@ -22,7 +22,7 @@ namespace Bob.EditorTools
             PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, Package);
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
-            PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel24;
+            PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel26;
             PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevelAuto;
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.AutoRotation;
             PlayerSettings.allowedAutorotateToPortrait = false; PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
@@ -50,6 +50,13 @@ namespace Bob.EditorTools
             so.ApplyModifiedProperties(); AssetDatabase.SaveAssets();
         }
 
+        [MenuItem("Bob/Android/Switch Editor Back To Windows")]
+        public static void BackToWindows()
+        {
+            if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.StandaloneWindows64)
+                EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows64);
+        }
+
         [MenuItem("Bob/Android/Build APK")]
         public static void BuildApk()
         {
@@ -63,6 +70,7 @@ namespace Bob.EditorTools
             {
                 scenes = scenes, locationPathName = path, target = BuildTarget.Android, options = BuildOptions.None
             });
+            BackToWindows(); // a build leaves the Editor on Android; the next Play session would then recompile (define symbols change) and kill the bot test
             var s = report.summary;
             Debug.Log($"Bob: APK build {s.result}, {s.totalErrors} errors, {s.totalSize / 1048576} MB -> {path}");
             if (Application.isBatchMode) EditorApplication.Exit(s.result == UnityEditor.Build.Reporting.BuildResult.Succeeded ? 0 : 1);

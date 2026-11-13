@@ -239,3 +239,9 @@ All UI text is TextMeshPro now (`BobUi.Label`, fonts `Assets/Resources/Fonts/TMP
 
 ## 2.5D play scene (branch feature/scene-3d)
 The solo room is now a real 3D room (wood floor from the Leonardo tile, walls, the themed room picture as a back-wall mural, sun light) seen by a perspective camera pitched 55 degrees with a gentle follow; heroes, enemies, props and FX are the Leonardo sprites standing as camera-facing billboards with soft blob shadows. Walking leans and bounces the hero and leaves dust puffs. Game logic is unchanged (room coordinates x / y = depth); switch back with `World3D = false` in `BobGame.World.cs`.
+
+## Menus, music and game feel (13 Nov)
+- Screens around the match (`Game/BobGame.Menus.cs`, UX spec section 4): splash, login (guest), Home / lobby with the time-of-day room picture, mode select (Solo and Friends playable, the rest show why they are locked), hero select with the 15 s timer, shop with a purchase confirm (coins, no random boxes), XP and level. Icons that do not exist yet (wardrobe, friends, recipe book) are left out and listed for the art thread.
+- Music: four CC0 tracks (Zane Little) crossfade by screen (`BobSfx.Track`): menu, game, tense under 15 s, result. Nine Kenney CC0 sounds replaced placeholders. Credits in `art/docs/12_Sound_Manifest.md`.
+- Feel: the hero accelerates and brakes with squash and stretch (`PlayerController`), the cart keeps rolling after a push, tilts into turns, its load bounces and it kicks up dust, a hit enemy blinks, recoils, squashes and sparks.
+- Test note: the bot waits for the Editor to settle before Play (the Editor changes define symbols when it starts, which recompiled scripts mid-match). After an APK build the Editor is switched back to Windows.

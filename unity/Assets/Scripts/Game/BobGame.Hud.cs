@@ -518,7 +518,12 @@ namespace Bob.Game
             BobUi.Clear(screenRoot);
             switch (phase)
             {
-                case Phase.Title: MainMenu(); break;
+                case Phase.Title: Home(); break;
+                case Phase.Splash: Splash(); break;
+                case Phase.Login: Login(); break;
+                case Phase.Modes: ModeSelect(); break;
+                case Phase.Heroes: HeroSelect(); break;
+                case Phase.Shop: Shop(); break;
                 case Phase.Loading: Busy("กำลังเตรียมห้อง…", online ? "ขอใบงานรอบ " + roundNo + " จากเซิร์ฟเวอร์" : "สุ่มห้องในเครื่อง"); break;
                 case Phase.Scoring: Busy("กำลังทดสอบความสะอาด…", online ? "เซิร์ฟเวอร์กำลังคิดคะแนน" : "คิดคะแนนในเครื่อง"); break;
                 case Phase.Intro: RoomTicket(); break;
@@ -709,6 +714,7 @@ namespace Bob.Game
             var ct = BobUi.Label(cr.transform, "+0", 60, BobUi.Ink, TextAnchor.MiddleLeft, FontStyle.Bold); BobUi.Size(ct, 80, 80, 0, 200);
             StartCoroutine(CountCoins(ct, gain));
             BobUi.Label(card, "เหรียญรวม " + coins, 24, BobUi.Muted, TextAnchor.MiddleCenter);
+            BobUi.Label(card, $"XP +{xpGain}  ·  ระดับ {Level}", 28, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
 
             var again = BobUi.Button(screenRoot, "เล่นอีกครั้ง", BobUi.Sun, StartMatch, 46);
             BobUi.Pin((RectTransform)again.transform, new Vector2(0.5f, 0), new Vector2(0, 0), new Vector2(20, 50), new Vector2(460, 140));

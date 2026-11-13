@@ -96,7 +96,27 @@ namespace Bob.EditorTools
             if (!File.Exists(ScenePath)) Build();
             EditorSceneManager.OpenScene(ScenePath);
             SessionState.SetBool(BobGame.AutoKey, true);
+            SessionState.SetBool(WaitKey, true);
             Hook();
+        }
+
+        const string WaitKey = "Bob.AutoWaitPlay";
+        static double settleFrom;
+
+        /// <summary>The Editor changes define symbols when it starts (Sentis analytics), which recompiles scripts. Entering Play before that
+        /// settles would reload the domain mid-test and kill the bot, so wait for a quiet 12 s, then play.</summary>
+        static void StartSettleWaiter()
+        {
+            settleFrom = EditorApplication.timeSinceStartup;
+            EditorApplication.update -= SettleTick; EditorApplication.update += SettleTick;
+        }
+
+        static void SettleTick()
+        {
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating) settleFrom = EditorApplication.timeSinceStartup;
+            if (EditorApplication.timeSinceStartup - settleFrom < 12) return;
+            EditorApplication.update -= SettleTick;
+            SessionState.SetBool(WaitKey, false);
             EditorApplication.EnterPlaymode();
         }
 
@@ -107,8 +127,9 @@ namespace Bob.EditorTools
         {
             if (!SessionState.GetBool(BobGame.AutoKey, false)) return;
             Application.logMessageReceived -= OnLog; Application.logMessageReceived += OnLog;
-            deadline = EditorApplication.timeSinceStartup + 300;
+            deadline = EditorApplication.timeSinceStartup + 420;
             EditorApplication.update -= Watchdog; EditorApplication.update += Watchdog;
+            if (SessionState.GetBool(WaitKey, false) && !EditorApplication.isPlaying) StartSettleWaiter();
         }
 
         static void Watchdog() { if (EditorApplication.timeSinceStartup > deadline) { Debug.LogError("[BobGameTest] TIMEOUT"); Finish(1); } }

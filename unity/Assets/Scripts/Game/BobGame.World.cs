@@ -1,5 +1,6 @@
 // Battle of the Brooms: the room (floor, 4 stations, cart, sofa, enemies), the hero and movement (tap / WASD).
 // World units: the prototype's 800x500 room divided by 100, y up. Sprites are y-sorted for a 2.5D look.
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Bob.Art;
@@ -187,6 +188,7 @@ namespace Bob.Game
             var s = art.Get(charId + "_idle");
             playerSr.transform.localScale = Vector3.one * (0.95f / Mathf.Max(0.01f, s.bounds.size.y));
             if (!art.Has(charId + "_idle")) { playerSr.transform.localScale = new Vector3(0.3f, 0.45f, 1); playerSr.color = BobUi.Hex(Hero.Color); }
+            heroBase = playerSr.transform.localScale;
             SetHeroAnim("idle");
         }
 
@@ -238,7 +240,7 @@ namespace Bob.Game
                 }
             }
             cartRect = CartHome; PlaceCart(); ClearTable();
-            pos = PlayerStart; target = null; stuck = 0; near = null; nearCart = false; nearTable = false;
+            pos = PlayerStart; player.Velocity = Vector2.zero; target = null; stuck = 0; near = null; nearCart = false; nearTable = false;
             handShown = -1;
         }
 
@@ -359,6 +361,10 @@ namespace Bob.Game
                 heroLean = Mathf.Lerp(heroLean, -Mathf.Sign(lastMove.x) * 7f * speedK, 1 - Mathf.Exp(-12f * dt));
                 if (lastMove == Vector2.zero) heroLean = Mathf.Lerp(heroLean, 0, 1 - Mathf.Exp(-10f * dt));
                 playerSr.transform.localRotation = Quaternion.Euler(CamPitch - 90f, 0, heroLean);
+                // squash and stretch: taller when speeding up, wider when braking
+                float spd = player.Velocity.magnitude, acc = dt > 0.0001f ? (spd - prevSpeed) / dt : 0f; prevSpeed = spd;
+                heroSquash = Mathf.Lerp(heroSquash, Mathf.Clamp(acc * 0.006f, -0.13f, 0.13f), 1 - Mathf.Exp(-14f * dt));
+                playerSr.transform.localScale = new Vector3(heroBase.x * (1 - heroSquash * 0.7f), heroBase.y * (1 + heroSquash), heroBase.z);
                 float bounce = lastMove != Vector2.zero ? Mathf.Abs(Mathf.Sin(Time.time * 14f)) * 0.06f : 0f;
                 playerSr.transform.localPosition = Raise(pos, bounce);
                 if (heroShadow != null) { heroShadow.transform.localPosition = new Vector3(pos.x, pos.y, -0.005f); heroShadow.sortingOrder = Order(pos.y) - 2; }
@@ -374,6 +380,7 @@ namespace Bob.Game
             targetMarker.gameObject.SetActive(target.HasValue);
             if (target.HasValue) targetMarker.localPosition = target.Value;
             TickSignals(dt);
+            TickCart(dt);
         }
 
         IEnumerable<Rect> Solids() { foreach (var r in StationRects) yield return r; if (Online) yield return CartRect; yield return SofaRect; if (!Online) yield return TableRect; }
@@ -533,7 +540,29 @@ namespace Bob.Game
         }
 
         Material floor3d;
-        float heroLean;
+        float heroSquash;
+        /// <summary>The enemy takes a hit: blinks, recoils away from the cart, squashes, and sparks fly.</summary>
+        IEnumerator EnemyHitFx((string id, BobSpriteAnimator anim, Transform t) en)
+        {
+            var holder = en.t; var sr = en.anim != null ? en.anim.GetComponent<SpriteRenderer>() : null;
+            if (holder == null) yield break;
+            Vector3 p0 = holder.localPosition, s0 = holder.localScale;
+            SpawnFx("fx_hit", Raise((Vector2)p0 + new Vector2(0, 0.05f), 0.45f)); Sfx("enemy_hit");
+            for (float e = 0; e < 0.45f; e += Time.deltaTime)
+            {
+                if (holder == null) yield break;
+                float k = e / 0.45f, recoil = Mathf.Sin(k * Mathf.PI) * 0.28f;
+                holder.localPosition = p0 + new Vector3(0, recoil, 0);
+                float sq = Mathf.Sin(k * Mathf.PI) * 0.22f; holder.localScale = new Vector3(s0.x * (1 + sq), s0.y * (1 - sq), s0.z);
+                if (sr != null) sr.color = ((int)(e * 30) % 2 == 0) ? new Color(1f, 0.55f, 0.55f, 1f) : new Color(1f, 1f, 1f, 0.45f); // blink
+                yield return null;
+            }
+            if (holder != null) { holder.localPosition = p0; holder.localScale = s0; }
+            if (sr != null) sr.color = Color.white;
+        }
+
+        float heroLean, prevSpeed;
+        Vector3 heroBase = Vector3.one;
         SpriteRenderer heroShadow;
         static Sprite blob;
 
@@ -572,6 +601,7 @@ namespace Bob.Game
 
         void OnRoundTested(bool win)
         {
+            if (!win) foreach (var en in enemies) if (en.t != null) StartCoroutine(EnemyHitFx(en));
             if (!enemiesLive) ActivateEnemies(false);
             foreach (var en in enemies)
             {
