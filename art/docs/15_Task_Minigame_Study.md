@@ -1,6 +1,6 @@
 # 15 · ศึกษาระบบ Task ของ Among Us → ข้อเสนอ "มินิเกมทำความสะอาด" ของ BOB
 
-เวอร์ชัน 0.1 · 13 พ.ย. 2026 · สถานะ: **ขั้นศึกษา (ยังไม่แก้ GDD และโค้ด)** รอผู้ใช้ตัดสินใจตามข้อ 0
+เวอร์ชัน 0.2 · 13 พ.ย. 2026 · สถานะ: **อนุมัติแล้ว (ผู้ใช้เลือกแนว task race ตามข้อแนะนำ D1–D6)** GDD, `11_UX_UI_Spec.md`, `12_Sound_Manifest.md` แก้แล้ว สเปกที่ใช้ทำงานจริงอยู่ใน `16_Task_Race_Minigame_Spec.md` และ `17_Music_Layers.md` (เอกสารนี้เก็บไว้เป็นเหตุผลและแหล่งที่มา) ยังไม่แก้โค้ด
 
 > เอกสารนี้ใช้ Among Us เป็นแรงบันดาลใจเชิง "กลไก" เท่านั้น **ห้ามคัดลอกภาพ เสียง UI โค้ด ชื่อ task หรือเลย์เอาต์ของ Among Us** มินิเกมทุกตัวข้างล่างออกแบบใหม่ในโลกของ BOB (โรงเรียน ฮีโร่ กวาด/ฟอง/ถู/สเปรย์ ศัตรูคราบ) และใช้ asset ของเราเอง
 
@@ -320,4 +320,4 @@ T01 กวาดตามทาง · T02 ถูคราบวน · T03 ฉี
 - Stanford Daily — Newest Among Us update makes for more exciting gameplay: https://stanforddaily.com/2020/11/19/newest-among-us-update-makes-for-more-exciting-gameplay/
 - คู่มือ task รายแผนที่ (ใช้ดูรูปแบบปฏิสัมพันธ์): https://www.androidcentral.com/among-us-task-guide-skeld , https://sportskeeda.com/esports/among-us-ultimate-task-guide
 
-เอกสารที่ต้องแก้ตามถ้าอนุมัติ: GDD (ข้อ 3 Core Gameplay, 5 กฎ, 19 ศัตรู, 20 ฉาก), `11_UX_UI_Spec.md` (S20, S22, S25, S26), `12_Sound_Manifest.md` (ข้อ 5 เพลง), `02_Asset_List.md`, `14_Modular_HUD_Setup.md`, `README.md` (โฟลเดอร์ Minigames)
+เอกสารที่ต้องแก้ตาม (อัปเดต 13 พ.ย.: GDD, 11, 12, 02 และ README แก้แล้ว; `14_Modular_HUD_Setup.md` แก้เมื่อทำโค้ด): GDD (ข้อ 3 Core Gameplay, 5 กฎ, 19 ศัตรู, 20 ฉาก), `11_UX_UI_Spec.md` (S20, S22, S25, S26), `12_Sound_Manifest.md` (ข้อ 5 เพลง), `02_Asset_List.md`, `14_Modular_HUD_Setup.md`, `README.md` (โฟลเดอร์ Minigames)
