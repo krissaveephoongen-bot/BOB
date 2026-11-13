@@ -12,6 +12,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Bob.Art;
+using Bob.Modular;
 using Bob.Rules;
 using UnityEngine;
 using UnityEngine.UI;
@@ -58,6 +59,7 @@ namespace Bob.Game
 
             hudRoot = BobUi.Stretch(BobUi.Rect("HUD", safe));
             BuildTopBar(); BuildOrderTicket(); BuildCartCard(); BuildHand(); BuildActionButtons(); BuildJoystick();
+            BindHudController();
 
             stationPop = BobUi.Rect("StationShelf", hudRoot);
             var spImg = stationPop.gameObject.AddComponent<Image>(); spImg.sprite = art.Get("ui_panel"); spImg.type = Image.Type.Sliced; spImg.pixelsPerUnitMultiplier = 1.2f; spImg.color = BobUi.Surface;
@@ -131,7 +133,35 @@ namespace Bob.Game
             BobUi.Pin((RectTransform)pause.transform, Vector2.one, Vector2.one, new Vector2(-12, -12), new Vector2(104, 96)); pause.transform.localScale = Vector3.one * 0.8f;
             var pi = BobUi.Img(pause.transform, "icon_pause", 56); BobUi.Pin(pi.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(56, 56));
             if (!art.Has("icon_pause")) pause.GetComponentInChildren<Text>().text = "II";
+            BuildCartSlotBar();
             Bob.UI.BobHitArea.Ensure(pause.targetGraphic, 144f); // UX spec 1.2: touch area >= 144u without growing the picture
+        }
+
+        MobileHUDController hudCtl;
+        Image[] slotImgs = new Image[BobRules.MaxLayers];
+
+        /// <summary>UX 5A.2 top right: the cart's layers as icons only, five slots.</summary>
+        void BuildCartSlotBar()
+        {
+            var bar = BobUi.Pin(BobUi.Rect("CartSlots", hudRoot), Vector2.one, Vector2.one, new Vector2(-12, -92), new Vector2(5 * 56 + 4 * 6, 56));
+            var h = bar.gameObject.AddComponent<HorizontalLayoutGroup>(); h.spacing = 6; h.childControlWidth = h.childControlHeight = true; h.childForceExpandWidth = h.childForceExpandHeight = true;
+            for (int i = 0; i < slotImgs.Length; i++)
+            {
+                var back = BobUi.Disc(bar, new Color(1f, 0.99f, 0.95f, 0.85f), 56, "Slot");
+                var ic = BobUi.Img(back.transform, "", 44); BobUi.Pin(ic.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(44, 44));
+                slotImgs[i] = ic;
+            }
+        }
+
+        /// <summary>Hand the code-built widgets to the Modular HUD controller (it drives timer pulse, slot icons and the main button).</summary>
+        void BindHudController()
+        {
+            hudCtl = hudRoot.gameObject.AddComponent<MobileHUDController>();
+            hudCtl.timerPill = timerBg; hudCtl.timerText = timerText; hudCtl.warnAt = 15f;
+            hudCtl.cartSlots = slotImgs;
+            hudCtl.primaryButton = ctxBtn; hudCtl.primaryLabel = ctxLabel; hudCtl.primaryImage = (Image)ctxBtn.targetGraphic;
+            hudCtl.submitButton = submitBtn; hudCtl.submitRing = submitHold != null ? submitHold.ring : null;
+            hudCtl.Bind(); // BobGame wires pause / primary / submit itself; the controller drives their look (label, tint, ring)
         }
 
         void BuildOrderTicket()
@@ -151,7 +181,7 @@ namespace Bob.Game
         {
             var card = Card(hudRoot, "CartCard"); cartCardRt = card;
             card.anchorMin = card.anchorMax = Vector2.one; card.pivot = Vector2.one;
-            card.sizeDelta = new Vector2(400, 0); card.anchoredPosition = new Vector2(-12, -86); card.localScale = Vector3.one * 0.72f;
+            card.sizeDelta = new Vector2(400, 0); card.anchoredPosition = new Vector2(-12, -160); card.localScale = Vector3.one * 0.72f;
             card.GetComponent<Image>().color = new Color(1f, 0.99f, 0.95f, 0.9f);
             VStack(card, 16, 12, 6);
             card.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
@@ -207,10 +237,8 @@ namespace Bob.Game
             bool playing = phase == Phase.Build;
             if (R != null && (playing || phase == Phase.Scoring || phase == Phase.Countdown))
             {
-                timerText.text = Mathf.CeilToInt(time) + (freeze > 0 ? "*" : "");
+                hudCtl.SetTimer(time, freeze > 0, playing); // text, frozen tint and the red pulse under 15 s
                 bool warn = time <= 15 && playing;
-                timerBg.color = freeze > 0 ? BobUi.Hex("#DDEBFA") : warn ? BobUi.Rose : BobUi.Surface;
-                timerText.color = warn && freeze <= 0 ? BobUi.Surface : BobUi.Ink;
                 if (warn && Mathf.CeilToInt(time) != lastTick) { lastTick = Mathf.CeilToInt(time); Sfx("timer_tick"); StartCoroutine(BobTween.Pop(timerBg.transform, 0.2f, 1.08f)); }
             }
             if (toastRt.gameObject.activeSelf && Time.unscaledTime > toastUntil) toastRt.gameObject.SetActive(false);
@@ -306,6 +334,11 @@ namespace Bob.Game
 
         void RenderCart()
         {
+            if (hudCtl != null)
+            {
+                var icons = new List<Sprite>(); foreach (var id in stack) if (!BobRules.IsMethod(id)) icons.Add(art.Has("part_" + id) ? art.Get("part_" + id) : null);
+                hudCtl.SetCartSlots(icons);
+            }
             BobUi.Clear(cartBody);
             var e = Ev();
             var head = BobUi.HBox(cartBody, 6, "Head"); head.childForceExpandHeight = false; BobUi.Size(head, 34, 34);

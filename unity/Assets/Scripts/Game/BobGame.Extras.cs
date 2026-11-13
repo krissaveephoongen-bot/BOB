@@ -5,6 +5,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using Bob.Art;
+using Bob.Modular;
 using Bob.Rules;
 using UnityEngine;
 using UnityEngine.UI;
@@ -60,6 +61,9 @@ namespace Bob.Game
             if (sp == null) { tableSr.transform.localScale = new Vector3(TableRect.width, TableRect.height, 1); tableSr.transform.position = TableRect.center; tableSr.color = BobUi.Hex("#C9A66B"); }
             tableSr.sortingOrder = Order(TableRect.yMin);
             WorldLabel("โต๊ะพักของ", new Vector2(TableRect.center.x, TableRect.yMin - 0.16f), 0.03f, BobUi.Ink);
+            var tableProp = tableSr.gameObject.AddComponent<StationProp>();
+            tableProp.Configure(InteractableKind.Table, "table", NearCart, null); tableProp.BoundsProvider = () => TableRect;
+            tableProp.CanInteractProvider = () => !Online; tableProp.PromptProvider = () => CtxText(ComputeCtx()); tableProp.OnInteract = _ => DoCtx(); detector.Register(tableProp);
             tableItemsRoot = new GameObject("TableItems").transform; tableItemsRoot.SetParent(worldRoot, false);
         }
 
@@ -168,11 +172,10 @@ namespace Bob.Game
 
         void RenderCtx()
         {
-            if (ctxBtn == null) return;
+            if (ctxBtn == null || hudCtl == null) return;
             ctx = ComputeCtx();
-            ctxLabel.text = CtxText(ctx);
-            ctxBtn.interactable = ctx != Ctx.None && ctx != Ctx.Full;
-            ((Image)ctxBtn.targetGraphic).color = ctx == Ctx.Full ? new Color(0.75f, 0.75f, 0.78f, 0.95f) : ctx == Ctx.None ? new Color(1f, 0.99f, 0.95f, 0.85f) : BobUi.Sun;
+            hudCtl.SetPrimary(CtxText(ctx), ctx != Ctx.None && ctx != Ctx.Full,
+                ctx == Ctx.Full ? new Color(0.75f, 0.75f, 0.78f, 0.95f) : ctx == Ctx.None ? new Color(1f, 0.99f, 0.95f, 0.85f) : BobUi.Sun);
             if (cartCardRt != null) cartCardRt.gameObject.SetActive(nearCart); // spec 5A.4: cart info appears when standing next to the cart
         }
 

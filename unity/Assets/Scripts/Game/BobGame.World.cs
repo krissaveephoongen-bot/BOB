@@ -3,6 +3,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Bob.Art;
+using Bob.Modular;
 using Bob.Rules;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -35,8 +36,11 @@ namespace Bob.Game
         readonly List<SpriteRenderer> floorTiles = new List<SpriteRenderer>();
         readonly List<(string id, BobSpriteAnimator anim, Transform t)> enemies = new List<(string, BobSpriteAnimator, Transform)>();
 
-        Vector2 pos = PlayerStart, lastMove;
-        Vector2? target;
+        PlayerController player;           // movement (Modular/PlayerController.cs)
+        InteractionDetector detector;      // what the hero stands next to (Modular/InteractionDetector.cs)
+        Vector2 pos { get => player.Position; set => player.Position = value; }
+        Vector2? target { get => player.Target; set => player.Target = value; }
+        Vector2 lastMove;
         float stuck, stepT;
         string near;
         bool nearCart;
@@ -49,6 +53,9 @@ namespace Bob.Game
 
         void BuildWorld()
         {
+            player = gameObject.AddComponent<PlayerController>();
+            player.room = new Rect(0, 0, RoomW, RoomH); player.speed = Speed; player.radius = Radius; player.Solids = Solids; player.Position = PlayerStart;
+            detector = gameObject.AddComponent<InteractionDetector>();
             cam = Camera.main;
             if (cam == null) { var cg = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener)) { tag = "MainCamera" }; cam = cg.GetComponent<Camera>(); }
             cam.orthographic = true; cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = BobUi.Hex("#E9DDB8");
@@ -86,6 +93,8 @@ namespace Bob.Game
                 if (!art.Has("station_" + StationIds[i])) { sr.transform.localScale = new Vector3(r.width, r.height, 1); sr.transform.position = r.center; sr.color = BobUi.Family((Family)i); }
                 sr.sortingOrder = Order(r.yMin);
                 stationSr[i] = sr;
+                var shelfProp = sr.gameObject.AddComponent<StationProp>(); int si = i;
+                shelfProp.Configure(InteractableKind.Shelf, StationIds[i], NearStation, null); shelfProp.BoundsProvider = () => StationRects[si]; detector.Register(shelfProp);
                 // the shelf picture is empty: the parts it offers sit on it
                 var onShelf = BobRules.Parts.Where(kv => kv.Value.Family == (Family)i).Select(kv => kv.Key).ToList();
                 for (int n = 0; n < onShelf.Count && art.Has("station_" + StationIds[i]); n++)
@@ -105,6 +114,9 @@ namespace Bob.Game
             if (!art.Has("cart")) { cartSr.transform.localScale = new Vector3(CartRect.width, CartRect.height, 1); cartSr.transform.position = CartRect.center; cartSr.color = BobUi.Surface; }
             cartSr.sortingOrder = Order(CartRect.yMin);
             cartT = cartSr.transform;
+            var cartProp = cartSr.gameObject.AddComponent<StationProp>();
+            cartProp.Configure(InteractableKind.Cart, "cart", NearCart, null); cartProp.BoundsProvider = () => cartRect;
+            cartProp.PromptProvider = () => CtxText(ComputeCtx()); cartProp.OnInteract = _ => DoCtx(); detector.Register(cartProp);
             BuildTable();
             cartLayers = new GameObject("CartLayers").transform; cartLayers.SetParent(worldRoot);
 
@@ -287,33 +299,24 @@ namespace Bob.Game
                 if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) v.x -= 1;
                 if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) v.x += 1;
                 if (v == Vector2.zero && joyActive && joyVec.magnitude > JoyDead) v = joyVec; // analogue: partial tilt walks slower
-                if (v != Vector2.zero) target = null;
-                else if (target.HasValue) { var d = target.Value - pos; if (d.magnitude < 0.05f) target = null; else v = d.normalized; }
+                if (v != Vector2.zero) player.ClearTarget();
             }
-            else target = null;
+            else player.ClearTarget();
 
-            if (v != Vector2.zero)
+            var old = pos;
+            player.Step(v, dt); // keys / stick, or the tap target when there is no direct input
+            lastMove = player.LastMove;
+            if (lastMove != Vector2.zero)
             {
-                var old = pos; float sp = Speed * dt * Mathf.Clamp(v.magnitude, 0.45f, 1f);
-                pos += v.normalized * sp;
-                pos.x = Mathf.Clamp(pos.x, 0.18f, RoomW - 0.18f); pos.y = Mathf.Clamp(pos.y, 0.18f, RoomH - 0.18f);
-                foreach (var r in Solids())
-                {
-                    var (d, c) = RectDist(pos, r);
-                    if (d < Radius) pos = d > 0.0001f ? c + (pos - c) / d * Radius : old;
-                }
                 if (!Online) PushCart(old);
-                if (target.HasValue) { if (Vector2.Distance(pos, old) < sp * 0.25f) { stuck += dt; if (stuck > 0.4f) target = null; } else stuck = 0; }
-                lastMove = pos - old;
                 stepT += dt; if (stepT > 0.32f) { stepT = 0; Sfx("footstep"); }
             }
-            else lastMove = Vector2.zero;
 
             // nearest station / cart
-            string n = null; float best = NearStation;
-            for (int i = 0; i < 4; i++) { var d = RectDist(pos, StationRects[i]).d; if (d < best) { best = d; n = StationIds[i]; } }
-            bool nc = RectDist(pos, CartRect).d < NearCart;
-            bool ntb = !Online && RectDist(pos, TableRect).d < NearCart;
+            detector.Evaluate(pos);
+            string n = detector.NearestId(InteractableKind.Shelf);
+            bool nc = detector.IsNear(InteractableKind.Cart);
+            bool ntb = !Online && detector.IsNear(InteractableKind.Table);
             if (n != near || nc != nearCart || ntb != nearTable) { near = n; nearCart = nc; nearTable = ntb; if (phase == Phase.Build) Sfx("ui_tap"); RenderAll(); }
 
             // hero
