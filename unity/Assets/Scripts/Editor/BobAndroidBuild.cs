@@ -30,7 +30,24 @@ namespace Bob.EditorTools
             PlayerSettings.insecureHttpOption = InsecureHttpOption.AlwaysAllowed; // plain http to the PC's LAN Nakama
             PlayerSettings.SetApiCompatibilityLevel(NamedBuildTarget.Android, ApiCompatibilityLevel.NET_Standard);
             PlayerSettings.Android.forceInternetPermission = true;
+            KeepShaders("Standard", "Unlit/Texture"); // the 2.5D room creates these materials in code, so a player build must not strip them
             Debug.Log("Bob: Android player settings applied (" + Package + ", IL2CPP, ARM64, landscape).");
+        }
+
+        static void KeepShaders(params string[] names)
+        {
+            var gs = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>("ProjectSettings/GraphicsSettings.asset");
+            if (gs == null) { Debug.LogWarning("Bob: GraphicsSettings.asset not found; shaders may be stripped"); return; }
+            var so = new SerializedObject(gs); var arr = so.FindProperty("m_AlwaysIncludedShaders");
+            foreach (var n in names)
+            {
+                var sh = Shader.Find(n); if (sh == null) { Debug.LogWarning("Bob: shader not found: " + n); continue; }
+                bool has = false;
+                for (int i = 0; i < arr.arraySize; i++) if (arr.GetArrayElementAtIndex(i).objectReferenceValue == sh) has = true;
+                if (has) continue;
+                arr.arraySize++; arr.GetArrayElementAtIndex(arr.arraySize - 1).objectReferenceValue = sh;
+            }
+            so.ApplyModifiedProperties(); AssetDatabase.SaveAssets();
         }
 
         [MenuItem("Bob/Android/Build APK")]
