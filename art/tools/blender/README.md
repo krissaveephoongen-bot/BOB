@@ -4,7 +4,7 @@ Spec: `art/docs/21_AA_Art_Bible.md` section 9. Tested with Blender 5.3 as the pi
 
 | Script | What it does | Output |
 | --- | --- | --- |
-| `bob_kit.py` | Builds the 4 heroes (sweep, bubble, press, spray) and 4 enemies (dirt, slime, trash, boss_slime) from primitives, rigs them (shared skeleton, rigid skinning), keys idle/walk/cheer (heroes) and idle/caught (enemies), one material + palette texture | `SK_<id>.glb`, `SK_<id>.fbx`, `T_BOB_Palette.png`, `kit_report.json` |
+| `bob_kit.py` | Builds the 8 heroes (sweep, bubble, press, spray, wash, iron, duster, vac) and 4 enemies (dirt, slime, trash, boss_slime) from primitives, rigs them (shared skeleton, rigid skinning), keys idle/walk/cheer (heroes) and idle/caught (enemies), one material + palette texture | `SK_<id>.glb`, `SK_<id>.fbx`, `T_BOB_Palette.png`, `kit_report.json` |
 | `bob_prop_cleanup.py` | Cleans a raw AI image-to-3D or CC0 mesh: join, merge, drop floating bits, decimate to budget, scale to game height, pivot bottom centre, snap colours to the palette | `SM_<name>.glb`, `.fbx`, `.json` |
 
 ```bash

@@ -220,6 +220,7 @@ UI, ไอคอน, หน้าเมนู, ภาพการ์ดโหม
 | ระดับ | asset | สาย | สถานะ |
 | --- | --- | --- | --- |
 | **AA-0 (vertical slice)** | A03 ฮีโร่ 4 (3D) | A | blockout ✓ (`art/aa/kit`), ต้องเก็บรายละเอียด + หน้า |
+| AA-1 / 1.0 | A13 ฮีโร่ 5-8 (3D) ตาม `24_Hero_Roster_Expansion.md` | A | blockout ✓ (`art/aa/kit/SK_{wash,iron,duster,vac}`) |
 | AA-0 | A04 rig ร่วม + A05/A07 12 ท่า | A + โค้ด | 3 ท่า ✓ |
 | AA-0 | หน้า flipbook 4 ฮีโร่ | 2D ครอป + แก้มือ | – |
 | AA-0 | B01 เจ้าคราบ, B02 สไลม์ (คราบฉุกเฉิน T16) | A | blockout ✓ |

@@ -1,4 +1,4 @@
-"""BOB chibi kit: builds the 4 heroes and 4 enemies from primitives, rigs them
+"""BOB chibi kit: builds the 8 heroes and 4 enemies from primitives, rigs them
 with the shared skeleton from 03_Unity_Spec.md, keys idle / walk / cheer, and
 exports GLB (+ FBX for Unity).
 
@@ -45,6 +45,11 @@ PALETTE = [
     ("slime_light", "#C79BF0"), ("trash", "#7D8796"), ("trash_dark", "#2A2D38"),
     ("boss", "#7A3FB8"), ("gold", "#F6C431"), ("gold_dark", "#C98A1B"),
     ("fang", "#FFF6E8"),
+    # heroes 5-8 (doc 24); appended only, never reorder
+    ("wash_shirt", "#F27BAE"), ("wash_hair", "#C08A5A"), ("towel", "#FFF8F0"),
+    ("iron_shirt", "#F2C230"), ("iron_handle", "#3D6FD0"),
+    ("duster_shirt", "#E5484D"),
+    ("vac_shirt", "#9CCB3B"), ("vac_hair", "#C06A30"),
 ]
 PAL_INDEX = {n: i for i, (n, _) in enumerate(PALETTE)}
 GRID = 16  # 16x16 cells on a 256 texture (16 px per cell)
@@ -341,6 +346,96 @@ def hero_spray():
     return P
 
 
+# --- heroes 5-8 (art/docs/24_Hero_Roster_Expansion.md section 5) ---------
+def hero_wash():
+    """ซัก Wash: tall swirled towel turban + 3 clothespins, giant clothespin tool."""
+    P = hero_body("wash_shirt", "wash_hair") + fringe("wash_hair", n=4, z=0.8, size=0.055)
+    # towel turban: stacked rings shrinking upward + tip (tallest head in the team)
+    for i, (z, r) in enumerate(((0.9, 0.25), (0.98, 0.21), (1.05, 0.16), (1.11, 0.1))):
+        P.append(part("torus", "towel", "Head", (0.01 * i, 0.01 * i, z), rot=(-6, 4 * i, 25 * i),
+                      scale=(r, r * 0.95, r * 0.9), minor=0.32, seg=14, mseg=5))
+    P.append(part("cone", "towel", "Head", (0.04, 0.04, 1.16), rot=(-10, 15, 0), scale=(0.07, 0.07, 0.09), seg=10))
+    P.append(part("torus", "wash_shirt", "Head", (0, 0, 0.94), rot=(-6, 0, 0), scale=(0.235, 0.225, 0.2), minor=0.06, seg=18, mseg=4))
+    # three yellow clothespins clipped on the front of the towel
+    for k in (-1, 0, 1):
+        P.append(part("box", "gold", "Head", (0.09 * k, -0.2 + 0.02 * abs(k), 0.99 - 0.02 * abs(k)), rot=(-20, 0, -10 * k),
+                      scale=(0.016, 0.014, 0.05), bevel=0.006, bseg=1))
+    # ponytail at the back
+    P.append(part("sphere", "wash_hair", "Head", (0, 0.26, 0.68), rot=(30, 0, 0), scale=(0.07, 0.06, 0.12), seg=12, rings=8))
+    # giant clothespin held like pincers (right hand)
+    for s in (1, -1):
+        P.append(part("box", "gold", "Socket_Tool", (-0.3, -0.04 + 0.025 * s, 0.42), rot=(6 * s, 25, 0),
+                      scale=(0.018, 0.016, 0.17), bevel=0.008, bseg=1))
+    P.append(part("cyl", "metal", "Socket_Tool", (-0.31, -0.04, 0.38), rot=(90, 0, 0), scale=(0.03, 0.03, 0.07), seg=10))
+    return P
+
+
+def hero_iron():
+    """รีด Press (id iron): iron-shaped silver helmet (shield from above) + steam iron."""
+    P = hero_body("iron_shirt", "spray_hair") + fringe("spray_hair", n=6, z=0.82, spread=0.18, size=0.05)
+    # iron helmet: rounded back + pointed front = shield seen from the game camera
+    P.append(part("sphere", "metal", "Head", (0, 0.03, 0.97), scale=(0.25, 0.25, 0.08), seg=16, rings=8))
+    P.append(part("cone", "metal", "Head", (0, -0.17, 0.97), rot=(90, 0, 0), r1=1, r2=0.15, scale=(0.2, 0.08, 0.22), seg=10))
+    P.append(part("box", "metal_dark", "Head", (0, 0, 0.92), scale=(0.25, 0.27, 0.012), bevel=0.01, bseg=1))
+    # curved handle on top + red status light
+    P.append(part("torus", "iron_handle", "Head", (0, 0.02, 1.06), rot=(0, 90, 0), scale=(0.11, 0.08, 0.08), minor=0.18, seg=16, mseg=5))
+    P.append(part("sphere", "sweep_band", "Head", (0.12, -0.12, 1.03), scale=(0.022, 0.022, 0.022), seg=8, rings=6))
+    # steam iron held like a shield (left hand)
+    P.append(part("sphere", "metal", "Hand_L", (0.3, -0.11, 0.32), rot=(0, 90, 0), scale=(0.05, 0.1, 0.075), seg=10, rings=6))
+    P.append(part("cone", "metal", "Hand_L", (0.3, -0.11, 0.42), rot=(0, 90, 0), r1=1, r2=0.2, scale=(0.05, 0.07, 0.09), seg=12))
+    P.append(part("torus", "iron_handle", "Hand_L", (0.32, -0.11, 0.35), rot=(0, 0, 0), scale=(0.05, 0.05, 0.08), minor=0.25, seg=12, mseg=4))
+    for k in range(3):  # steam puffs
+        P.append(part("sphere", "white", "Hand_L", (0.33 + 0.03 * k, -0.2 - 0.03 * k, 0.4 + 0.06 * k), scale=(0.03, 0.03, 0.03), seg=8, rings=6))
+    return P
+
+
+def hero_duster():
+    """ปัด Duster: 5-spike crest (star from above) with red tips, rainbow feather duster."""
+    P = hero_body("duster_shirt", "sweep_hair") + fringe("sweep_hair", n=5, size=0.055)
+    for i in range(5):
+        a = i / 5 * math.tau + math.pi / 2
+        x, y = 0.12 * math.cos(a), 0.12 * math.sin(a)
+        tilt_x, tilt_y = -28 * math.sin(a), 28 * math.cos(a)
+        P.append(part("cone", "sweep_hair", "Head", (x, y, 1.0), rot=(tilt_x, tilt_y, 0), scale=(0.075, 0.075, 0.2), seg=8))
+        P.append(part("cone", "sweep_band", "Head", (x * 1.75, y * 1.75, 1.15), rot=(tilt_x, tilt_y, 0), scale=(0.035, 0.035, 0.06), seg=8))
+    P.append(part("cone", "sweep_hair", "Head", (0, 0, 1.03), scale=(0.08, 0.08, 0.18), seg=8))
+    P.append(part("cone", "sweep_band", "Head", (0, 0, 1.15), scale=(0.04, 0.04, 0.06), seg=8))
+    # feather duster: long handle + round rainbow pom above the shoulder
+    P.append(part("cyl", "wood", "Socket_Tool", (-0.3, -0.03, 0.5), rot=(0, 14, 0), scale=(0.016, 0.016, 0.5), seg=8))
+    pom = [("sweep_band", (0, 0, 0)), ("gold", (0.05, 0.03, 0.04)), ("bubble_shirt", (-0.05, 0.02, 0.05)),
+           ("press_shirt", (0.0, -0.05, 0.06)), ("sweep_band", (0.03, 0.04, 0.1)), ("gold", (-0.03, -0.03, 0.11))]
+    for c, (dx, dy, dz) in pom:
+        P.append(part("sphere", c, "Socket_Tool", (-0.21 + dx, -0.03 + dy, 0.78 + dz), scale=(0.09, 0.09, 0.085), seg=10, rings=7))
+    return P
+
+
+def hero_vac():
+    """ดูด Vac: big yellow ear-muffs, backpack vacuum with a hose to the hand."""
+    P = hero_body("vac_shirt", "vac_hair") + fringe("vac_hair", n=4, size=0.065)
+    for i, (x, y) in enumerate([(-0.08, 0.02), (0.07, -0.03), (0.0, 0.1)]):  # messy tufts
+        P.append(part("sphere", "vac_hair", "Head", (x, y, 0.95), scale=(0.07, 0.07, 0.06), seg=8, rings=5))
+    # ear-muff band over the crown (arc of beads) + two big cups
+    for i in range(7):
+        a = math.pi * (0.12 + 0.76 * i / 6)
+        P.append(part("sphere", "gold_dark", "Head", (0.275 * math.cos(a), 0.0, 0.72 + 0.29 * math.sin(a)),
+                      scale=(0.034, 0.038, 0.034), seg=6, rings=4))
+    for s in (1, -1):
+        P.append(part("cyl", "gold", "Head", (0.27 * s, 0.0, 0.72), rot=(0, 90, 0), scale=(0.1, 0.1, 0.06), seg=12))
+        P.append(part("sphere", "gold", "Head", (0.31 * s, 0.0, 0.72), scale=(0.035, 0.09, 0.09), seg=10, rings=6))
+    # backpack vacuum (only hero with a load on the back)
+    P.append(part("cyl", "trash", "Chest", (0, 0.2, 0.36), scale=(0.1, 0.1, 0.2), seg=12))
+    P.append(part("sphere", "trash", "Chest", (0, 0.2, 0.46), scale=(0.1, 0.1, 0.05), seg=12, rings=5))
+    P.append(part("torus", "vac_shirt", "Chest", (0, 0.2, 0.36), scale=(0.1, 0.1, 0.1), minor=0.12, seg=12, mseg=4))
+    # hose: bead chain from tank top over the right shoulder down to the nozzle
+    pts = [(0.0, 0.2, 0.5), (-0.08, 0.16, 0.56), (-0.16, 0.08, 0.56), (-0.22, 0.0, 0.52), (-0.28, -0.05, 0.46),
+           (-0.31, -0.08, 0.39), (-0.31, -0.1, 0.33)]
+    for x, y, z in pts:
+        P.append(part("sphere", "metal_dark", "Chest", (x, y, z), scale=(0.03, 0.03, 0.03), seg=6, rings=4))
+    P.append(part("cyl", "metal", "Socket_Tool", (-0.3, -0.11, 0.24), rot=(-15, 0, 0), scale=(0.02, 0.02, 0.1), seg=8))
+    P.append(part("box", "trash_dark", "Socket_Tool", (-0.3, -0.13, 0.13), rot=(-15, 0, 0), scale=(0.06, 0.03, 0.02), bevel=0.01, bseg=1))
+    return P
+
+
 # --------------------------------------------------------------------------
 # Enemies (no limbs; squash & stretch happens in code/BobSquash)
 # --------------------------------------------------------------------------
@@ -568,6 +663,10 @@ def main():
         ("bubble", "hero", hero_bubble, BONES, anim_hero, 1.0),
         ("press", "hero", hero_press, BONES, anim_hero, 1.0),
         ("spray", "hero", hero_spray, BONES, anim_hero, 1.0),
+        ("wash", "hero", hero_wash, BONES, anim_hero, 1.0),
+        ("iron", "hero", hero_iron, BONES, anim_hero, 1.0),
+        ("duster", "hero", hero_duster, BONES, anim_hero, 1.0),
+        ("vac", "hero", hero_vac, BONES, anim_hero, 1.0),
         ("dirt", "enemy", enemy_dirt, ENEMY_BONES, anim_enemy, 1.0),
         ("slime", "enemy", enemy_slime, ENEMY_BONES, anim_enemy, 1.0),
         ("trash", "enemy", enemy_trash, ENEMY_BONES, anim_enemy, 1.0),

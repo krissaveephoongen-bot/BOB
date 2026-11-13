@@ -68,6 +68,74 @@
   ]
  },
  {
+  "id": "wash",
+  "kind": "hero",
+  "tris": 5786,
+  "budget": [
+   4000,
+   6000
+  ],
+  "ok": true,
+  "bones": 19,
+  "materials": 1,
+  "anims": [
+   "idle",
+   "walk",
+   "cheer"
+  ]
+ },
+ {
+  "id": "iron",
+  "kind": "hero",
+  "tris": 5864,
+  "budget": [
+   4000,
+   6000
+  ],
+  "ok": true,
+  "bones": 19,
+  "materials": 1,
+  "anims": [
+   "idle",
+   "walk",
+   "cheer"
+  ]
+ },
+ {
+  "id": "duster",
+  "kind": "hero",
+  "tris": 5656,
+  "budget": [
+   4000,
+   6000
+  ],
+  "ok": true,
+  "bones": 19,
+  "materials": 1,
+  "anims": [
+   "idle",
+   "walk",
+   "cheer"
+  ]
+ },
+ {
+  "id": "vac",
+  "kind": "hero",
+  "tris": 5932,
+  "budget": [
+   4000,
+   6000
+  ],
+  "ok": true,
+  "bones": 19,
+  "materials": 1,
+  "anims": [
+   "idle",
+   "walk",
+   "cheer"
+  ]
+ },
+ {
   "id": "dirt",
   "kind": "enemy",
   "tris": 2452,
