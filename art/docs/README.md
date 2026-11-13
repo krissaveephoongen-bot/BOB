@@ -31,6 +31,7 @@
 | [21_AA_Art_Bible.md](21_AA_Art_Bible.md) | **Art Bible ฉบับ AA (อนุมัติแล้ว 13 พ.ย. 2026):** หลัก 5 ข้อ, ภาษารูปทรง, กล้อง 45° + สเกลโลก, งบต่อประเภท, material library, ชุดแสง, หน้า flipbook, อนิเมชัน (หนัก-เบา), VFX 5 ชั้น, pipeline ไม่มี artist 3 สาย (สคริปต์ Blender / AI image-to-3D / CC0), ด่านตรวจ 8 ข้อ, ลำดับ asset ใหม่, สิ่งที่ต้องใช้คน | ทุกคน |
 | [ux/BOB_AA_Art_Bible.html](ux/BOB_AA_Art_Bible.html) | ภาพอ้างอิง AA: โมเดล 3D จริงจาก `art/tools/blender/bob_kit.py` ที่มุมกล้องเกม (สลับกล้องเดิม/ใหม่, ท่า idle/walk/cheer, ทดสอบ silhouette, วัดขนาดบนจอ/tris/draw call), คะแนนช่องว่าง, พาเลต+เงาอมสี, งบ, pipeline | Art / Unity |
 | [17_Music_Layers.md](17_Music_Layers.md) | แผนดนตรีเลเยอร์ 4 stem (120 bpm, เปิดตาม % ทีม/คู่แข่ง/เวลา, quantize ขอบห้อง, ชุด fast 130 bpm, stinger, ducking, `BobMusicLayers` ใน Unity, ทางเลือกการผลิต) | Sound / Unity dev |
+| [22_Tripo_CLI.md](22_Tripo_CLI.md) | **Tripo CLI (13 พ.ย. 2026):** ติดตั้ง `tripo-cli`, ตั้งคีย์ผ่าน `TRIPO_API_KEY` เท่านั้น, คำสั่งที่ไม่เสียเครดิต (doctor/balance/--dry-run), สูตรสร้าง prop จาก prompt/ภาพ Leonardo, ประมาณการเครดิต และตัวอย่างเรียก V3 API ด้วย Python | Art / ผู้ใช้ |
 
 ## สรุปสั้น
 
