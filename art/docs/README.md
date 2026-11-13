@@ -54,4 +54,4 @@
 
 ## มาตรฐาน AA (13 พ.ย. 2026)
 
-รีวิว `20_AA_Art_Review.md` + Art Bible `21_AA_Art_Bible.md` (ข้อเสนอ รอตัดสินข้อ 14) ตัวละครและของในฉากเล่นย้ายเป็น 3D toon ที่ใช้ material + palette เดียวทั้งเกม ผลิตโดยไม่มี artist ผ่าน 3 สาย: สคริปต์ Blender (`art/tools/blender/bob_kit.py` สร้างฮีโร่ 4 + ศัตรู 4 พร้อม rig/อนิเมชันแล้ว ใน `art/aa/kit/`), AI image-to-3D + `bob_prop_cleanup.py`, และชุด CC0 ภาพ 2D จาก Leonardo ใช้ต่อเฉพาะ UI/เมนู/การ์ด ไม่อยู่ในฉากเล่น ลำดับ Milestone M1–M6 ด้านบนถูกแทนด้วย 21 ข้อ 12 เมื่ออนุมัติ
+รีวิว `20_AA_Art_Review.md` + Art Bible `21_AA_Art_Bible.md` (ข้อเสนอ; โลกของเกมตัดสินแล้ว: บทแรกเป็นห้องบ้านตาม GDD 20) ตัวละครและของในฉากเล่นย้ายเป็น 3D toon ที่ใช้ material + palette เดียวทั้งเกม ผลิตโดยไม่มี artist ผ่าน 3 สาย: สคริปต์ Blender (`art/tools/blender/bob_kit.py` สร้างฮีโร่ 4 + ศัตรู 4 พร้อม rig/อนิเมชันแล้ว ใน `art/aa/kit/`), AI image-to-3D + `bob_prop_cleanup.py`, และชุด CC0 ภาพ 2D จาก Leonardo ใช้ต่อเฉพาะ UI/เมนู/การ์ด ไม่อยู่ในฉากเล่น ลำดับ Milestone M1–M6 ด้านบนถูกแทนด้วย 21 ข้อ 12 เมื่ออนุมัติ
