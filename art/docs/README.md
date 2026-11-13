@@ -28,6 +28,7 @@
 | [15_Task_Minigame_Study.md](15_Task_Minigame_Study.md) | **ศึกษา (13 พ.ย. 2026):** ระบบ task ของ Among Us (common/short/long, แถบความคืบหน้ารวม, ทำไมสนุก) → ข้อเสนอเปลี่ยนรอบเล่น BOB เป็น task list มินิเกมทำความสะอาด 16 ตัว (MVP 8), แถบทีม+คู่แข่ง, ดนตรีเลเยอร์ และสิ่งที่กติกา/server ต้องเปลี่ยน (**อนุมัติแล้ว** ใช้เป็นเหตุผลและแหล่งที่มา) | Game designer / ทุกคน |
 | [16_Task_Race_Minigame_Spec.md](16_Task_Race_Minigame_Spec.md) | **สเปกใช้งานจริง (13 พ.ย. 2026):** รอบเล่น task race (ใบงาน = รายการงานของทีม, น้ำหนัก, แถบทีม/คู่แข่ง, ลมเป่าช่วย, คราบฉุกเฉิน, การชนะ), มินิเกม 16 ตัวแบบละเอียดครบ (MVP 8 ตัว + ระยะ 2 อีก 8 ตัว: ควบคุม, เกณฑ์, D1–D3, ถนัด, เวลาขั้นต่ำ server, เสียง, art) และสัญญา opcode | Game designer / Unity / Server |
 | [17_Music_Layers.md](17_Music_Layers.md) | แผนดนตรีเลเยอร์ 4 stem (120 bpm, เปิดตาม % ทีม/คู่แข่ง/เวลา, quantize ขอบห้อง, ชุด fast 130 bpm, stinger, ducking, `BobMusicLayers` ใน Unity, ทางเลือกการผลิต) | Sound / Unity dev |
+| [19_Level_Layout_Task_Stations.md](19_Level_Layout_Task_Stations.md) | **ผังฉาก task race (13 พ.ย. 2026):** แถบวางจุดงาน (เลี่ยง HUD/นิ้วโป้ง), แกนกลาง ชั้นวาง–จุดเกิด–รถเข็น, ชนิดจุด → มินิเกม, กติการะยะ R1–R13, seed กระจายงานตามโซน A–D, ดาว/ลูกศรพื้น/ป้ายย่อ, การ์ดเมื่อเข้าใกล้, ผัง 3 ห้อง (ห้องเรียน โรงอาหาร ห้องใต้ดิน) + ผลจำลองเวลาเดิน · ผังภาพ [`ux/BOB_Level_Layouts.html`](ux/BOB_Level_Layouts.html) · ตัวตรวจ `tools/check_layouts.js` | Level / Game designer / Unity |
 
 ## สรุปสั้น
 
