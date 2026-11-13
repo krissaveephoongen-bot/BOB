@@ -85,6 +85,7 @@ namespace Bob.Game
             BobToon.Shape(PrimitiveType.Cube, setRoot, "BackTrim", new Vector3(RoomW / 2, 0.3f, RoomH + 1.32f), new Vector3(RoomW + 4f, 0.6f, 0.1f), new Color(0.62f, 0.82f, 0.78f), false);
 
             BuildRentalRoom();
+            BuildTaskPoints();
             BuildSigns();
         }
 
@@ -115,6 +116,36 @@ namespace Bob.Game
             BobToon.Shape(PrimitiveType.Cube, setRoot, "TVUnit", new Vector3(RoomW + 1.6f, 0.3f, -1.4f), new Vector3(1.6f, 0.6f, 0.6f), wood, true, 2.2f);
             BobToon.Shape(PrimitiveType.Cube, setRoot, "TV", new Vector3(RoomW + 1.6f, 0.95f, -1.4f), new Vector3(1.1f, 0.65f, 0.08f), new Color(0.2f, 0.22f, 0.3f), true, 2f);
             BobToon.Shape(PrimitiveType.Cube, setRoot, "Table", new Vector3(RoomW / 2, 0.22f, -1.6f), new Vector3(2.0f, 0.44f, 0.9f), TableTop, true, 2.5f);
+        }
+
+        // Level layout doc 19, L1 rental room: the 11 task points (S1-S11), emergency points E1-E3 and the 4 spawns. Doc y runs from the back wall, world z from the front.
+        // The prototype rules still use 4 stations (BobGame.World.cs StationRects = S1, S5, S8, S9); the other points are marked on the floor and open nothing until the task-race rules (docs 16 / 19) are built.
+        static readonly (string id, float x, float y, string type, string label)[] L1Points =
+        {
+            ("S1", 3.0f, 1.2f, "glass", "หน้าต่าง"), ("S2", 5.0f, 1.2f, "wall", "ผนังโปสเตอร์"), ("S3", 7.0f, 1.2f, "shelf", "ชั้นวางชิ้นส่วน"), ("S4", 9.0f, 1.2f, "wall", "ผนังทีวี"),
+            ("S5", 11.05f, 1.2f, "cabinet", "ตู้น้ำยา"), ("S6", 5.0f, 3.2f, "floor", "พื้น"), ("S7", 9.0f, 3.2f, "floor", "พื้น"), ("S8", 3.25f, 4.45f, "table", "โต๊ะ"),
+            ("S9", 10.75f, 4.45f, "bin", "ถังขยะ"), ("S10", 3.0f, 6.9f, "table", "โต๊ะ"), ("S11", 11.0f, 6.9f, "table", "โต๊ะ"),
+        };
+        static readonly (string id, float x, float y)[] L1Emergency = { ("E1", 7.0f, 3.0f), ("E2", 5.5f, 7.25f), ("E3", 8.5f, 7.25f) };
+
+        void BuildTaskPoints()
+        {
+            var taskRoot = new GameObject("TaskPoints").transform; taskRoot.SetParent(setRoot, false);
+            foreach (var p in L1Points)
+            {
+                var c = p.type == "floor" ? new Color(0.91f, 0.77f, 0.42f) : p.type == "table" ? new Color(0.96f, 0.64f, 0.38f) : p.type == "bin" ? new Color(0.49f, 0.53f, 0.61f) : p.type == "shelf" ? new Color(0.98f, 0.62f, 0.2f) : new Color(0.54f, 0.69f, 0.49f);
+                float z = RoomH - p.y; Marker(taskRoot, p.id, p.label, new Vector3(p.x, 0.012f, z), 0.55f, c);
+            }
+            foreach (var e in L1Emergency) Marker(taskRoot, e.id, "ฉุกเฉิน", new Vector3(e.x, 0.012f, RoomH - e.y), 0.4f, new Color(0.93f, 0.28f, 0.38f));
+        }
+
+        void Marker(Transform parent, string id, string label, Vector3 at, float r, Color c)
+        {
+            var d = BobToon.Shape(PrimitiveType.Cylinder, parent, "Pt_" + id, at, new Vector3(r * 2, 0.006f, r * 2), new Color(c.r, c.g, c.b), false);
+            var go = new GameObject("PtLabel_" + id); go.transform.SetParent(parent, false); go.transform.position = at + new Vector3(0, 0.05f, 0);
+            var tm = go.AddComponent<TextMeshPro>(); if (BobUi.HeadingTmp != null) tm.font = BobUi.HeadingTmp;
+            tm.text = id; tm.fontSize = 2.4f; tm.alignment = TextAlignmentOptions.Center; tm.color = Color.white; tm.outlineColor = BobToon.LineColor; tm.outlineWidth = 0.3f; tm.textWrappingMode = TextWrappingModes.NoWrap;
+            signs.Add(tm);
         }
 
         void BuildSigns()
