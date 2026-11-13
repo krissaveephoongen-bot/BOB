@@ -47,3 +47,5 @@ python art/tools/blender/bob_prop_cleanup.py art/aa/raw/hero_sweep_tripo_2026111
 ```
 
 `--min-island 0.08` drops a stray image frame that came with the model. `bob_prop_preview.py --fit width` frames long furniture by its widest side.
+
+`--rot-z <deg>` turns a prop so its front faces -Y. The pip `bpy` module cannot read meshopt-compressed GLB (files made by gltfpack): decode first with `@gltf-transform/core` + `meshoptimizer` (read, dispose `EXT_meshopt_compression`, write).

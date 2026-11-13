@@ -110,6 +110,8 @@ def main():
                     "material (no palette snap) so the painted face survives; export as --prefix")
     ap.add_argument("--min-island", type=float, default=0.01, help="drop loose islands smaller than this "
                     "share of the faces (raise to ~0.08 when a stray image frame came with the model)")
+    ap.add_argument("--rot-z", type=float, default=0.0, help="degrees to turn the model about the up axis "
+                    "so its front faces -Y")
     ap.add_argument("--prefix", default="SM_", help="SM_ for props, SK_ for characters")
     a = ap.parse_args(argv)
     os.makedirs(a.out, exist_ok=True)
@@ -127,6 +129,9 @@ def main():
         bpy.ops.object.join()
     ob = bpy.context.active_object
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    if a.rot_z:
+        from mathutils import Matrix
+        ob.data.transform(Matrix.Rotation(math.radians(a.rot_z), 4, "Z"))
     tris_in = sum(len(p.vertices) - 2 for p in ob.data.polygons)
 
     # 1. clean
