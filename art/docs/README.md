@@ -27,6 +27,7 @@
 | [13_Balance_Sim.md](13_Balance_Sim.md) | ผลจำลองสมดุลฮีโร่ 20,000 รอบ (`server/balance-sim.js`): ability แต่ละตัวช่วยได้แค่ไหน และข้อเสนอปรับตัวเลข (ยังไม่ได้แก้เกม) | Game design |
 | [15_Task_Minigame_Study.md](15_Task_Minigame_Study.md) | **ศึกษา (13 พ.ย. 2026):** ระบบ task ของ Among Us (common/short/long, แถบความคืบหน้ารวม, ทำไมสนุก) → ข้อเสนอเปลี่ยนรอบเล่น BOB เป็น task list มินิเกมทำความสะอาด 16 ตัว (MVP 8), แถบทีม+คู่แข่ง, ดนตรีเลเยอร์ และสิ่งที่กติกา/server ต้องเปลี่ยน (**อนุมัติแล้ว** ใช้เป็นเหตุผลและแหล่งที่มา) | Game designer / ทุกคน |
 | [16_Task_Race_Minigame_Spec.md](16_Task_Race_Minigame_Spec.md) | **สเปกใช้งานจริง (13 พ.ย. 2026):** รอบเล่น task race (ใบงาน = รายการงานของทีม, น้ำหนัก, แถบทีม/คู่แข่ง, ลมเป่าช่วย, คราบฉุกเฉิน, การชนะ), มินิเกม 16 ตัวแบบละเอียดครบ (MVP 8 ตัว + ระยะ 2 อีก 8 ตัว: ควบคุม, เกณฑ์, D1–D3, ถนัด, เวลาขั้นต่ำ server, เสียง, art) และสัญญา opcode | Game designer / Unity / Server |
+| [18_Tactile_Props.md](18_Tactile_Props.md) | **ผิวสัมผัสของวัตถุในมินิเกม (13 พ.ย. 2026):** ไม่มี artist จึงให้ความสมจริงมาจาก shader/โค้ด (paint mask, เปียก/ฟอง, ยุบ-ยืด, บิดผ้า, หยดน้ำ) + รูปทรงจาก AI ภาพเป็น 3D + CC0; ตารางเทคนิคต่อมินิเกม 16 ตัว, งบมือถือ; ต้นแบบลองได้ครบ 16 มินิเกม [`ux/BOB_Tactile_Test.html`](ux/BOB_Tactile_Test.html); เส้นขอบ `#4A2E22` | Tech art / Unity / Game designer |
 | [17_Music_Layers.md](17_Music_Layers.md) | แผนดนตรีเลเยอร์ 4 stem (120 bpm, เปิดตาม % ทีม/คู่แข่ง/เวลา, quantize ขอบห้อง, ชุด fast 130 bpm, stinger, ducking, `BobMusicLayers` ใน Unity, ทางเลือกการผลิต) | Sound / Unity dev |
 
 ## สรุปสั้น
