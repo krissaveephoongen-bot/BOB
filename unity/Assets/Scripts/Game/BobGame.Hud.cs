@@ -12,6 +12,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Bob.Art;
+using Bob.Modular;
 using Bob.Rules;
 using UnityEngine;
 using UnityEngine.UI;
@@ -21,7 +22,7 @@ namespace Bob.Game
     public partial class BobGame
     {
         // Screen split (fractions of the safe area). The room camera fills the middle.
-        public const float SideCol = 0.2f, TopStrip = 0.11f, BottomStrip = 0.19f;
+        public const float SideCol = 0.15f, TopStrip = 0.10f, BottomStrip = 0.17f;
 
         static readonly Dictionary<string, string> StatTh = new Dictionary<string, string>
             { { "clean", "ขจัดคราบ" }, { "gentle", "ถนอมผิว" }, { "speed", "ความเร็ว" }, { "shine", "ความเงา" } };
@@ -58,6 +59,7 @@ namespace Bob.Game
 
             hudRoot = BobUi.Stretch(BobUi.Rect("HUD", safe));
             BuildTopBar(); BuildOrderTicket(); BuildCartCard(); BuildHand(); BuildActionButtons(); BuildJoystick();
+            BindHudController();
 
             stationPop = BobUi.Rect("StationShelf", hudRoot);
             var spImg = stationPop.gameObject.AddComponent<Image>(); spImg.sprite = art.Get("ui_panel"); spImg.type = Image.Type.Sliced; spImg.pixelsPerUnitMultiplier = 1.2f; spImg.color = BobUi.Surface;
@@ -67,7 +69,7 @@ namespace Bob.Game
             stationPop.gameObject.SetActive(false);
 
             // hint just above the hand tray
-            var hint = BobUi.Pin(BobUi.Rect("Hint", hudRoot), new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 166), new Vector2(1000, 40));
+            var hint = BobUi.Pin(BobUi.Rect("Hint", hudRoot), new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 150), new Vector2(1000, 40));
             hintText = BobUi.Label(hint, "", 22, BobUi.Ink, TextAnchor.MiddleCenter); BobUi.Stretch(hintText.rectTransform);
             var sh = hintText.gameObject.AddComponent<Outline>(); sh.effectColor = new Color(1, 1, 1, 0.8f); sh.effectDistance = new Vector2(2, -2);
 
@@ -112,7 +114,7 @@ namespace Bob.Game
         {
             // centre: round pips · timer · score
             var top = BobUi.Pin(BobUi.Rect("TopCentre", hudRoot), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -14), new Vector2(760, 100));
-            var h = top.gameObject.AddComponent<HorizontalLayoutGroup>(); h.spacing = 16; h.childAlignment = TextAnchor.MiddleCenter;
+            top.localScale = Vector3.one * 0.8f; var h = top.gameObject.AddComponent<HorizontalLayoutGroup>(); h.spacing = 16; h.childAlignment = TextAnchor.MiddleCenter;
             h.childControlWidth = h.childControlHeight = false; h.childForceExpandWidth = h.childForceExpandHeight = false;
             var pipBox = BobUi.Rect("Pips", top); pipBox.sizeDelta = new Vector2(150, 50);
             for (int i = 0; i < 3; i++) { pips[i] = BobUi.Disc(pipBox, BobUi.Line, 40, "Pip"); pips[i].rectTransform.anchoredPosition = new Vector2(-50 + i * 50, 0); }
@@ -124,20 +126,50 @@ namespace Bob.Game
 
             // right: budget + pause
             var bp = Card(hudRoot, "Budget", BobUi.Surface, 1f);
-            BobUi.Pin(bp, Vector2.one, Vector2.one, new Vector2(-136, -18), new Vector2(230, 96));
+            BobUi.Pin(bp, Vector2.one, Vector2.one, new Vector2(-112, -12), new Vector2(230, 96)); bp.localScale = Vector3.one * 0.8f; bp.pivot = Vector2.one;
             BobUi.Pin(BobUi.Img(bp, "icon_budget", 56).rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(18, 0), new Vector2(56, 56));
             budgetText = BobUi.Label(bp, "", 40, BobUi.Ink, TextAnchor.MiddleRight, FontStyle.Bold); BobUi.Stretch(budgetText.rectTransform, 80, 0, 22, 0);
             var pause = BobUi.Button(hudRoot, "", BobUi.Surface, () => SetOverlay(Overlay.Pause));
-            BobUi.Pin((RectTransform)pause.transform, Vector2.one, Vector2.one, new Vector2(-18, -18), new Vector2(104, 96));
+            BobUi.Pin((RectTransform)pause.transform, Vector2.one, Vector2.one, new Vector2(-12, -12), new Vector2(104, 96)); pause.transform.localScale = Vector3.one * 0.8f;
             var pi = BobUi.Img(pause.transform, "icon_pause", 56); BobUi.Pin(pi.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(56, 56));
             if (!art.Has("icon_pause")) pause.GetComponentInChildren<Text>().text = "II";
+            BuildCartSlotBar();
+            Bob.UI.BobHitArea.Ensure(pause.targetGraphic, 144f); // UX spec 1.2: touch area >= 144u without growing the picture
+        }
+
+        MobileHUDController hudCtl;
+        Image[] slotImgs = new Image[BobRules.MaxLayers];
+
+        /// <summary>UX 5A.2 top right: the cart's layers as icons only, five slots.</summary>
+        void BuildCartSlotBar()
+        {
+            var bar = BobUi.Pin(BobUi.Rect("CartSlots", hudRoot), Vector2.one, Vector2.one, new Vector2(-12, -92), new Vector2(5 * 56 + 4 * 6, 56));
+            var h = bar.gameObject.AddComponent<HorizontalLayoutGroup>(); h.spacing = 6; h.childControlWidth = h.childControlHeight = true; h.childForceExpandWidth = h.childForceExpandHeight = true;
+            for (int i = 0; i < slotImgs.Length; i++)
+            {
+                var back = BobUi.Disc(bar, new Color(1f, 0.99f, 0.95f, 0.85f), 56, "Slot");
+                var ic = BobUi.Img(back.transform, "", 44); BobUi.Pin(ic.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(44, 44));
+                slotImgs[i] = ic;
+            }
+        }
+
+        /// <summary>Hand the code-built widgets to the Modular HUD controller (it drives timer pulse, slot icons and the main button).</summary>
+        void BindHudController()
+        {
+            hudCtl = hudRoot.gameObject.AddComponent<MobileHUDController>();
+            hudCtl.timerPill = timerBg; hudCtl.timerText = timerText; hudCtl.warnAt = 15f;
+            hudCtl.cartSlots = slotImgs;
+            hudCtl.primaryButton = ctxBtn; hudCtl.primaryLabel = ctxLabel; hudCtl.primaryImage = (Image)ctxBtn.targetGraphic;
+            hudCtl.submitButton = submitBtn; hudCtl.submitRing = submitHold != null ? submitHold.ring : null;
+            hudCtl.Bind(); // BobGame wires pause / primary / submit itself; the controller drives their look (label, tint, ring)
         }
 
         void BuildOrderTicket()
         {
             var card = Card(hudRoot, "OrderTicket");
-            card.anchorMin = new Vector2(0, 1); card.anchorMax = new Vector2(SideCol, 1); card.pivot = new Vector2(0, 1);
-            card.offsetMin = new Vector2(16, 0); card.offsetMax = new Vector2(-6, 0); card.anchoredPosition = new Vector2(16, -16);
+            card.anchorMin = card.anchorMax = new Vector2(0, 1); card.pivot = new Vector2(0, 1);
+            card.sizeDelta = new Vector2(400, 0); card.anchoredPosition = new Vector2(12, -12); card.localScale = Vector3.one * 0.72f;
+            card.GetComponent<Image>().color = new Color(1f, 0.99f, 0.95f, 0.9f);
             VStack(card, 18, 14, 6);
             card.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             var head = BobUi.Label(card, "ใบงาน", 26, BobUi.Muted, TextAnchor.MiddleLeft, FontStyle.Bold); BobUi.Size(head, 32, 32);
@@ -148,8 +180,9 @@ namespace Bob.Game
         void BuildCartCard()
         {
             var card = Card(hudRoot, "CartCard"); cartCardRt = card;
-            card.anchorMin = new Vector2(1 - SideCol, 1); card.anchorMax = Vector2.one; card.pivot = new Vector2(1, 1);
-            card.offsetMin = new Vector2(6, 0); card.offsetMax = new Vector2(-16, 0); card.anchoredPosition = new Vector2(-16, -128);
+            card.anchorMin = card.anchorMax = Vector2.one; card.pivot = Vector2.one;
+            card.sizeDelta = new Vector2(400, 0); card.anchoredPosition = new Vector2(-12, -160); card.localScale = Vector3.one * 0.72f;
+            card.GetComponent<Image>().color = new Color(1f, 0.99f, 0.95f, 0.9f);
             VStack(card, 16, 12, 6);
             card.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             cartBody = BobUi.Rect("Body", card);
@@ -158,31 +191,31 @@ namespace Bob.Game
 
         void BuildHand()
         {
-            handRow = BobUi.Pin(BobUi.Rect("Hand", hudRoot), new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 14), new Vector2(3 * 148 + 2 * 14, 148));
+            handRow = BobUi.Pin(BobUi.Rect("Hand", hudRoot), new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(-90, 10), new Vector2(3 * 148 + 2 * 14, 148)); handRow.localScale = Vector3.one * 0.75f;
             var h = handRow.gameObject.AddComponent<HorizontalLayoutGroup>(); h.spacing = 14;
             h.childControlWidth = h.childControlHeight = true; h.childForceExpandWidth = h.childForceExpandHeight = true;
         }
 
         void BuildActionButtons()
         {
-            var col = BobUi.Rect("Actions", hudRoot);
-            col.anchorMin = new Vector2(1 - SideCol, 0); col.anchorMax = new Vector2(1, 0); col.pivot = new Vector2(1, 0);
-            col.offsetMin = new Vector2(6, 16); col.offsetMax = new Vector2(-16, 16 + 290);
-            var v = col.gameObject.AddComponent<VerticalLayoutGroup>(); v.spacing = 12; v.childControlWidth = v.childControlHeight = true; v.childForceExpandWidth = true; v.childForceExpandHeight = false;
+            var col = hudRoot; // thumb arc, bottom right (UX 5A.2): big contextual main button, send (hold) beside it, ability further left
+            ctxBtn = BobUi.Button(col, "หยิบ", BobUi.Sun, DoCtx, 40);
+            BobUi.Pin((RectTransform)ctxBtn.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-20, 20), new Vector2(230, 160));
+            ctxLabel = ctxBtn.GetComponentInChildren<Text>(); ctxLabel.fontStyle = FontStyle.Bold;
 
-            abilityBtn = BobUi.Button(col, "", BobUi.Sun, UseAbility, 26);
-            BobUi.Size(abilityBtn, 112, 112);
-            var lab = abilityBtn.GetComponentInChildren<Text>(); lab.alignment = TextAnchor.MiddleLeft; BobUi.Stretch(lab.rectTransform, 118, 4, 14, 4);
-            abilityLabel = lab; abilityLabel.supportRichText = true;
-            var port = BobUi.Img(abilityBtn.transform, charId + "_portrait", 92); port.name = "Portrait";
-            BobUi.Pin(port.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(14, 0), new Vector2(92, 92));
-
-            submitBtn = BobUi.Button(col, "กดค้างเพื่อส่ง", BobUi.Teal, Submit, 40, Color.white);
-            BobUi.Size(submitBtn, 160, 160);
+            submitBtn = BobUi.Button(col, "กดค้างเพื่อส่ง", BobUi.Teal, Submit, 30, Color.white);
+            BobUi.Pin((RectTransform)submitBtn.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-262, 20), new Vector2(230, 100));
             submitBtn.GetComponentInChildren<Text>().fontStyle = FontStyle.Bold;
             // UX spec 14.4: hold 0.6 s to send (a ring fills), so a thumb slip cannot end the round. Settings: PlayerPrefs bob.holdSubmit.
             submitBtn.onClick.RemoveAllListeners();
             submitHold = Bob.UI.BobHoldButton.Attach(submitBtn.targetGraphic, BobUi.Circle, new Color(1f, 0.85f, 0.3f, 0.9f), Submit);
+
+            abilityBtn = BobUi.Button(col, "", BobUi.Sun, UseAbility, 26);
+            BobUi.Pin((RectTransform)abilityBtn.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-504, 20), new Vector2(200, 100)); ((Image)abilityBtn.targetGraphic).color = new Color(1f, 0.82f, 0.35f, 0.95f);
+            var lab = abilityBtn.GetComponentInChildren<Text>(); lab.alignment = TextAnchor.MiddleLeft; BobUi.Stretch(lab.rectTransform, 84, 4, 8, 4);
+            abilityLabel = lab; abilityLabel.supportRichText = true;
+            var port = BobUi.Img(abilityBtn.transform, charId + "_portrait", 72); port.name = "Portrait";
+            BobUi.Pin(port.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(8, 0), new Vector2(72, 72));
         }
 
         Bob.UI.BobHoldButton submitHold;
@@ -204,10 +237,8 @@ namespace Bob.Game
             bool playing = phase == Phase.Build;
             if (R != null && (playing || phase == Phase.Scoring || phase == Phase.Countdown))
             {
-                timerText.text = Mathf.CeilToInt(time) + (freeze > 0 ? "*" : "");
+                hudCtl.SetTimer(time, freeze > 0, playing); // text, frozen tint and the red pulse under 15 s
                 bool warn = time <= 15 && playing;
-                timerBg.color = freeze > 0 ? BobUi.Hex("#DDEBFA") : warn ? BobUi.Rose : BobUi.Surface;
-                timerText.color = warn && freeze <= 0 ? BobUi.Surface : BobUi.Ink;
                 if (warn && Mathf.CeilToInt(time) != lastTick) { lastTick = Mathf.CeilToInt(time); Sfx("timer_tick"); StartCoroutine(BobTween.Pop(timerBg.transform, 0.2f, 1.08f)); }
             }
             if (toastRt.gameObject.activeSelf && Time.unscaledTime > toastUntil) toastRt.gameObject.SetActive(false);
@@ -303,6 +334,11 @@ namespace Bob.Game
 
         void RenderCart()
         {
+            if (hudCtl != null)
+            {
+                var icons = new List<Sprite>(); foreach (var id in stack) if (!BobRules.IsMethod(id)) icons.Add(art.Has("part_" + id) ? art.Get("part_" + id) : null);
+                hudCtl.SetCartSlots(icons);
+            }
             BobUi.Clear(cartBody);
             var e = Ev();
             var head = BobUi.HBox(cartBody, 6, "Head"); head.childForceExpandHeight = false; BobUi.Size(head, 34, 34);
@@ -393,12 +429,13 @@ namespace Bob.Game
         void RenderButtons()
         {
             var h = Hero;
-            abilityLabel.text = $"<b>{h.Ability}</b>\n<size=18>{(abUsed ? "ใช้แล้วในรอบนี้" : swapMode ? "แตะ สลับ↑ ในรถเข็น" : AbilityShort[charId])}</size>";
+            abilityLabel.text = $"<b>{h.Ability}</b>\n<size=16>{(abUsed ? "ใช้แล้ว" : swapMode ? "แตะ สลับ↑" : "พร้อม")}</size>";
             abilityBtn.interactable = phase == Phase.Build && !abUsed;
             var pt = abilityBtn.transform.Find("Portrait");
             if (pt != null) pt.GetComponent<Image>().sprite = art.Get(charId + "_portrait");
             submitBtn.interactable = phase == Phase.Build && BobRules.CountLayers(stack) > 0;
             if (submitHold != null) submitHold.interactable = submitBtn.interactable;
+            RenderCtx();
         }
 
         // ---------------------------------------------------------------- station shelf

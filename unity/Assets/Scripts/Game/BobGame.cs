@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bob.Art;
+using Bob.Modular;
 using Bob.Net;
 using Bob.Rules;
 using UnityEngine;
@@ -42,7 +43,9 @@ namespace Bob.Game
         int seed, roundNo, wins, losses, carry, rivalCarry, coins, budget, gain;
         Round R;
         readonly List<string> stack = new List<string>(), hand = new List<string>();
-        float time, freeze;
+        TaskManager tasks;   // the round clock (Modular/TaskManager.cs)
+        float time { get => tasks != null ? tasks.TimeLeft : 0f; set { if (tasks != null) tasks.TimeLeft = value; } }
+        float freeze { get => tasks != null ? tasks.Freeze : 0f; set { if (tasks != null) tasks.Freeze = value; } }
         bool abUsed, shield, swapMode;
         ScoreResult preview;
         LastRound last;
@@ -59,6 +62,7 @@ namespace Bob.Game
 
         void Awake()
         {
+            tasks = gameObject.AddComponent<TaskManager>(); tasks.warnAt = 15f;
             if (art == null) { art = ScriptableObject.CreateInstance<BobArtLibrary>(); Debug.LogWarning("[BobGame] no art library: run Bob > Build Game Scene"); }
             BobUi.Art = art;
             try
@@ -120,8 +124,8 @@ namespace Bob.Game
             TickOnline();
             if (phase == Phase.Build && overlay == Overlay.None && !Online) // online, the server runs the clock
             {
-                if (freeze > 0) freeze = Mathf.Max(0, freeze - Time.deltaTime); else time -= Time.deltaTime;
-                if (time <= 0) { time = 0; if (stack.Count == 0) Toast("หมดเวลา! ส่งรถเข็นเปล่า"); Submit(); }
+                tasks.Tick(Time.deltaTime);
+                if (tasks.TimeUp) { if (stack.Count == 0) Toast("หมดเวลา! ส่งรถเข็นเปล่า"); Submit(); }
             }
             TickWorld();
             TickHud();
@@ -217,7 +221,7 @@ namespace Bob.Game
             }
             R = room ?? BobMatch.MakeRound(roundNo, seed);
             stack.Clear(); hand.Clear();
-            time = RoundTime; budget = BobRules.RoundBudget + carry / 2;
+            tasks.Begin(R.Need, RoundTime); budget = BobRules.RoundBudget + carry / 2;
             abUsed = false; shield = false; swapMode = false; freeze = 0; preview = null;
             ResetRoomForRound();
             phase = Phase.Intro; RenderAll();
@@ -314,7 +318,7 @@ namespace Bob.Game
                     preview = BobRules.TotalScore(Ev(), R.Need, BudgetLeft, budget, time / RoundTime);
                     Toast("เล็งเป้า! กองนี้จะได้ " + preview.Total + " คะแนน"); Sfx("spray_psst"); SpawnFx("fx_target", CartTop); break;
                 case "press":
-                    freeze = FreezeTime; Toast("รีดเวลา! หยุดนาฬิกา 8 วินาที"); Sfx("steam_hiss"); SpawnFx("fx_steam", PlayerPos + Vector2.up * 0.5f); break;
+                    tasks.FreezeFor(FreezeTime); Toast("รีดเวลา! หยุดนาฬิกา 8 วินาที"); Sfx("steam_hiss"); SpawnFx("fx_steam", PlayerPos + Vector2.up * 0.5f); break;
             }
             MarkAbilityUsed(); Sfx("ability_activate"); RenderAll();
         }
