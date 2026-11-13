@@ -1,0 +1,390 @@
+<title>BOB Minigame Cards</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mitr:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap">
+<style>
+/* Layout: phone frame showing the card in context + numbered legend, then the 16 cards in two groups, then shared states and sizing rules. Tokens follow the earlier BOB wireframes. */
+:root{
+  --bg:#F4F6FB; --panel:#FFFFFF; --fg:#0B1A3A; --muted:#55607A; --line:#D7DDEA; --accent:#1A6FC4; --chip:#E8EEF8; --warn:#B4531A;
+  --display:"Mitr","IBM Plex Sans Thai",system-ui,sans-serif;
+  --body:"IBM Plex Sans Thai","Noto Sans Thai",system-ui,sans-serif;
+  --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0B1222;--panel:#121B30;--fg:#E8EDF8;--muted:#9AA6C2;--line:#26324D;--accent:#6CB2FF;--chip:#1B2742;--warn:#F2A46B;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0B1222;--panel:#121B30;--fg:#E8EDF8;--muted:#9AA6C2;--line:#26324D;--accent:#6CB2FF;--chip:#1B2742;--warn:#F2A46B;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.6}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:1280px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 64px}
+h1,h2,h3{font-family:var(--display);font-weight:600;text-wrap:balance;margin:0}
+h1{font-size:clamp(26px,4vw,38px)} h2{font-size:23px} h3{font-size:17px;font-weight:500}
+p{margin:0;max-width:72ch} .lead{color:var(--muted);margin-top:8px}
+section{padding-top:34px;display:grid;gap:14px}
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);margin:18px 0 4px}
+nav .row{display:flex;gap:8px 14px;flex-wrap:wrap;padding-block:10px;align-items:center;font-size:14px}
+nav a{color:var(--fg);text-decoration:none;background:var(--chip);padding:4px 12px;border-radius:999px}
+nav a:focus-visible,nav label:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+nav label{display:flex;gap:6px;align-items:center;cursor:pointer;background:var(--chip);padding:4px 12px;border-radius:999px;margin-left:auto}
+figure{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;gap:10px;min-width:0}
+figure svg{width:100%;height:auto;display:block;border-radius:8px}
+figcaption{display:grid;gap:4px;min-width:0}
+.id{font-family:var(--mono);font-size:12px;color:var(--accent);letter-spacing:.02em}
+.tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;background:var(--chip);color:var(--muted);margin-left:6px;font-family:var(--body)}
+.tag.p1{color:var(--warn)}
+figcaption p{font-size:14px;color:var(--muted)}
+figcaption dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:4px 0 0;font-size:13.5px}
+figcaption dt{color:var(--muted)} figcaption dd{margin:0;min-width:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,520px),1fr));gap:18px}
+.tblwrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 10px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--display);font-weight:500}
+td:first-child{font-family:var(--mono);font-size:13px;color:var(--accent);white-space:nowrap}
+.anno{display:none} body.on-anno .anno{display:inline}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>BOB · การ์ดมินิเกม Task Race</h1>
+    <p class="lead">หน้าจอ S28 ของมินิเกมทำความสะอาดทั้ง 16 ตัว ทุกตัวใช้กรอบการ์ดเดียวกันขนาด 1400×860u กลางจอ 2340×1080u ฉากห้องยังเห็นอยู่ข้างหลัง ภาพในหน้านี้คือ wireframe ขณะกำลังเล่น สีและรูปทรงเป็นตัวแทน art จริงตาม concept กติกาเต็มอยู่ใน <code>art/docs/16_Task_Race_Minigame_Spec.md</code> และสเปกหน้าจออยู่ใน <code>11_UX_UI_Spec.md</code> S28</p>
+  </header>
+  <nav aria-label="ไปยังส่วน"><div class="row">
+    <a href="#context">การ์ดบนจอ</a><a href="#mvp">MVP 8 ตัว</a><a href="#phase2">ระยะ 2 อีก 8 ตัว</a><a href="#states">สถานะร่วม</a><a href="#rules">ขนาดและกฎ</a>
+    <label><input type="checkbox" id="t-anno" checked> หมายเลขอธิบาย</label>
+  </div></nav>
+
+  <section id="context"><h2>การ์ดบนจอเล่น</h2>
+    <p class="lead">เดินไปที่วงจุดงานแล้วแตะปุ่มหลัก การ์ดเด้งขึ้นกลางจอ ห้องข้างหลังมืดลง 40% แต่ยังเห็นเพื่อนและคราบฉุกเฉิน ขอบบนของการ์ดยังมีเวลาและแถบทั้งสองทีม ให้รู้สึกว่ากำลังแข่งอยู่ตลอด</p>
+    <figure><svg viewBox="0 0 2340 1080" id="ctx" role="img" aria-label="การ์ดมินิเกมบนจอเล่น"></svg></figure>
+    <div class="tblwrap"><table id="legend"><thead><tr><th>#</th><th>ส่วน</th><th>ขนาด / ตำแหน่ง</th><th>พฤติกรรม</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section id="mvp"><h2>MVP 8 ตัว</h2>
+    <p class="lead">ทำก่อนตามลำดับใน spec ข้อ 9 ใช้ component กลาง 5 ตัว (TracePath, ScrubPad, TapTargets, DragSort, HoldMeter) T04 ไม่ใช้การ์ดนี้ แต่ใช้แผงรถเข็น S22-Cart เดิม</p>
+    <div class="grid" id="g-mvp"></div>
+  </section>
+
+  <section id="phase2"><h2>ระยะ 2 อีก 8 ตัว</h2>
+    <p class="lead">ทำหลัง MVP ผ่านการทดสอบเล่น ใช้ component เดิม ยกเว้น T15 ที่เพิ่ม SequencePad และ T12 ที่เล่นในฉากห้องโดยไม่เปิดการ์ด</p>
+    <div class="grid" id="g-p2"></div>
+  </section>
+
+  <section id="states"><h2>สถานะร่วมของการ์ด</h2>
+    <p class="lead">ทุกมินิเกมใช้สถานะชุดเดียวกัน ภาพตัวอย่างใช้ T02 ถูคราบวน</p>
+    <div class="grid" id="g-states"></div>
+  </section>
+
+  <section id="rules"><h2>ขนาดและกฎที่ใช้ทุกการ์ด</h2>
+    <div class="tblwrap"><table><thead><tr><th>ค่า</th><th>กำหนด</th><th>เหตุผล</th></tr></thead><tbody>
+      <tr><td>การ์ด</td><td>1400 × 860u กลางจอ, เปิด scale 0.9→1.0 ใน 180 ms, ปิด 120 ms</td><td>เหลือขอบซ้ายขวา 470u ให้เห็นห้องและจอยยังอยู่ใต้นิ้วซ้าย</td></tr>
+      <tr><td>พื้นที่เล่น</td><td>1240 × 620u รับนิ้วทั้งพื้นที่</td><td>ไม่บังคับให้เริ่มตรงจุด นิ้วโป้งขวาเล่นได้ทั้งแผ่น</td></tr>
+      <tr><td>เป้าที่ต้องแตะ</td><td>≥ 160u (T03, T10, T15) ปุ่มกดค้าง ≥ 240u</td><td>ใหญ่กว่าขั้นต่ำ 144u เพราะเป้าขยับหรือโผล่หาย</td></tr>
+      <tr><td>ปุ่ม ×</td><td>144u มุมขวาบนของการ์ด</td><td>ปิดได้ทุกเมื่อ ความคืบหน้าค้าง 10 วิ</td></tr>
+      <tr><td>ข้อความแนะนำ</td><td>≤ 6 คำ, Mitr 44u, ใต้พื้นที่เล่น</td><td>อ่านได้ในครึ่งวินาที ไม่ต้องหยุดเล่น</td></tr>
+      <tr><td>มือผีสอนท่า</td><td>ครั้งแรกที่เจอมินิเกมนั้นเท่านั้น วน 2 รอบแล้วหาย</td><td>ไม่มีหน้าสอนแยก เรียนตอนเล่นจริง</td></tr>
+      <tr><td>ไม่พึ่งสีอย่างเดียว</td><td>ถังขยะต่างรูปฝา ปุ่ม T15 ต่างรูปทรง ช่วงเป้า T11 มีลายทแยง</td><td>ผู้เล่นตาบอดสีเล่นได้ครบ</td></tr>
+      <tr><td>ถนัด</td><td>หน้าฮีโร่ที่ถนัดมุมซ้ายบน ถ้าคนเล่นคือฮีโร่นั้น วงหน้าเป็นสีทอง + ป้าย "ถนัด"</td><td>บอกว่าทำไมเส้นกว้างหรือเป้าใหญ่กว่าปกติ</td></tr>
+      <tr><td>โหมดช่วยกดค้าง</td><td>ตั้งค่า S39 > ควบคุม: ลาก/วน → กดค้างบนเป้า เวลา ×1.3</td><td>เล่นได้ด้วยนิ้วเดียวที่ขยับไม่สะดวก</td></tr>
+    </tbody></table></div>
+  </section>
+</div>
+
+<script>
+(function(){
+const INK='#041E4F';
+const C={ink:INK,frame:'#2E4484',cream:'#FEEECF',surface:'#FFFDF5',gold:'#F6C431',orange:'#FD7713',blue:'#1A6FC4',sky:'#3695F2',red:'#FB2F44',green:'#178A4F',danger:'#D81E36',muted:'#5A5F7A',grey:'#C9CFDD',spark:'#3DDC84',
+ sweep:'#F79A2E',bubble:'#3D8FE0',scrub:'#9B7EDE',spray:'#19B6D9',all:'#F6C431',dirt:'#8A5226',dirt2:'#6E3F1B',slime:'#55C46A',tile:'#F4E6C3',tile2:'#EAD9B0',wall:'#F2C98E',water:'#7DC4F2'};
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const f=v=>Math.round(v*10)/10;
+const R=(x,y,w,h,fl,o={})=>`<rect x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(h)}" rx="${o.r||0}" fill="${fl}"${o.s?` stroke="${o.s}" stroke-width="${o.sw||4}"`:''}${o.dash?` stroke-dasharray="${o.dash}"`:''}${o.op!=null?` opacity="${o.op}"`:''}/>`;
+const Ci=(x,y,r,fl,o={})=>`<circle cx="${f(x)}" cy="${f(y)}" r="${f(r)}" fill="${fl}"${o.s?` stroke="${o.s}" stroke-width="${o.sw||4}"`:''}${o.dash?` stroke-dasharray="${o.dash}"`:''}${o.op!=null?` opacity="${o.op}"`:''}/>`;
+const El=(x,y,rx,ry,fl,o={})=>`<ellipse cx="${f(x)}" cy="${f(y)}" rx="${f(rx)}" ry="${f(ry)}" fill="${fl}"${o.s?` stroke="${o.s}" stroke-width="${o.sw||4}"`:''}${o.op!=null?` opacity="${o.op}"`:''}/>`;
+const Pa=(d,fl,o={})=>`<path d="${d}" fill="${fl}"${o.s?` stroke="${o.s}" stroke-width="${o.sw||4}" stroke-linecap="round" stroke-linejoin="round"`:''}${o.dash?` stroke-dasharray="${o.dash}"`:''}${o.op!=null?` opacity="${o.op}"`:''}/>`;
+const Po=(pts,fl,o={})=>`<polygon points="${pts.map(p=>f(p[0])+','+f(p[1])).join(' ')}" fill="${fl}"${o.s?` stroke="${o.s}" stroke-width="${o.sw||4}" stroke-linejoin="round"`:''}${o.op!=null?` opacity="${o.op}"`:''}/>`;
+const T=(x,y,t,sz=40,fl=INK,o={})=>`<text x="${f(x)}" y="${f(y)}" font-size="${sz}" fill="${fl}" text-anchor="${o.a||'start'}" font-family="Mitr,IBM Plex Sans Thai,system-ui" font-weight="${o.w||500}" dominant-baseline="middle"${o.st?` stroke="${o.st}" stroke-width="${o.sw||8}" paint-order="stroke" stroke-linejoin="round"`:''}>${esc(t)}</text>`;
+const N=(x,y,n)=>`<g class="anno">${Ci(x,y,30,C.red,{s:'#fff',sw:5})}${T(x,y+2,n,34,'#fff',{a:'middle',w:600})}</g>`;
+const arrow=(d,col=C.blue,w=10)=>{return Pa(d,'none',{s:col,sw:w,dash:'2 22'});};
+const head=(x,y,ang,col=C.blue,s=30)=>{const a=ang*Math.PI/180;const p=[[x,y],[x-s*Math.cos(a-0.5),y-s*Math.sin(a-0.5)],[x-s*Math.cos(a+0.5),y-s*Math.sin(a+0.5)]];return Po(p,col);};
+const finger=(x,y,ghost)=>{const op=ghost?.55:1;return `<g opacity="${op}">${El(x+18,y+46,30,40,ghost?'#fff':'#FFD9B8',{s:INK,sw:4})}${R(x+2,y-10,30,62,ghost?'#fff':'#FFD9B8',{s:INK,sw:4,r:15})}${Ci(x+16,y-6,20,'none',{s:ghost?C.blue:C.gold,sw:5,op:.9})}</g>`;};
+const eyes=(x,y,s=1,mood='frown')=>{let g=Ci(x-14*s,y,9*s,'#fff',{s:INK,sw:3})+Ci(x+14*s,y,9*s,'#fff',{s:INK,sw:3})+Ci(x-12*s,y+2*s,4*s,INK)+Ci(x+16*s,y+2*s,4*s,INK);
+  if(mood==='frown')g+=Pa(`M${x-26*s} ${y-16*s} L${x-6*s} ${y-10*s} M${x+26*s} ${y-16*s} L${x+6*s} ${y-10*s}`,'none',{s:INK,sw:4*s});
+  return g;};
+const hatch=(id,col)=>`<pattern id="${id}" width="18" height="18" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="18" height="18" fill="${col}"/><rect width="7" height="18" fill="#fff" opacity=".45"/></pattern>`;
+
+/* ---------- card chrome ---------- */
+// play area: x 80..1320, y 150..770
+const PX=80,PY=150,PW=1240,PH=620;
+function bar(x,y,w,h,pct,col,rival){
+  let s=R(x,y,w,h,'#E3E7F0',{r:h/2,s:INK,sw:3});
+  s+=R(x+3,y+3,Math.max(0,(w-6)*pct),h-6,rival?`url(#rv)`:col,{r:(h-6)/2});
+  [0.25,.5,.75].forEach(t=>s+=R(x+w*t-1.5,y+3,3,h-6,INK,{op:.35}));
+  return s;}
+function card(o){
+  const cat=o.cat||'scrub';
+  let s=`<defs>${hatch('rv','#9AA3B8')}${hatch('gz','#3DDC84')}<clipPath id="pa${o.key}"><rect x="${PX}" y="${PY}" width="${PW}" height="${PH}" rx="22"/></clipPath></defs>`;
+  s+=R(6,6,1388,848,C.cream,{r:46,s:C.frame,sw:10});
+  if(o.emergency)s+=R(6,6,1388,848,'none',{r:46,s:C.danger,sw:12});
+  // top strip
+  s+=R(30,24,190,64,INK,{r:32})+T(125,57,o.time||'1:04',38,'#fff',{a:'middle',w:600});
+  s+=T(250,57,'ทีมฟ้า',30,C.blue,{w:600})+bar(345,40,280,30,o.team??.67,C.sky)+T(640,57,Math.round((o.team??.67)*100)+'%',28,INK,{w:600});
+  s+=T(720,57,'ทีมแดง',30,C.muted,{w:600})+bar(825,40,280,30,o.rival??.5,'#9AA3B8',true)+T(1120,57,Math.round((o.rival??.5)*100)+'%',28,C.muted,{w:600});
+  s+=Ci(1316,58,46,C.surface,{s:INK,sw:5})+Pa('M1298 40 L1334 76 M1334 40 L1298 76','none',{s:INK,sw:8});
+  // title row
+  const cc=C[cat]||C.scrub;
+  s+=Ci(108,120,24,cc,{s:INK,sw:3})+T(146,121,o.title,40,INK,{w:600});
+  if(o.hero){const hx=146+o.title.length*30+50;s+=Ci(hx,120,22,o.spec?C.gold:'#fff',{s:INK,sw:3})+T(hx,121,o.hero,22,INK,{a:'middle',w:600});
+    if(o.spec)s+=R(hx+30,104,96,34,C.gold,{r:17,s:INK,sw:2})+T(hx+78,122,'ถนัด',22,INK,{a:'middle',w:600});}
+  if(o.badge)s+=R(1050,100,240,42,o.badgeCol||C.red,{r:21})+T(1170,122,o.badge,26,'#fff',{a:'middle',w:600});
+  // play area
+  s+=`<g clip-path="url(#pa${o.key})">${R(PX,PY,PW,PH,o.bg||C.surface)}${o.play||''}</g>`;
+  s+=R(PX,PY,PW,PH,'none',{r:22,s:INK,sw:4});
+  // bottom
+  s+=T(PX,808,o.hint,40,INK,{w:500});
+  s+=bar(760,792,400,32,o.prog??.6,C.green);
+  s+=T(1320,809,o.step||'',32,INK,{a:'end',w:600});
+  return s+(o.over||'');}
+function svgCard(o){return `<svg viewBox="0 0 1400 860" role="img" aria-label="${esc(o.id+' '+o.title)}">${card(o)}</svg>`;}
+
+/* ---------- play-area drawings ---------- */
+const floor=()=>{let s='';for(let j=0;j<6;j++)for(let i=0;i<12;i++)s+=R(PX+i*104,PY+j*104,104,104,(i+j)%2?C.tile2:C.tile);return s;};
+const wall=(c=C.wall)=>R(PX,PY,PW,PH,c)+R(PX,PY+470,PW,150,'#E3B57A');
+const blob=(x,y,r,col=C.dirt,op=.75)=>Pa(`M${x-r} ${y} C${x-r} ${y-r*.9} ${x-r*.2} ${y-r*1.05} ${x+r*.3} ${y-r*.85} C${x+r*1.05} ${y-r*.6} ${x+r} ${y+r*.3} ${x+r*.5} ${y+r*.75} C${x} ${y+r*1.1} ${x-r*.9} ${y+r*.8} ${x-r} ${y} Z`,col,{op});
+const sponge=(x,y)=>R(x-60,y-36,120,72,'#FFE066',{r:18,s:INK,sw:4})+R(x-60,y+8,120,28,C.green,{r:10,op:.85});
+const bubbles=(x,y)=>[[0,0,22],[40,-26,14],[-36,-30,16],[60,14,10],[-50,18,12]].map(b=>Ci(x+b[0],y+b[1],b[2],'#fff',{s:C.sky,sw:3,op:.9})).join('');
+const slime=(x,y,r=58,hid)=>`<g${hid?' opacity=".45"':''}>${Pa(`M${x-r} ${y+r*.5} Q${x-r} ${y-r} ${x} ${y-r} Q${x+r} ${y-r} ${x+r} ${y+r*.5} Q${x+r*.5} ${y+r*.8} ${x} ${y+r*.5} Q${x-r*.5} ${y+r*.8} ${x-r} ${y+r*.5} Z`,C.slime,{s:INK,sw:4})}${eyes(x,y-r*.2,r/58,'')}</g>`;
+const dustBunny=(x,y,r=52,peek=1)=>`<g>${El(x,y,r,r*.8*peek,'#B9AE9A',{s:INK,sw:4})}${[...Array(7)].map((_,i)=>{const a=Math.PI+i*Math.PI/6;return Pa(`M${x+Math.cos(a)*r} ${y+Math.sin(a)*r*.8*peek} l${Math.cos(a)*16} ${Math.sin(a)*16}`,'none',{s:INK,sw:3});}).join('')}${eyes(x,y-6,.8,'')}</g>`;
+const holdBtn=(x,y,pct,label,col=C.gold)=>{const r=120,c=2*Math.PI*(r+16);return Ci(x,y,r+16,'none',{s:'#E3E7F0',sw:18})+`<circle cx="${x}" cy="${y}" r="${r+16}" fill="none" stroke="${C.green}" stroke-width="18" stroke-dasharray="${f(c*pct)} ${f(c)}" transform="rotate(-90 ${x} ${y})" stroke-linecap="round"/>`+Ci(x,y,r,col,{s:INK,sw:5})+T(x,y+2,label,36,INK,{a:'middle',w:600});};
+
+const P={};
+P.T01=()=>{let s=floor();
+  const d=`M${PX+80} ${PY+470} C${PX+330} ${PY+470} ${PX+300} ${PY+170} ${PX+600} ${PY+180} S${PX+900} ${PY+460} ${PX+1160} ${PY+300}`;
+  s+=Pa(d,'none',{s:'#C9B48A',sw:120,op:.55})+Pa(d,'none',{s:C.dirt,sw:110,dash:'6 26',op:.7});
+  s+=Pa(`M${PX+80} ${PY+470} C${PX+330} ${PY+470} ${PX+300} ${PY+170} ${PX+600} ${PY+180}`,'none',{s:C.tile,sw:124});
+  s+=Pa(d,'none',{s:C.sweep,sw:5,dash:'14 14',op:.9});
+  s+=R(PX+575,PY+120,26,120,'#B7793A',{s:INK,sw:4,r:8})+Po([[PX+545,PY+235],[PX+630,PY+235],[PX+650,PY+290],[PX+525,PY+290]],C.sweep,{s:INK,sw:4});
+  s+=finger(PX+600,PY+250,false);
+  return s;};
+P.T02=()=>{let s=R(PX,PY,PW,PH,'#D9B27C')+[...Array(7)].map((_,i)=>R(PX,PY+i*90,PW,4,'#B98E57')).join('');
+  s+=blob(PX+620,PY+310,230,C.dirt,.35)+blob(PX+700,PY+300,120,C.dirt2,.4);
+  s+=Pa(`M${PX+470} ${PY+330} a160 110 0 1 1 300 40`,'none',{s:C.blue,sw:10,dash:'2 22'})+head(PX+772,PY+372,80);
+  s+=bubbles(PX+520,PY+260)+sponge(PX+500,PY+380)+finger(PX+500,PY+410,false);
+  return s;};
+P.T03=()=>{let s=wall('#BFE0D0');
+  [[300,180,60],[560,330,54],[820,200,58],[1040,380,50],[700,130,48]].forEach((t,i)=>s+=slime(PX+t[0],PY+t[1],t[2],i===4));
+  s+=R(PX+640,PY+70,130,120,'#E3B57A',{s:INK,sw:4,r:10})+T(PX+705,PY+132,'ซ่อน',26,INK,{a:'middle'});
+  s+=Ci(PX+560,PY+330,90,'none',{s:C.spray,sw:6,dash:'14 10'})+Ci(PX+560,PY+330,10,C.spray);
+  s+=[...Array(10)].map((_,i)=>Ci(PX+520+Math.cos(i)*50,PY+300+Math.sin(i*1.7)*40,7,'#fff',{op:.85})).join('');
+  s+=R(PX+30,PY+430,120,170,'#fff',{r:20,s:INK,sw:4})+R(PX+48,PY+500,84,86,C.spray,{r:10})+R(PX+60,PY+400,60,40,C.spray,{s:INK,sw:4,r:6});
+  s+=T(PX+170,PY+560,'น้ำยา 7/10',32,INK,{w:600});
+  s+=finger(PX+560,PY+350,false);
+  return s;};
+P.T05=()=>{let s=floor()+R(PX,PY,PW,PH,'#fff',{op:.35});
+  const bins=[[C.sky,'กระดาษ','rect'],[C.gold,'ขวด','tri'],[C.green,'เศษอาหาร','round'],['#9AA3B8','ทั่วไป','flat']];
+  bins.forEach((b,i)=>{const x=PX+90+i*290;s+=R(x,PY+380,230,220,b[0],{s:INK,sw:5,r:18});
+    if(b[2]==='rect')s+=R(x-8,PY+350,246,40,b[0],{s:INK,sw:5,r:4});
+    if(b[2]==='tri')s+=Po([[x-8,PY+390],[x+115,PY+330],[x+238,PY+390]],b[0],{s:INK,sw:5});
+    if(b[2]==='round')s+=Pa(`M${x-8} ${PY+390} Q${x+115} ${PY+300} ${x+238} ${PY+390} Z`,b[0],{s:INK,sw:5});
+    if(b[2]==='flat')s+=R(x-8,PY+360,246,30,b[0],{s:INK,sw:5,r:15});
+    s+=T(x+115,PY+500,b[1],36,INK,{a:'middle',w:600,st:'#fff',sw:8});});
+  s+=R(PX+520,PY+70,110,160,'#9ED9F5',{s:INK,sw:5,r:30})+R(PX+548,PY+40,54,40,'#fff',{s:INK,sw:4,r:6});
+  s+=arrow(`M${PX+600} ${PY+240} Q${PX+520} ${PY+300} ${PX+420} ${PY+330}`,C.blue)+head(PX+420,PY+332,165);
+  s+=finger(PX+580,PY+190,false);
+  s+=T(PX+1220,PY+60,'4 / 8',34,INK,{a:'end',w:600});
+  return s;};
+P.T09=()=>{let s=R(PX,PY,PW,PH,'#E8EEF3');
+  s+=El(PX+430,PY+330,320,190,'#C9CFDD',{s:INK,sw:5})+blob(PX+430,PY+330,180,'#5B3A1E',.85);
+  s+=Po([[PX+330,PY+60],[PX+470,PY+40],[PX+520,PY+130],[PX+380,PY+170]],C.spray,{s:INK,sw:5});
+  s+=Pa(`M${PX+470} ${PY+150} q10 60 -10 120`,'none',{s:C.water,sw:16,op:.9});
+  s+=El(PX+430,PY+300,140,80,C.water,{op:.35});
+  s+=holdBtn(PX+1000,PY+310,.65,'กดค้าง');
+  s+=R(PX+840,PY+520,320,70,'#fff',{r:35,s:INK,sw:4})+Ci(PX+880,PY+555,22,'none',{s:INK,sw:4})+Pa(`M${PX+880} ${PY+541} v14 h10`,'none',{s:INK,sw:4})+T(PX+920,PY+557,'จากนั้นแช่ 15 วิ',28,INK);
+  return s;};
+P.T13=()=>{let s=floor();
+  s+=R(PX+420,PY+150,400,250,'#B7793A',{s:INK,sw:5,r:10})+R(PX+440,PY+170,360,90,'#D39A5C',{r:6})+T(PX+620,PY+330,'ตู้ล้ม',36,'#fff',{a:'middle',w:600});
+  s+=Ci(PX+230,PY+300,80,'none',{s:C.blue,sw:8,dash:'16 10'})+T(PX+230,PY+302,'A',56,C.blue,{a:'middle',w:600});
+  s+=Ci(PX+1010,PY+300,80,'none',{s:C.blue,sw:8,dash:'16 10'})+T(PX+1010,PY+302,'B',56,C.blue,{a:'middle',w:600});
+  s+=T(PX+120,PY+450,'คุณ',30,INK,{w:600})+bar(PX+190,PY+434,380,34,.8,C.green);
+  s+=T(PX+660,PY+450,'มายด์',30,INK,{w:600})+bar(PX+760,PY+434,380,34,.72,C.green);
+  s+=R(PX+330,PY+500,580,90,C.gold,{r:45,s:INK,sw:5})+T(PX+620,PY+546,'กดค้างพร้อมกัน · 1.4 / 2 วิ',34,INK,{a:'middle',w:600});
+  return s;};
+P.T16=()=>{let s=R(PX,PY,PW,PH,'#D9B27C');
+  s+=blob(PX+760,PY+320,250,'#6B4A8E',.85)+eyes(PX+760,PY+270,2.2,'frown')+Pa(`M${PX+700} ${PY+380} q60 -30 120 0`,'none',{s:INK,sw:8});
+  s+=bubbles(PX+560,PY+300)+sponge(PX+520,PY+400)+finger(PX+520,PY+430,false);
+  const c=2*Math.PI*70;s+=Ci(PX+1120,PY+100,70,'#fff',{s:'#F2D3D7',sw:14})+`<circle cx="${PX+1120}" cy="${PY+100}" r="70" fill="none" stroke="${C.danger}" stroke-width="14" stroke-dasharray="${f(c*.56)} ${f(c)}" transform="rotate(-90 ${PX+1120} ${PY+100})"/>`+T(PX+1120,PY+102,'14',52,C.danger,{a:'middle',w:600});
+  return s;};
+P.T06=()=>{let s=R(PX,PY,PW,PH,'#E8EEF3');
+  s+=El(PX+620,PY+540,260,70,'#9AA3B8',{s:INK,sw:5})+El(PX+620,PY+530,220,50,C.water,{op:.8});
+  s+=Pa(`M${PX+520} ${PY+130} q100 40 200 0 l-20 260 q-80 30 -160 0 Z`,'#B79BE8',{s:INK,sw:5});
+  [0,1,2,3].forEach(i=>s+=Pa(`M${PX+540+i*20} ${PY+170+i*60} q80 20 160 -10`,'none',{s:INK,sw:3,op:.5}));
+  [[600,430],[640,470],[680,440]].forEach(d=>s+=El(PX+d[0],PY+d[1],10,16,C.water,{s:INK,sw:2}));
+  s+=Pa(`M${PX+380} ${PY+250} A240 240 0 0 1 ${PX+860} ${PY+250}`,'none',{s:C.blue,sw:10,dash:'2 22'})+head(PX+862,PY+256,95);
+  s+=finger(PX+400,PY+240,false);
+  s+=R(PX+1100,PY+80,70,440,'#E3E7F0',{r:35,s:INK,sw:4})+R(PX+1106,PY+300,58,214,C.water,{r:29})+T(PX+1135,PY+560,'หยด',28,INK,{a:'middle'});
+  s+=T(PX+60,PY+60,'ครึ่งวง 3/6',32,INK,{w:600});
+  return s;};
+P.T07=()=>{let s=R(PX,PY,PW,PH,'#D7E6EE');
+  s+=R(PX+300,PY+120,700,440,'#B9C6D3',{r:40,s:INK,sw:5})+R(PX+330,PY+150,640,380,'#8FB7D6',{r:30});
+  s+=Ci(PX+650,PY+340,170,'#fff',{s:INK,sw:5})+Ci(PX+650,PY+340,120,'none',{s:C.grey,sw:4})+blob(PX+690,PY+320,90,'#C79A3A',.6);
+  s+=bubbles(PX+600,PY+300)+sponge(PX+600,PY+400)+finger(PX+600,PY+430,false);
+  [0,1,2].forEach(i=>s+=El(PX+150,PY+460-i*26,110,22,'#fff',{s:INK,sw:4}));
+  s+=T(PX+150,PY+540,'อีก 3 ใบ',28,INK,{a:'middle'});
+  s+=R(PX+1060,PY+80,150,220,'#fff',{r:20,s:INK,sw:4})+R(PX+1090,PY+40,90,50,C.bubble,{s:INK,sw:4,r:8})+T(PX+1135,PY+200,'สบู่',30,INK,{a:'middle'});
+  return s;};
+P.T08=()=>{let s=wall('#CFE3F2');
+  s+=R(PX+220,PY+60,840,500,'#BFE3FA',{s:INK,sw:8,r:10});
+  s+=R(PX+500,PY+66,554,488,'#F4F6FB',{op:.85});
+  [[620,200],[860,380]].forEach(p=>s+=Ci(PX+p[0],PY+p[1],38,'#E9E2CF',{s:'#C9B48A',sw:4}));
+  for(let i=0;i<4;i++)s+=R(PX+228+i*68,PY+66,6,488,'#fff',{op:.6});
+  s+=Pa(`M${PX+520} ${PY+120} v360`,'none',{s:C.blue,sw:10,dash:'2 22'})+head(PX+520,PY+484,90)+head(PX+520,PY+116,-90);
+  s+=R(PX+470,PY+300,100,70,'#fff',{s:INK,sw:4,r:14})+finger(PX+500,PY+330,false);
+  s+=R(PX+40,PY+80,110,170,'#fff',{r:20,s:INK,sw:4})+R(PX+58,PY+140,74,96,C.spray,{r:10})+T(PX+95,PY+290,'ฉีดแล้ว',26,C.green,{a:'middle',w:600});
+  s+=T(PX+1100,PY+590,'ฝ้า 46%',30,INK,{a:'end',w:600});
+  return s;};
+P.T10=()=>{let s=R(PX,PY,PW,PH,'#3C3550');
+  s+=R(PX,PY,PW,120,'#B7793A')+R(PX+60,PY+120,40,500,'#8C5A2B')+R(PX+1140,PY+120,40,500,'#8C5A2B');
+  const holes=[[260,300],[620,260],[980,300],[260,500],[620,520],[980,500]];
+  holes.forEach(h=>s+=El(PX+h[0],PY+h[1]+30,120,36,'#221C30'));
+  s+=dustBunny(PX+620,PY+270,60,1)+dustBunny(PX+980,PY+500,56,.6);
+  s+=Ci(PX+620,PY+270,92,'none',{s:C.gold,sw:6,dash:'12 10'});
+  s+=finger(PX+630,PY+290,false);
+  s+=T(PX+1200,PY+60,'3 / 8',34,'#fff',{a:'end',w:600});
+  return s;};
+P.T11=()=>{let s=R(PX,PY,PW,PH,'#E8EEF3');
+  s+=R(PX+500,PY+130,220,460,'#fff',{r:40,s:INK,sw:5,op:.95})+R(PX+560,PY+80,100,60,C.spray,{s:INK,sw:4,r:8});
+  s+=R(PX+505,PY+360,210,226,C.water,{r:30,op:.85});
+  s+=R(PX+500,PY+250,220,56,'url(#gz)',{op:.9})+R(PX+500,PY+250,220,56,'none',{s:C.green,sw:5});
+  s+=T(PX+740,PY+278,'เป้า',30,C.green,{w:600});
+  s+=Po([[PX+190,PY+60],[PX+420,PY+40],[PX+460,PY+180],[PX+230,PY+220]],'#F2F2F2',{s:INK,sw:5})+Pa(`M${PX+450} ${PY+150} q80 10 110 120`,'none',{s:C.water,sw:16});
+  s+=holdBtn(PX+1020,PY+330,.55,'กดค้างเท');
+  return s;};
+P.T14=()=>{let s=R(PX,PY,PW,PH,'#DCE6E0');
+  for(let i=0;i<12;i++)s+=R(PX+i*104,PY+200,104,220,i%2?'#C9D6CF':'#D5E0DA');
+  s+=R(PX,PY+200,620,220,'#9CC9E8',{op:.45});
+  [[820,260],[930,360],[1070,280]].forEach(m=>s+=Ci(PX+m[0],PY+m[1],26,'#5E7F3E',{op:.75}));
+  s+=Pa(`M${PX+60} ${PY+310} H${PX+1180}`,'none',{s:C.blue,sw:10,dash:'2 22'})+head(PX+1185,PY+310,0);
+  s+=R(PX+600,PY+40,22,250,'#B7793A',{s:INK,sw:4,r:8})+R(PX+540,PY+270,140,60,C.scrub,{s:INK,sw:4,r:16});
+  s+=finger(PX+610,PY+330,false);
+  s+=T(PX+60,PY+520,'จุด 2 / 3',34,INK,{w:600})+T(PX+1180,PY+520,'จุดต่อไป: หน้าห้องน้ำ →',28,C.muted,{a:'end'});
+  return s;};
+P.T15=()=>{let s=R(PX,PY,PW,PH,'#DCE3EE');
+  s+=R(PX+180,PY+30,880,560,'#F7F9FC',{r:40,s:INK,sw:6});
+  s+=R(PX+250,PY+70,740,90,INK,{r:16})+T(PX+620,PY+117,'ดูนะ…  ▲ ● ■ _',40,'#7FFFB0',{a:'middle',w:600});
+  const btns=[['▲','น้ำ',C.sky,'tri'],['●','ผงซักฟอก',C.gold,'circ'],['■','ปั่น',C.green,'sq'],['◆','อุณหภูมิ',C.red,'dia']];
+  btns.forEach((b,i)=>{const x=PX+310+i*205,y=PY+300,lit=i===2;
+    const col=lit?b[2]:'#fff';
+    if(b[3]==='tri')s+=Po([[x,y-90],[x+90,y+70],[x-90,y+70]],col,{s:b[2],sw:10});
+    if(b[3]==='circ')s+=Ci(x,y,86,col,{s:b[2],sw:10});
+    if(b[3]==='sq')s+=R(x-80,y-80,160,160,col,{s:b[2],sw:10,r:14});
+    if(b[3]==='dia')s+=Po([[x,y-96],[x+96,y],[x,y+96],[x-96,y]],col,{s:b[2],sw:10});
+    if(lit)s+=Ci(x,y,120,'none',{s:b[2],sw:6,op:.5});
+    s+=T(x,y+150,b[1],28,INK,{a:'middle'});});
+  s+=Ci(PX+1150,PY+450,70,'#9FB3C8',{s:INK,sw:5})+Ci(PX+1150,PY+450,46,'#C9D6E3');
+  return s;};
+
+/* in-world frames (T04, T12) */
+function worldFrame(key,inner,title){return `<svg viewBox="0 0 1400 860" role="img" aria-label="${esc(title)}">${R(6,6,1388,848,'#0b1a3a',{r:30})}${inner}</svg>`;}
+function T04(){let s='';
+  s+=R(6,6,1388,848,'#EAD9B0',{r:30});
+  for(let j=0;j<8;j++)for(let i=0;i<13;i++)s+=R(30+i*104,30+j*104,104,104,(i+j)%2?C.tile2:C.tile,{op:.9});
+  s+=R(380,260,320,240,'#9AA3B8',{s:INK,sw:5,r:16})+[0,1,2,3,4].map(i=>R(400,280+i*42,280,34,['#F4A340','#4EA8DE','#EF476F','#9B7EDE','#fff'][i],{s:INK,sw:3,r:6,op:i<3?1:.35})).join('');
+  s+=Ci(420,520,26,INK)+Ci(660,520,26,INK)+T(540,232,'รถเข็น',34,INK,{a:'middle',w:600});
+  s+=R(780,90,560,560,C.surface,{r:30,s:C.frame,sw:6})+T(810,140,'สูตรในใบงาน',36,INK,{w:600});
+  [['ขจัดคราบ',.72,.6],['ถนอม',.4,.5],['เร็ว',.55,.3],['เงา',.3,.5]].forEach((r,i)=>{const y=200+i*90;s+=T(810,y+20,r[0],30,INK)+R(970,y,330,40,'#E3E7F0',{r:20,s:INK,sw:3})+R(973,y+3,324*r[1],34,r[1]>=r[2]?C.green:C.orange,{r:17})+R(970+330*r[2]-3,y-8,6,56,INK);});
+  s+=R(830,570,460,64,C.gold,{r:32,s:INK,sw:5})+T(1060,603,'กดค้าง ล็อกสูตร 0.6 วิ',30,INK,{a:'middle',w:600});
+  return worldFrame('t04',s,'T04 จัดรถเข็นตามสูตร');}
+function T12(){let s='';
+  s+=R(6,6,1388,848,'#EAD9B0',{r:30});
+  for(let j=0;j<8;j++)for(let i=0;i<13;i++)s+=R(30+i*104,30+j*104,104,104,(i+j)%2?C.tile2:C.tile,{op:.9});
+  s+=R(420,230,560,200,'#B7793A',{s:INK,sw:5,r:14})+T(700,330,'โต๊ะ',34,'#fff',{a:'middle',w:600});
+  [[470,460],[640,460],[810,460]].forEach((p,i)=>{s+=R(p[0],p[1],130,110,i===0?'#B7793A':'none',{s:i===0?INK:C.blue,sw:i===0?4:6,dash:i===0?null:'14 10',r:10});if(i===1)s+=R(p[0],p[1],130,110,C.blue,{op:.18,r:10});});
+  s+=T(700,610,'2 / 3 คน · รอเก้าอี้อีก 1 ตัว',32,INK,{a:'middle',w:600,st:'#fff',sw:8});
+  s+=Po([[180,640],[300,600],[330,700],[210,730]],'#B7793A',{s:INK,sw:4})+Ci(255,600,30,'#fff',{s:C.sky,sw:5})+T(255,602,'ถู',24,INK,{a:'middle',w:600});
+  s+=Ci(330,520,40,C.sky,{s:INK,sw:4})+T(330,522,'คุณ',22,'#fff',{a:'middle',w:600});
+  s+=arrow('M380 560 Q520 640 640 560',C.blue)+head(640,560,-35);
+  s+=Ci(1220,700,112,C.gold,{s:INK,sw:6})+T(1220,690,'จับ',36,INK,{a:'middle',w:600})+T(1220,735,'เก้าอี้',30,INK,{a:'middle',w:600});
+  s+=R(40,40,520,70,INK,{r:35,op:.85})+T(70,76,'ไม่เปิดการ์ด · เล่นในห้อง',30,'#fff',{w:600});
+  return worldFrame('t12',s,'T12 จัดโต๊ะเก้าอี้');}
+
+/* ---------- data ---------- */
+const MVP=[
+ {id:'T01',key:'t01',title:'กวาดตามทาง',cat:'sweep',hero:'กวาด',hint:'ลากตามเส้นฝุ่น',prog:.48,step:'',type:'สั้น · TracePath',ctl:'ลากนิ้วตามเส้นฝุ่นกว้าง 120u ออกนอกเส้นไม่เสีย แค่ไม่นับ',done:'ผ่านเส้น ≥ 90%',spec:'กวาด: เส้นกว้าง 150u',note:'เห็นเส้นทั้งหมดตั้งแต่ต้น ส่วนที่กวาดแล้วเป็นพื้นสะอาด'},
+ {id:'T02',key:'t02',title:'ถูคราบวน',cat:'bubble',hero:'ฟอง',hint:'ลากวนบนคราบ',prog:.62,step:'',type:'สั้น · ScrubPad',ctl:'ลากวนหรือลากไปมาบนคราบ คราบจางตามระยะลาก ไม่ต้องเป็นวงกลมเป๊ะ',done:'คราบทุกจุด ≤ 5%',spec:'ฟอง: ระยะลากที่ต้องใช้ −25%'},
+ {id:'T03',key:'t03',title:'ฉีดให้ตรงจุด',cat:'spray',hero:'สเปรย์',hint:'แตะสไลม์เพื่อฉีด',prog:.4,step:'',type:'สั้น · TapTargets',ctl:'แตะเป้า ≥ 160u ขวดมีน้ำยา 10 หน่วย พลาดเสีย 1 หน่วย หมดแล้วเติมเอง 1.5 วิ',done:'เป้าหมดทุกตัว',spec:'สเปรย์: เป้าใหญ่ +20% และเห็นตัวที่ซ่อน'},
+ {id:'T04',world:T04,title:'จัดรถเข็นตามสูตร',type:'ยาว 2 ขั้น · แผงรถเข็นเดิม',ctl:'ขั้น 1 เดินหยิบของจากชั้นวาง ขั้น 2 ลากของลงรถเข็นให้ค่า 4 ตัวผ่านเส้นสูตร แล้วกดค้างล็อก 0.6 วิ',done:'ผ่านสูตรตาม D ได้บัฟทั้งทีม',spec:'ทุกคน ใช้ ability เดิมได้',note:'ไม่ใช้การ์ด S28 ใช้แผง S22-Cart เดิมพร้อมเส้นสูตรบนแถบค่า'},
+ {id:'T05',key:'t05',title:'แยกขยะ',cat:'sweep',hero:'กวาด',hint:'ลากขยะลงถังที่ถูก',prog:.5,step:'4/8',type:'สั้น · DragSort',ctl:'ลากขยะทีละชิ้นไปปล่อยที่ถัง ถังต่างกันทั้งสี ไอคอน และรูปฝา ลงผิดถังชิ้นเด้งกลับ',done:'แยกครบทุกชิ้น',spec:'กวาด: ช่องรับรอบถังกว้าง +25%'},
+ {id:'T09',key:'t09',title:'แช่คราบรอ',cat:'all',hint:'กดค้างเทน้ำยา',prog:.33,step:'ขั้น 1/2',type:'ยาว 2 ขั้น · HoldMeter → ScrubPad',ctl:'ขั้น 1 กดค้างเทน้ำยาบนคราบแข็ง 2.5 วิ แล้วไปทำงานอื่นระหว่างแช่ 15/20/25 วิ ขั้น 2 กลับมาขัดคราบที่นุ่มแล้ว',done:'ขัดหลังแช่ครบ (ขัดก่อนครบไม่นับ)',spec:'ไม่มี งานนี้วัดการวางแผนเส้นทางของทีม'},
+ {id:'T13',key:'t13',title:'ยกของหนักสองคน',cat:'all',hint:'กดค้างพร้อมเพื่อน',prog:.7,step:'',badge:'ทุกคน',badgeCol:C.frame,type:'งานรวม 2 คน · HoldMeter คู่',ctl:'สองคนยืนที่วง A และ B แต่ละคนกดค้างปุ่มในการ์ด แถบของทั้งคู่ต้องเขียวพร้อมกัน 2 วิต่อเนื่อง',done:'ซิงก์ครบ 2 วิ',spec:'ทุกคน ทีม 1 คนเปลี่ยนเป็นดันด้วยรถเข็น'},
+ {id:'T16',key:'t16',title:'ปราบคราบฉุกเฉิน',cat:'scrub',hint:'ขัดให้คราบหดหาย',prog:.55,step:'',emergency:true,badge:'ฉุกเฉิน 25 วิ',type:'ฉุกเฉิน · มินิเกมจุดอ่อน (T02/T03/T05)',ctl:'การ์ดมีตัวศัตรูหน้าบึ้งอยู่ในพื้นที่เล่น เล่นมินิเกมจุดอ่อนของมัน จบแล้วศัตรูหดเล็กและโบกมือลา',done:'ภายใน 25 วิ ไม่ทัน = ลามเป็นงานเพิ่ม 1',spec:'ตามจุดอ่อนของศัตรู',note:'ขอบการ์ดแดง และวงนาฬิกา 25 วิมุมขวาบน'}];
+const P2=[
+ {id:'T06',key:'t06',title:'บิดผ้าถู',cat:'scrub',hero:'ถู',hint:'แตะค้างแล้ววนครึ่งวง',prog:.5,type:'สั้น · HoldMeter + หมุน',ctl:'แตะค้างบนผ้าแล้วลากเป็นครึ่งวง ≥ 150° ทุกครึ่งวงเติมแถบหยด ปล่อยนิ้วแถบหยุด ไม่ลด',done:'แถบหยดเต็ม',spec:'ถู: แถบเติมเร็วขึ้น 25%'},
+ {id:'T07',key:'t07',title:'ล้างจานกองสูง',cat:'bubble',hero:'ฟอง',hint:'ถูจานทีละใบ',prog:.25,step:'ขั้น 1/3',type:'ยาว 3 ขั้น · ScrubPad → HoldMeter → เดินวาง',ctl:'ถูจานจนสะอาด จานใบต่อไปเลื่อนเข้าเอง ขั้น 2 กดค้างก๊อกล้างฟอง ขั้น 3 ถือกองจานไปวางที่ชั้นคว่ำจาน',done:'วางจานครบที่ชั้น',spec:'ฟอง: ระยะถูต่อใบ −25%',note:'ขั้น 3 ไม่มีการ์ด ลูกศรขอบจอชี้ไปชั้นคว่ำจาน'},
+ {id:'T08',key:'t08',title:'เช็ดกระจก',cat:'bubble',hero:'ฟอง',hint:'เช็ดขึ้นลง ซ้ายไปขวา',prog:.54,type:'สั้น · TapTargets 1 แตะ + ScrubPad แถบ',ctl:'แตะขวดสเปรย์หนึ่งครั้ง แล้วลากขึ้นลงไล่จากซ้ายไปขวา ฝ้าหายตามแถบที่เช็ด จุดหินปูนต้องเช็ดซ้ำ',done:'ฝ้า ≤ 5%',spec:'ฟอง: แถบเช็ดกว้างขึ้น 25% · สเปรย์: ฉีดครั้งเดียวคลุมทั้ง 2 บาน'},
+ {id:'T10',key:'t10',title:'ไล่ฝุ่นใต้โต๊ะ',cat:'sweep',hero:'กวาด',hint:'แตะฝุ่นที่โผล่',prog:.38,type:'สั้น · TapTargets โผล่-หาย',ctl:'กองฝุ่นโผล่จาก 6 ช่องทีละ 1–2 กอง แตะโดนแล้วฟุ้งหาย หลบไปก่อนก็โผล่ใหม่ ไม่เสียอะไร',done:'ปัดครบตามจำนวน',spec:'กวาด: ฝุ่นค้างนานขึ้น 25% เป้าใหญ่ขึ้น 20%'},
+ {id:'T11',key:'t11',title:'เติมน้ำยาตามระดับ',cat:'spray',hero:'สเปรย์',hint:'ปล่อยนิ้วตรงขีดเขียว',prog:.55,type:'สั้น · HoldMeter แบบจังหวะ',ctl:'กดค้างเพื่อเท ระดับน้ำขึ้นเรื่อยๆ ปล่อยในช่วงขีดเขียวลายทแยง ล้นแล้วขวดเทออกครึ่งหนึ่งให้ลองใหม่',done:'ปล่อยตรงช่วง (D3 สองขวด)',spec:'สเปรย์: ช่วงเป้ากว้างขึ้น 25% และเห็นเส้นทำนายระดับ'},
+ {id:'T12',world:T12,title:'จัดโต๊ะเก้าอี้',type:'งานรวมทุกคน · เล่นในห้อง',ctl:'เก้าอี้ล้มคนละตัว มีหน้าฮีโร่เจ้าของ แตะปุ่มหลัก "จับเก้าอี้" แล้วเดินลากไปช่องเส้นประข้างโต๊ะ',done:'เก้าอี้ของทุกคนที่ออนไลน์เข้าช่อง',spec:'ทุกคน ทีม 1 คนลาก 2 ตัว',note:'ไม่เปิดการ์ด แถวรายการแสดง "2/3 คน" ใช้คำบวก'},
+ {id:'T14',key:'t14',title:'ล้างพื้นทั้งแถว',cat:'scrub',hero:'ถู',hint:'ลากไม้ถูจากซ้ายไปขวา',prog:.5,step:'ขั้น 2/3',type:'ยาว 3 จุด · TracePath ตรง',ctl:'แต่ละจุดลากไม้ถูต่อเนื่องจากซ้ายไปขวา ยกนิ้วกลางทางแล้วทำต่อจากจุดเดิมได้ เดินไปอีก 2 จุดตามลูกศรพื้น',done:'ครบ 3 แถบ ผลัดคนทำได้ทุกแถบ',spec:'ถู: แถบเติมเร็วขึ้น 25% (ไม้ถูกว้างขึ้น)'},
+ {id:'T15',key:'t15',title:'จำลำดับเครื่องซักผ้า',cat:'all',hint:'ดูก่อน แล้วกดตาม',prog:.4,type:'สั้น · SequencePad (ใหม่)',ctl:'ปุ่ม 4 ปุ่มต่างรูปทรง ไอคอน และโน้ต ดูลำดับกะพริบแล้วกดตาม กดผิดเครื่องเล่นลำดับเดิมให้ดูใหม่',done:'กดครบลำดับถูก',spec:'ไม่มี (งานทุกคน) · ตั้งค่า "ช้าลง" กะพริบนานขึ้น 50%',note:'ระหว่างโชว์ลำดับ ปุ่มกดไม่ได้และจอแสดง "ดูนะ"'}];
+
+function captionHTML(o){
+  return `<figcaption><div><span class="id">${o.id}</span> <h3 style="display:inline">${esc(o.title)}</h3>${o.world?'<span class="tag">ในฉาก</span>':''}</div>
+  <dl><dt>ประเภท</dt><dd>${esc(o.type)}</dd><dt>เล่น</dt><dd>${esc(o.ctl)}</dd><dt>สำเร็จ</dt><dd>${esc(o.done)}</dd><dt>ถนัด</dt><dd>${esc(o.spec)}</dd>${o.note?`<dt>หมายเหตุ</dt><dd>${esc(o.note)}</dd>`:''}</dl></figcaption>`;}
+function fill(el,list){document.getElementById(el).innerHTML=list.map(o=>{
+  const svg=o.world?o.world():svgCard({...o,play:P[o.id](),spec:o.spec2});
+  return `<figure>${svg}${captionHTML(o)}</figure>`;}).join('');}
+fill('g-mvp',MVP);fill('g-p2',P2);
+
+/* ---------- context frame ---------- */
+(function(){
+  let s=R(0,0,2340,1080,'#EAD9B0');
+  for(let j=0;j<10;j++)for(let i=0;i<23;i++)s+=R(i*104,j*104+40,104,104,(i+j)%2?C.tile2:C.tile);
+  s+=R(0,0,2340,200,'#F2C98E');
+  s+=R(160,24,2020,150,'none');
+  // HUD row behind
+  s+=R(180,40,320,90,'#fff',{r:20,s:INK,sw:4})+T(340,86,'ใบงาน 4/6',36,INK,{a:'middle',w:600});
+  s+=Ci(330,860,150,'#fff',{op:.6,s:INK,sw:5})+Ci(330,860,60,'#fff',{s:INK,sw:5});
+  s+=Ci(2020,860,112,C.gold,{op:.5,s:INK,sw:5});
+  s+=Ci(1900,420,46,C.slime,{s:INK,sw:4})+Ci(1700,600,40,C.sky,{s:INK,sw:4});
+  s+=R(0,0,2340,1080,'#041E4F',{op:.4});
+  s+=`<svg x="470" y="110" width="1400" height="860" viewBox="0 0 1400 860">${card({key:'ctx',title:'ถูคราบวน',cat:'bubble',hero:'ฟอง',spec:true,hint:'ลากวนบนคราบ',prog:.62,step:'',play:P.T02()})}</svg>`;
+  s+=R(0,0,2340,1080,'none',{s:'#000',sw:2});
+  // annotations
+  s+=N(450,150,'1')+N(1890,150,'2')+N(460,240,'3')+N(1890,560,'4')+N(460,920,'5')+N(1890,920,'6')+N(110,560,'7')+N(110,860,'8')+N(2220,860,'9')+N(1990,420,'10');
+  document.getElementById('ctx').innerHTML=s;
+  const rows=[
+   ['1','ขอบบน: เวลา + แถบทีมเรา/คู่แข่ง','TIMER-Pill ย่อ + BAR-TeamProgress 280×30u ×2','ไม่ซ่อนตอนเล่น แถบคู่แข่งเป็นเทาลายทแยง อัปเดตทีละ 25% (ทันทีหลัง 85%)'],
+   ['2','ปุ่มปิด ×','144u มุมขวาบน','ปิดการ์ด ความคืบหน้าค้าง 10 วิ แถวรายการแสดงวงจาง'],
+   ['3','ชื่องาน + ไอคอนหมวด + หน้าฮีโร่ถนัด','Mitr 40u, ไอคอน 48u','ถ้าคนเล่นคือฮีโร่ที่ถนัด วงหน้าเป็นทองและมีป้าย "ถนัด"'],
+   ['4','พื้นที่เล่น','1240×620u มุมโค้ง 22u','รับนิ้วทั้งพื้นที่ มือผีสอนท่าเฉพาะครั้งแรก'],
+   ['5','ข้อความแนะนำ','≤ 6 คำ, 40–44u','เปลี่ยนตามขั้น เช่น "ถูจานทีละใบ" → "กดค้างล้างฟอง"'],
+   ['6','แถบความคืบหน้ามินิเกม + ขั้น','BAR-Progress-S 400×32u, "ขั้น 1/2"','เขียวเมื่อเติม ถอยไม่ได้ในมินิเกม'],
+   ['7','ห้องข้างหลัง','มืดลง 40%','ยังเห็นเพื่อนและคราบฉุกเฉิน ไม่ blur เพื่อไม่ให้รู้สึกหลุดจากห้อง'],
+   ['8','จอยสติ๊ก','จาง 50% ที่เดิม','โยกแรงเกิน 70% = ปิดการ์ดและเดินต่อทันที'],
+   ['9','ปุ่มหลัก','จาง 50% กดไม่ได้','กลับมาเต็มเมื่อการ์ดปิด'],
+   ['10','คราบฉุกเฉินระหว่างเล่น','ป้ายแดงที่ขอบบนการ์ด','ไม่ปิดการ์ดให้ ผู้เล่นตัดสินใจเองว่าจะไปไหม']];
+  document.querySelector('#legend tbody').innerHTML=rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('');
+})();
+
+/* ---------- shared states ---------- */
+const base={title:'ถูคราบวน',cat:'bubble',hero:'ฟอง',hint:'ลากวนบนคราบ'};
+const st=[
+ {key:'s1',name:'ครั้งแรก: มือผีสอนท่า',desc:'มือผีขาวโปร่งลากวน 2 รอบแล้วหาย แตะที่ใดก็ได้เพื่อข้าม ข้อความแนะนำกะพริบครั้งเดียว',o:{...base,prog:0,play:(()=>{let s=R(PX,PY,PW,PH,'#D9B27C')+blob(PX+620,PY+310,230,C.dirt,.7);s+=Pa(`M${PX+470} ${PY+330} a160 110 0 1 1 300 40`,'none',{s:'#fff',sw:12,dash:'2 22'})+head(PX+772,PY+372,80,'#fff');s+=finger(PX+470,PY+330,true);return s;})()}},
+ {key:'s2',name:'ถนัด',desc:'ฮีโร่ที่ถนัดเปิดการ์ด: วงหน้าทอง ป้าย "ถนัด" และ toast สั้น "ถนัด! ลากน้อยลง 25%" ครั้งแรกของรอบ',o:{...base,spec:true,prog:.35,play:P.T02(),over:R(430,640,540,70,C.gold,{r:35,s:INK,sw:4})+T(700,676,'ถนัด! ลากน้อยลง 25%',32,INK,{a:'middle',w:600})}},
+ {key:'s3',name:'กลับมาทำต่อ (ภายใน 10 วิ)',desc:'ปิดการ์ดกลางคัน ความคืบหน้าค้างไว้ 10 วิ วงจุดงานในห้องและแถวรายการแสดงวงนับถอยหลังจาง คนอื่นหยิบต่อได้',o:{...base,prog:.62,play:P.T02(),over:R(330,320,740,200,'#fff',{r:30,s:INK,sw:5,op:.96})+T(700,385,'ทำค้างไว้ 62%',40,INK,{a:'middle',w:600})+T(700,450,'เก็บให้อีก 7 วิ ใครมาต่อก็ได้',30,C.muted,{a:'middle'})}},
+ {key:'s4',name:'รอเพื่อน (งานรวม)',desc:'งานสองคนเปิดแล้วแต่อีกคนยังไม่มา การ์ดแสดง "รอเพื่อนอีก 1 คน" และปุ่ม ping ใช้คำบวก',o:{title:'ยกของหนักสองคน',cat:'all',hint:'รอเพื่อนมาที่วง B',prog:0,badge:'ทุกคน',badgeCol:C.frame,play:(()=>{let s=floor()+R(PX+420,PY+150,400,250,'#B7793A',{s:INK,sw:5,r:10});s+=Ci(PX+230,PY+300,80,C.blue,{op:.3,s:C.blue,sw:8})+T(PX+230,PY+302,'A ✓',44,C.blue,{a:'middle',w:600});s+=Ci(PX+1010,PY+300,80,'none',{s:C.muted,sw:8,dash:'16 10'})+T(PX+1010,PY+302,'B',56,C.muted,{a:'middle',w:600});s+=T(PX+620,PY+470,'รอเพื่อนอีก 1 คน',40,INK,{a:'middle',w:600});s+=R(PX+430,PY+510,380,80,C.gold,{r:40,s:INK,sw:5})+T(PX+620,PY+551,'มาช่วยยก!',34,INK,{a:'middle',w:600});return s;})()}},
+ {key:'s5',name:'คราบฉุกเฉินโผล่ระหว่างเล่น',desc:'ไม่ปิดการ์ดให้ ป้ายแดงกะพริบที่ขอบบน 2 ครั้ง + sting_emergency ผู้เล่นตัดสินใจเองว่าจะไปไหม',o:{...base,prog:.7,play:P.T02(),badge:'สไลม์โผล่!',over:''}},
+ {key:'s6',name:'สำเร็จ',desc:'การ์ดเด้ง ประกาย และ sting_task_done สั่น medium แล้วปิดเองใน 400 ms จุดในห้องเปลี่ยนเป็นสะอาดตอนการ์ดปิด',o:{...base,prog:1,play:R(PX,PY,PW,PH,'#E7C796')+[...Array(9)].map((_,i)=>{const a=i*0.7;return Po([[PX+620+Math.cos(a)*250,PY+310+Math.sin(a)*200-24],[PX+632+Math.cos(a)*250,PY+310+Math.sin(a)*200],[PX+620+Math.cos(a)*250,PY+310+Math.sin(a)*200+24],[PX+608+Math.cos(a)*250,PY+310+Math.sin(a)*200]],C.gold,{s:INK,sw:3});}).join('')+T(PX+620,PY+310,'สะอาด!',96,C.green,{a:'middle',w:600,st:'#fff',sw:14})}},
+ {key:'s7',name:'งานถูกล็อก',desc:'เดินไปจุดงานที่เพื่อนกำลังทำ ปุ่มหลักเป็นเทา แตะแล้วบอก "มายด์กำลังทำอยู่" ไม่เปิดการ์ด (ภาพนี้คือ toast ในห้อง)',o:null},
+ {key:'s8',name:'โหมดช่วยกดค้าง',desc:'ตั้งค่า S39 > ควบคุม เปลี่ยนการลากและการวนเป็นกดค้างบนเป้า เวลาทำ ×1.3 คะแนนเท่าเดิม',o:{...base,hint:'กดค้างบนคราบ',prog:.45,play:R(PX,PY,PW,PH,'#D9B27C')+blob(PX+620,PY+310,230,C.dirt,.45)+holdBtn(PX+620,PY+310,.45,'กดค้าง',C.surface)}}];
+document.getElementById('g-states').innerHTML=st.map(x=>{
+  let svg;
+  if(x.o)svg=svgCard({...x.o,key:x.key,id:x.name});
+  else{let s=R(6,6,1388,848,'#EAD9B0',{r:30});for(let j=0;j<8;j++)for(let i=0;i<13;i++)s+=R(30+i*104,30+j*104,104,104,(i+j)%2?C.tile2:C.tile,{op:.9});
+    s+=Ci(600,420,110,'none',{s:C.scrub,sw:10,dash:'16 12'})+Ci(760,420,44,'#F79A2E',{s:INK,sw:4})+T(760,422,'มายด์',22,INK,{a:'middle',w:600});
+    s+=Ci(520,460,40,C.sky,{s:INK,sw:4})+T(520,462,'คุณ',22,'#fff',{a:'middle',w:600});
+    s+=R(380,250,560,74,INK,{r:37})+T(660,288,'มายด์กำลังทำอยู่ ไปจุดอื่นนะ',30,'#fff',{a:'middle',w:600});
+    s+=Ci(1220,700,112,'#C9CFDD',{s:INK,sw:6})+T(1220,702,'ถูคราบ',32,C.muted,{a:'middle',w:600});
+    svg=worldFrame('s7',s,x.name);}
+  return `<figure>${svg}<figcaption><h3>${esc(x.name)}</h3><p>${esc(x.desc)}</p></figcaption></figure>`;}).join('');
+
+const t=document.getElementById('t-anno');const sync=()=>document.body.classList.toggle('on-anno',t.checked);t.addEventListener('change',sync);sync();
+})();
+</script>
