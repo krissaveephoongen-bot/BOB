@@ -32,7 +32,7 @@
 | [ux/BOB_AA_Art_Bible.html](ux/BOB_AA_Art_Bible.html) | ภาพอ้างอิง AA: โมเดล 3D จริงจาก `art/tools/blender/bob_kit.py` ที่มุมกล้องเกม (สลับกล้องเดิม/ใหม่, ท่า idle/walk/cheer, ทดสอบ silhouette, วัดขนาดบนจอ/tris/draw call), คะแนนช่องว่าง, พาเลต+เงาอมสี, งบ, pipeline | Art / Unity |
 | [17_Music_Layers.md](17_Music_Layers.md) | แผนดนตรีเลเยอร์ 4 stem (120 bpm, เปิดตาม % ทีม/คู่แข่ง/เวลา, quantize ขอบห้อง, ชุด fast 130 bpm, stinger, ducking, `BobMusicLayers` ใน Unity, ทางเลือกการผลิต) | Sound / Unity dev |
 | [22_Tripo_CLI.md](22_Tripo_CLI.md) | **Tripo CLI (13 พ.ย. 2026):** ติดตั้ง `tripo-cli`, ตั้งคีย์ผ่าน `TRIPO_API_KEY` เท่านั้น, คำสั่งที่ไม่เสียเครดิต (doctor/balance/--dry-run), สูตรสร้าง prop จาก prompt/ภาพ Leonardo, ประมาณการเครดิต และตัวอย่างเรียก V3 API ด้วย Python | Art / ผู้ใช้ |
-| [23_Asset_Master_Table.md](23_Asset_Master_Table.md) + [.csv](23_Asset_Master_Table.csv) | **ตาราง asset หลักของฉาก 3D (13 พ.ย. 2026):** ผลตรวจเฟอร์นิเจอร์ห้องเช่า L1 (Tripo เหลือ 3 ชิ้น), กฎออกแบบเผื่อขยายเกม (Core / ชุดธีม / ของเด่น, กริดความสูง, ครัวโมดูล 0.6 m, สถานะที่ไม่ต้องทำ mesh เพิ่ม), ตาราง 64 แถวครอบคลุม 11 ห้อง พร้อมสาย ผลิต เครดิต ลำดับ สถานะ และของที่แต่ละห้องต้องสร้างใหม่ · สร้างตารางจาก CSV ด้วย `tools/asset_table.py` | Art / ผู้ใช้ |
+| [23_Asset_Master_Table.md](23_Asset_Master_Table.md) + [.csv](23_Asset_Master_Table.csv) | **ตาราง asset หลักของฉาก 3D (13 พ.ย. 2026):** ผลตรวจเฟอร์นิเจอร์ห้องเช่า L1 (Tripo เหลือ 3 ชิ้น), กฎออกแบบเผื่อขยายเกม (Core / ชุดธีม / ของเด่น, กริดความสูง, ครัวโมดูล 0.6 m, สถานะที่ไม่ต้องทำ mesh เพิ่ม), การ์ดมินิเกมแบบ 3D, ตาราง 76 แถวครอบคลุม 11 ห้อง พร้อมสาย ผลิต เครดิต ลำดับ สถานะ และของที่แต่ละห้องต้องสร้างใหม่ · สร้างตารางจาก CSV ด้วย `tools/asset_table.py` | Art / ผู้ใช้ |
 
 ## สรุปสั้น
 
