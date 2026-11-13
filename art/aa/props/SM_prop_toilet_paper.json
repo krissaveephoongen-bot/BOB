@@ -1,0 +1,11 @@
+{
+ "name": "prop_toilet_paper",
+ "class": "prop_m",
+ "tris_in": 4844,
+ "tris_out": 798,
+ "budget": 800,
+ "height_m": 0.2,
+ "colours": {
+  "mop": 798
+ }
+}

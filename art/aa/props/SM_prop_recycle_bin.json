@@ -1,0 +1,12 @@
+{
+ "name": "prop_recycle_bin",
+ "class": "prop_m",
+ "tris_in": 4318,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.8,
+ "colours": {
+  "bubble_shirt": 642,
+  "cream": 158
+ }
+}

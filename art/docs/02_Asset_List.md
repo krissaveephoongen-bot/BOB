@@ -143,6 +143,14 @@
 | B01/B02 | เจ้าคราบ, สไลม์ | A | blockout ✓ (2,452 / 1,826 tris) |
 | B03/B06 | ขยะปีศาจ, บอส | A | blockout ✓ (1,084 / 3,890 tris) |
 | C03 | ถังน้ำฟ้า (ชิ้นแรกจาก Tripo, 13 พ.ย. 2026) | B | ✓ `art/aa/props/SM_prop_bucket` (4,740 → 800 tris, สี `bubble_shirt` + `shoe`), ไฟล์ดิบ `art/aa/raw/prop_bucket_tripo_20261113.glb`, preview `art/docs/aa/aa_prop_bucket.png` |
+| C03 | ป้ายพื้นเปียก (Tripo, 13 พ.ย. 2026) | B | ✓ `art/aa/props/SM_prop_wet_sign` (4,398 → 800 tris, สี `gold`) |
+| C03 | กรวยส้ม (Tripo, 13 พ.ย. 2026) | B | ✓ `art/aa/props/SM_prop_cone` (4,815 → 299 tris, สี `sweep_shirt` + `white`) |
+| C03 | ถุงขยะดำ (Tripo, 13 พ.ย. 2026) | B | ✓ `art/aa/props/SM_prop_trash_bag` (4,652 → 800 tris, สี `trash_dark` + `wood`) |
+| C03 | ถังขยะ (Tripo, 13 พ.ย. 2026) | B | ✓ `art/aa/props/SM_prop_trash_bin` (4,640 → 800 tris, สี `trash_dark` + `trash`) |
+| C03 | ถังรีไซเคิล (Tripo, 13 พ.ย. 2026) | B | ✓ `art/aa/props/SM_prop_recycle_bin` (4,318 → 800 tris, สี `bubble_shirt` + `cream`) |
+| C03 | ม้วนทิชชู (Tripo, 13 พ.ย. 2026) | B | ✓ `art/aa/props/SM_prop_toilet_paper` (4,844 → 798 tris, สี `mop`) |
+| C03 | ขวดน้ำยาฟ้า (Tripo, 13 พ.ย. 2026) | B | ✓ `art/aa/props/SM_prop_spray_blue` (4,842 → 798 tris, สี `bubble_shirt` + `shoe` + `white`) |
+| C03 | ภาพรวมชุด C03 8 ชิ้น (แถวบน = ดิบจาก Tripo, แถวล่าง = หลัง cleanup) | – | `art/docs/aa/aa_props_c03.png`; ข้อจำกัด: ป้ายพื้นเปียกไม่มีลายเตือน (ต้องใส่ decal), ฉลากขวดสเปรย์เป็นปื้นสี (ควรสร้างใหม่จากภาพไม่มีฉลากหรือใส่ decal) |
 | G01 (ใหม่) | shader `BOB/ToonLit`, `ToonFace`, `ToonSlime`, `ToonFloor`, Outline Renderer Feature, `PF_Light_Room` | โค้ด | – (P0) |
 | G02 (ใหม่) | `T_BOB_Palette.png` (แผ่นเดียวทั้งเกม) | A | ✓ |
 | E12 (ใหม่) | VFX 5 ชั้นสำหรับ 6 event หลัก (งานเสร็จ, จับคราบ, ของลงรถเข็น, ขึ้นนำ, หมดเวลา, ชนะรอบ) | Shuriken | – (P0) |

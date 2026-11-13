@@ -1,0 +1,11 @@
+{
+ "name": "prop_wet_sign",
+ "class": "prop_m",
+ "tris_in": 4398,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.6,
+ "colours": {
+  "gold": 800
+ }
+}
