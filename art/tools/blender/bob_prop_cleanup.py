@@ -52,8 +52,14 @@ def srgb_to_lab(c):
 PAL_LAB = {n: srgb_to_lab(hex_rgb(h)) for n, h in PALETTE if n in PROP_COLOURS}
 
 
-def nearest(rgb):
+def nearest(rgb, allowed=None):
+    """Nearest palette colour. With an allowed list (--colours) lightness counts for
+    only a quarter: AI textures have lighting baked in, so a shaded blue must stay
+    the prop's blue instead of jumping to navy."""
     L = srgb_to_lab(rgb)
+    if allowed:
+        return min(allowed, key=lambda n: (0.25 * (L[0] - PAL_LAB[n][0])) ** 2
+                   + (L[1] - PAL_LAB[n][1]) ** 2 + (L[2] - PAL_LAB[n][2]) ** 2)
     return min(PAL_LAB, key=lambda n: sum((a - b) ** 2 for a, b in zip(L, PAL_LAB[n])))
 
 
@@ -97,6 +103,8 @@ def main():
     ap.add_argument("--class", dest="cls", default="prop_m", choices=TRI_BUDGET)
     ap.add_argument("--height", type=float, required=True, help="game height in metres (1 tile = 1 m)")
     ap.add_argument("--out", default="art/aa/props")
+    ap.add_argument("--colours", default="", help="comma list of palette names this prop may use "
+                    "(2-4 names from the concept); empty = whole prop palette")
     a = ap.parse_args(argv)
     os.makedirs(a.out, exist_ok=True)
 
@@ -167,7 +175,11 @@ def main():
     bm.from_mesh(me)
     uv = bm.loops.layers.uv.verify()
     px = list(img.pixels) if img else None
-    used = {}
+    allowed = [c.strip() for c in a.colours.split(",") if c.strip()]
+    bad = [c for c in allowed if c not in PAL_LAB]
+    if bad:
+        raise SystemExit("not a prop palette colour: " + ", ".join(bad))
+    pick = {}
     for f in bm.faces:
         if px:
             u = sum(l[uv].uv.x for l in f.loops) / len(f.loops)
@@ -176,7 +188,24 @@ def main():
         else:
             m = me.materials[f.material_index] if me.materials else None
             rgb = tuple(m.diffuse_color[:3]) if m else (0.7, 0.7, 0.7)
-        n = nearest(rgb)
+        pick[f.index] = nearest(rgb, allowed)
+    # despeckle: a face that disagrees with most of its edge neighbours takes their colour
+    for _ in range(3):
+        nxt = dict(pick)
+        for f in bm.faces:
+            votes = {}
+            for e in f.edges:
+                for g in e.link_faces:
+                    if g is not f:
+                        votes[pick[g.index]] = votes.get(pick[g.index], 0) + 1
+            if votes:
+                best = max(votes, key=votes.get)
+                if best != pick[f.index] and votes[best] >= 2 and votes.get(pick[f.index], 0) == 0:
+                    nxt[f.index] = best
+        pick = nxt
+    used = {}
+    for f in bm.faces:
+        n = pick[f.index]
         used[n] = used.get(n, 0) + 1
         cu, cv = cell_uv(n)
         for l in f.loops:

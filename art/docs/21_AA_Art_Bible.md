@@ -179,9 +179,11 @@ event ที่ต้องมีสูตรครบ (P0): งานเสร�
 
 1. เลือกภาพ Leonardo ที่ตรง concept 1 ภาพ (พื้นหลังเรียบ มุม 3/4)
 2. แปลงเป็น 3D (TRELLIS / Tripo / Meshy) ได้ `.glb`
-3. `blender -b -P art/tools/blender/bob_prop_cleanup.py -- raw/<file>.glb --name prop_<id> --class prop_m --height <m>`
+3. `blender -b -P art/tools/blender/bob_prop_cleanup.py -- art/aa/raw/<file>.glb --name prop_<id> --class prop_m --height <m> --colours <สี concept 2–4 สี>` (`--colours` จำกัดสีที่ snap ได้ ไม่สนแสงเงาที่ bake มาใน texture และลบจุดสีกระจาย) แล้วเรนเดอร์เทียบด้วย `bob_prop_preview.py`
 4. ตรวจ `SM_prop_<id>.json`: tris ≤ งบ, สีที่ใช้อยู่ในพาเลต
 5. ผ่านด่านตรวจข้อ 10 แล้ววางใน `Assets/Art/Props/`
+
+ค่าที่ใช้กับ Tripo Studio (เว็บ, แผน Pro; ทดสอบกับถัง 13 พ.ย. 2026): Image to 3D, HD Model, ปิด Ultra Mesh Quality, texture 2K, ปิด PBR, Topology = Triangle, Polycount 5,000 → Generate 25 เครดิต + Export GLB 55 เครดิต = **80 เครดิตต่อชิ้น** (Smart Mesh ไม่จำเป็น เพราะ cleanup ลดเหลือตามงบเอง) เครดิตของ API (`art/tools/tripo/tripo_gen.py`) เป็นกระเป๋าแยกจากเครดิตบนเว็บ
 
 ### 9.4 สาย 2D (ยังใช้ภาพ AI ได้)
 

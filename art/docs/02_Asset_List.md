@@ -142,7 +142,7 @@
 | A12 (ใหม่) | หน้า flipbook ตา 8 + ปาก 8 + คิ้ว 4 ต่อฮีโร่ (atlas 512²) | 2D ครอป + แก้มือ | – (P0) |
 | B01/B02 | เจ้าคราบ, สไลม์ | A | blockout ✓ (2,452 / 1,826 tris) |
 | B03/B06 | ขยะปีศาจ, บอส | A | blockout ✓ (1,084 / 3,890 tris) |
-| C03 | ถังน้ำ (ทดสอบสาย B) | B | ✓ `art/aa/props/SM_prop_bucket` (23,372 → 800 tris) |
+| C03 | ถังน้ำฟ้า (ชิ้นแรกจาก Tripo, 13 พ.ย. 2026) | B | ✓ `art/aa/props/SM_prop_bucket` (4,740 → 800 tris, สี `bubble_shirt` + `shoe`), ไฟล์ดิบ `art/aa/raw/prop_bucket_tripo_20261113.glb`, preview `art/docs/aa/aa_prop_bucket.png` |
 | G01 (ใหม่) | shader `BOB/ToonLit`, `ToonFace`, `ToonSlime`, `ToonFloor`, Outline Renderer Feature, `PF_Light_Room` | โค้ด | – (P0) |
 | G02 (ใหม่) | `T_BOB_Palette.png` (แผ่นเดียวทั้งเกม) | A | ✓ |
 | E12 (ใหม่) | VFX 5 ชั้นสำหรับ 6 event หลัก (งานเสร็จ, จับคราบ, ของลงรถเข็น, ขึ้นนำ, หมดเวลา, ชนะรอบ) | Shuriken | – (P0) |

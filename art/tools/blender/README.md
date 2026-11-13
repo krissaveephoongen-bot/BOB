@@ -6,11 +6,17 @@ Spec: `art/docs/21_AA_Art_Bible.md` section 9. Tested with Blender 5.3 as the pi
 | --- | --- | --- |
 | `bob_kit.py` | Builds the 4 heroes (sweep, bubble, press, spray) and 4 enemies (dirt, slime, trash, boss_slime) from primitives, rigs them (shared skeleton, rigid skinning), keys idle/walk/cheer (heroes) and idle/caught (enemies), one material + palette texture | `SK_<id>.glb`, `SK_<id>.fbx`, `T_BOB_Palette.png`, `kit_report.json` |
 | `bob_prop_cleanup.py` | Cleans a raw AI image-to-3D or CC0 mesh: join, merge, drop floating bits, decimate to budget, scale to game height, pivot bottom centre, snap colours to the palette | `SM_<name>.glb`, `.fbx`, `.json` |
+| `bob_prop_preview.py` | Renders raw and cleaned `.glb` side by side near the game camera angle (Cycles CPU) | one `.png` |
+| `../tripo/tripo_gen.py` | Creates a prop through the Tripo API from a spec in `../tripo/specs/` (needs API credits, which are separate from the Tripo web plan credits) | `<name>_tripo.glb` + credit log `.json` |
 
 ```bash
 # with Blender installed
 blender -b -P art/tools/blender/bob_kit.py -- --out art/aa/kit
 blender -b -P art/tools/blender/bob_prop_cleanup.py -- raw/bucket.glb --name prop_bucket --class prop_m --height 0.45 --out art/aa/props
+
+# AI prop: limit the snap to the 2-4 concept colours of the prop (ignores baked lighting, removes speckles)
+python art/tools/blender/bob_prop_cleanup.py art/aa/raw/prop_bucket_tripo_20261113.glb --name prop_bucket --class prop_m --height 0.45 --colours bubble_shirt,shoe
+python art/tools/blender/bob_prop_preview.py art/aa/raw/prop_bucket_tripo_20261113.glb art/aa/props/SM_prop_bucket.glb --out art/docs/aa/aa_prop_bucket.png
 
 # or without Blender
 python3 -m venv .bpy && .bpy/bin/pip install bpy
