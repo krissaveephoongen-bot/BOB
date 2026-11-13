@@ -53,7 +53,7 @@ namespace Bob.Game
 
         // ---- 2.5D: the room is a real 3D floor (x right, room y = depth) seen by a tilted perspective camera; sprites stand up.
         public const bool World3D = true;
-        const float CamPitch = 55f, CamFov = 30f;
+        const float CamPitch = 45f, CamFov = 30f; // Art Bible 21 D3: orthographic, pitch 45
         static readonly System.Collections.Generic.HashSet<string> FlatNames =
             new System.Collections.Generic.HashSet<string> { "tile", "RoomBorder", "Target", "TeamRing", "SpawnRing", "ThemeBackdrop", "Floor", "Shadow" };
         float camFollowX = RoomW / 2;
@@ -90,7 +90,7 @@ namespace Bob.Game
                 new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
 
             worldRoot = new GameObject("Room").transform;
-            if (World3D) { worldRoot.localRotation = Quaternion.Euler(90, 0, 0); cam.orthographic = false; cam.fieldOfView = CamFov; Build3DRoom(); }
+            if (World3D) { worldRoot.localRotation = Quaternion.Euler(90, 0, 0); cam.orthographic = true; BuildSet(); }
             themeBg = MakeSprite("ThemeBackdrop", worldRoot, null, new Vector2(RoomW / 2, RoomH / 2 + 0.35f), 0f, false);
             themeBg.sortingOrder = -3000;
 
@@ -126,7 +126,7 @@ namespace Bob.Game
                     var ic = MakeSprite("Shelf_" + onShelf[n], worldRoot, "part_" + onShelf[n], Raise(new Vector2(fx, r.yMin - 0.03f), 0.46f), 0.3f, false);
                     ic.sortingOrder = sr.sortingOrder + 1;
                 }
-                WorldLabel(StationNames[i], new Vector2(r.center.x, r.yMin - 0.16f), 0.032f, BobUi.Ink);
+                if (!World3D) WorldLabel(StationNames[i], new Vector2(r.center.x, r.yMin - 0.16f), 0.032f, BobUi.Ink); // 3D: the signs above the shelves (BobGame.Set.cs)
             }
 
             var sofa = MakeSprite("Sofa", worldRoot, "sofa", new Vector2(SofaRect.center.x, SofaRect.yMin), SofaRect.width, true);
@@ -189,6 +189,7 @@ namespace Bob.Game
             playerSr.transform.localScale = Vector3.one * (0.95f / Mathf.Max(0.01f, s.bounds.size.y));
             if (!art.Has(charId + "_idle")) { playerSr.transform.localScale = new Vector3(0.3f, 0.45f, 1); playerSr.color = BobUi.Hex(Hero.Color); }
             heroBase = playerSr.transform.localScale;
+            TryHeroModel();
             SetHeroAnim("idle");
         }
 
@@ -381,6 +382,7 @@ namespace Bob.Game
             if (target.HasValue) targetMarker.localPosition = target.Value;
             TickSignals(dt);
             TickCart(dt);
+            TickHeroModel(dt);
         }
 
         IEnumerable<Rect> Solids() { foreach (var r in StationRects) yield return r; if (Online) yield return CartRect; yield return SofaRect; if (!Online) yield return TableRect; }
@@ -414,62 +416,21 @@ namespace Bob.Game
         {
             var sa = Screen.safeArea; float W = Mathf.Max(1, Screen.width), H = Mathf.Max(1, Screen.height);
             cam.rect = new Rect(sa.xMin / W, sa.yMin / H, Mathf.Max(0.1f, sa.width / W), Mathf.Max(0.1f, sa.height / H));
-            cam.fieldOfView = CamFov;
+            cam.orthographic = true; cam.nearClipPlane = 0.1f; cam.farClipPlane = 120f;
             var rot = Quaternion.Euler(CamPitch, 0, 0); cam.transform.rotation = rot;
-            // fit the room's width (between the HUD side columns) and depth (between the top / bottom strips)
-            float vHalf = CamFov * 0.5f * Mathf.Deg2Rad, hHalf = Mathf.Atan(Mathf.Tan(vHalf) * Mathf.Max(0.1f, cam.aspect));
+            // fit the floor's width (between the HUD side columns) and depth (between the top / bottom strips); tables and walls spill past the edges
             float fw = Mathf.Max(0.3f, 1f - 2 * SideCol), fh = Mathf.Max(0.3f, 1f - TopStrip - BottomStrip);
-            float dW = (RoomW + 0.6f) / 2f / (Mathf.Tan(hHalf) * fw);
-            float dH = (RoomH * Mathf.Sin(CamPitch * Mathf.Deg2Rad) + 1.4f) / 2f / (Mathf.Tan(vHalf) * fh);
-            float d = Mathf.Max(dW, dH);
-            // gentle follow: the camera drifts a little towards the hero, never far enough to hide a shelf
-            float wantX = Mathf.Lerp(RoomW / 2, pos.x, 0.18f);
+            float depthOnScreen = RoomH * Mathf.Sin(CamPitch * Mathf.Deg2Rad) + 1.0f;
+            float half = Mathf.Max(depthOnScreen / 2f / fh, (RoomW + 0.8f) / 2f / (Mathf.Max(0.1f, cam.aspect) * fw));
+            cam.orthographicSize = half;
+            // gentle follow: drift a little towards the hero, never far enough to hide a shelf
+            float wantX = Mathf.Lerp(RoomW / 2, pos.x, 0.12f);
             camFollowX = Mathf.Lerp(camFollowX, wantX, 1 - Mathf.Exp(-3f * Time.unscaledDeltaTime));
-            var target = new Vector3(camFollowX, 0.35f, RoomH / 2 - 0.15f);
-            float bandShift = (BottomStrip - TopStrip) / 2f * 2f * d * Mathf.Tan(vHalf); // keep the room centred in the free band
-            cam.transform.position = target - rot * Vector3.forward * d - rot * Vector3.up * bandShift;
+            var target = new Vector3(camFollowX, 0.3f, RoomH / 2 - 0.1f);
+            float bandShift = (BottomStrip - TopStrip) * half; // keep the floor centred in the free band
+            cam.transform.position = target - rot * Vector3.forward * 40f - rot * Vector3.up * bandShift;
             if (themeBg != null) themeBg.gameObject.SetActive(false);
-        }
-
-        /// <summary>Walls, ground and light around the floor (floor tiles stay the 2D sprites). The back wall shows the room picture.</summary>
-        void Build3DRoom()
-        {
-            var room3d = new GameObject("Room3D").transform;
-            Material Mat(Color c) { var m = new Material(Shader.Find("Standard")); m.color = c; m.SetFloat("_Glossiness", 0.1f); return m; }
-            GameObject Box(string n, Vector3 centre, Vector3 size, Color c)
-            {
-                var g = GameObject.CreatePrimitive(PrimitiveType.Cube); g.name = n; g.transform.SetParent(room3d, false);
-                g.transform.position = centre; g.transform.localScale = size; Destroy(g.GetComponent<Collider>());
-                g.GetComponent<MeshRenderer>().sharedMaterial = Mat(c); return g;
-            }
-            // ground outside the room, a plinth under the floor, walls (back high, sides low, front lip)
-            Box("Ground", new Vector3(RoomW / 2, -0.06f, RoomH / 2), new Vector3(40, 0.1f, 30), BobUi.Hex("#C9B48A"));
-            Box("Plinth", new Vector3(RoomW / 2, -0.03f, RoomH / 2), new Vector3(RoomW + 0.5f, 0.06f, RoomH + 0.5f), BobUi.Hex("#8C6A4A"));
-            Box("BackWall", new Vector3(RoomW / 2, 1.3f, RoomH + 0.2f), new Vector3(RoomW + 0.8f, 2.6f, 0.3f), BobUi.Hex("#F4E6C8"));
-            Box("WallL", new Vector3(-0.25f, 0.35f, RoomH / 2), new Vector3(0.3f, 0.7f, RoomH + 0.5f), BobUi.Hex("#EAD7B0"));
-            Box("WallR", new Vector3(RoomW + 0.25f, 0.35f, RoomH / 2), new Vector3(0.3f, 0.7f, RoomH + 0.5f), BobUi.Hex("#EAD7B0"));
-            Box("Lip", new Vector3(RoomW / 2, 0.06f, -0.22f), new Vector3(RoomW + 0.8f, 0.12f, 0.15f), BobUi.Hex("#8C6A4A"));
-            // the themed room picture as a mural on the back wall
-            if (art.Has("lobby_rental_room"))
-            {
-                var tex = art.Get("lobby_rental_room").texture;
-                var q = GameObject.CreatePrimitive(PrimitiveType.Quad); q.name = "WallPicture"; q.transform.SetParent(room3d, false);
-                Destroy(q.GetComponent<Collider>());
-                q.transform.position = new Vector3(RoomW / 2, 1.45f, RoomH + 0.04f); q.transform.localScale = new Vector3(RoomW + 0.6f, (RoomW + 0.6f) * 9f / 16f * 0.55f, 1);
-                var m = new Material(Shader.Find("Unlit/Texture")) { mainTexture = tex }; m.mainTextureScale = new Vector2(1, 0.55f); m.mainTextureOffset = new Vector2(0, 0.38f);
-                q.GetComponent<MeshRenderer>().sharedMaterial = m;
-            }
-            // wooden floor (Leonardo tile texture), the 2D floor tiles are hidden in 3D
-            var fl = GameObject.CreatePrimitive(PrimitiveType.Quad); fl.name = "FloorWood"; fl.transform.SetParent(room3d, false); Destroy(fl.GetComponent<Collider>());
-            fl.transform.position = new Vector3(RoomW / 2, 0.001f, RoomH / 2); fl.transform.rotation = Quaternion.Euler(90, 0, 0); fl.transform.localScale = new Vector3(RoomW, RoomH, 1);
-            var fm = new Material(Shader.Find("Standard")); fm.SetFloat("_Glossiness", 0.25f);
-            var ft = Resources.Load<Texture2D>("Textures/floor_wood"); if (ft != null) { fm.mainTexture = ft; fm.mainTextureScale = new Vector2(RoomW / 2.2f, RoomH / 2.2f); } else fm.color = BobUi.Hex("#C8935A");
-            fl.GetComponent<MeshRenderer>().sharedMaterial = fm;
-            floor3d = fm;
-            var lightGo = new GameObject("Sun"); lightGo.transform.SetParent(room3d, false);
-            var sun = lightGo.AddComponent<Light>(); sun.type = LightType.Directional; sun.intensity = 1.05f; sun.shadows = LightShadows.Soft; sun.color = new Color(1f, 0.96f, 0.88f);
-            lightGo.transform.rotation = Quaternion.Euler(50, -30, 0);
-            RenderSettings.ambientLight = new Color(0.62f, 0.6f, 0.58f);
+            FaceSigns();
         }
 
         // ---------------------------------------------------------------- reacting to the rules
