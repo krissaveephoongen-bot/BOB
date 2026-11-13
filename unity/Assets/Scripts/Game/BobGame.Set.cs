@@ -75,7 +75,7 @@ namespace Bob.Game
             // floor: pale tiles everywhere, the play area is a teal mat with a light border
             var tiles = Resources.Load<Texture2D>("Textures/floor_wood"); if (tiles == null) tiles = TileTexture(new Color(1f, 0.97f, 0.82f), new Color(0.98f, 0.92f, 0.70f));
             Quad("Floor", new Vector3(RoomW / 2, -0.02f, RoomH / 2), new Vector2(40, 30), Color.white, tiles, new Vector2(10, 7.5f));
-            Quad("MatBorder", new Vector3(RoomW / 2, -0.012f, RoomH / 2), new Vector2(RoomW + 0.5f, RoomH + 0.5f), new Color(0.80f, 0.94f, 0.90f));
+            Quad("MatBorder", new Vector3(RoomW / 2, -0.012f, RoomH / 2), new Vector2(RoomW + 0.5f, RoomH + 0.5f), new Color(0.76f, 0.58f, 0.40f));
             Quad("PlayMat", new Vector3(RoomW / 2, -0.008f, RoomH / 2), new Vector2(RoomW, RoomH), Mat);
             foreach (var sx in new[] { 0.12f, RoomW - 0.12f }) Quad("Lane", new Vector3(sx, -0.004f, RoomH / 2), new Vector2(0.06f, RoomH - 0.4f), new Color(1f, 0.88f, 0.35f));
 
