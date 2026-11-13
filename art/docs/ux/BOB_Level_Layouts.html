@@ -51,7 +51,7 @@ body.on-heat .heat{display:inline} body.on-route .route{display:inline} body.on-
 <div class="wrap">
   <header>
     <h1>BOB · ผังฉากและจุดเปิดมินิเกม (task race)</h1>
-    <p class="lead">ผังห้องขนาดมาตรฐาน 14×8 ช่อง สำหรับเดินไปทำมินิเกมที่จุดงาน มุมกล้อง 3/4 pitch 55° ล็อกทั้งห้อง ทุกผังในหน้านี้วาดจากข้อมูลชุดเดียวกับที่สคริปต์ตรวจใช้ ตัวเลขในตารางคำนวณสดในหน้า (เส้นทาง BFS ความละเอียด 0.25 ช่อง ความเร็วเดิน 2.3 ช่อง/วิ) สเปกเต็มอยู่ใน <code>art/docs/19_Level_Layout_Task_Stations.md</code></p>
+    <p class="lead">ผังห้องขนาดมาตรฐาน 14×8 ช่อง สำหรับเดินไปทำมินิเกมที่จุดงาน มุมกล้อง 3/4 pitch 45° size 4.1 ล็อกทั้งห้อง (ภาพเล่น 3/4 ด้านล่างยังวาดที่ 55° เดิม ภาพ 45° จริงดู <code>art/aa/rooms/*_preview.png</code>) ทุกผังในหน้านี้วาดจากข้อมูลชุดเดียวกับที่สคริปต์ตรวจใช้ ตัวเลขในตารางคำนวณสดในหน้า (เส้นทาง BFS ความละเอียด 0.25 ช่อง ความเร็วเดิน 2.3 ช่อง/วิ) สเปกเต็มอยู่ใน <code>art/docs/19_Level_Layout_Task_Stations.md</code></p>
   </header>
   <nav aria-label="ตัวเลือกภาพ"><div class="row">
     <label><input type="checkbox" id="t-ids" checked> รหัสจุด</label>
@@ -101,7 +101,7 @@ const RULE = {
   PAIR_MIN:2.0,                                  // T13 A-B (spec 16)
   E_SPACING:1.4, E_REACH:7.0,                    // emergency points: from slots, path from room centre
   SPAWN_GAP:1.6, FAIR_TOL:1.0,                   // spawn to nearest slot, max spread between spawns
-  OCCLUDE:0.695                                  // KZ/KY: floor hidden behind a prop of height h for 0.695h tiles
+  OCCLUDE:1.0                                    // floor hidden behind a prop of height h for h/tan(pitch) tiles: 1.0h at 45 deg (D3); was 0.695h at 55 deg
 };
 // slot type -> tasks that can open there
 const TYPE_TASKS = {

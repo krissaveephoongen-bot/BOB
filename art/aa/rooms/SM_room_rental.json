@@ -1,0 +1,282 @@
+{
+ "room": "rental",
+ "name": "ห้องเช่า",
+ "code": "L1",
+ "units": "1 unit = 1 tile",
+ "axes": "Unity: x right, z forward (back wall z=8), y up",
+ "props": [
+  {
+   "label": "ชั้นวางชิ้นส่วน",
+   "kind": "shelf",
+   "tripo_id": "parts_shelf",
+   "source": "placeholder",
+   "unity_min": [
+    6.3,
+    0,
+    7.3
+   ],
+   "size": [
+    1.4,
+    1.6,
+    0.7
+   ]
+  },
+  {
+   "label": "ครัวเล็ก + ตู้น้ำยา",
+   "kind": "cabinet",
+   "tripo_id": "kitchenette",
+   "source": "placeholder",
+   "unity_min": [
+    10.4,
+    0,
+    7.3
+   ],
+   "size": [
+    1.3,
+    1.8,
+    0.7
+   ]
+  },
+  {
+   "label": "โซฟา",
+   "kind": "sofa",
+   "tripo_id": "sofa_2seat",
+   "source": "placeholder",
+   "unity_min": [
+    2.4,
+    0,
+    4.5
+   ],
+   "size": [
+    1.7,
+    0.75,
+    0.7
+   ]
+  },
+  {
+   "label": "เตียงเดี่ยว",
+   "kind": "bed",
+   "tripo_id": "bed_single",
+   "source": "placeholder",
+   "unity_min": [
+    9.9,
+    0,
+    4.5
+   ],
+   "size": [
+    1.7,
+    0.6,
+    0.7
+   ]
+  },
+  {
+   "label": "โต๊ะญี่ปุ่น",
+   "kind": "table",
+   "tripo_id": "table_low",
+   "source": "placeholder",
+   "unity_min": [
+    2.2,
+    0,
+    1.8999999999999997
+   ],
+   "size": [
+    1.6,
+    0.45,
+    0.7
+   ]
+  },
+  {
+   "label": "ตู้ลิ้นชัก",
+   "kind": "drawer",
+   "tripo_id": "drawer_low",
+   "source": "placeholder",
+   "unity_min": [
+    10.2,
+    0,
+    1.8999999999999997
+   ],
+   "size": [
+    1.6,
+    0.75,
+    0.7
+   ]
+  },
+  {
+   "label": "ถังแยกขยะ",
+   "kind": "bin",
+   "tripo_id": "recycle_bin",
+   "source": "placeholder",
+   "unity_min": [
+    11.7,
+    0,
+    3.1500000000000004
+   ],
+   "size": [
+    0.8,
+    0.8,
+    0.8
+   ]
+  },
+  {
+   "label": "ฟูกที่นอนล้ม",
+   "kind": "heavy",
+   "tripo_id": "futon_fallen",
+   "source": "placeholder",
+   "unity_min": [
+    5.5,
+    0,
+    1.9500000000000004
+   ],
+   "size": [
+    3,
+    0.45,
+    0.45
+   ]
+  },
+  {
+   "label": "รถเข็น",
+   "kind": "cart",
+   "tripo_id": "cart",
+   "source": "placeholder",
+   "unity_min": [
+    6.25,
+    0,
+    0.050000000000000155
+   ],
+   "size": [
+    1.5,
+    0.4,
+    0.65
+   ]
+  }
+ ],
+ "points": [
+  {
+   "id": "S1",
+   "role": "taskspot",
+   "type": "glass",
+   "x": 3,
+   "z": 6.8
+  },
+  {
+   "id": "S2",
+   "role": "taskspot",
+   "type": "wall",
+   "x": 5,
+   "z": 6.8
+  },
+  {
+   "id": "S3",
+   "role": "taskspot",
+   "type": "shelf",
+   "x": 7,
+   "z": 6.8
+  },
+  {
+   "id": "S4",
+   "role": "taskspot",
+   "type": "wall",
+   "x": 9,
+   "z": 6.8
+  },
+  {
+   "id": "S5",
+   "role": "taskspot",
+   "type": "cabinet",
+   "x": 11.05,
+   "z": 6.8
+  },
+  {
+   "id": "S6",
+   "role": "taskspot",
+   "type": "floor",
+   "x": 5,
+   "z": 4.8
+  },
+  {
+   "id": "S7",
+   "role": "taskspot",
+   "type": "floor",
+   "x": 9,
+   "z": 4.8
+  },
+  {
+   "id": "S8",
+   "role": "taskspot",
+   "type": "table",
+   "x": 3.25,
+   "z": 3.55
+  },
+  {
+   "id": "S9",
+   "role": "taskspot",
+   "type": "bin",
+   "x": 10.75,
+   "z": 3.55
+  },
+  {
+   "id": "S10",
+   "role": "taskspot",
+   "type": "table",
+   "x": 3,
+   "z": 1.0999999999999996
+  },
+  {
+   "id": "S11",
+   "role": "taskspot",
+   "type": "table",
+   "x": 11,
+   "z": 1.0999999999999996
+  },
+  {
+   "id": "cart",
+   "x": 7,
+   "z": 1.0999999999999996
+  },
+  {
+   "id": "pair_a",
+   "x": 4.7,
+   "z": 2.1500000000000004
+  },
+  {
+   "id": "pair_b",
+   "x": 9.3,
+   "z": 2.1500000000000004
+  },
+  {
+   "id": "emergency_E1",
+   "x": 7,
+   "z": 5.0
+  },
+  {
+   "id": "emergency_E2",
+   "x": 5.5,
+   "z": 0.75
+  },
+  {
+   "id": "emergency_E3",
+   "x": 8.5,
+   "z": 0.75
+  },
+  {
+   "id": "spawn_P1",
+   "x": 5.9,
+   "z": 3.3
+  },
+  {
+   "id": "spawn_P2",
+   "x": 6.65,
+   "z": 3.3
+  },
+  {
+   "id": "spawn_P3",
+   "x": 7.35,
+   "z": 3.3
+  },
+  {
+   "id": "spawn_P4",
+   "x": 8.1,
+   "z": 3.3
+  }
+ ]
+}
