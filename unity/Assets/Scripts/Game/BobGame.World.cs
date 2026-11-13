@@ -218,6 +218,7 @@ namespace Bob.Game
                 if (idle == null) { sr.transform.localScale = new Vector3(0.6f, 0.5f, 1); sr.color = BobUi.Hex(BobMatch.Enemy(ids[i]).Color); }
                 sr.sortingOrder = Order(3.75f);
                 if (World3D) MakeShadow(holder, new Vector2(x, 3.75f), 0.7f);
+                if (World3D) TryEnemyModel(ids[i], holder, new Vector2(x, 3.75f), sr);
                 var an = sr.gameObject.AddComponent<BobSpriteAnimator>();
                 if (idle != null) an.Play(idle.frames, idle.fps, true);
                 WorldLabel(BobMatch.Enemy(ids[i]).Name, new Vector2(x, 3.62f), 0.03f, BobUi.Ink, holder);

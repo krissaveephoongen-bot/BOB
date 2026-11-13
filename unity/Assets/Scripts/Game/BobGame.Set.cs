@@ -3,6 +3,7 @@
 // Modular/BobToon.cs, so the 3D heroes that come later sit in the same world. World axes: x right, y up, z = room depth.
 using Bob.Art;
 using Bob.Modular;
+using Bob.Rules;
 using TMPro;
 using UnityEngine;
 
@@ -163,6 +164,27 @@ namespace Bob.Game
                 if (r is MeshRenderer || r is SkinnedMeshRenderer) BobToon.Outline(r.gameObject, 2.5f);
             }
             heroAnim = heroModel.GetComponentInChildren<Animator>();
+        }
+
+        // rules enemy -> kit model (placeholder mapping until each has its own model)
+        static string EnemyKit(string id) => id == "stain" || id == "rust" ? "dirt" : id == "dust" ? "trash" : "slime";
+
+        /// <summary>3D enemy from Resources/Heroes/SK_<kit>; hides the sprite when found.</summary>
+        void TryEnemyModel(string id, Transform holder, Vector2 at, SpriteRenderer sr)
+        {
+            var prefab = Resources.Load<GameObject>("Heroes/SK_" + EnemyKit(id)); if (prefab == null) return;
+            sr.enabled = false;
+            var m = Instantiate(prefab, holder); m.name = "Enemy3D";
+            var rs = m.GetComponentsInChildren<Renderer>(); var b = rs[0].bounds; foreach (var r in rs) b.Encapsulate(r.bounds);
+            m.transform.localScale *= 0.95f / Mathf.Max(0.01f, b.size.y);
+            var tint = Color.Lerp(Color.white, BobUi.Hex(BobMatch.Enemy(id).Color), 0.35f);
+            foreach (var r in rs)
+            {
+                var mats = r.sharedMaterials;
+                for (int i = 0; i < mats.Length; i++) mats[i] = BobToon.Toon(tint, mats[i] != null ? mats[i].mainTexture : null);
+                r.sharedMaterials = mats; BobToon.Outline(r.gameObject, 2.5f);
+            }
+            m.transform.position = new Vector3(at.x, 0, at.y); m.transform.rotation = Quaternion.Euler(0, 180, 0);
         }
 
         void TickHeroModel(float dt)

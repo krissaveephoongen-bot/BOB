@@ -23,6 +23,7 @@ namespace Bob.EditorTools
                 ti.filterMode = FilterMode.Point; ti.textureCompression = TextureImporterCompression.Uncompressed; ti.mipmapEnabled = false; ti.SaveAndReimport();
             }
             foreach (var id in new[] { "sweep", "bubble", "spray", "press" }) BuildOne(id, pal);
+            foreach (var id in new[] { "dirt", "slime", "trash", "boss_slime" }) BuildOne(id, pal);
             AssetDatabase.SaveAssets(); AssetDatabase.Refresh();
         }
 
@@ -44,10 +45,11 @@ namespace Bob.EditorTools
             ac.AddParameter("Carry", AnimatorControllerParameterType.Bool);
             var sm = ac.layers[0].stateMachine;
             var sIdle = sm.AddState("idle"); sIdle.motion = idle;
-            var sWalk = sm.AddState("walk"); sWalk.motion = walk;
             sm.defaultState = sIdle;
+            if (walk != null) {
+            var sWalk = sm.AddState("walk"); sWalk.motion = walk;
             var t1 = sIdle.AddTransition(sWalk); t1.hasExitTime = false; t1.duration = 0.1f; t1.AddCondition(AnimatorConditionMode.Greater, 0.2f, "Speed");
-            var t2 = sWalk.AddTransition(sIdle); t2.hasExitTime = false; t2.duration = 0.1f; t2.AddCondition(AnimatorConditionMode.Less, 0.2f, "Speed");
+            var t2 = sWalk.AddTransition(sIdle); t2.hasExitTime = false; t2.duration = 0.1f; t2.AddCondition(AnimatorConditionMode.Less, 0.2f, "Speed"); }
             if (cheer != null) { var sC = sm.AddState("cheer"); sC.motion = cheer; }
             var model = AssetDatabase.LoadAssetAtPath<GameObject>(fbx);
             var inst = (GameObject)PrefabUtility.InstantiatePrefab(model);
