@@ -338,7 +338,7 @@ var roomMeshes=[];room.traverse(function(o){if(o.isMesh&&o!==floor)roomMeshes.pu
 
 // characters
 var loader=new THREE.GLTFLoader(), mixers=[], actors=[], heroes=[];
-var LAYOUT={sweep:[-3,1.3,0],bubble:[-1,1.3,0],press:[1,1.3,0],spray:[3,1.3,0],dirt:[-4.4,-0.6,0.5],slime:[-1.6,-0.9,0.3],trash:[1.6,-0.9,-0.3],boss_slime:[4.6,-2.4,-0.4]};
+var LAYOUT={sweep:[-5.25,1.3,0],bubble:[-3.75,1.3,0],press:[-2.25,1.3,0],spray:[-0.75,1.3,0],wash:[0.75,1.3,0],iron:[2.25,1.3,0],duster:[3.75,1.3,0],vac:[5.25,1.3,0],dirt:[-4.4,-0.6,0.5],slime:[-1.6,-0.9,0.3],trash:[1.6,-0.9,-0.3],boss_slime:[4.6,-2.4,-0.4]};
 var ids=Object.keys(LAYOUT),left=ids.length;
 function b64(s){var b=atob(s),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u.buffer}
 ids.forEach(function(id){
@@ -348,7 +348,7 @@ ids.forEach(function(id){
     if(id==='boss_slime')root.scale.setScalar(1.0);
     scene.add(root);
     var mx=new THREE.AnimationMixer(root);var clips={};g.animations.forEach(function(c){clips[c.name]=c});
-    var a={id:id,root:root,mixer:mx,clips:clips,hero:['sweep','bubble','press','spray'].indexOf(id)>=0,cur:null};
+    var a={id:id,root:root,mixer:mx,clips:clips,hero:['sweep','bubble','press','spray','wash','iron','duster','vac'].indexOf(id)>=0,cur:null};
     mixers.push(mx);actors.push(a);if(a.hero)heroes.push(a);
     if(--left===0){applyAll();}
   },function(e){console.error(id,e)});

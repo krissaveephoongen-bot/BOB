@@ -24,7 +24,7 @@
 | A09 | Full-body render (หน้า Upgrade / Character Select) | 4 | P1 | ทั้งคู่ | – |
 | A10 | Equipment upgrade 3 ระดับต่อ Hero (mesh swap + FX) | 12 | P1 | Action | – |
 | A11 | Skin/Costume | 8 | P2 | ทั้งคู่ | – |
-| A13 (เสนอ) | ฮีโร่เพิ่ม 4 ตัว (ซัก `wash`, รีด `iron`, ปัด `duster`, ดูด `vac`): sheet อ้างอิง + โมเดลสคริปต์ + หน้า flipbook + portrait/การ์ด + skill FX ต่อตัว ตาม `24_Hero_Roster_Expansion.md` ข้อ 8 | 4 × 7 | P1 (ซัก/รีด) · P2 (ปัด/ดูด) | ทั้งคู่ | – (รออนุมัติรายชื่อ) |
+| A13 | ฮีโร่เพิ่ม 4 ตัว (ซัก `wash`, รีด `iron`, ปัด `duster`, ดูด `vac`): sheet อ้างอิง + โมเดลสคริปต์ + หน้า flipbook + portrait/การ์ด + skill FX ต่อตัว ตาม `24_Hero_Roster_Expansion.md` ข้อ 8 | 4 × 7 | P1 (ซัก/รีด) · P2 (ปัด/ดูด) | ทั้งคู่ | blockout 3D ✓ (13 พ.ย. 2026) · sheet, หน้า, FX ยังไม่มี |
 | A14 (เสนอ) | เฟอร์นิเจอร์/พร็อพของมินิเกมใหม่ T17–T23: ราวตากผ้า, ตะกร้าผ้า, เตียง, โต๊ะรีดผ้า, ชั้นหนังสือ, หยากไย่, พรม, โซฟา | 8 | P2 | ทั้งคู่ | – |
 
 ## B. Enemy Assets
@@ -140,6 +140,7 @@
 | รหัส | ของ | สาย | สถานะ |
 | --- | --- | --- | --- |
 | A03/A04 | ฮีโร่ 4 ตัว 3D + rig ร่วม | A | blockout ✓ `art/aa/kit/SK_{sweep,bubble,press,spray}` (5,284–5,704 tris) |
+| A13 | ฮีโร่ 5-8 (ซัก รีด ปัด ดูด) 3D | A | blockout ✓ `art/aa/kit/SK_{wash,iron,duster,vac}` (5,656–5,932 tris) ภาพ `aa/aa_heroes_8_game_cam.png` |
 | A05/A07 | อนิเมชัน idle, walk, cheer | A | ✓ 3 จาก 12 ท่า P0 |
 | A12 (ใหม่) | หน้า flipbook ตา 8 + ปาก 8 + คิ้ว 4 ต่อฮีโร่ (atlas 512²) | 2D ครอป + แก้มือ | – (P0) |
 | B01/B02 | เจ้าคราบ, สไลม์ | A | blockout ✓ (2,452 / 1,826 tris) |
