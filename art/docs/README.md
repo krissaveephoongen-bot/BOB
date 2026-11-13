@@ -9,7 +9,7 @@
 | ไฟล์ | เนื้อหา | ใครใช้ |
 | --- | --- | --- |
 | [00_Art_Direction.md](00_Art_Direction.md) | Visual identity, สัดส่วน, สี, วัสดุ, แสง, กล้อง, กฎการอ่านง่ายบนมือถือ | ทุกคน |
-| [01_Character_Bible.md](01_Character_Bible.md) | Master design ของ 4 Heroes + ศัตรู 5 ตัว + บอส "เจ้าคราบ" (ทรง, สี HEX, อุปกรณ์, หน้า, ท่าทาง) | Concept / 3D artist |
+| [01_Character_Bible.md](01_Character_Bible.md) | Master design ของ 4 Heroes (+ สรุปฮีโร่ที่เสนอเพิ่ม 4 ตัวในข้อ 8) + ศัตรู 5 ตัว + บอส "เจ้าคราบ" (ทรง, สี HEX, อุปกรณ์, หน้า, ท่าทาง) | Concept / 3D artist |
 | [02_Asset_List.md](02_Asset_List.md) | รายการ asset 6 กลุ่ม (A–F) พร้อมรหัส ลำดับความสำคัญ และสถานะเทียบชุด placeholder | Producer / Artist |
 | [03_Unity_Spec.md](03_Unity_Spec.md) | Poly/texture budget, rig, animation, shader URP, import, โฟลเดอร์, prefab, การตั้งชื่อ, optimization | 3D artist / Unity dev |
 | [04_AI_Prompts.md](04_AI_Prompts.md) | Prompt สำหรับ ChatGPT / Midjourney / เครื่องมือ AI ใช้สร้าง Character Sheet และ asset ให้ตรงสไตล์ | Concept artist |
@@ -31,6 +31,7 @@
 | [21_AA_Art_Bible.md](21_AA_Art_Bible.md) | **Art Bible ฉบับ AA (อนุมัติแล้ว 13 พ.ย. 2026):** หลัก 5 ข้อ, ภาษารูปทรง, กล้อง 45° + สเกลโลก, งบต่อประเภท, material library, ชุดแสง, หน้า flipbook, อนิเมชัน (หนัก-เบา), VFX 5 ชั้น, pipeline ไม่มี artist 3 สาย (สคริปต์ Blender / AI image-to-3D / CC0), ด่านตรวจ 8 ข้อ, ลำดับ asset ใหม่, สิ่งที่ต้องใช้คน | ทุกคน |
 | [ux/BOB_AA_Art_Bible.html](ux/BOB_AA_Art_Bible.html) | ภาพอ้างอิง AA: โมเดล 3D จริงจาก `art/tools/blender/bob_kit.py` ที่มุมกล้องเกม (สลับกล้องเดิม/ใหม่, ท่า idle/walk/cheer, ทดสอบ silhouette, วัดขนาดบนจอ/tris/draw call), คะแนนช่องว่าง, พาเลต+เงาอมสี, งบ, pipeline | Art / Unity |
 | [17_Music_Layers.md](17_Music_Layers.md) | แผนดนตรีเลเยอร์ 4 stem (120 bpm, เปิดตาม % ทีม/คู่แข่ง/เวลา, quantize ขอบห้อง, ชุด fast 130 bpm, stinger, ducking, `BobMusicLayers` ใน Unity, ทางเลือกการผลิต) | Sound / Unity dev |
+| [24_Hero_Roster_Expansion.md](24_Hero_Roster_Expansion.md) | **ขยายฮีโร่ (13 พ.ย. 2026, Krits เลือก 8 ตัว):** จาก 4 เป็น 8 ตัวตอนเปิดเกม (ซัก รีด ปัด ดูด) + ซีซันละ 1, เหตุผลเรื่องจำนวน, หลักออกแบบ 7 ข้อ, หมวดถนัดและมินิเกมใหม่ T17–T23, ability ชุดใหม่ทั้ง 8 ตัวที่ใช้กับ task race ทั้งรอบ (แทน ability รถเข็น), id `press`/`iron`, งานผลิตต่อตัว, prompt ภาพอ้างอิง | Game designer / Art |
 | [22_Tripo_CLI.md](22_Tripo_CLI.md) | **Tripo CLI (13 พ.ย. 2026):** ติดตั้ง `tripo-cli`, ตั้งคีย์ผ่าน `TRIPO_API_KEY` เท่านั้น, คำสั่งที่ไม่เสียเครดิต (doctor/balance/--dry-run), สูตรสร้าง prop จาก prompt/ภาพ Leonardo, ประมาณการเครดิต และตัวอย่างเรียก V3 API ด้วย Python | Art / ผู้ใช้ |
 | [23_Asset_Master_Table.md](23_Asset_Master_Table.md) + [.csv](23_Asset_Master_Table.csv) | **ตาราง asset หลักของฉาก 3D (13 พ.ย. 2026):** ผลตรวจเฟอร์นิเจอร์ห้องเช่า L1 (Tripo เหลือ 3 ชิ้น), กฎออกแบบเผื่อขยายเกม (Core / ชุดธีม / ของเด่น, กริดความสูง, ครัวโมดูล 0.6 m, สถานะที่ไม่ต้องทำ mesh เพิ่ม), การ์ดมินิเกมแบบ 3D, ตาราง 76 แถวครอบคลุม 11 ห้อง พร้อมสาย ผลิต เครดิต ลำดับ สถานะ และของที่แต่ละห้องต้องสร้างใหม่ · สร้างตารางจาก CSV ด้วย `tools/asset_table.py` | Art / ผู้ใช้ |
 

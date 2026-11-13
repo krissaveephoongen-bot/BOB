@@ -34,6 +34,7 @@ Light blue gradient background panels with navy rounded headers. 16:9.
 - **ฟอง (Foam)**: `cheerful girl, light-brown hair in two space buns with side-swept bangs, sky-blue t-shirt, cream apron with square front pocket, navy shorts, brown short boots, holds a big yellow porous sponge, soap bubbles floating around. Role: support / area attack. Skill: squeezes sponge to release a ring wave of water and bubbles.`
 - **ถู (Scrub)**: `sturdy cheerful boy wearing a silver metal bucket as a helmet (handle hanging at the side), brown hair peeking out, green t-shirt, cream apron with square pocket, navy pants, brown boots, holds a wooden mop with a fluffy white mop head. Role: defender / control. Skill: sweeps the mop in an arc creating a slippery water line.`
 - **สเปรย์ (Spray)**: `confident girl, black bob haircut with straight bangs, aviator goggles with light-blue lenses and purple strap worn on the head, purple t-shirt, cream apron with square pocket, navy shorts, brown boots, holds a pink trigger spray bottle with white nozzle like a blaster. Role: ranged / debuff. Skill: long-range blue mist spray.`
+- **ฮีโร่ที่เสนอเพิ่ม (ซัก, รีด, ปัด, ดูด):** CHARACTER_BLOCK อยู่ใน `24_Hero_Roster_Expansion.md` ข้อ 9 (รออนุมัติรายชื่อก่อนสร้างภาพ)
 - **กวาด (Sweeper)** (เพิ่มแผ่น ortho): `energetic boy, messy dark-brown hair, red headband tied in a knot on the right with two tails, orange t-shirt, cream apron with square pocket, navy pants, brown boots, wooden broom with golden bristles and red band.`
 
 ## 2. Orthographic Modeling Reference (ส่ง modeler / Blender)

@@ -24,6 +24,8 @@
 | A09 | Full-body render (หน้า Upgrade / Character Select) | 4 | P1 | ทั้งคู่ | – |
 | A10 | Equipment upgrade 3 ระดับต่อ Hero (mesh swap + FX) | 12 | P1 | Action | – |
 | A11 | Skin/Costume | 8 | P2 | ทั้งคู่ | – |
+| A13 (เสนอ) | ฮีโร่เพิ่ม 4 ตัว (ซัก `wash`, รีด `iron`, ปัด `duster`, ดูด `vac`): sheet อ้างอิง + โมเดลสคริปต์ + หน้า flipbook + portrait/การ์ด + skill FX ต่อตัว ตาม `24_Hero_Roster_Expansion.md` ข้อ 8 | 4 × 7 | P1 (ซัก/รีด) · P2 (ปัด/ดูด) | ทั้งคู่ | – (รออนุมัติรายชื่อ) |
+| A14 (เสนอ) | เฟอร์นิเจอร์/พร็อพของมินิเกมใหม่ T17–T23: ราวตากผ้า, ตะกร้าผ้า, เตียง, โต๊ะรีดผ้า, ชั้นหนังสือ, หยากไย่, พรม, โซฟา | 8 | P2 | ทั้งคู่ | – |
 
 ## B. Enemy Assets
 
