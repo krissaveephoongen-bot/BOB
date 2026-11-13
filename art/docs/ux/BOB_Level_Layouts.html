@@ -1,0 +1,573 @@
+<title>BOB Level Layouts</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mitr:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap">
+<style>
+/* Layout: room plans (top-down, one per room) with layer toggles and live checks, then the 3/4 play view with the
+   wayfinding signals, the approach sequence, and the walk simulation table. Data + checks live in the BOBL script. */
+:root{
+  --bg:#F4F6FB; --panel:#FFFFFF; --fg:#0B1A3A; --muted:#55607A; --line:#D7DDEA; --accent:#1A6FC4; --chip:#E8EEF8;
+  --ok:#178A4F; --warn:#B25E00; --bad:#C21F33;
+  --display:"Mitr","IBM Plex Sans Thai",system-ui,sans-serif;
+  --body:"IBM Plex Sans Thai","Noto Sans Thai",system-ui,sans-serif;
+  --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0B1222;--panel:#121B30;--fg:#E8EDF8;--muted:#9AA6C2;--line:#26324D;--accent:#6CB2FF;--chip:#1B2742;--ok:#4CC38A;--warn:#F0A04B;--bad:#FF6B7D;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0B1222;--panel:#121B30;--fg:#E8EDF8;--muted:#9AA6C2;--line:#26324D;--accent:#6CB2FF;--chip:#1B2742;--ok:#4CC38A;--warn:#F0A04B;--bad:#FF6B7D;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.6;margin:0}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:1280px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 64px}
+h1,h2,h3{font-family:var(--display);font-weight:600;text-wrap:balance;margin:0}
+h1{font-size:clamp(26px,4vw,38px)} h2{font-size:23px} h3{font-size:17px;font-weight:500}
+p{margin:0;max-width:76ch} .lead{color:var(--muted);margin-top:8px}
+section{padding-top:34px;display:grid;gap:14px}
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);margin:18px 0 4px}
+nav .row{display:flex;gap:8px 12px;flex-wrap:wrap;padding-block:10px;align-items:center;font-size:14px}
+nav label{display:flex;gap:6px;align-items:center;cursor:pointer;background:var(--chip);padding:5px 12px;border-radius:999px}
+nav a{color:var(--accent);text-decoration:none;font-family:var(--display);font-size:14px}
+figure{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;gap:10px;min-width:0}
+figure svg{width:100%;height:auto;display:block;border-radius:10px}
+figcaption{display:grid;gap:4px}
+figcaption .id{font-family:var(--mono);font-size:12px;color:var(--accent)}
+figcaption p{font-size:14px;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,540px),1fr));gap:18px}
+.tblwrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 10px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--display);font-weight:500;white-space:nowrap}
+td.k{font-family:var(--mono);font-size:13px;color:var(--accent);white-space:nowrap}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.ok{color:var(--ok);font-weight:600} .bad{color:var(--bad);font-weight:600} .warn{color:var(--warn);font-weight:600}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:8px;align-content:start;min-width:0}
+.card svg{width:100%;height:auto;border-radius:10px}
+.meta{font-size:13px;color:var(--muted)}
+.layer{display:none}
+body.on-zones .zones{display:inline} body.on-ban .ban{display:inline} body.on-near .near{display:inline}
+body.on-heat .heat{display:inline} body.on-route .route{display:inline} body.on-ids .ids{display:inline}
+.pill{display:inline-block;font-family:var(--mono);font-size:12px;padding:1px 8px;border-radius:999px;background:var(--chip)}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>BOB · ผังฉากและจุดเปิดมินิเกม (task race)</h1>
+    <p class="lead">ผังห้องขนาดมาตรฐาน 14×8 ช่อง สำหรับเดินไปทำมินิเกมที่จุดงาน มุมกล้อง 3/4 pitch 45° size 4.1 ล็อกทั้งห้อง (ภาพเล่น 3/4 ด้านล่างยังวาดที่ 55° เดิม ภาพ 45° จริงดู <code>art/aa/rooms/*_preview.png</code>) ทุกผังในหน้านี้วาดจากข้อมูลชุดเดียวกับที่สคริปต์ตรวจใช้ ตัวเลขในตารางคำนวณสดในหน้า (เส้นทาง BFS ความละเอียด 0.25 ช่อง ความเร็วเดิน 2.3 ช่อง/วิ) สเปกเต็มอยู่ใน <code>art/docs/19_Level_Layout_Task_Stations.md</code></p>
+  </header>
+  <nav aria-label="ตัวเลือกภาพ"><div class="row">
+    <label><input type="checkbox" id="t-ids" checked> รหัสจุด</label>
+    <label><input type="checkbox" id="t-zones" checked> โซน A–D</label>
+    <label><input type="checkbox" id="t-ban"> แถบห้ามวาง (HUD/นิ้วโป้ง)</label>
+    <label><input type="checkbox" id="t-near"> วงระยะ 1.2 / 2.6</label>
+    <label><input type="checkbox" id="t-route" checked> เส้นงานยาว</label>
+    <label><input type="checkbox" id="t-heat"> ระยะเดินจากจุดเกิด</label>
+    <a href="#play">ภาพ 3/4</a> · <a href="#approach">เข้าใกล้จุด</a> · <a href="#sim">ตัวเลขจำลอง</a>
+  </div></nav>
+
+  <section id="plans"><h2>ผังห้อง (มองจากบน)</h2>
+    <p class="lead">วงกลม = จุดงาน (TaskSpot) ตัวอักษรในวงคือชนิดจุด · ★ = จุดเกิด 4 จุด (สลับทุกรอบ) · สี่เหลี่ยมเทา = ของที่เดินชน · เส้นประ = ขั้นของงานยาว (T04 ชั้นวาง → รถเข็น, T07 อ่าง → ชั้นคว่ำจาน) · วงแดง E = จุดคราบฉุกเฉิน · A/B = ยกของสองคน (T13)</p>
+    <div id="g-plans" class="grid2" style="grid-template-columns:1fr"></div>
+  </section>
+
+  <section id="types"><h2>ชนิดจุดงาน → มินิเกมที่เปิดได้</h2>
+    <div class="tblwrap"><table id="tbl-types"><thead><tr><th>ชนิด</th><th>ป้ายในผัง</th><th>มินิเกม</th><th>พื้นการ์ด F27</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section id="play"><h2>ภาพเล่น 3/4: สัญญาณนำทางในฉาก</h2>
+    <p class="lead">ห้องเช่า L1 (ห้องแรกของบทบ้าน) กลางรอบ ทีม 4 คน กรอบ 2340×1080u เหมือน <code>BOB_Play_Screen_Cafeteria.html</code> หมายเลขในภาพตรงกับตารางด้านล่าง</p>
+    <div id="g-play" class="grid2" style="grid-template-columns:1fr"></div>
+    <div class="tblwrap"><table id="tbl-play"><thead><tr><th>#</th><th>สัญญาณ</th><th>เห็นโดย</th><th>พฤติกรรม</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section id="approach"><h2>เดินเข้าใกล้จุดงาน 4 จังหวะ</h2>
+    <p class="lead">วงตรวจระยะ 2 ชั้น: 2.6 ช่อง ขึ้นป้ายย่อ, 1.2 ช่อง ปุ่มหลักเปลี่ยนเป็น "ทำงาน" การ์ดเปิดเมื่อแตะ (ไม่เปิดเอง) โยกจอยเกิน 70% ปิดการ์ดแล้วเดินต่อ</p>
+    <div id="g-approach" class="cards"></div>
+  </section>
+
+  <section id="sim"><h2>ตรวจผังและจำลองการเดิน</h2>
+    <p class="lead">กติกาตรวจ 10 ข้อในเอกสาร 19 ข้อ 6 · จำลอง "ทีมเล่นดีที่สุด" (ทุกคนเลือกงานที่ถึงเร็วที่สุด ไม่ลังเล ไม่พลาด) ด้วยชุด MVP และจำนวนงานตามสเปก 16 ข้อ 2.2 ผลจึงเป็น <b>ขอบล่าง</b> ของเวลาจริง</p>
+    <div class="tblwrap"><table id="tbl-check"><thead><tr><th>ห้อง</th><th>ผลตรวจ</th><th>จุดงาน</th><th>ระยะจุดใกล้สุด</th><th>T04 ชั้นวาง→รถ</th><th>จุดเกิด: ต่างกันสูงสุด (รถ/ชั้นวาง/เฉลี่ย)</th><th>เดินเฉลี่ยระหว่างจุด</th></tr></thead><tbody></tbody></table></div>
+    <div class="tblwrap"><table id="tbl-sim"><thead><tr><th>ห้อง</th><th>คน</th><th>ขั้นงาน</th><th>จบเฉลี่ย (วิ)</th><th>p90</th><th>เวลาเดิน %</th><th>เดิน/ครั้ง (ช่อง)</th><th>ไกลสุด</th></tr></thead><tbody></tbody></table></div>
+    <p class="meta" id="sim-note"></p>
+  </section>
+</div>
+<script id="bob-layout-logic">
+/* BOB level layouts: data + checks + walk simulation. Shared by the HTML page and tools/check_layouts.js */
+var BOBL = (function(){
+const RULE = {
+  W:14, H:8, SPEED:2.3, NEAR:1.2, PREVIEW:2.6, CART_NEAR:1.5,
+  BAND:{x0:2.2, x1:11.8, y0:1.0, y1:7.3},      // ring centres must sit here (HUD + thumb zones, 16:9 worst case)
+  SPACING_MIN:1.8, SPACING_GOOD:2.2, PAIR_SPACING:1.5,             // centre to centre of interactive points
+  LONG_MIN:5.6,                                  // 40% of room width between steps of one long task (study 15 §4.3)
+  PAIR_MIN:2.0,                                  // T13 A-B (spec 16)
+  E_SPACING:1.4, E_REACH:7.0,                    // emergency points: from slots, path from room centre
+  SPAWN_GAP:1.6, FAIR_TOL:1.0,                   // spawn to nearest slot, max spread between spawns
+  OCCLUDE:1.0                                    // floor hidden behind a prop of height h for h/tan(pitch) tiles: 1.0h at 45 deg (D3); was 0.695h at 55 deg
+};
+// slot type -> tasks that can open there
+const TYPE_TASKS = {
+  floor:['T01','T09','T14'], table:['T02','T10','T09'], wall:['T03','T02'], glass:['T08'], bin:['T05'],
+  sink:['T06','T07'], rack:['T07b'], cabinet:['T11'], washer:['T15'], shelf:['T04a'], cart:['T04b'], pair:['T13']
+};
+const ROOMS = [
+ { id:'rental', name:'ห้องเช่า', code:'L1', chapter:'บท 1 บ้าน · ด่านแรก (P0, AA-0)', floor:['#E9C79A','#DDB582'], wall:'#F6EAD3', dado:'#7FB2E0',
+   note:'ห้องเช่าห้องเดียว พื้นไม้ ผนังครีม ม่านฟ้า เฟอร์นิเจอร์เตี้ย 4 ชิ้นแบ่งซ้าย/ขวาชัด (โซฟา เตียง โต๊ะญี่ปุ่น ตู้ลิ้นชัก) ครัวเล็กมุมหลังขวา ฟูกที่นอนล้มกลางห้อง (T13) ขวางทางลัดจากจุดเกิดไปรถเข็น ยกแล้วทางกลางเปิด',
+   props:[
+     {x:2.4,y:-.05,w:1.2,d:.1,h:0,k:'window',t:'หน้าต่างม่านฟ้า'},
+     {x:4.2,y:-.05,w:1.6,d:.1,h:0,k:'board',t:'ผนังโปสเตอร์'},
+     {x:6.3,y:0,w:1.4,d:.7,h:1.6,k:'shelf',t:'ชั้นวางชิ้นส่วน'},
+     {x:8.2,y:-.05,w:1.6,d:.1,h:0,k:'board',t:'ทีวีติดผนัง'},
+     {x:10.4,y:0,w:1.3,d:.7,h:1.8,k:'cabinet',t:'ครัวเล็ก + ตู้น้ำยา'},
+     {x:2.4,y:2.8,w:1.7,d:.7,h:.75,k:'sofa',t:'โซฟา'},{x:9.9,y:2.8,w:1.7,d:.7,h:.6,k:'bed',t:'เตียงเดี่ยว'},
+     {x:2.2,y:5.4,w:1.6,d:.7,h:.45,k:'table',t:'โต๊ะญี่ปุ่น'},{x:10.2,y:5.4,w:1.6,d:.7,h:.75,k:'drawer',t:'ตู้ลิ้นชัก'},
+     {x:11.7,y:4.05,w:.8,d:.8,h:.8,k:'bin',t:'ถังแยกขยะ'},
+     {x:5.5,y:5.6,w:3.0,d:.45,h:.45,k:'heavy',t:'ฟูกที่นอนล้ม'},
+     {x:6.25,y:7.3,w:1.5,d:.65,h:.4,k:'cart',t:'รถเข็น'}
+   ],
+   slots:[
+     {id:'S1',x:3.0,y:1.2,type:'glass'},{id:'S2',x:5.0,y:1.2,type:'wall'},{id:'S3',x:7.0,y:1.2,type:'shelf'},
+     {id:'S4',x:9.0,y:1.2,type:'wall'},{id:'S5',x:11.05,y:1.2,type:'cabinet'},
+     {id:'S6',x:5.0,y:3.2,type:'floor'},{id:'S7',x:9.0,y:3.2,type:'floor'},
+     {id:'S8',x:3.25,y:4.45,type:'table'},{id:'S9',x:10.75,y:4.45,type:'bin'},
+     {id:'S10',x:3.0,y:6.9,type:'table'},{id:'S11',x:11.0,y:6.9,type:'table'}
+   ],
+   cart:{x:7.0,y:6.9}, pair:{a:[4.7,5.85],b:[9.3,5.85]},
+   E:[[7.0,3.0],[5.5,7.25],[8.5,7.25]],
+   spawns:[[5.9,4.7],[6.65,4.7],[7.35,4.7],[8.1,4.7]],
+   chairs:[[4.3,2.3],[9.7,2.3],[4.4,7.2],[9.6,7.2]]
+ },
+ { id:'condo', name:'คอนโดสองห้อง (ครัว + นั่งเล่น)', code:'L2', chapter:'บท 1 บ้าน · ด่านสอง (P1, AA-1)', floor:['#EFE6D8','#E2D6C4'], wall:'#F3F1EC', dado:'#8FB9A8',
+   note:'เกาะครัวกับโซฟายาวแบ่งครัว (หลัง) กับห้องนั่งเล่น (หน้า) เหลือทาง 3 ช่อง (ซ้าย กลาง ขวา) ช่องกลางเป็นคอขวดตั้งใจ งานครัว (อ่าง → ชั้นคว่ำจาน) บังคับเดินข้ามห้อง',
+   props:[
+     {x:2.2,y:0,w:1.6,d:.9,h:.9,k:'counter',t:'เคาน์เตอร์ครัว'},
+     {x:4.2,y:0,w:1.6,d:.9,h:.9,k:'sink',t:'อ่างล้างจาน'},
+     {x:6.3,y:0,w:1.4,d:.7,h:1.6,k:'shelf',t:'ชั้นวางชิ้นส่วน'},
+     {x:8.2,y:-.05,w:1.6,d:.1,h:0,k:'door',t:'ประตูห้องนอน'},
+     {x:10.4,y:0,w:1.3,d:.8,h:1.9,k:'cabinet',t:'ตู้เย็น + ตู้น้ำยา'},
+     {x:1.6,y:2.9,w:4.3,d:.8,h:.9,k:'counter',t:'เกาะครัว'},{x:8.1,y:2.9,w:4.3,d:.8,h:.75,k:'sofa',t:'โซฟายาว (หันหน้าลง)'},
+     {x:11.7,y:3.95,w:.8,d:.9,h:1.2,k:'rack',t:'ชั้นคว่ำจาน'},
+     {x:4.4,y:5.4,w:.8,d:1.0,h:.7,k:'heavy',t:'ถังน้ำล้ม'},
+     {x:2.2,y:5.6,w:1.2,d:.6,h:.75,k:'table',t:'โต๊ะทำงาน'},{x:10.3,y:5.6,w:1.3,d:.6,h:.45,k:'table',t:'โต๊ะกลาง'},
+     {x:8.6,y:7.25,w:.8,d:.6,h:.8,k:'bin',t:'ถังแยกขยะ'},
+     {x:6.25,y:7.3,w:1.5,d:.65,h:.4,k:'cart',t:'รถเข็น'}
+   ],
+   slots:[
+     {id:'S1',x:3.0,y:1.35,type:'table'},{id:'S2',x:5.0,y:1.35,type:'sink'},{id:'S3',x:7.0,y:1.2,type:'shelf'},
+     {id:'S4',x:9.0,y:1.2,type:'wall'},{id:'S5',x:11.05,y:1.3,type:'cabinet'},
+     {id:'S6',x:2.9,y:4.3,type:'table'},{id:'S7',x:11.1,y:4.3,type:'rack'},
+     {id:'S8',x:2.8,y:6.9,type:'table'},{id:'S9',x:9.0,y:6.85,type:'bin'},{id:'S10',x:10.95,y:6.9,type:'table'},
+     {id:'S11',x:9.3,y:5.0,type:'floor'}
+   ],
+   cart:{x:7.0,y:6.9}, pair:{a:[4.8,4.85],b:[4.8,6.95]},
+   E:[[7.0,3.1],[4.0,2.35],[10.0,2.35]],
+   spawns:[[6.5,4.4],[7.5,4.4],[6.5,5.2],[7.5,5.2]],
+   chairs:[[1.0,4.4],[13.0,4.4],[6.0,2.4],[8.0,2.4]]
+ },
+ { id:'kitchen', name:'ครัวร้านอาหาร (ห้องบอส)', code:'L3b', chapter:'บท 1 บ้าน · ด่านบอส (ข้อเสนอ, P1, AA-1)', floor:['#D3D8DE','#C3C9D1'], wall:'#E4E1D8', dado:'#5F8F86',
+   note:'ข้อเสนอห้องบอสของบทบ้าน: บอสคราบยักษ์ (คราบน้ำมัน) ยึดลานกลางครัว ทางเดินรอบเป็นวงแหวน เตาสองแถวซ้าย/ขวาสร้างคอขวด 4 จุด T13 คือยกหม้อซุปยักษ์ที่ล้มทับเตาซ้าย (คนละฝั่งเตา) งานล้างและผ้าอยู่หลังครัว',
+   props:[
+     {x:2.2,y:0,w:1.6,d:.9,h:1.4,k:'washer',t:'เครื่องล้างจาน + ซักผ้ากันเปื้อน'},
+     {x:4.2,y:0,w:1.6,d:.9,h:.9,k:'sink',t:'อ่างล้างสามช่อง'},
+     {x:6.3,y:0,w:1.4,d:.7,h:1.6,k:'shelf',t:'ชั้นวางชิ้นส่วน'},
+     {x:8.2,y:-.05,w:1.6,d:.1,h:0,k:'door',t:'ประตูหลังร้าน'},
+     {x:10.4,y:0,w:1.3,d:.8,h:1.8,k:'cabinet',t:'ตู้น้ำยา'},
+     {x:3.9,y:3.5,w:1.0,d:2.0,h:.9,k:'heavy',t:'หม้อซุปล้ม'},{x:9.1,y:3.5,w:1.0,d:2.0,h:.9,k:'stove',t:'เตาแก๊ส'},
+     {x:11.6,y:3.0,w:.8,d:.8,h:.8,k:'bin',t:'ถังแยกขยะ'},
+     {x:11.9,y:4.8,w:.7,d:.9,h:1.2,k:'rack',t:'ชั้นคว่ำจาน/ราวผ้า'},
+     {x:2.4,y:5.9,w:1.6,d:.6,h:.9,k:'steel',t:'โต๊ะเตรียมอาหาร'},{x:10.0,y:5.9,w:1.6,d:.6,h:.9,k:'steel',t:'โต๊ะเตรียมอาหาร'},
+     {x:6.25,y:7.3,w:1.5,d:.65,h:.4,k:'cart',t:'รถเข็น'}
+   ],
+   slots:[
+     {id:'S1',x:3.0,y:1.4,type:'washer'},{id:'S2',x:5.0,y:1.4,type:'sink'},{id:'S3',x:7.0,y:1.2,type:'shelf'},
+     {id:'S4',x:9.0,y:1.2,type:'wall'},{id:'S5',x:11.05,y:1.3,type:'cabinet'},
+     {id:'S6',x:11.0,y:3.4,type:'bin'},{id:'S7',x:11.2,y:5.25,type:'rack'},
+     {id:'S8',x:3.3,y:7.05,type:'table'},{id:'S9',x:10.6,y:7.0,type:'table'},
+     {id:'S10',x:5.0,y:6.0,type:'floor'},{id:'S11',x:9.0,y:6.0,type:'floor'},
+     {id:'S12',x:2.5,y:3.15,type:'wall'}
+   ],
+   cart:{x:7.0,y:6.9}, pair:{a:[3.35,4.5],b:[5.45,4.5]},
+   E:[[7.0,5.35],[5.3,2.8],[8.7,2.8]], boss:{x:7.0,y:4.1,front:[7.0,5.35],back:[7.0,2.75]},
+   spawns:[[6.45,3.75],[7.55,3.75],[6.45,4.55],[7.55,4.55]],
+   chairs:[]
+ }
+];
+/* ---------- grid + Dijkstra ---------- */
+const RES = 4, R0 = 0.2; // 0.25-tile cells, player radius incl. slack
+function makeGrid(room){
+  const gw = RULE.W*RES, gh = RULE.H*RES, b = new Uint8Array(gw*gh);
+  for(let j=0;j<gh;j++)for(let i=0;i<gw;i++){
+    const x=(i+.5)/RES, y=(j+.5)/RES;
+    let bl = x<R0 || x>RULE.W-R0 || y<R0 || y>RULE.H-R0;
+    for(const p of room.props){ if(p.h<=0) continue;
+      if(x>p.x-R0 && x<p.x+p.w+R0 && y>p.y-R0 && y<p.y+p.d+R0){bl=true;break;} }
+    b[j*gw+i]=bl?1:0; }
+  return {gw,gh,b};
+}
+function cellOf(g,x,y){return [Math.min(g.gw-1,Math.max(0,Math.floor(x*RES))),Math.min(g.gh-1,Math.max(0,Math.floor(y*RES)))];}
+function dijkstra(g,x,y){
+  const n=g.gw*g.gh, d=new Float64Array(n).fill(Infinity);
+  let [ci,cj]=cellOf(g,x,y); const s=cj*g.gw+ci; d[s]=0;
+  // binary heap
+  const h=[[0,s]];
+  const push=(it)=>{h.push(it);let k=h.length-1;while(k>0){const p=(k-1)>>1;if(h[p][0]<=h[k][0])break;[h[p],h[k]]=[h[k],h[p]];k=p;}};
+  const pop=()=>{const t=h[0],l=h.pop();if(h.length){h[0]=l;let k=0;for(;;){let a=2*k+1,b=a+1,m=k;if(a<h.length&&h[a][0]<h[m][0])m=a;if(b<h.length&&h[b][0]<h[m][0])m=b;if(m===k)break;[h[m],h[k]]=[h[k],h[m]];k=m;}}return t;};
+  const N=[[1,0,1],[-1,0,1],[0,1,1],[0,-1,1],[1,1,Math.SQRT2],[1,-1,Math.SQRT2],[-1,1,Math.SQRT2],[-1,-1,Math.SQRT2]];
+  while(h.length){const [dv,u]=pop(); if(dv>d[u])continue; const ui=u%g.gw, uj=(u/g.gw)|0;
+    for(const [di,dj,c] of N){const vi=ui+di,vj=uj+dj; if(vi<0||vj<0||vi>=g.gw||vj>=g.gh)continue; const v=vj*g.gw+vi; if(g.b[v]&&v!==s)continue;
+      if(di&&dj&&(g.b[uj*g.gw+vi]||g.b[vj*g.gw+ui]))continue;
+      const nd=dv+c/RES; if(nd<d[v]){d[v]=nd;push([nd,v]);}}}
+  return d;
+}
+function blockedAt(g,x,y){const [i,j]=cellOf(g,x,y);return g.b[j*g.gw+i]===1;}
+
+/* ---------- points ---------- */
+function points(room){
+  const pts=room.slots.map(s=>({id:s.id,x:s.x,y:s.y,type:s.type,role:'slot'}));
+  pts.push({id:'CART',x:room.cart.x,y:room.cart.y,type:'cart',role:'slot'});
+  pts.push({id:'PA',x:room.pair.a[0],y:room.pair.a[1],type:'pair',role:'slot'});
+  pts.push({id:'PB',x:room.pair.b[0],y:room.pair.b[1],type:'pair',role:'slot'});
+  room.E.forEach((e,i)=>pts.push({id:'E'+(i+1),x:e[0],y:e[1],type:'emergency',role:'E'}));
+  room.spawns.forEach((s,i)=>pts.push({id:'P'+(i+1),x:s[0],y:s[1],type:'spawn',role:'spawn'}));
+  pts.push({id:'MID',x:7,y:4.45,type:'mid',role:'ref'});
+  return pts;
+}
+function zoneOf(x,y){return (x<7?(y<4.45?'A':'C'):(y<4.45?'B':'D'));}
+function analyse(room){
+  const g=makeGrid(room), pts=points(room), D={};
+  for(const p of pts){ p.blocked=blockedAt(g,p.x,p.y); const d=dijkstra(g,p.x,p.y); D[p.id]=(q)=>{const [i,j]=cellOf(g,q.x,q.y);return d[j*g.gw+i];}; }
+  const by=id=>pts.find(p=>p.id===id);
+  const path=(a,b)=>D[a.id](b);
+  const slots=pts.filter(p=>p.role==='slot'), Es=pts.filter(p=>p.role==='E'), sp=pts.filter(p=>p.role==='spawn');
+  const issues=[], euc=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+  // band + blocked
+  for(const s of slots.concat(Es)){ const B=RULE.BAND;
+    if(s.x<B.x0||s.x>B.x1||s.y<B.y0||s.y>B.y1) issues.push(`${s.id} อยู่นอกแถบวางจุด (${s.x},${s.y})`);
+    if(s.blocked) issues.push(`${s.id} ทับสิ่งกีดขวาง`); }
+  // spacing
+  let minSp=99, minPair='', minPP=99;
+  for(let i=0;i<slots.length;i++)for(let j=i+1;j<slots.length;j++){const a=slots[i],b=slots[j]; if(a.type==='pair'&&b.type==='pair')continue; const d=euc(a,b);
+    if(a.type==='pair'||b.type==='pair'){minPP=Math.min(minPP,d);continue;}
+    if(d<minSp){minSp=d;minPair=a.id+'–'+b.id;}}
+  if(minSp<RULE.SPACING_MIN) issues.push(`ระยะจุดใกล้สุด ${minSp.toFixed(2)} (${minPair}) < ${RULE.SPACING_MIN}`);
+  if(minPP<RULE.PAIR_SPACING) issues.push(`จุดยกคู่ใกล้จุดอื่นเกิน (${minPP.toFixed(2)})`);
+  let minE=99; for(const e of Es)for(const s of slots){minE=Math.min(minE,euc(e,s));}
+  if(minE<RULE.E_SPACING) issues.push(`จุดฉุกเฉินใกล้จุดงานเกิน (${minE.toFixed(2)})`);
+  // reach
+  const mid=by('MID'); let maxE=0; for(const e of Es){const d=path(mid,e); maxE=Math.max(maxE,d); if(!isFinite(d)) issues.push(`${e.id} เดินไปไม่ถึง`);}
+  for(const s of slots) if(!isFinite(path(mid,s))) issues.push(`${s.id} เดินไปไม่ถึง`);
+  if(maxE>RULE.E_REACH) issues.push(`จุดฉุกเฉินไกลจากกลางห้องเกิน ${RULE.E_REACH}`);
+  // long chains
+  const shelf=slots.find(s=>s.type==='shelf'), cart=by('CART');
+  const longs=[['T04 ชั้นวาง→รถเข็น',shelf,cart]];
+  const sink=slots.find(s=>s.type==='sink'), rack=slots.find(s=>s.type==='rack');
+  if(sink&&rack) longs.push(['T07 อ่าง→ชั้นคว่ำจาน',sink,rack]);
+  const longRes=longs.map(([n,a,b])=>{const d=path(a,b); if(d<RULE.LONG_MIN) issues.push(`${n} ใกล้เกิน (${d.toFixed(1)})`); return {n,d};});
+  const pa=by('PA'),pb=by('PB'); const pairD=euc(pa,pb); if(pairD<RULE.PAIR_MIN) issues.push('T13 A–B ใกล้เกิน');
+  // spawn fairness
+  const workSlots=slots.filter(s=>s.type!=='cart'&&s.type!=='pair');
+  const fair=sp.map(s=>{
+    const ds=workSlots.map(w=>path(s,w));
+    return {id:s.id, cart:path(s,cart), shelf:path(s,shelf), mean:ds.reduce((a,b)=>a+b,0)/ds.length, near:Math.min(...ds)};});
+  const spread=k=>Math.max(...fair.map(f=>f[k]))-Math.min(...fair.map(f=>f[k]));
+  const fairRes={cart:spread('cart'),shelf:spread('shelf'),mean:spread('mean'),near:spread('near'),minNear:Math.min(...fair.map(f=>f.near))};
+  ['cart','shelf','mean'].forEach(k=>{if(fairRes[k]>RULE.FAIR_TOL) issues.push(`จุดเกิด: ระยะถึง${k} ต่างกัน ${fairRes[k].toFixed(2)} > ${RULE.FAIR_TOL}`);});
+  if(fairRes.minNear<RULE.SPAWN_GAP) issues.push(`จุดเกิดใกล้จุดงานเกิน (${fairRes.minNear.toFixed(2)})`);
+  // occlusion
+  for(const s of slots.concat(Es)) for(const p of room.props){ if(p.h<1) continue;
+    const y2=p.y+p.d; if(s.x>p.x-.3&&s.x<p.x+p.w+.3&&s.y<p.y&&y2-s.y<RULE.OCCLUDE*p.h) issues.push(`${s.id} ถูก ${p.t} บัง`); }
+  // average legs between work slots
+  let sum=0,n=0,mx=0; for(let i=0;i<workSlots.length;i++)for(let j=i+1;j<workSlots.length;j++){const d=path(workSlots[i],workSlots[j]);sum+=d;n++;mx=Math.max(mx,d);}
+  const zones={}; workSlots.forEach(s=>{const z=zoneOf(s.x,s.y);zones[z]=(zones[z]||0)+1;});
+  return {room, g, pts, path, by, issues, minSp, minPair, minPP, minE, maxE, longRes, pairD, fair, fairRes, meanPair:sum/n, maxPair:mx, zones};
+}
+
+/* ---------- seed + simulation (MVP set) ---------- */
+function rng(seed){let s=seed>>>0||1;return ()=>{s^=s<<13;s>>>=0;s^=s>>17;s^=s<<5;s>>>=0;return s/4294967296;};}
+const WORK={T01:5,T02:4,T03:8,T05:6.5,T09a:4,T09b:3,T13:3.5,T04a:6,T04b:8,T16:6,T10:6,T08:5,T11:4,T06:3.5,T07:10,T07b:1,T14:4,T15:10};
+const OPEN=0.6;          // tap button + card open/close per step
+const COUNTS={1:{common:0,long:['T04','T09'],short:4},2:{common:1,long:['T04','T09'],short:4},3:{common:1,long:['T04','T09'],short:6},4:{common:1,long:['T04','T09','T09'],short:7}};
+const SHORT_POOL=[['T01','floor'],['T02','table'],['T02','wall'],['T03','wall'],['T05','bin']];
+function buildRound(A,n,r,counts){
+  const CN=(counts||COUNTS)[n];
+  const free=new Set(A.pts.filter(p=>p.role==='slot'&&!['cart','pair','shelf','rack','sink','washer','cabinet','glass'].includes(p.type)).map(p=>p.id));
+  const load={A:0,B:0,C:0,D:0}, steps=[]; let tid=0, reused=0;
+  const uses={};
+  const pick=(types)=>{let c=[...free].map(id=>A.by(id)).filter(p=>types.includes(p.type));
+    if(!c.length){ // room full: reuse a slot, the new task opens there after the first one is done (same for both teams)
+      c=A.pts.filter(p=>p.role==='slot'&&types.includes(p.type)&&uses[p.id]); if(!c.length) return null;
+      const mu=Math.min(...c.map(p=>uses[p.id])); const r2=c.filter(p=>uses[p.id]===mu); const p=r2[Math.floor(r()*r2.length)]; uses[p.id]++; reused++; return p; } const m=Math.min(...c.map(p=>load[zoneOf(p.x,p.y)]));
+    const best=c.filter(p=>load[zoneOf(p.x,p.y)]===m); const p=best[Math.floor(r()*best.length)]; free.delete(p.id); uses[p.id]=1; load[zoneOf(p.x,p.y)]++; return p;};
+  const shelf=A.pts.find(p=>p.type==='shelf');
+  for(const L of CN.long){ const t=tid++;
+    if(L==='T04'){steps.push({t,k:'T04a',at:shelf,seq:0},{t,k:'T04b',at:A.by('CART'),seq:1});}
+    else {const p=pick(['floor','table']); if(p) steps.push({t,k:'T09a',at:p,seq:0},{t,k:'T09b',at:p,seq:1,wait:20});}}
+  if(CN.common){const t=tid++; steps.push({t,k:'T13',at:A.by('PA'),pair:A.by('PB'),seq:0});}
+  for(let i=0;i<CN.short;i++){ let ok=false; for(let tries=0;tries<10&&!ok;tries++){const [k,ty]=SHORT_POOL[Math.floor(r()*SHORT_POOL.length)]; const p=pick([ty]); if(p){steps.push({t:tid++,k,at:p,seq:0});ok=true;}}}
+  steps.reused=reused; return steps;
+}
+function simulate(A,n,seed,counts){
+  const r=rng(seed*7919+n), steps=buildRound(A,n,r,counts);
+  const em=[40,75,100].slice(0,2+(seed%2)).map((at,i)=>({t:900+i,k:'T16',at:A.pts.filter(p=>p.role==='E')[(seed+i)%3],seq:0,emAt:at}));
+  const all=steps.concat(em);
+  const pl=A.room.spawns.slice(0,n).map((s,i)=>({x:s[0],y:s[1],at:{x:s[0],y:s[1],id:'P'+(i+1)},free:0,walk:0,legs:[]}));
+  const done=new Set(), doneAt={}, taken=new Set();
+  const dist=(from,to)=>{const d=from.id&&A.by(from.id)?A.path(A.by(from.id),to):Math.hypot(from.x-to.x,from.y-to.y);return d;};
+  let tNow=0, guard=0;
+  const avail=(s,now)=>{ if(done.has(s)||taken.has(s))return false; if(s.emAt!=null&&now<s.emAt)return false;
+    const prev=all.find(q=>q.t===s.t&&q.seq===s.seq-1); if(prev&&!done.has(prev))return false;
+    if(all.some(q=>q!==s&&q.at===s.at&&q.t<s.t&&!done.has(q)))return false;
+    if(prev&&s.wait&&now<doneAt[prev.t+':'+prev.seq]+s.wait)return false; return true;};
+  const regular=steps.length; let regDone=0;
+  const finished=()=>regDone>=regular&&em.every(e=>done.has(e)||e.emAt>tNow);
+  while(!finished()&&guard++<800){
+    pl.sort((a,b)=>a.free-b.free); const p=pl[0]; const now=p.free;
+    let cands=all.filter(s=>avail(s,now));
+    if(regDone>=regular) cands=cands.filter(s=>s.emAt<=tNow);
+    if(!cands.length){ if(regDone>=regular&&!pl.some(q=>q.free>now)) break; // wait for next event
+      const nexts=[...pl.slice(1).map(q=>q.free), ...all.filter(s=>!done.has(s)&&s.emAt!=null&&s.emAt>now).map(s=>s.emAt),
+        ...all.filter(s=>s.wait&&!done.has(s)).map(s=>{const pr=all.find(q=>q.t===s.t&&q.seq===s.seq-1);return done.has(pr)?doneAt[pr.t+':'+pr.seq]+s.wait:Infinity;})].filter(v=>v>now);
+      p.free=nexts.length?Math.min(...nexts):now+1; continue; }
+    const em=cands.filter(s=>s.k==='T16'); if(em.length) cands=em;
+    let best=null,bc=Infinity; for(const s of cands){const c=dist(p.at,s.at)/RULE.SPEED+WORK[s.k]; if(c<bc){bc=c;best=s;}}
+    taken.add(best);
+    const d1=dist(p.at,best.at); p.walk+=d1/RULE.SPEED; p.legs.push(d1);
+    let fin=now+d1/RULE.SPEED+OPEN+WORK[best.k];
+    if(best.k==='T13'){ // nearest other player who is free soonest joins at B
+      const others=pl.slice(1); let q=null,qc=Infinity; for(const o of others){const c=Math.max(o.free,now)+dist(o.at,best.pair)/RULE.SPEED; if(c<qc){qc=c;q=o;}}
+      const d2=dist(q.at,best.pair); q.walk+=d2/RULE.SPEED; q.legs.push(d2);
+      const start=Math.max(now+d1/RULE.SPEED, qc)+OPEN; fin=start+WORK.T13; q.free=fin; q.at=best.pair;}
+    p.free=fin; p.at=best.at; done.add(best); if(best.k!=='T16')regDone++; doneAt[best.t+':'+best.seq]=fin; tNow=Math.max(tNow,fin);
+  }
+  const legs=pl.flatMap(q=>q.legs);
+  return {finish:tNow, walkShare:pl.reduce((a,q)=>a+q.walk,0)/(n*tNow), meanLeg:legs.reduce((a,b)=>a+b,0)/legs.length, maxLeg:Math.max(...legs), steps:all.length, reused:steps.reused, em:em.filter(e=>done.has(e)).length};
+}
+function simStats(A,n,runs=300,counts){
+  const res=[];for(let s=1;s<=runs;s++)res.push(simulate(A,n,s,counts));
+  const m=k=>res.reduce((a,r)=>a+r[k],0)/res.length; const sorted=res.map(r=>r.finish).sort((a,b)=>a-b);
+  return {n, finish:m('finish'), p90:sorted[Math.floor(res.length*.9)], walkShare:m('walkShare'), meanLeg:m('meanLeg'), maxLeg:Math.max(...res.map(r=>r.maxLeg)), steps:m('steps'), reused:m('reused'), em:m('em')};
+}
+return {RULE, ROOMS, TYPE_TASKS, COUNTS, analyse, simStats, zoneOf, WORK};
+})();
+if(typeof module!=='undefined') module.exports=BOBL;
+</script>
+<script>
+(function(){
+const {RULE,ROOMS,analyse,simStats,zoneOf}=BOBL;
+const INK='#041E4F';
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const f1=v=>Math.round(v*10)/10;
+const R=(x,y,w,h,f,o={})=>`<rect x="${f1(x)}" y="${f1(y)}" width="${f1(w)}" height="${f1(h)}" rx="${o.r||0}" fill="${f}"${o.s?` stroke="${o.s}" stroke-width="${o.sw||3}"`:''}${o.dash?` stroke-dasharray="${o.dash}"`:''}${o.op!=null?` opacity="${o.op}"`:''}/>`;
+const Ci=(x,y,r,f,o={})=>`<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(r)}" fill="${f}"${o.s?` stroke="${o.s}" stroke-width="${o.sw||3}"`:''}${o.dash?` stroke-dasharray="${o.dash}"`:''}${o.op!=null?` opacity="${o.op}"`:''}/>`;
+const El=(x,y,rx,ry,f,o={})=>`<ellipse cx="${f1(x)}" cy="${f1(y)}" rx="${f1(rx)}" ry="${f1(ry)}" fill="${f}"${o.s?` stroke="${o.s}" stroke-width="${o.sw||3}"`:''}${o.dash?` stroke-dasharray="${o.dash}"`:''}${o.op!=null?` opacity="${o.op}"`:''}/>`;
+const T=(x,y,t,sz=20,f=INK,o={})=>`<text x="${f1(x)}" y="${f1(y)}" font-size="${sz}" fill="${f}" text-anchor="${o.a||'middle'}" font-family="Mitr,IBM Plex Sans Thai,system-ui" font-weight="${o.w||500}" dominant-baseline="middle"${o.st?` stroke="${o.st}" stroke-width="${o.sw||6}" paint-order="stroke" stroke-linejoin="round"`:''}>${esc(t)}</text>`;
+const L=(x1,y1,x2,y2,c,o={})=>`<line x1="${f1(x1)}" y1="${f1(y1)}" x2="${f1(x2)}" y2="${f1(y2)}" stroke="${c}" stroke-width="${o.sw||3}"${o.dash?` stroke-dasharray="${o.dash}"`:''}${o.op!=null?` opacity="${o.op}"`:''} stroke-linecap="round"/>`;
+const star=(x,y,r,f,s=INK)=>{let d='';for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr=i%2?r*.45:r;d+=(i?'L':'M')+f1(x+Math.cos(a)*rr)+' '+f1(y+Math.sin(a)*rr);}return `<path d="${d}Z" fill="${f}" stroke="${s}" stroke-width="3" stroke-linejoin="round"/>`;};
+
+const TYPE={floor:['พื้น','#E9C46A','T01 กวาดตามทาง · T09 แช่คราบรอ · T14 ล้างพื้นทั้งแถว (3 จุด)','mini_bg_floor'],
+ table:['โต๊ะ','#F4A261','T02 ถูคราบวน · T09 แช่คราบรอ · T10 ไล่ฝุ่นใต้โต๊ะ','mini_bg_table'],
+ wall:['ผนัง','#8AB17D','T03 ฉีดให้ตรงจุด · T02 ถูคราบวน','mini_bg_wall'],
+ glass:['กระจก','#9AD1F5','T08 เช็ดกระจก','mini_bg_glass'],
+ bin:['ถัง','#7C879C','T05 แยกขยะ','mini_bg_bin'],
+ sink:['อ่าง','#4EA8DE','T06 บิดผ้าถู · T07 ล้างจาน ขั้น 1–2','mini_bg_sink'],
+ rack:['ราว','#5FB6A8','T07 ล้างจาน ขั้น 3 (วางจาน, ไม่มีการ์ด)','— (ในโลก)'],
+ cabinet:['ตู้','#B392D9','T11 เติมน้ำยาตามระดับ','mini_bg_cabinet'],
+ washer:['ซัก','#6D83C9','T15 จำลำดับเครื่องซักผ้า','mini_bg_washer'],
+ shelf:['ชั้น','#D9A15C','T04 ขั้น 1 หยิบชิ้นส่วน (HUD-StationShelf เดิม)','— (HUD รถเข็น)'],
+ cart:['รถ','#C9CFDD','T04 ขั้น 2 จัดรถเข็น (S22-Cart) · รถเข็นช่วยมินิเกม ≤ 1.5','— (HUD รถเข็น)'],
+ pair:['A/B','#FFB4C8','T13 ยกของหนักสองคน (ยืนคนละฝั่ง ห่าง ≥ 2)','mini_bg_cabinet'],
+ emergency:['E','#FB2F44','T16 คราบฉุกเฉิน (จุดอ่อนของศัตรู) · บอส: 2 จุดหน้า/หลัง','ตามมินิเกมจุดอ่อน']};
+const PROPC={shelf:['#F7DDA6','#D9A15C'],cabinet:['#DCCBF2','#9E7CC9'],desk:['#F7DDA6','#C99251'],table:['#F7DDA6','#C99251'],counter:['#F7DDA6','#C99251'],
+ bin:['#7C879C','#4D5668'],heavy:['#FFD3DF','#D97A95'],cart:['#D8DEE9','#9AA6C2'],sink:['#CFD8E6','#8FA0BA'],rack:['#CFEDE8','#5FB6A8'],washer:['#DDE3F7','#6D83C9'],pipe:['#B8C0D4','#6C7A94'],
+ sofa:['#F5B98A','#D9824A'],bed:['#DCEBFA','#7FB2E0'],drawer:['#F2D3A8','#C99251'],stove:['#C9CED6','#6C7480'],steel:['#E3E7EC','#9AA3AE']};
+const CHOKE={rental:[],condo:[[7,3.3,'ช่องกลาง 2.2'],[0.9,3.3,'ช่องซ้าย 1.4'],[13.1,3.3,'ช่องขวา 1.4']],
+ kitchen:[[4.4,2.95,'คอขวด 1'],[9.6,2.95,'คอขวด 2'],[4.4,6.05,'คอขวด 3'],[9.6,6.05,'คอขวด 4']]};
+
+/* ---------- top-down plan ---------- */
+const S=72, OXp=40, OYp=78;
+const X=x=>OXp+x*S, Y=y=>OYp+y*S;
+function plan(A){
+  const room=A.room; let s=R(0,0,OXp*2+14*S,OYp+8*S+40,'#FBF7EE',{r:12});
+  for(let j=0;j<8;j++)for(let i=0;i<14;i++)s+=R(X(i),Y(j),S,S,(i+j)%2?room.floor[1]:room.floor[0]);
+  // back wall strip
+  s+=R(X(0),Y(0)-52,14*S,52,room.wall,{s:INK,sw:2})+R(X(0),Y(0)-20,14*S,20,room.dado,{op:.8});
+  for(const p of room.props.filter(p=>p.h<=0)){const c=p.k==='window'?'#BFE1FF':p.k==='door'?'#8E6BD8':'#2E5E4E';
+    s+=R(X(p.x),Y(0)-46,p.w*S,30,c,{s:INK,sw:2,r:3})+T(X(p.x+p.w/2),Y(0)-31,p.t,14,'#fff',{w:500});}
+  // heat (mean path from spawns)
+  let h='<g class="layer heat">';
+  for(let j=0;j<16;j++)for(let i=0;i<28;i++){const q={x:(i+.5)/2,y:(j+.5)/2}; if(A.g.b[Math.floor(q.y*4)*A.g.gw+Math.floor(q.x*4)])continue;
+    const d=A.pts.filter(p=>p.role==='spawn').reduce((a,p)=>a+A.path(p,q),0)/4; const t=Math.min(1,d/10);
+    h+=R(X(q.x-.25),Y(q.y-.25),S/2,S/2,`hsl(${210-t*190} 80% 55%)`,{op:.42});}
+  h+=T(X(13.9),Y(7.75),'น้ำเงิน = ใกล้จุดเกิด · แดง = ≥ 10 ช่อง',14,INK,{a:'end',st:'#fff',sw:5})+'</g>';
+  s+=h;
+  // ban band
+  const B=RULE.BAND;
+  s+=`<g class="layer ban">`+R(X(0),Y(0),X(B.x0)-X(0),8*S,'#FF3B8B',{op:.18})+R(X(B.x1),Y(0),X(14)-X(B.x1),8*S,'#FF3B8B',{op:.18})+
+     R(X(B.x0),Y(0),X(B.x1)-X(B.x0),B.y0*S,'#FF3B8B',{op:.18})+R(X(B.x0),Y(B.y1),X(B.x1)-X(B.x0),(8-B.y1)*S,'#FF3B8B',{op:.18})+
+     T(X(1.1),Y(1.7),'ใต้รายการงาน',13,'#7A0F3F',{st:'#fff',sw:4})+T(X(1.1),Y(6.4),'นิ้วโป้งซ้าย',13,'#7A0F3F',{st:'#fff',sw:4})+T(X(12.9),Y(6.4),'นิ้วโป้งขวา',13,'#7A0F3F',{st:'#fff',sw:4})+`</g>`;
+  // zones
+  s+=`<g class="layer zones">`+L(X(7),Y(0),X(7),Y(8),INK,{sw:2,dash:'4 8',op:.5})+L(X(0),Y(4.45),X(14),Y(4.45),INK,{sw:2,dash:'4 8',op:.5})+
+     [['A',.55,.75],['B',13.45,.75],['C',.55,7.6],['D',13.45,7.6]].map(z=>T(X(z[1]),Y(z[2]),z[0],34,INK,{w:600}).replace('fill="#041E4F"','fill="#041E4F" opacity=".28"')).join('')+`</g>`;
+  // props
+  for(const p of room.props.filter(p=>p.h>0)){const c=PROPC[p.k]||['#ddd','#999'];
+    s+=R(X(p.x),Y(p.y),p.w*S,p.d*S,c[0],{s:c[1],sw:3,r:5});
+    if(p.w*S>60||p.d*S>60)s+=T(X(p.x+p.w/2),Y(p.y+p.d/2),p.t,13,INK,{st:c[0],sw:4});}
+  // choke points
+  for(const c of CHOKE[room.id]||[]) s+=`<g>`+L(X(c[0])-18,Y(c[1]),X(c[0])+18,Y(c[1]),'#C21F33',{sw:5})+T(X(c[0]),Y(c[1])+(c[1]>5?-16:20),c[2],13,'#C21F33',{st:'#fff',sw:4})+`</g>`;
+  // boss
+  if(room.boss){const b=room.boss; s+=El(X(b.x),Y(b.y),0.9*S,0.7*S,'#8B4FC8',{op:.22,s:'#8B4FC8',dash:'8 6'})+T(X(b.x)+0.95*S,Y(b.y)-0.55*S,'ลานบอส',13,'#5B2A8F',{a:'start',st:'#fff',sw:4});}
+  // routes
+  const by=id=>A.by(id), shelf=A.pts.find(p=>p.type==='shelf'), sink=A.pts.find(p=>p.type==='sink'), rack=A.pts.find(p=>p.type==='rack');
+  let rt='<g class="layer route">';
+  const route=(a,b,c,lab)=>L(X(a.x),Y(a.y),X(b.x),Y(b.y),c,{sw:4,dash:'2 10'})+T((X(a.x)+X(b.x))/2+14,(Y(a.y)+Y(b.y))/2,lab,13,c,{a:'start',st:'#fff',sw:4});
+  rt+=route(shelf,by('CART'),'#B25E00',`T04 ${A.path(shelf,by('CART')).toFixed(1)} ช่อง`);
+  if(sink&&rack)rt+=route(sink,rack,'#1A6FC4',`T07 ${A.path(sink,rack).toFixed(1)} ช่อง`);
+  rt+=L(X(by('PA').x),Y(by('PA').y),X(by('PB').x),Y(by('PB').y),'#D9367A',{sw:3,dash:'6 6'});
+  s+=rt+'</g>';
+  // near rings
+  let nr='<g class="layer near">';
+  for(const p of A.pts.filter(p=>p.role==='slot')) nr+=Ci(X(p.x),Y(p.y),RULE.NEAR*S,'none',{s:'#1A6FC4',sw:1.5,op:.55})+Ci(X(p.x),Y(p.y),RULE.PREVIEW*S,'none',{s:'#1A6FC4',sw:1,dash:'3 6',op:.3});
+  s+=nr+'</g>';
+  // slots
+  for(const p of A.pts.filter(p=>p.role==='slot')){const t=TYPE[p.type]; const lab=p.type==='pair'?p.id.slice(1):t[0];
+    s+=Ci(X(p.x),Y(p.y),0.42*S,t[1],{s:INK,sw:3})+T(X(p.x),Y(p.y)+1,lab,lab.length>2?13:15,INK,{w:600});
+    s+=`<g class="layer ids">`+T(X(p.x),Y(p.y)-0.42*S-10,p.id,13,'#1A3A7A',{st:'#fff',sw:4,w:600})+`</g>`;}
+  for(const p of A.pts.filter(p=>p.role==='E')) s+=Ci(X(p.x),Y(p.y),0.34*S,'#fff',{s:'#FB2F44',sw:4,dash:'6 4'})+T(X(p.x),Y(p.y)+1,p.id,14,'#C21F33',{w:600});
+  A.pts.filter(p=>p.role==='spawn').forEach((p,i)=>{s+=star(X(p.x),Y(p.y),0.3*S,'#FFD84D')+T(X(p.x),Y(p.y)+2,String(i+1),13,INK,{w:600});});
+  s+=T(X(7),Y(8)+22,'↓ กล้อง (ขอบล่างจอ)',13,'#55607A');
+  return `<svg viewBox="0 0 ${OXp*2+14*S} ${OYp+8*S+40}" role="img" aria-label="ผังห้อง ${esc(room.name)}">${s}</svg>`;
+}
+const gp=document.getElementById('g-plans'), results=[];
+ROOMS.forEach(room=>{const A=analyse(room); results.push(A);
+  const fig=document.createElement('figure');
+  const slots=A.pts.filter(p=>p.role==='slot');
+  const rows=slots.map(p=>`<tr><td class="k">${p.id}</td><td>${TYPE[p.type][0]}</td><td>${zoneOf(p.x,p.y)}</td><td class="num">(${p.x}, ${p.y})</td><td>${esc(TYPE[p.type][2])}</td></tr>`).join('');
+  fig.innerHTML=plan(A)+`<figcaption><span class="id">${room.code} · ${esc(room.chapter)}</span><h3>${esc(room.name)}</h3><p>${esc(room.note)}</p>
+   <p>${A.issues.length?`<span class="bad">ไม่ผ่าน ${A.issues.length} ข้อ:</span> ${esc(A.issues.join(' · '))}`:'<span class="ok">ผ่านกติกาตรวจครบ</span>'}</p></figcaption>
+   <details><summary>ตารางจุด ${slots.length} จุด</summary><div class="tblwrap" style="border:none;padding:0"><table><thead><tr><th>รหัส</th><th>ชนิด</th><th>โซน</th><th>ตำแหน่ง</th><th>เปิดได้</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
+  gp.appendChild(fig);});
+document.querySelector('#tbl-types tbody').innerHTML=Object.entries(TYPE).map(([k,t])=>`<tr><td class="k">${k}</td><td>${t[0]}</td><td>${esc(t[2])}</td><td>${esc(t[3])}</td></tr>`).join('');
+
+/* ---------- 3/4 play view (rental room) ---------- */
+const W=2340,H=1080,U=104,KY=.82,KZ=.57,OX=442,OY=309,SL=156,SR=2292,ST=24,SB=996;
+const P=(x,y,z=0)=>[OX+x*U,OY+y*U*KY-z*U*KZ];
+const pts=a=>a.map(p=>f1(p[0])+','+f1(p[1])).join(' ');
+const poly=(a,f,o={})=>`<polygon points="${pts(a)}" fill="${f}"${o.s?` stroke="${o.s}" stroke-width="${o.sw||3}" stroke-linejoin="round"`:''}${o.op!=null?` opacity="${o.op}"`:''}/>`;
+function box(x,y,w,d,h,c){return poly([P(x,y+d,h),P(x+w,y+d,h),P(x+w,y+d,0),P(x,y+d,0)],c[1],{s:INK,sw:3})+poly([P(x,y,h),P(x+w,y,h),P(x+w,y+d,h),P(x,y+d,h)],c[0],{s:INK,sw:3});}
+function ring(x,y,col,o={}){const p=P(x,y);let s=El(p[0],p[1],0.55*U,0.55*U*KY,o.fill||'none',{s:col,sw:o.sw||7,op:o.op,dash:o.dash});
+  if(o.glow)s=El(p[0],p[1],0.55*U+10,0.55*U*KY+8,'none',{s:'#fff',sw:6,op:.9})+s; return s;}
+function hero(x,y,col,o={}){const [fx,fy]=P(x,y);let s=El(fx,fy,46,16,'none',{s:col,sw:6})+El(fx,fy,36,12,INK,{op:.25});
+  s+=R(fx-28,fy-78,56,60,col,{r:20,s:INK,sw:4})+R(fx-17,fy-66,34,42,'#FEEECF',{r:10})+Ci(fx,fy-104,36,'#FADDC1',{s:INK,sw:4})+Ci(fx-12,fy-100,5,INK)+Ci(fx+12,fy-100,5,INK);
+  if(o.name)s+=R(fx-46,fy+12,92,30,'#fff',{r:15,s:INK,sw:3})+T(fx,fy+28,o.name,22,INK,{w:600});
+  if(o.busy)s+=Ci(fx,fy-170,30,'#fff',{s:INK,sw:3})+T(fx,fy-168,'⋯',34,INK,{w:600});
+  return s;}
+function face(cx,cy,r,col){return Ci(cx,cy,r,col,{s:INK,sw:3})+Ci(cx,cy+2,r*.62,'#FADDC1')+Ci(cx-r*.22,cy,r*.09,INK)+Ci(cx+r*.22,cy,r*.09,INK);}
+function playView(){
+  const room=ROOMS[0]; let s=R(0,0,W,H,'#6D5A3C');
+  s+=poly([P(0,0,2.2),P(14,0,2.2),P(14,0,0),P(0,0,0)],room.wall,{s:INK,sw:3})+poly([P(0,0,1.0),P(14,0,1.0),P(14,0,0),P(0,0,0)],room.dado,{op:.9});
+  for(const p of room.props.filter(p=>p.h<=0)){const c=p.k==='window'?'#BFE1FF':'#2E5E4E';s+=poly([P(p.x,0,2.0),P(p.x+p.w,0,2.0),P(p.x+p.w,0,1.2),P(p.x,0,1.2)],c,{s:INK,sw:3});}
+  for(let j=0;j<8;j++)for(let i=0;i<14;i++)s+=poly([P(i,j),P(i+1,j),P(i+1,j+1),P(i,j+1)],(i+j)%2?room.floor[1]:room.floor[0]);
+  // dirt on open spots
+  const dirt=(x,y,r)=>{const p=P(x,y);return El(p[0],p[1]-4,r,r*KY*.8,'#8A5226',{op:.45});};
+  // rings first (floor level)
+  const by=id=>room.slots.find(q=>q.id===id);
+  const rings=[['S2','#8AB17D',{}],['S6','#E9C46A',{}],['S8','#F4A261',{glow:true,sw:9}],['S9','#7C879C',{}],['S10','#F4A261',{}],['S4','#8AB17D',{op:.35}],['S11','#E9C46A',{}]];
+  rings.forEach(([id,c,o])=>{const q=by(id);s+=dirt(q.x,q.y,30)+ring(q.x,q.y,c,o);});
+  // done spot S5 (clean sparkle) / S4 done
+  {const q=by('S4');const p=P(q.x,q.y);s+=T(p[0],p[1]-6,'✓',40,'#178A4F',{w:600,st:'#fff',sw:8});}
+  // emergency at E1
+  {const p=P(7.0,3.0);s+=El(p[0],p[1],64,26,'#FB2F44',{op:.25,s:'#FB2F44',sw:6,dash:'14 8'});
+   s+=`<path d="M${p[0]-48} ${p[1]-4} q0 -66 48 -66 q48 0 48 66 q-12 10 -24 0 q-12 10 -24 0 q-12 10 -24 0 q-12 10 -24 0z" fill="#8B4FC8" stroke="${INK}" stroke-width="4"/>`+Ci(p[0]-16,p[1]-40,10,'#fff',{s:INK,sw:3})+Ci(p[0]+16,p[1]-40,10,'#fff',{s:INK,sw:3});
+   s+=R(p[0]-46,p[1]-118,92,40,'#FB2F44',{r:20,s:INK,sw:3})+T(p[0],p[1]-98,'0:18',26,'#fff',{w:600});}
+  // wait ring T09 at S7
+  {const q=by('S7');const p=P(q.x,q.y);s+=ring(q.x,q.y,'#E9C46A',{})+Ci(p[0],p[1]-70,30,'#fff',{s:INK,sw:3})+`<path d="M${p[0]} ${p[1]-70} v-18 M${p[0]} ${p[1]-70} h12" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>`+T(p[0],p[1]-26,'0:07',22,INK,{w:600,st:'#fff',sw:6});}
+  // pair A/B with bench
+  const pa=room.pair.a,pb=room.pair.b; s+=ring(pa[0],pa[1],'#D9367A',{})+ring(pb[0],pb[1],'#D9367A',{dash:'12 8'});
+  // props (sorted by y)
+  room.props.filter(p=>p.h>0).sort((a,b)=>(a.y+a.d)-(b.y+b.d)).forEach(p=>{const c=PROPC[p.k]||['#ddd','#999'];s+=box(p.x,p.y,p.w,p.d,p.h,c);});
+  // breadcrumb from player (Krit at 4.6,3.6) to S8
+  const path=[[5.25,4.05],[4.6,4.25],[3.95,4.4]]; path.forEach((q,i)=>{const p=P(q[0],q[1]);s+=`<path d="M${p[0]-14} ${p[1]-8} l16 8 l-16 8" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" opacity="${.5+i*.2}" transform="rotate(160 ${p[0]} ${p[1]})"/>`;});
+  // locked ring S10: friend face
+  {const q=by('S10');const p=P(q.x,q.y);s+=face(p[0]+58,p[1]-12,22,'#3D8FE0');}
+  // soft claim on S9 (bin): friend going
+  {const q=by('S9');const p=P(q.x,q.y);s+=face(p[0]-62,p[1]-6,18,'#8E6BD8')+T(p[0]-62,p[1]+26,'กำลังไป',18,INK,{st:'#fff',sw:5});}
+  // heroes
+  s+=hero(5.9,4.0,'#F79A2E',{name:'Krit'});
+  {const q=by('S10');s+=hero(q.x,q.y-.05,'#3D8FE0',{name:'Mai',busy:true});}
+  s+=hero(10.0,6.0,'#8E6BD8',{name:'Tan'});
+  s+=hero(pa[0],pa[1]-.05,'#2FA97A',{name:'Pim'});
+  // star + preview chip on S8 (suggested for Krit)
+  {const q=by('S8');const p=P(q.x,q.y);s+=star(p[0],p[1]-96,30,'#FFD84D');
+   s+=R(p[0]-150,p[1]-200,300,64,'#FFFDF5',{r:32,s:INK,sw:4})+Ci(p[0]-112,p[1]-168,20,'#F4A261',{s:INK,sw:3})+T(p[0]+10,p[1]-176,'ถูคราบวน · ~4 วิ',24,INK,{w:600})+T(p[0]+10,p[1]-150,'ถนัด: ฟอง',18,'#55607A',{w:500});}
+  // pair waiting bubble
+  {const p=P(pa[0],pa[1]);s+=R(p[0]-110,p[1]+46,220,46,'#fff',{r:23,s:INK,sw:3})+T(p[0],p[1]+69,'รอเพื่อนอีก 1 คน',22,INK,{w:600});}
+  // HUD: task list
+  s+=R(SL,ST+150,440,470,'#FFFDF5',{r:24,s:INK,sw:4})+T(SL+24,ST+184,'งานของทีม 4/11',28,INK,{a:'start',w:600});
+  [['#FB2F44','สไลม์!','0:18'],['#D9367A','ยกฟูก','1/2'],['#F4A261','ถูคราบวน','★'],['#E9C46A','แช่คราบ','0:07'],['#7C879C','แยกขยะ','👤'],['#F4A261','ไล่ฝุ่นใต้โต๊ะ','🔒']].forEach((r,i)=>{const y=ST+232+i*64;
+    s+=R(SL+14,y-26,412,56,i===2?'#FFF2C2':'none',{r:14})+Ci(SL+44,y,16,r[0],{s:INK,sw:2.5})+T(SL+72,y,r[1],24,INK,{a:'start'})+T(SL+404,y,r[2],22,INK,{a:'end',w:600});});
+  s+=T(SL+24,ST+600,'+5 · แตะแถว = ลูกศรนำทาง',18,'#55607A',{a:'start'});
+  // bars
+  const cx=W/2; s+=R(cx-360,ST+8,720,120,'#FFFDF5',{r:24,s:INK,sw:4})+T(cx-330,ST+46,'ทีมฟ้า',24,INK,{a:'start',w:600})+R(cx-220,ST+32,420,30,'#E6DCC2',{r:15})+R(cx-220,ST+32,420*.36,30,'#1A6FC4',{r:15})+T(cx+300,ST+48,'36%',26,INK,{w:600});
+  s+=T(cx-330,ST+96,'ทีมแดง',24,INK,{a:'start',w:600})+R(cx-220,ST+82,420,30,'#E6DCC2',{r:15})+R(cx-220,ST+82,420*.25,30,'#9AA6C2',{r:15})+T(cx+300,ST+98,'25%',26,INK,{w:600});
+  s+=R(cx+380,ST+30,150,70,'#FFFDF5',{r:35,s:INK,sw:4})+T(cx+455,ST+66,'1:12',34,INK,{w:600});
+  // joystick + context button
+  s+=Ci(SL+250,SB-170,130,INK,{op:.22,s:'#fff',sw:3})+Ci(SL+250-60,SB-170+20,60,'#fff',{s:INK,sw:4,op:.95});
+  s+=R(SR-470,SB-200,440,180,'#F6C431',{r:90,s:INK,sw:6})+T(SR-250,SB-130,'ทำงาน:',30,INK,{w:500})+T(SR-250,SB-86,'ถูคราบวน',44,INK,{w:600});
+  // mate tray
+  s+=R(SL,ST+640,440,64,'#FFFDF5',{r:32,s:INK,sw:3})+face(SL+36,ST+672,20,'#3D8FE0')+T(SL+64,ST+672,'กำลังทำ',20,INK,{a:'start'})+face(SL+186,ST+672,20,'#2FA97A')+T(SL+214,ST+672,'รอยก',20,INK,{a:'start'})+face(SL+316,ST+672,20,'#8E6BD8')+T(SL+344,ST+672,'กำลังไป',20,INK,{a:'start'});
+  // annotations
+  const qa=by('S8'),q10=by('S10'),q9=by('S9'),q7=by('S7');
+  const ann=[[1,P(qa.x,qa.y)[0]+40,P(qa.x,qa.y)[1]-250],[2,P(qa.x,qa.y)[0]+170,P(qa.x,qa.y)[1]-170],[3,P(4.6,4.25)[0],P(4.6,4.25)[1]+40],[4,P(qa.x,qa.y)[0]-70,P(qa.x,qa.y)[1]+44],
+    [5,P(q10.x,q10.y)[0]-80,P(q10.x,q10.y)[1]-20],[6,P(q9.x,q9.y)[0]-120,P(q9.x,q9.y)[1]-30],[7,P(7,3)[0]+80,P(7,3)[1]-100],[8,P(q7.x,q7.y)[0]+60,P(q7.x,q7.y)[1]-70],
+    [9,P(pa[0],pa[1])[0]+132,P(pa[0],pa[1])[1]+69],[10,SL+460,ST+380],[11,SR-490,SB-200],[12,SL+460,ST+672],[13,P(9,1.2)[0]+40,P(9,1.2)[1]-10]];
+  ann.forEach(a=>{s+=Ci(a[1],a[2],22,'#FF3B8B',{s:'#fff',sw:4})+T(a[1],a[2]+1,String(a[0]),24,'#fff',{w:600});});
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="ภาพเล่นห้องเช่าพร้อมสัญญาณนำทาง">${s}</svg>`;
+}
+document.getElementById('g-play').innerHTML=`<figure>${playView()}<figcaption><span class="id">LV-PLAY · L1 ห้องเช่า · วิ 0:48 ของรอบ</span><h3>Krit กำลังเดินไปจุดที่ดาวแนะนำ ขณะที่เพื่อนอีก 3 คนแยกกันอยู่ในโซนของตัวเอง</h3><p>วงทุกวงอยู่บนพื้นใต้ของ ไม่ลอยบนหัว ป้ายและดาวลอยเหนือจุดเฉพาะจุดที่เกี่ยวกับผู้เล่นคนนั้น ไม่ใส่ข้อความเหนือทุกจุดพร้อมกัน</p></figcaption></figure>`;
+const PLAYROWS=[
+ [1,'ดาวนำทาง ★','เฉพาะเรา','ลอยเหนือจุดที่ระบบแนะนำ 1 จุดต่อคน: งานว่างที่ถึงเร็วสุด (เวลาเดิน + เวลาทำ) ให้คะแนนพิเศษกับหมวดถนัดและโซนประจำ เปลี่ยนเมื่อเพื่อนล็อกงานนั้นหรือเราแตะแถวอื่น ไม่มีดาวเมื่อเปิดการ์ด'],
+ [2,'ป้ายย่อ (preview chip)','เฉพาะเรา','โผล่เมื่อเข้าใกล้ ≤ 2.6 ช่อง: ไอคอนหมวด · ชื่องาน · เวลาโดยประมาณ · ฮีโร่ถนัด หายเมื่อห่าง > 3.0 (กันกะพริบ) ขึ้นได้ทีละ 1 ป้าย (จุดที่ใกล้สุด)'],
+ [3,'ลูกศรพื้น (breadcrumb)','เฉพาะเรา','แตะแถวในรายการงาน = ลูกศรขาวบนพื้น 3 อันตามเส้นทาง BFS ไปจุดนั้น 3 วิ + จุดกะพริบ 2 ครั้ง ไม่ต้องใช้ลูกศรขอบจอเพราะกล้องเห็นทั้งห้อง'],
+ [4,'วงจุดงานพร้อมทำ','ทั้งทีม','วงสีตามชนิด (F29) บนพื้น ≤ 1.2 ช่อง = ขอบขาวสว่าง + ปุ่มหลัก "ทำงาน: <ชื่อ>" ถ้ามีหลายวงในระยะ เลือกวงที่ใกล้สุด'],
+ [5,'วงถูกล็อก','ทั้งทีม','หน้าฮีโร่ที่กำลังทำเกาะขอบวง + ไอคอน ⋯ เหนือหัว ปุ่มหลักเทา แตะ = toast "มายด์กำลังทำอยู่ ไปจุดอื่นนะ" (ไม่เปิดการ์ด)'],
+ [6,'จองเบาๆ "กำลังไป"','ทั้งทีม','เมื่อเพื่อนแตะแถวหรือ ping "ฉันรับอันนี้" หน้าเล็กเกาะวง ไม่ล็อก (คนถึงก่อนได้ทำ) ดาวของคนอื่นจะข้ามจุดนี้ 8 วิ'],
+ [7,'คราบฉุกเฉิน','ทั้งทีม','วงแดงเส้นประ + ศัตรู + นับถอยหลัง 25 วิ เหนือจุด, toast บนกลาง, แถวแดงบนสุดของรายการ ดาวของคนที่ใกล้สุดย้ายมาที่นี่'],
+ [8,'งานรอ (T09)','ทั้งทีม','นาฬิกาเหนือจุดนับถอยหลังรอแช่ ครบแล้วเด้ง + ping_pop และกลายเป็นงานพร้อมทำ'],
+ [9,'งานคู่ (T13)','ทั้งทีม','จุด A ทึบ จุด B เส้นประจนมีคนยืน ฟอง "รอเพื่อนอีก 1 คน" เหนือคนที่รอ ถาดเพื่อนแสดง "รอยก"'],
+ [10,'รายการงาน','เฉพาะเรา (แตะ)','แถวที่ดาวชี้ไฮไลต์เหลือง แถวที่มีคนจองมีหน้า แถวล็อกมีกุญแจ เรียงตาม 11_UX_UI_Spec S22'],
+ [11,'ปุ่มหลักตามบริบท','เฉพาะเรา','สีเดียวกับวงที่เลือกอยู่ เปลี่ยนป้ายทันทีที่เข้า/ออกวง 1.2'],
+ [12,'ถาดเพื่อน','เฉพาะเรา','สถานะ "กำลังทำ / กำลังไป / รอยก / ว่าง" ช่วยแบ่งงานโดยไม่ต้องพิมพ์'],
+ [13,'จุดที่ทำแล้ว','ทั้งทีม','วงหาย ✓ เขียวลอย 1 วิ พื้นเปลี่ยนเป็นสะอาด (_DirtAmount → 0) จุดนี้ไม่เปิดอีกในรอบ ยกเว้นกติกาจุดซ้ำ']];
+document.querySelector('#tbl-play tbody').innerHTML=PLAYROWS.map(r=>`<tr><td class="k">${r[0]}</td><td>${esc(r[1])}</td><td>${esc(r[2])}</td><td>${esc(r[3])}</td></tr>`).join('');
+
+/* ---------- approach sequence ---------- */
+function approach(stage){
+  const w=520,h=300,cx=300,cy=160,u=64; let s=R(0,0,w,h,'#F4E6C3',{r:10});
+  s+=Ci(cx,cy,2.6*u,'none',{s:'#1A6FC4',sw:2,dash:'5 7',op:.6})+Ci(cx,cy,1.2*u,stage>=3?'#FFF2C2':'none',{s:'#1A6FC4',sw:2,op:.8});
+  s+=R(cx-40,cy-80,80,36,'#F7DDA6',{s:'#C99251',sw:3,r:4})+Ci(cx,cy,.42*u,'#F4A261',{s:stage>=3?'#fff':INK,sw:stage>=3?7:3});
+  const px=[0,cx-3.6*u,cx-2.2*u,cx-.9*u,cx-.9*u][stage]; s+=Ci(px,cy+10,18,'#F79A2E',{s:INK,sw:3});
+  if(stage===1)s+=star(cx,cy-110,18,'#FFD84D')+L(px+24,cy+10,cx-2.7*u,cy+4,'#fff',{sw:5,dash:'2 12'});
+  if(stage>=2&&stage<4)s+=R(cx-110,cy-140,220,44,'#FFFDF5',{r:22,s:INK,sw:3})+T(cx,cy-118,'ถูคราบวน · ~4 วิ',20,INK,{w:600});
+  if(stage===3)s+=R(w-170,h-70,150,52,'#F6C431',{r:26,s:INK,sw:4})+T(w-95,h-44,'ทำงาน',22,INK,{w:600});
+  if(stage===4){s+=R(60,40,400,200,'#FFFDF5',{r:14,s:'#2E4484',sw:5,op:.95})+T(260,90,'การ์ดมินิเกม (S28)',22,INK,{w:600})+T(260,130,'โยกจอยเกิน 70% →',18,INK)+T(260,160,'ปิดการ์ด เดินต่อทันที',18,INK)+T(260,196,'ความคืบหน้าเก็บไว้ 10 วิ',16,'#55607A');
+    s+=Ci(70,h-50,34,INK,{op:.25,s:'#fff',sw:2})+Ci(70-24,h-50,16,'#fff',{s:INK,sw:3})+T(150,h-50,'> 70%',20,'#C21F33',{w:600});}
+  return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="จังหวะ ${stage}">${s}</svg>`;}
+const AP=[[1,'ไกล (> 2.6 ช่อง)','เห็นวงจุดงานบนพื้นทุกวง ดาวลอยเหนือจุดที่แนะนำ แตะแถวในรายการแล้วมีลูกศรพื้น'],
+ [2,'ใกล้ (≤ 2.6)','ป้ายย่อขึ้นเหนือจุดที่ใกล้สุด บอกชื่อ เวลาโดยประมาณ ฮีโร่ถนัด เพื่อให้ตัดสินใจก่อนถึง (ไม่ต้องเปิดการ์ดเพื่อดู)'],
+ [3,'ถึง (≤ 1.2)','วงสว่าง + สั่น selection 1 ครั้ง ปุ่มหลักเป็น "ทำงาน: ถูคราบวน" แตะ = เปิดการ์ด ไม่เปิดเองเพราะคนเดินผ่านจะเปิดโดยไม่ตั้งใจ'],
+ [4,'เปิดการ์ด','จอยจาง 50% อยู่ที่เดิม โยกเกิน 70% = ปิดการ์ดและเดินทันที (กฎ S28) ผังต้องเหลือทางออกจากวงอย่างน้อย 2 ทิศ']];
+document.getElementById('g-approach').innerHTML=AP.map(a=>`<div class="card">${approach(a[0])}<h3>${a[0]} · ${esc(a[1])}</h3><p class="meta">${esc(a[2])}</p></div>`).join('');
+
+/* ---------- checks + sim ---------- */
+document.querySelector('#tbl-check tbody').innerHTML=results.map(A=>{const fr=A.fairRes, t04=A.longRes[0].d;
+  return `<tr><td>${A.room.code} ${esc(A.room.name)}</td><td>${A.issues.length?`<span class="bad">ไม่ผ่าน ${A.issues.length}</span>`:'<span class="ok">ผ่าน</span>'}</td><td class="num">${A.pts.filter(p=>p.role==='slot').length} + E${A.pts.filter(p=>p.role==='E').length}</td><td class="num">${A.minSp.toFixed(2)}</td><td class="num">${t04.toFixed(1)}</td><td class="num">${fr.cart.toFixed(2)} / ${fr.shelf.toFixed(2)} / ${fr.mean.toFixed(2)}</td><td class="num">${A.meanPair.toFixed(1)} (สูงสุด ${A.maxPair.toFixed(1)})</td></tr>`;}).join('');
+const tb=document.querySelector('#tbl-sim tbody'); const RUNS=120; let html='';
+results.forEach(A=>{[1,2,3,4].forEach(n=>{const st=simStats(A,n,RUNS);
+  html+=`<tr><td>${n===1?A.room.code+' '+esc(A.room.name):''}</td><td class="num">${n}</td><td class="num">${st.steps.toFixed(1)}</td><td class="num">${st.finish.toFixed(1)}</td><td class="num">${st.p90.toFixed(1)}</td><td class="num">${(st.walkShare*100).toFixed(0)}%</td><td class="num">${st.meanLeg.toFixed(1)}</td><td class="num">${st.maxLeg.toFixed(1)}</td></tr>`;});});
+tb.innerHTML=html;
+document.getElementById('sim-note').textContent=`จำลอง ${RUNS} seed ต่อแถว · เวลาทำงานต่อขั้นใช้ค่ากลางของ "เวลาเป้า" ในสเปก 16 + 0.6 วิ เปิด/ปิดการ์ด · คราบฉุกเฉินวิ 40/75/100 นับเฉพาะที่โผล่ก่อนจบ · ผลชี้ว่าผังคุมเวลาเดินได้ (15–27%) แต่จำนวนงานตามสเปก 16 ข้อ 2.2 ทำให้ทีม 3–4 คนจบเร็วกว่าเป้า 90–100 วิ มาก ดูข้อเสนอในเอกสาร 19 ข้อ 9`;
+
+/* ---------- toggles ---------- */
+const map={'t-ids':'on-ids','t-zones':'on-zones','t-ban':'on-ban','t-near':'on-near','t-route':'on-route','t-heat':'on-heat'};
+const apply=()=>Object.keys(map).forEach(k=>document.body.classList.toggle(map[k],document.getElementById(k).checked));
+Object.keys(map).forEach(k=>document.getElementById(k).addEventListener('change',apply)); apply();
+})();
+</script>

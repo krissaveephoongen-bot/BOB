@@ -1,0 +1,321 @@
+{
+ "room": "kitchen",
+ "name": "ครัวร้านอาหาร (ห้องบอส)",
+ "code": "L3b",
+ "units": "1 unit = 1 tile",
+ "axes": "Unity: x right, z forward (back wall z=8), y up",
+ "props": [
+  {
+   "label": "เครื่องล้างจาน + ซักผ้ากันเปื้อน",
+   "kind": "washer",
+   "tripo_id": null,
+   "source": "placeholder",
+   "unity_min": [
+    2.2,
+    0,
+    7.1
+   ],
+   "size": [
+    1.6,
+    1.4,
+    0.9
+   ]
+  },
+  {
+   "label": "อ่างล้างสามช่อง",
+   "kind": "sink",
+   "tripo_id": null,
+   "source": "placeholder",
+   "unity_min": [
+    4.2,
+    0,
+    7.1
+   ],
+   "size": [
+    1.6,
+    0.9,
+    0.9
+   ]
+  },
+  {
+   "label": "ชั้นวางชิ้นส่วน",
+   "kind": "shelf",
+   "tripo_id": null,
+   "source": "placeholder",
+   "unity_min": [
+    6.3,
+    0,
+    7.3
+   ],
+   "size": [
+    1.4,
+    1.6,
+    0.7
+   ]
+  },
+  {
+   "label": "ตู้น้ำยา",
+   "kind": "cabinet",
+   "tripo_id": null,
+   "source": "placeholder",
+   "unity_min": [
+    10.4,
+    0,
+    7.2
+   ],
+   "size": [
+    1.3,
+    1.8,
+    0.8
+   ]
+  },
+  {
+   "label": "หม้อซุปล้ม",
+   "kind": "heavy",
+   "tripo_id": null,
+   "source": "placeholder",
+   "unity_min": [
+    3.9,
+    0,
+    2.5
+   ],
+   "size": [
+    1,
+    0.9,
+    2
+   ]
+  },
+  {
+   "label": "เตาแก๊ส",
+   "kind": "stove",
+   "tripo_id": null,
+   "source": "placeholder",
+   "unity_min": [
+    9.1,
+    0,
+    2.5
+   ],
+   "size": [
+    1,
+    0.9,
+    2
+   ]
+  },
+  {
+   "label": "ถังแยกขยะ",
+   "kind": "bin",
+   "tripo_id": null,
+   "source": "placeholder",
+   "unity_min": [
+    11.6,
+    0,
+    4.2
+   ],
+   "size": [
+    0.8,
+    0.8,
+    0.8
+   ]
+  },
+  {
+   "label": "ชั้นคว่ำจาน/ราวผ้า",
+   "kind": "rack",
+   "tripo_id": null,
+   "source": "placeholder",
+   "unity_min": [
+    11.9,
+    0,
+    2.3000000000000003
+   ],
+   "size": [
+    0.7,
+    1.2,
+    0.9
+   ]
+  },
+  {
+   "label": "โต๊ะเตรียมอาหาร",
+   "kind": "steel",
+   "tripo_id": null,
+   "source": "placeholder",
+   "unity_min": [
+    2.4,
+    0,
+    1.4999999999999996
+   ],
+   "size": [
+    1.6,
+    0.9,
+    0.6
+   ]
+  },
+  {
+   "label": "โต๊ะเตรียมอาหาร",
+   "kind": "steel",
+   "tripo_id": null,
+   "source": "placeholder",
+   "unity_min": [
+    10,
+    0,
+    1.4999999999999996
+   ],
+   "size": [
+    1.6,
+    0.9,
+    0.6
+   ]
+  },
+  {
+   "label": "รถเข็น",
+   "kind": "cart",
+   "tripo_id": null,
+   "source": "placeholder",
+   "unity_min": [
+    6.25,
+    0,
+    0.050000000000000155
+   ],
+   "size": [
+    1.5,
+    0.4,
+    0.65
+   ]
+  }
+ ],
+ "points": [
+  {
+   "id": "S1",
+   "role": "taskspot",
+   "type": "washer",
+   "x": 3,
+   "z": 6.6
+  },
+  {
+   "id": "S2",
+   "role": "taskspot",
+   "type": "sink",
+   "x": 5,
+   "z": 6.6
+  },
+  {
+   "id": "S3",
+   "role": "taskspot",
+   "type": "shelf",
+   "x": 7,
+   "z": 6.8
+  },
+  {
+   "id": "S4",
+   "role": "taskspot",
+   "type": "wall",
+   "x": 9,
+   "z": 6.8
+  },
+  {
+   "id": "S5",
+   "role": "taskspot",
+   "type": "cabinet",
+   "x": 11.05,
+   "z": 6.7
+  },
+  {
+   "id": "S6",
+   "role": "taskspot",
+   "type": "bin",
+   "x": 11,
+   "z": 4.6
+  },
+  {
+   "id": "S7",
+   "role": "taskspot",
+   "type": "rack",
+   "x": 11.2,
+   "z": 2.75
+  },
+  {
+   "id": "S8",
+   "role": "taskspot",
+   "type": "table",
+   "x": 3.3,
+   "z": 0.9500000000000002
+  },
+  {
+   "id": "S9",
+   "role": "taskspot",
+   "type": "table",
+   "x": 10.6,
+   "z": 1.0
+  },
+  {
+   "id": "S10",
+   "role": "taskspot",
+   "type": "floor",
+   "x": 5,
+   "z": 2.0
+  },
+  {
+   "id": "S11",
+   "role": "taskspot",
+   "type": "floor",
+   "x": 9,
+   "z": 2.0
+  },
+  {
+   "id": "S12",
+   "role": "taskspot",
+   "type": "wall",
+   "x": 2.5,
+   "z": 4.85
+  },
+  {
+   "id": "cart",
+   "x": 7,
+   "z": 1.0999999999999996
+  },
+  {
+   "id": "pair_a",
+   "x": 3.35,
+   "z": 3.5
+  },
+  {
+   "id": "pair_b",
+   "x": 5.45,
+   "z": 3.5
+  },
+  {
+   "id": "emergency_E1",
+   "x": 7,
+   "z": 2.6500000000000004
+  },
+  {
+   "id": "emergency_E2",
+   "x": 5.3,
+   "z": 5.2
+  },
+  {
+   "id": "emergency_E3",
+   "x": 8.7,
+   "z": 5.2
+  },
+  {
+   "id": "spawn_P1",
+   "x": 6.45,
+   "z": 4.25
+  },
+  {
+   "id": "spawn_P2",
+   "x": 7.55,
+   "z": 4.25
+  },
+  {
+   "id": "spawn_P3",
+   "x": 6.45,
+   "z": 3.45
+  },
+  {
+   "id": "spawn_P4",
+   "x": 7.55,
+   "z": 3.45
+  }
+ ]
+}

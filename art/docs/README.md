@@ -31,6 +31,7 @@
 | [21_AA_Art_Bible.md](21_AA_Art_Bible.md) | **Art Bible ฉบับ AA (อนุมัติแล้ว 13 พ.ย. 2026):** หลัก 5 ข้อ, ภาษารูปทรง, กล้อง 45° + สเกลโลก, งบต่อประเภท, material library, ชุดแสง, หน้า flipbook, อนิเมชัน (หนัก-เบา), VFX 5 ชั้น, pipeline ไม่มี artist 3 สาย (สคริปต์ Blender / AI image-to-3D / CC0), ด่านตรวจ 8 ข้อ, ลำดับ asset ใหม่, สิ่งที่ต้องใช้คน | ทุกคน |
 | [ux/BOB_AA_Art_Bible.html](ux/BOB_AA_Art_Bible.html) | ภาพอ้างอิง AA: โมเดล 3D จริงจาก `art/tools/blender/bob_kit.py` ที่มุมกล้องเกม (สลับกล้องเดิม/ใหม่, ท่า idle/walk/cheer, ทดสอบ silhouette, วัดขนาดบนจอ/tris/draw call), คะแนนช่องว่าง, พาเลต+เงาอมสี, งบ, pipeline | Art / Unity |
 | [17_Music_Layers.md](17_Music_Layers.md) | แผนดนตรีเลเยอร์ 4 stem (120 bpm, เปิดตาม % ทีม/คู่แข่ง/เวลา, quantize ขอบห้อง, ชุด fast 130 bpm, stinger, ducking, `BobMusicLayers` ใน Unity, ทางเลือกการผลิต) | Sound / Unity dev |
+| [19_Level_Layout_Task_Stations.md](19_Level_Layout_Task_Stations.md) | **ผังฉาก task race (13 พ.ย. 2026):** แถบวางจุดงาน (เลี่ยง HUD/นิ้วโป้ง), แกนกลาง ชั้นวาง–จุดเกิด–รถเข็น, ชนิดจุด → มินิเกม, กติการะยะ R1–R13, seed กระจายงานตามโซน A–D, ดาว/ลูกศรพื้น/ป้ายย่อ, การ์ดเมื่อเข้าใกล้, ผัง 3 ห้อง (ห้องเรียน โรงอาหาร ห้องใต้ดิน) + ผลจำลองเวลาเดิน · ผังภาพ [`ux/BOB_Level_Layouts.html`](ux/BOB_Level_Layouts.html) · ตัวตรวจ `tools/check_layouts.js` | Level / Game designer / Unity |
 
 ## สรุปสั้น
 

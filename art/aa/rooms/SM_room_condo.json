@@ -1,0 +1,330 @@
+{
+ "room": "condo",
+ "name": "คอนโดสองห้อง (ครัว + นั่งเล่น)",
+ "code": "L2",
+ "units": "1 unit = 1 tile",
+ "axes": "Unity: x right, z forward (back wall z=8), y up",
+ "props": [
+  {
+   "label": "เคาน์เตอร์ครัว",
+   "kind": "counter",
+   "tripo_id": null,
+   "source": "placeholder",
+   "unity_min": [
+    2.2,
+    0,
+    7.1
+   ],
+   "size": [
+    1.6,
+    0.9,
+    0.9
+   ]
+  },
+  {
+   "label": "อ่างล้างจาน",
+   "kind": "sink",
+   "tripo_id": null,
+   "source": "placeholder",
+   "unity_min": [
+    4.2,
+    0,
+    7.1
+   ],
+   "size": [
+    1.6,
+    0.9,
+    0.9
+   ]
+  },
+  {
+   "label": "ชั้นวางชิ้นส่วน",
+   "kind": "shelf",
+   "tripo_id": null,
+   "source": "placeholder",
+   "unity_min": [
+    6.3,
+    0,
+    7.3
+   ],
+   "size": [
+    1.4,
+    1.6,
+    0.7
+   ]
+  },
+  {
+   "label": "ตู้เย็น + ตู้น้ำยา",
+   "kind": "cabinet",
+   "tripo_id": null,
+   "source": "placeholder",
+   "unity_min": [
+    10.4,
+    0,
+    7.2
+   ],
+   "size": [
+    1.3,
+    1.9,
+    0.8
+   ]
+  },
+  {
+   "label": "เกาะครัว",
+   "kind": "counter",
+   "tripo_id": null,
+   "source": "placeholder",
+   "unity_min": [
+    1.6,
+    0,
+    4.3
+   ],
+   "size": [
+    4.3,
+    0.9,
+    0.8
+   ]
+  },
+  {
+   "label": "โซฟายาว (หันหน้าลง)",
+   "kind": "sofa",
+   "tripo_id": null,
+   "source": "placeholder",
+   "unity_min": [
+    8.1,
+    0,
+    4.3
+   ],
+   "size": [
+    4.3,
+    0.75,
+    0.8
+   ]
+  },
+  {
+   "label": "ชั้นคว่ำจาน",
+   "kind": "rack",
+   "tripo_id": null,
+   "source": "placeholder",
+   "unity_min": [
+    11.7,
+    0,
+    3.15
+   ],
+   "size": [
+    0.8,
+    1.2,
+    0.9
+   ]
+  },
+  {
+   "label": "ถังน้ำล้ม",
+   "kind": "heavy",
+   "tripo_id": null,
+   "source": "placeholder",
+   "unity_min": [
+    4.4,
+    0,
+    1.5999999999999996
+   ],
+   "size": [
+    0.8,
+    0.7,
+    1
+   ]
+  },
+  {
+   "label": "โต๊ะทำงาน",
+   "kind": "table",
+   "tripo_id": null,
+   "source": "placeholder",
+   "unity_min": [
+    2.2,
+    0,
+    1.8000000000000003
+   ],
+   "size": [
+    1.2,
+    0.75,
+    0.6
+   ]
+  },
+  {
+   "label": "โต๊ะกลาง",
+   "kind": "table",
+   "tripo_id": null,
+   "source": "placeholder",
+   "unity_min": [
+    10.3,
+    0,
+    1.8000000000000003
+   ],
+   "size": [
+    1.3,
+    0.45,
+    0.6
+   ]
+  },
+  {
+   "label": "ถังแยกขยะ",
+   "kind": "bin",
+   "tripo_id": null,
+   "source": "placeholder",
+   "unity_min": [
+    8.6,
+    0,
+    0.15000000000000002
+   ],
+   "size": [
+    0.8,
+    0.8,
+    0.6
+   ]
+  },
+  {
+   "label": "รถเข็น",
+   "kind": "cart",
+   "tripo_id": null,
+   "source": "placeholder",
+   "unity_min": [
+    6.25,
+    0,
+    0.050000000000000155
+   ],
+   "size": [
+    1.5,
+    0.4,
+    0.65
+   ]
+  }
+ ],
+ "points": [
+  {
+   "id": "S1",
+   "role": "taskspot",
+   "type": "table",
+   "x": 3,
+   "z": 6.65
+  },
+  {
+   "id": "S2",
+   "role": "taskspot",
+   "type": "sink",
+   "x": 5,
+   "z": 6.65
+  },
+  {
+   "id": "S3",
+   "role": "taskspot",
+   "type": "shelf",
+   "x": 7,
+   "z": 6.8
+  },
+  {
+   "id": "S4",
+   "role": "taskspot",
+   "type": "wall",
+   "x": 9,
+   "z": 6.8
+  },
+  {
+   "id": "S5",
+   "role": "taskspot",
+   "type": "cabinet",
+   "x": 11.05,
+   "z": 6.7
+  },
+  {
+   "id": "S6",
+   "role": "taskspot",
+   "type": "table",
+   "x": 2.9,
+   "z": 3.7
+  },
+  {
+   "id": "S7",
+   "role": "taskspot",
+   "type": "rack",
+   "x": 11.1,
+   "z": 3.7
+  },
+  {
+   "id": "S8",
+   "role": "taskspot",
+   "type": "table",
+   "x": 2.8,
+   "z": 1.0999999999999996
+  },
+  {
+   "id": "S9",
+   "role": "taskspot",
+   "type": "bin",
+   "x": 9,
+   "z": 1.1500000000000004
+  },
+  {
+   "id": "S10",
+   "role": "taskspot",
+   "type": "table",
+   "x": 10.95,
+   "z": 1.0999999999999996
+  },
+  {
+   "id": "S11",
+   "role": "taskspot",
+   "type": "floor",
+   "x": 9.3,
+   "z": 3.0
+  },
+  {
+   "id": "cart",
+   "x": 7,
+   "z": 1.0999999999999996
+  },
+  {
+   "id": "pair_a",
+   "x": 4.8,
+   "z": 3.1500000000000004
+  },
+  {
+   "id": "pair_b",
+   "x": 4.8,
+   "z": 1.0499999999999998
+  },
+  {
+   "id": "emergency_E1",
+   "x": 7,
+   "z": 4.9
+  },
+  {
+   "id": "emergency_E2",
+   "x": 4,
+   "z": 5.65
+  },
+  {
+   "id": "emergency_E3",
+   "x": 10,
+   "z": 5.65
+  },
+  {
+   "id": "spawn_P1",
+   "x": 6.5,
+   "z": 3.5999999999999996
+  },
+  {
+   "id": "spawn_P2",
+   "x": 7.5,
+   "z": 3.5999999999999996
+  },
+  {
+   "id": "spawn_P3",
+   "x": 6.5,
+   "z": 2.8
+  },
+  {
+   "id": "spawn_P4",
+   "x": 7.5,
+   "z": 2.8
+  }
+ ]
+}
