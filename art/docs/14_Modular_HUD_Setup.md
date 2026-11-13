@@ -38,7 +38,7 @@
 1. `Bob > TextMeshPro > 1 Import Essentials` (นำเข้า TMP Essential Resources; ต้องรัน batchmode แบบไม่ใส่ `-quit`) → ได้โฟลเดอร์ `Assets/TextMesh Pro`
 2. `Bob > TextMeshPro > 2 Build Font Assets` สร้าง `Assets/Resources/Fonts/TMP/IBMPlexSansThai-Medium SDF.asset` และ `Mitr-Medium SDF.asset` (SDFAA, atlas 2048, Dynamic, เติมอักษรไทยล่วงหน้า ~200 ตัว)
 3. ช่องกรอก IP เซิร์ฟเวอร์ (InputField) ยังใช้ `Text` เดิมเพราะ `InputField` ต้องใช้ข้อความรุ่นเก่า (`BobUi.LabelLegacy`)
-4. อักขระ ▲ ▼ ● ○ ✓ ✕ ★ ไม่มีในฟอนต์ไทย จึงเปลี่ยนเป็น + - • ◦ ในข้อความ ถ้าต้องการสัญลักษณ์ ใช้ไอคอนภาพ
+4. อักขระ ▲ ▼ ● ○ ✓ ✕ ★ ไม่มีในฟอนต์ไทย จึงใช้ไอคอนภาพแทน (icon_check = ส่งผลดี, icon_cross = ขัดกัน, icon_pause = ปิดอยู่; สถานะเซิร์ฟเวอร์ใช้ icon_check/timer/cross)
 5. ขอบตัวอักษรใช้ `BobUi.OutlineText` (ขอบของ TMP) ไม่ใช้คอมโพเนนต์ `Outline` ของ uGUI ซึ่งใช้กับ TMP ไม่ได้
 
 ## การทดสอบ
