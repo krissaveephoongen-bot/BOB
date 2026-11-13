@@ -4,6 +4,7 @@
 using System.Collections;
 using System.Linq;
 using Bob.Rules;
+using TMPro;
 using UnityEngine;
 
 namespace Bob.Game

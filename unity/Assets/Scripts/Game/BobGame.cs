@@ -11,6 +11,7 @@ using Bob.Art;
 using Bob.Modular;
 using Bob.Net;
 using Bob.Rules;
+using TMPro;
 using UnityEngine;
 
 namespace Bob.Game

@@ -1,5 +1,6 @@
 // Battle of the Brooms: small helpers that build uGUI from code (no prefabs yet), in the prototype's palette.
 using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
@@ -116,7 +117,50 @@ namespace Bob.Game
             return img;
         }
 
-        public static Text Label(Transform parent, string text, int size = 24, Color? color = null, TextAnchor align = TextAnchor.MiddleLeft, FontStyle style = FontStyle.Normal)
+        static TMP_FontAsset bodyTmp, headingTmp;
+        static bool tmpLoaded;
+        static void LoadTmp()
+        {
+            if (tmpLoaded) return; tmpLoaded = true;
+            bodyTmp = Resources.Load<TMP_FontAsset>("Fonts/TMP/IBMPlexSansThai-Medium SDF");
+            headingTmp = Resources.Load<TMP_FontAsset>("Fonts/TMP/Mitr-Medium SDF");
+        }
+        public static TMP_FontAsset BodyTmp { get { LoadTmp(); return bodyTmp; } }
+        public static TMP_FontAsset HeadingTmp { get { LoadTmp(); return headingTmp != null ? headingTmp : bodyTmp; } }
+
+        public static TextAlignmentOptions ToTmp(TextAnchor a)
+        {
+            switch (a)
+            {
+                case TextAnchor.UpperLeft: return TextAlignmentOptions.TopLeft;
+                case TextAnchor.UpperCenter: return TextAlignmentOptions.Top;
+                case TextAnchor.UpperRight: return TextAlignmentOptions.TopRight;
+                case TextAnchor.MiddleLeft: return TextAlignmentOptions.Left;
+                case TextAnchor.MiddleRight: return TextAlignmentOptions.Right;
+                case TextAnchor.LowerLeft: return TextAlignmentOptions.BottomLeft;
+                case TextAnchor.LowerCenter: return TextAlignmentOptions.Bottom;
+                case TextAnchor.LowerRight: return TextAlignmentOptions.BottomRight;
+                default: return TextAlignmentOptions.Center;
+            }
+        }
+
+        /// <summary>TextMeshPro label (Mitr for bold, IBM Plex Sans Thai otherwise). Thai marks are positioned by the font's GPOS table.</summary>
+        public static TMP_Text Label(Transform parent, string text, int size = 24, Color? color = null, TextAnchor align = TextAnchor.MiddleLeft, FontStyle style = FontStyle.Normal)
+        {
+            var r = Rect("Text", parent);
+            var t = r.gameObject.AddComponent<TextMeshProUGUI>();
+            var f = style == FontStyle.Bold ? HeadingTmp : BodyTmp; if (f != null) t.font = f;
+            t.text = text; t.fontSize = size; t.color = color ?? Ink; t.alignment = ToTmp(align);
+            t.fontStyle = style == FontStyle.Italic ? FontStyles.Italic : FontStyles.Normal;
+            t.textWrappingMode = TextWrappingModes.Normal; t.overflowMode = TextOverflowModes.Overflow; t.raycastTarget = false;
+            t.richText = true; t.lineSpacing = 6f;
+            return t;
+        }
+
+        /// <summary>Outline for a TMP label (the uGUI Outline component does not work on TextMeshPro).</summary>
+        public static void OutlineText(TMP_Text t, Color c, float width = 0.2f) { if (t == null) return; t.outlineColor = c; t.outlineWidth = width; }
+
+        public static Text LabelLegacy(Transform parent, string text, int size = 24, Color? color = null, TextAnchor align = TextAnchor.MiddleLeft, FontStyle style = FontStyle.Normal)
         {
             var r = Rect("Text", parent);
             var t = r.gameObject.AddComponent<Text>();

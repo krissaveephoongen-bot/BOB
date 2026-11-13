@@ -5,6 +5,7 @@ using System.Linq;
 using Bob.Art;
 using Bob.Modular;
 using Bob.Rules;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 

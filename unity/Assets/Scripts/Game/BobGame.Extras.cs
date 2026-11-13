@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using Bob.Art;
 using Bob.Modular;
 using Bob.Rules;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -116,7 +117,7 @@ namespace Bob.Game
 
         enum Ctx { None, Place, Lift, Stash, TakeTable, Full }
         Ctx ctx;
-        Button ctxBtn; Text ctxLabel;
+        Button ctxBtn; TMP_Text ctxLabel;
         SpriteRenderer ctxArrow, teamRing, spawnRing;
         TextMesh heroName, spawnLabel;
         bool enemiesLive; float buildElapsed;
@@ -248,7 +249,7 @@ namespace Bob.Game
         {
             var L = last;
             var ban = H1(screenRoot, "ทดสอบความสะอาด!", 64, BobUi.Surface);
-            ban.GetComponent<Outline>().effectColor = BobUi.Ink; ban.GetComponent<Outline>().effectDistance = new Vector2(4, -4);
+            BobUi.OutlineText(ban, BobUi.Ink, 0.3f);
             BobUi.Pin(ban.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -36), new Vector2(1200, 100));
             SplitHalf(0.25f, "ทีมเรา · " + Hero.Name, L.Mine, L.Stats, L.Win);
             SplitHalf(0.75f, Online ? "ทีมคู่แข่ง" : "คู่แข่ง", L.Rival.Score, L.Rival.Ev.Stats, !L.Win);

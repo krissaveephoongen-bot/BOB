@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Bob.Art;
 using Bob.Net;
 using Bob.Rules;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -334,7 +335,7 @@ namespace Bob.Game
                         BobUi.Img(row, p.@char + "_portrait", 80);
                         BobUi.Size(BobUi.Label(row, (me ? "คุณ · " : "") + BobMatch.Char(p.@char).Name + "  <color=#6B6E86>" + p.name + "</color>", 30, BobUi.Ink), 80, 80, 1);
                         var st = BobUi.Label(row, !p.online ? "หลุด" : p.ready ? "พร้อม ✓" : "รอ…", 28, p.ready ? BobUi.Good : BobUi.Muted, TextAnchor.MiddleRight, FontStyle.Bold);
-                        st.supportRichText = true; BobUi.Size(st, 80, 80, 0, 160);
+                        st.richText = true; BobUi.Size(st, 80, 80, 0, 160);
                     }
                 }
                 int n0 = s.players.Count(p => p.team == 0), n1 = s.players.Count(p => p.team == 1);
@@ -347,7 +348,7 @@ namespace Bob.Game
             {
                 var ready = BobUi.Button(S, mpReady ? "ยกเลิกพร้อม" : "พร้อม!", mpReady ? BobUi.Surface : BobUi.Sun, ToggleReady, 56);
                 BobUi.Pin((RectTransform)ready.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-48, 40), new Vector2(440, 160));
-                ready.GetComponentInChildren<Text>().fontStyle = FontStyle.Bold;
+                ready.GetComponentInChildren<TMP_Text>().fontStyle = FontStyles.Bold;
             }
         }
     }
