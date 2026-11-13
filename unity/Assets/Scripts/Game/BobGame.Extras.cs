@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using Bob.Art;
 using Bob.Modular;
 using Bob.Rules;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -16,16 +17,23 @@ namespace Bob.Game
     {
         // ---------------------------------------------------------------- cart push
 
-        bool pushHinted;
+        bool pushHinted, pushedFrame;
+        Vector2 cartVel; float cartTilt, cartDust;
+        SpriteRenderer cartShadow;
         float nextPushHud;
 
         /// <summary>Put the cart sprite where cartRect says (bottom-pivot, or a coloured box without art).</summary>
         void PlaceCart()
         {
             if (cartT == null) return;
-            if (art.Has("cart")) cartT.position = new Vector3(cartRect.center.x, cartRect.yMin, 0);
-            else cartT.position = new Vector3(cartRect.center.x, cartRect.center.y, 0);
+            if (art.Has("cart")) cartT.localPosition = new Vector3(cartRect.center.x, cartRect.yMin, 0);
+            else cartT.localPosition = new Vector3(cartRect.center.x, cartRect.center.y, 0);
             cartSr.sortingOrder = Order(cartRect.yMin);
+            if (World3D)
+            {
+                if (cartShadow == null) cartShadow = MakeShadow(worldRoot, cartRect.center, 1.1f);
+                cartShadow.transform.localPosition = new Vector3(cartRect.center.x, cartRect.yMin + 0.12f, -0.005f); cartShadow.sortingOrder = Order(cartRect.yMin) - 2;
+            }
         }
 
         /// <summary>The hero walked into the cart: slide it along unless a shelf, the sofa, the table or a wall is in the way.</summary>
@@ -39,10 +47,45 @@ namespace Bob.Game
                       && !SofaRect.Overlaps(moved) && !TableRect.Overlaps(moved);
             if (ok) foreach (var r in StationRects) if (r.Overlaps(moved)) { ok = false; break; }
             if (!ok) { if (d > 0.0001f) pos = c + (pos - c) / d * Radius; return; } // blocked: the cart acts as a wall
+            cartVel = Time.deltaTime > 0.0001f ? Vector2.ClampMagnitude((moved.position - cartRect.position) / Time.deltaTime, 2.6f) : cartVel;
+            pushedFrame = true;
             cartRect = moved; PlaceCart();
             RenderWorld();
             if (Time.unscaledTime > nextPushHud) { nextPushHud = Time.unscaledTime + 0.1f; RenderHud(); }
             if (!pushHinted) { pushHinted = true; Toast("เข็นรถเข็นไปจอดใกล้จุดเก็บของได้"); }
+        }
+
+        bool CartSpotFree(Rect moved)
+        {
+            bool ok = moved.xMin >= 0.1f && moved.xMax <= RoomW - 0.1f && moved.yMin >= 0.1f && moved.yMax <= RoomH - 0.1f
+                      && !SofaRect.Overlaps(moved) && !TableRect.Overlaps(moved);
+            if (ok) foreach (var r in StationRects) if (r.Overlaps(moved)) return false;
+            return ok;
+        }
+
+        /// <summary>The cart keeps rolling after a push (friction), tilts into the turn, its load bounces, and it kicks up dust when fast.</summary>
+        void TickCart(float dt)
+        {
+            if (cartT == null || Online) return;
+            if (pushedFrame) pushedFrame = false;
+            else if (cartVel.sqrMagnitude > 0.0009f)
+            {
+                var moved = new Rect(cartRect.position + cartVel * dt, cartRect.size);
+                if (CartSpotFree(moved)) { cartRect = moved; PlaceCart(); RenderWorld(); }
+                else cartVel *= -0.25f; // bumps into a shelf
+                cartVel *= Mathf.Exp(-5f * dt);
+            }
+            else cartVel = Vector2.zero;
+            float tiltTarget = Mathf.Clamp(-cartVel.x * 5f, -10f, 10f);
+            cartTilt = Mathf.Lerp(cartTilt, tiltTarget, 1 - Mathf.Exp(-12f * dt));
+            cartT.localRotation = Quaternion.Euler(World3D ? CamPitch - 90f : 0f, 0, cartTilt);
+            float bounce = Mathf.Min(cartVel.magnitude, 2.5f) * 0.02f * Mathf.Abs(Mathf.Sin(Time.time * 18f));
+            if (cartLayers != null) cartLayers.localPosition = Raise(Vector2.zero, bounce);
+            if (World3D && cartVel.magnitude > 1.1f)
+            {
+                cartDust -= dt;
+                if (cartDust <= 0) { cartDust = 0.12f; SpawnFxSized("fx_poof", Raise(new Vector2(cartRect.center.x, cartRect.yMin) - cartVel.normalized * 0.3f, 0.05f), 0.3f); }
+            }
         }
 
         // ---------------------------------------------------------------- item rest table
@@ -58,7 +101,7 @@ namespace Bob.Game
         {
             string sp = art.Has("desk") ? "desk" : null; // Leonardo desk picture
             tableSr = MakeSprite("RestTable", worldRoot, sp, new Vector2(TableRect.center.x, TableRect.yMin), TableRect.width * 1.15f, true);
-            if (sp == null) { tableSr.transform.localScale = new Vector3(TableRect.width, TableRect.height, 1); tableSr.transform.position = TableRect.center; tableSr.color = BobUi.Hex("#C9A66B"); }
+            if (sp == null) { tableSr.transform.localScale = new Vector3(TableRect.width, TableRect.height, 1); tableSr.transform.localPosition = TableRect.center; tableSr.color = BobUi.Hex("#C9A66B"); }
             tableSr.sortingOrder = Order(TableRect.yMin);
             WorldLabel("โต๊ะพักของ", new Vector2(TableRect.center.x, TableRect.yMin - 0.16f), 0.03f, BobUi.Ink);
             var tableProp = tableSr.gameObject.AddComponent<StationProp>();
@@ -92,7 +135,7 @@ namespace Bob.Game
             if (Online) return;
             for (int i = 0; i < tableItems.Count; i++)
             {
-                var ic = MakeSprite("T_" + tableItems[i], tableItemsRoot, "part_" + tableItems[i], new Vector2(TableRect.center.x - 0.16f + i * 0.32f, TableRect.yMin + 0.5f), 0.3f, false);
+                var ic = MakeSprite("T_" + tableItems[i], tableItemsRoot, "part_" + tableItems[i], Raise(new Vector2(TableRect.center.x - 0.16f + i * 0.32f, TableRect.yMin - 0.03f), 0.5f), 0.3f, false);
                 ic.sortingOrder = Order(TableRect.yMin) + 3;
             }
         }
@@ -116,7 +159,7 @@ namespace Bob.Game
 
         enum Ctx { None, Place, Lift, Stash, TakeTable, Full }
         Ctx ctx;
-        Button ctxBtn; Text ctxLabel;
+        Button ctxBtn; TMP_Text ctxLabel;
         SpriteRenderer ctxArrow, teamRing, spawnRing;
         TextMesh heroName, spawnLabel;
         bool enemiesLive; float buildElapsed;
@@ -146,14 +189,14 @@ namespace Bob.Game
             }
         }
 
-        Vector2? CtxTarget(Ctx c)
+        Vector3? CtxTarget(Ctx c)
         {
             switch (c)
             {
                 case Ctx.Place:
                 case Ctx.Lift: return CartTop;
                 case Ctx.Stash:
-                case Ctx.TakeTable: return new Vector2(TableRect.center.x, TableRect.yMax + 0.5f);
+                case Ctx.TakeTable: return Raise(new Vector2(TableRect.center.x, TableRect.yMin), 0.95f);
                 default: return null;
             }
         }
@@ -196,8 +239,8 @@ namespace Bob.Game
             teamRing.gameObject.SetActive(inGame); heroName.gameObject.SetActive(inGame);
             if (inGame)
             {
-                teamRing.color = new Color(hc.r, hc.g, hc.b, 0.85f); teamRing.transform.position = pos + new Vector2(0, 0.02f); teamRing.sortingOrder = Order(pos.y) - 1;
-                heroName.text = Hero.Name; heroName.transform.position = pos + new Vector2(0, -0.16f); heroName.color = hc;
+                teamRing.color = new Color(hc.r, hc.g, hc.b, 0.85f); teamRing.transform.localPosition = pos + new Vector2(0, 0.02f); teamRing.sortingOrder = Order(pos.y) - 1;
+                heroName.text = Hero.Name; heroName.transform.localPosition = pos + new Vector2(0, -0.16f); heroName.color = hc;
             }
             bool pre = R != null && (phase == Phase.Intro || phase == Phase.Countdown);
             spawnRing.gameObject.SetActive(pre); spawnLabel.gameObject.SetActive(pre);
@@ -206,7 +249,7 @@ namespace Bob.Game
             // the thing the main button will act on gets a bobbing star above it
             var tgt = CtxTarget(ctx);
             ctxArrow.gameObject.SetActive(tgt.HasValue);
-            if (tgt.HasValue) ctxArrow.transform.position = tgt.Value + new Vector2(0, 0.08f * Mathf.Sin(Time.unscaledTime * 6f));
+            if (tgt.HasValue) ctxArrow.transform.localPosition = tgt.Value + Raise(Vector2.zero, 0.08f * Mathf.Sin(Time.unscaledTime * 6f));
 
             // enemies appear 2.5 s after "ลุย!" (UX 5A.8) and never before everyone could move
             if (phase == Phase.Build && overlay == Overlay.None && !Online) buildElapsed += dt;
@@ -223,7 +266,7 @@ namespace Bob.Game
                 if (!withFx) continue;
                 var sp = art.Find(en.id + "_spawn");
                 if (sp != null) en.anim.Play(sp.frames, sp.fps, false);
-                SpawnFx("fx_poof", en.t.position + new Vector3(0, 0.4f, 0));
+                SpawnFx("fx_poof", Raise((Vector2)en.anim.transform.localPosition, 0.4f));
             }
             if (withFx) Sfx("enemy_spawn");
         }
@@ -248,7 +291,7 @@ namespace Bob.Game
         {
             var L = last;
             var ban = H1(screenRoot, "ทดสอบความสะอาด!", 64, BobUi.Surface);
-            ban.GetComponent<Outline>().effectColor = BobUi.Ink; ban.GetComponent<Outline>().effectDistance = new Vector2(4, -4);
+            BobUi.OutlineText(ban, BobUi.Ink, 0.3f);
             BobUi.Pin(ban.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -36), new Vector2(1200, 100));
             SplitHalf(0.25f, "ทีมเรา · " + Hero.Name, L.Mine, L.Stats, L.Win);
             SplitHalf(0.75f, Online ? "ทีมคู่แข่ง" : "คู่แข่ง", L.Rival.Score, L.Rival.Ev.Stats, !L.Win);

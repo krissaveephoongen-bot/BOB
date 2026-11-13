@@ -11,6 +11,7 @@ using Bob.Art;
 using Bob.Modular;
 using Bob.Net;
 using Bob.Rules;
+using TMPro;
 using UnityEngine;
 
 namespace Bob.Game
@@ -30,7 +31,7 @@ namespace Bob.Game
         public const float RoundTime = 100f, FreezeTime = 8f;
         public const int Hand = BobRules.HandSolo;
 
-        enum Phase { Title, Loading, Intro, Countdown, Build, Scoring, Test, Result, Lobby }
+        enum Phase { Title, Loading, Intro, Countdown, Build, Scoring, Test, Result, Lobby, Splash, Login, Modes, Heroes, Shop }
 
         sealed class LastRound
         {
@@ -90,11 +91,12 @@ namespace Bob.Game
             sfxReady = FindFirstObjectByType<BobSfx>() != null;
             AudioListener.volume = soundOn ? 1 : 0;
             if (sfxReady) BobSfx.Music(musicOn);
+            LoadProfile();
             BuildWorld();
             BuildHud();
             RenderAll();
             Connect();
-            if (AutoRequested()) StartCoroutine(AutoPlay());
+            if (AutoRequested()) StartCoroutine(AutoPlay()); else StartCoroutine(BootFlow());
         }
 
         async void Connect()
@@ -121,6 +123,7 @@ namespace Bob.Game
         {
             if (Input.GetKeyDown(KeyCode.Escape)) OnBack();
             TickInput();
+            TickMenus(); UpdateMusic();
             TickOnline();
             if (phase == Phase.Build && overlay == Overlay.None && !Online) // online, the server runs the clock
             {
@@ -129,6 +132,24 @@ namespace Bob.Game
             }
             TickWorld();
             TickHud();
+        }
+
+        // ---------------------------------------------------------------- music per screen
+
+        string musicNow;
+        /// <summary>menu music out of the match, game music while building, the tense track for the last seconds, result music after.</summary>
+        void UpdateMusic()
+        {
+            if (!sfxReady) return;
+            string want;
+            switch (phase)
+            {
+                case Phase.Intro: case Phase.Countdown: case Phase.Scoring: want = "game"; break;
+                case Phase.Build: want = tasks != null && tasks.Warning && !Online ? "tense" : "game"; break;
+                case Phase.Test: case Phase.Result: want = "result"; break;
+                default: want = "menu"; break;
+            }
+            if (want != musicNow) { musicNow = want; BobSfx.Track(want); }
         }
 
         // ---------------------------------------------------------------- helpers
@@ -168,6 +189,7 @@ namespace Bob.Game
             if (overlay != Overlay.None) SetOverlay(phase == Phase.Build && overlay == Overlay.Settings ? Overlay.Pause : Overlay.None);
             else if (phase == Phase.Build) SetOverlay(Overlay.Pause);
             else if (phase == Phase.Intro || phase == Phase.Test || phase == Phase.Result) ToTitle();
+            else if (phase == Phase.Modes || phase == Phase.Heroes || phase == Phase.Shop) GoHome();
         }
 
         EvalResult Ev() => BobRules.EvalStack(stack, R?.Enemies, shield);
@@ -313,12 +335,12 @@ namespace Bob.Game
                     if (stack.Count < 2) { Toast("ต้องมีอย่างน้อย 2 ชิ้นบนรถเข็น"); return; }
                     swapMode = !swapMode; Sfx("ui_tap"); RenderAll(); return;
                 case "bubble":
-                    shield = true; Toast("โล่ฟอง! กันปฏิกิริยาหักล้างที่แรงที่สุด"); Sfx("bubble_pop"); SpawnFx("fx_bubble_pop", PlayerPos + Vector2.up * 0.5f); break;
+                    shield = true; Toast("โล่ฟอง! กันปฏิกิริยาหักล้างที่แรงที่สุด"); Sfx("bubble_pop"); SpawnFx("fx_bubble_pop", Raise(PlayerPos, 0.5f)); break;
                 case "spray":
                     preview = BobRules.TotalScore(Ev(), R.Need, BudgetLeft, budget, time / RoundTime);
                     Toast("เล็งเป้า! กองนี้จะได้ " + preview.Total + " คะแนน"); Sfx("spray_psst"); SpawnFx("fx_target", CartTop); break;
                 case "press":
-                    tasks.FreezeFor(FreezeTime); Toast("รีดเวลา! หยุดนาฬิกา 8 วินาที"); Sfx("steam_hiss"); SpawnFx("fx_steam", PlayerPos + Vector2.up * 0.5f); break;
+                    tasks.FreezeFor(FreezeTime); Toast("รีดเวลา! หยุดนาฬิกา 8 วินาที"); Sfx("steam_hiss"); SpawnFx("fx_steam", Raise(PlayerPos, 0.5f)); break;
             }
             MarkAbilityUsed(); Sfx("ability_activate"); RenderAll();
         }
@@ -370,7 +392,8 @@ namespace Bob.Game
             if (MatchOver)
             {
                 gain = wins > losses ? 30 : 20; coins += gain;
-                try { PlayerPrefs.SetInt("bob.coins", coins); PlayerPrefs.Save(); } catch (Exception) { }
+                xpGain = 60 + wins * 40; xp += xpGain;
+                SaveProfile();
                 Log("match_end", $"{{\"wins\":{wins},\"losses\":{losses},\"rounds\":{roundNo},\"coins\":{gain},\"char\":\"{charId}\",\"mode\":\"{(Online ? "online" : "solo")}\"}}");
                 Sfx("coin");
                 phase = Phase.Result; RenderAll();

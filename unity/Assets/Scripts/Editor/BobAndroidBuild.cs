@@ -22,7 +22,7 @@ namespace Bob.EditorTools
             PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, Package);
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
-            PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel24;
+            PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel26;
             PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevelAuto;
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.AutoRotation;
             PlayerSettings.allowedAutorotateToPortrait = false; PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
@@ -30,7 +30,31 @@ namespace Bob.EditorTools
             PlayerSettings.insecureHttpOption = InsecureHttpOption.AlwaysAllowed; // plain http to the PC's LAN Nakama
             PlayerSettings.SetApiCompatibilityLevel(NamedBuildTarget.Android, ApiCompatibilityLevel.NET_Standard);
             PlayerSettings.Android.forceInternetPermission = true;
+            KeepShaders("Standard", "Unlit/Texture"); // the 2.5D room creates these materials in code, so a player build must not strip them
             Debug.Log("Bob: Android player settings applied (" + Package + ", IL2CPP, ARM64, landscape).");
+        }
+
+        static void KeepShaders(params string[] names)
+        {
+            var gs = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>("ProjectSettings/GraphicsSettings.asset");
+            if (gs == null) { Debug.LogWarning("Bob: GraphicsSettings.asset not found; shaders may be stripped"); return; }
+            var so = new SerializedObject(gs); var arr = so.FindProperty("m_AlwaysIncludedShaders");
+            foreach (var n in names)
+            {
+                var sh = Shader.Find(n); if (sh == null) { Debug.LogWarning("Bob: shader not found: " + n); continue; }
+                bool has = false;
+                for (int i = 0; i < arr.arraySize; i++) if (arr.GetArrayElementAtIndex(i).objectReferenceValue == sh) has = true;
+                if (has) continue;
+                arr.arraySize++; arr.GetArrayElementAtIndex(arr.arraySize - 1).objectReferenceValue = sh;
+            }
+            so.ApplyModifiedProperties(); AssetDatabase.SaveAssets();
+        }
+
+        [MenuItem("Bob/Android/Switch Editor Back To Windows")]
+        public static void BackToWindows()
+        {
+            if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.StandaloneWindows64)
+                EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows64);
         }
 
         [MenuItem("Bob/Android/Build APK")]
@@ -46,6 +70,7 @@ namespace Bob.EditorTools
             {
                 scenes = scenes, locationPathName = path, target = BuildTarget.Android, options = BuildOptions.None
             });
+            BackToWindows(); // a build leaves the Editor on Android; the next Play session would then recompile (define symbols change) and kill the bot test
             var s = report.summary;
             Debug.Log($"Bob: APK build {s.result}, {s.totalErrors} errors, {s.totalSize / 1048576} MB -> {path}");
             if (Application.isBatchMode) EditorApplication.Exit(s.result == UnityEditor.Build.Reporting.BuildResult.Succeeded ? 0 : 1);

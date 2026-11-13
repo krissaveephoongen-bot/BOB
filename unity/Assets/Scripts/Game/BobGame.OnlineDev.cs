@@ -7,6 +7,7 @@ using System.Collections;
 using System.IO;
 using System.Linq;
 using Bob.Rules;
+using TMPro;
 using UnityEngine;
 
 namespace Bob.Game

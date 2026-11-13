@@ -1564,3 +1564,98 @@ MonoBehaviour:
     - {fileID: 21300000, guid: 13cd8e3e6c7d0e349ad9f0780e5bdea0, type: 3}
     fps: 10
     loop: 1
+  - name: menu_settings
+    frames:
+    - {fileID: 21300000, guid: 2c323dd7f70fd0748a991bf8c5ab1946, type: 3}
+    fps: 10
+    loop: 1
+  - name: menu_shop
+    frames:
+    - {fileID: 21300000, guid: e1ba8702a9aabc24da9d25db1caa2513, type: 3}
+    fps: 10
+    loop: 1
+  - name: menu_home
+    frames:
+    - {fileID: 21300000, guid: 33ff7f8f5af7cdf4f92ac31623afac27, type: 3}
+    fps: 10
+    loop: 1
+  - name: menu_close
+    frames:
+    - {fileID: 21300000, guid: 9198bb67dd2cc9542a43b672ecd7e128, type: 3}
+    fps: 10
+    loop: 1
+  - name: menu_sound
+    frames:
+    - {fileID: 21300000, guid: b1e0715077b08a54d88c9d21bdeb6615, type: 3}
+    fps: 10
+    loop: 1
+  - name: menu_coin_stack
+    frames:
+    - {fileID: 21300000, guid: 722f17d29dffb6f48a2367d8040727ed, type: 3}
+    fps: 10
+    loop: 1
+  - name: menu_gem_pile
+    frames:
+    - {fileID: 21300000, guid: 5b4d586fa8887a34ca2f60593e807405, type: 3}
+    fps: 10
+    loop: 1
+  - name: menu_equip_broom
+    frames:
+    - {fileID: 21300000, guid: 6111c97fb6586444f8949576c9aa6455, type: 3}
+    fps: 10
+    loop: 1
+  - name: menu_equip_mop
+    frames:
+    - {fileID: 21300000, guid: 8e86a99161b2517419a2ed6287b555e1, type: 3}
+    fps: 10
+    loop: 1
+  - name: menu_equip_sponge
+    frames:
+    - {fileID: 21300000, guid: 3655d80c766eaab4c92ed78bbb286b31, type: 3}
+    fps: 10
+    loop: 1
+  - name: menu_equip_spray
+    frames:
+    - {fileID: 21300000, guid: 12942efcbf275a54087956925f09b7b3, type: 3}
+    fps: 10
+    loop: 1
+  - name: menu_equip_hat
+    frames:
+    - {fileID: 21300000, guid: 3d60dd1d17d3cc247bb3dbf7cccf701f, type: 3}
+    fps: 10
+    loop: 1
+  - name: menu_popup_win
+    frames:
+    - {fileID: 21300000, guid: 9630085db04ab104dbf0fb4d45c512e2, type: 3}
+    fps: 10
+    loop: 1
+  - name: menu_popup_confirm
+    frames:
+    - {fileID: 21300000, guid: 93e6a636f7497a84986a85b993e96441, type: 3}
+    fps: 10
+    loop: 1
+  - name: menu_ribbon
+    frames:
+    - {fileID: 21300000, guid: 919a1e0c2bd1d1e49ad2da3c42913b03, type: 3}
+    fps: 10
+    loop: 1
+  - name: menu_logo
+    frames:
+    - {fileID: 21300000, guid: b8d909705d6515e41b6c1fa00c5d255b, type: 3}
+    fps: 10
+    loop: 1
+  - name: menu_btn_play
+    frames:
+    - {fileID: 21300000, guid: 64e38f347a6754242b7d242ec8c5022c, type: 3}
+    fps: 10
+    loop: 1
+  - name: menu_btn_round
+    frames:
+    - {fileID: 21300000, guid: 984942c4c53196e4d8b09dc4f54fcd35, type: 3}
+    fps: 10
+    loop: 1
+  - name: menu_portrait_frame
+    frames:
+    - {fileID: 21300000, guid: 33b6a334f42879f44a373c7742c1e880, type: 3}
+    fps: 10
+    loop: 1

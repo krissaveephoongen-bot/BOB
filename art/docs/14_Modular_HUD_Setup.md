@@ -11,7 +11,7 @@
 | `TaskManager.cs` | นาฬิการอบ (หยุดเวลา, พัก), อีเวนต์ `WarningTick` / `TimeUpReached`, ความคืบหน้าตามสเปกใบงาน | นาฬิกา 100 วินาที และสกิล "รีดเวลา" |
 | `MobileHUDController.cs` | ตัวจับ widget ของ HUD: pill นาฬิกากะพริบแดงเมื่อเหลือ <15 วินาที, ตัวบอกรอบ, ตัวนับเหรียญ, ปุ่มหยุด, แถบช่องรถเข็น 5 ช่อง (ไอคอนอย่างเดียว), ปุ่มหลัก, ปุ่มกดค้างส่งพร้อมวงแหวน `fillAmount` | HUD ฉากเดี่ยว |
 
-หมายเหตุ: ข้อความรองรับทั้ง **TextMeshProUGUI** (`...Tmp`) และ `Text` เดิม ฟิลด์ไหนมีค่าก็ใช้ตัวนั้น (TMP ชนะ) ตอนนี้ฉากเดี่ยวยังใช้ `Text` พร้อมฟอนต์ Mitr/IBM Plex Sans Thai เพราะยังไม่ได้ import TMP Essentials และสร้าง font asset (ดูท้ายเอกสาร) ปุ่มหลักใช้ `Button` ปุ่มส่งใช้ `IPointerDownHandler/IPointerUpHandler` (ใน `BobHoldButton` ที่มีอยู่แล้ว หรือตัวสำรองในคอนโทรลเลอร์ถ้าปุ่มยังไม่มี)
+หมายเหตุ: ข้อความรองรับทั้ง **TextMeshProUGUI** (`...Tmp`) และ `Text` เดิม ฟิลด์ไหนมีค่าก็ใช้ตัวนั้น (TMP ชนะ) ฉากเดี่ยวและ Coop ใช้ TMP แล้ว (ดูหัวข้อ TextMeshPro ท้ายเอกสาร) ปุ่มหลักใช้ `Button` ปุ่มส่งใช้ `IPointerDownHandler/IPointerUpHandler` (ใน `BobHoldButton` ที่มีอยู่แล้ว หรือตัวสำรองในคอนโทรลเลอร์ถ้าปุ่มยังไม่มี)
 
 ## ตั้งค่าใน Inspector ทีละขั้น (ทำเองแบบ prefab)
 
@@ -32,9 +32,14 @@
 7. **เรียกใช้:** ทุกเฟรม `hud.SetTimer(task.TimeLeft, task.Freeze > 0, roundLive)`; เมื่อกองเปลี่ยน `hud.SetCartSlots(icons)`; เมื่อเป้าหลักเปลี่ยน `hud.SetPrimary(prompt, enabled, color)`
 8. **พื้นที่กด:** เรียก `Bob.UI.BobHitArea.Ensure(button.targetGraphic, 144)` กับปุ่มทุกปุ่ม (UX spec 1.2)
 
-## ใช้ TextMeshPro จริง (ยังไม่ได้ทำ)
+## TextMeshPro (ทำแล้ว 13 พ.ย.)
 
-Window > TextMeshPro > Import TMP Essential Resources แล้วสร้าง Font Asset จาก `Assets/Resources/Fonts/IBMPlexSansThai-Medium.ttf` (Atlas 4096, Dynamic, ตัวอักษรไทย U+0E00-0E7F) และ `Mitr-Medium.ttf` จากนั้นเปลี่ยน `BobUi.Label` ให้สร้าง `TextMeshProUGUI` ตัวคอนโทรลเลอร์ไม่ต้องแก้ ลากข้อความ TMP ใส่ฟิลด์ `...Tmp` ได้ทันที
+ข้อความทั้ง HUD/เมนู/ฉาก Coop ใช้ `TextMeshProUGUI` แล้ว ผ่าน `BobUi.Label` (Mitr สำหรับตัวหนา, IBM Plex Sans Thai สำหรับเนื้อหา) ขั้นตอนที่ทำและทำซ้ำได้:
+1. `Bob > TextMeshPro > 1 Import Essentials` (นำเข้า TMP Essential Resources; ต้องรัน batchmode แบบไม่ใส่ `-quit`) → ได้โฟลเดอร์ `Assets/TextMesh Pro`
+2. `Bob > TextMeshPro > 2 Build Font Assets` สร้าง `Assets/Resources/Fonts/TMP/IBMPlexSansThai-Medium SDF.asset` และ `Mitr-Medium SDF.asset` (SDFAA, atlas 2048, Dynamic, เติมอักษรไทยล่วงหน้า ~200 ตัว)
+3. ช่องกรอก IP เซิร์ฟเวอร์ (InputField) ยังใช้ `Text` เดิมเพราะ `InputField` ต้องใช้ข้อความรุ่นเก่า (`BobUi.LabelLegacy`)
+4. อักขระ ▲ ▼ ● ○ ✓ ✕ ★ ไม่มีในฟอนต์ไทย จึงใช้ไอคอนภาพแทน (icon_check = ส่งผลดี, icon_cross = ขัดกัน, icon_pause = ปิดอยู่; สถานะเซิร์ฟเวอร์ใช้ icon_check/timer/cross)
+5. ขอบตัวอักษรใช้ `BobUi.OutlineText` (ขอบของ TMP) ไม่ใช้คอมโพเนนต์ `Outline` ของ uGUI ซึ่งใช้กับ TMP ไม่ได้
 
 ## การทดสอบ
 
