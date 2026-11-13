@@ -1,0 +1,416 @@
+<title>BOB AA Art Bible</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mitr:wght@500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a production "bible" — one live stage up top, then reference plates in a single 1080px column. */
+:root{
+  --paper:#F2F6FC; --sheet:#FFFFFF; --ink:#0B2152; --ink-2:#4A5A7E; --line:#D5DEEC;
+  --red:#FB2F44; --gold:#F6C431; --sky:#3695F2; --brown:#4A2E22; --good:#2FA97A; --warn:#E58A1F; --bad:#D8384A;
+  --stage:#E7EEF8;
+  --f-display:"Mitr","Prompt","Noto Sans Thai",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans Thai","Noto Sans Thai",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0A1430; --sheet:#111D40; --ink:#E7EEFA; --ink-2:#A6B4D3; --line:#24335C; --stage:#16244C; color-scheme:dark}}
+:root[data-theme="dark"]{--paper:#0A1430; --sheet:#111D40; --ink:#E7EEFA; --ink-2:#A6B4D3; --line:#24335C; --stage:#16244C; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.65;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 64px}
+.wrap{max-width:1080px;margin:0 auto;display:grid;gap:40px}
+h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.3;text-wrap:balance;margin:0}
+h1{font-size:clamp(28px,4.4vw,44px)} h2{font-size:24px} h3{font-size:17px;font-weight:500}
+p{margin:0;max-width:68ch}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.lede{color:var(--ink-2);font-size:16px}
+header{display:grid;gap:10px}
+.badge{display:inline-flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:12px;border:1px solid var(--line);border-radius:999px;padding:2px 10px;color:var(--ink-2)}
+.badge i{width:8px;height:8px;border-radius:50%;background:var(--red);display:inline-block}
+section{display:grid;gap:14px}
+/* stage */
+.stage{background:var(--sheet);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.stage canvas{display:block;width:100%;aspect-ratio:16/9;max-width:100%;background:var(--stage)}
+.controls{display:flex;flex-wrap:wrap;gap:10px 18px;padding:12px 14px;border-top:1px solid var(--line);align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{font:500 13px var(--f-body);color:var(--ink);background:transparent;border:0;padding:6px 11px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--sheet)}
+.seg button:focus-visible,.chk input:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
+.chk{display:inline-flex;gap:6px;align-items:center;font-size:13px}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1px;background:var(--line);border-top:1px solid var(--line)}
+.readout div{background:var(--sheet);padding:10px 14px;display:grid;gap:2px}
+.readout b{font-family:var(--f-mono);font-size:20px;font-weight:500;font-variant-numeric:tabular-nums}
+.readout span{font-size:12px;color:var(--ink-2)}
+.pass{color:var(--good)} .fail{color:var(--bad)}
+/* tables */
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--sheet)}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:14px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--f-display);font-weight:500;font-size:13px;color:var(--ink-2)}
+tr:last-child td{border-bottom:0}
+td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.dots{display:inline-flex;gap:3px;vertical-align:middle}
+.dots i{width:10px;height:10px;border-radius:3px;background:var(--line)}
+.dots i.on{background:var(--warn)} .dots.t i.on{background:var(--good)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.plate{background:var(--sheet);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:10px;min-width:0}
+.plate svg{width:100%;height:auto;display:block}
+.sw{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
+.sw div{border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:12px}
+.sw .c{height:46px;display:grid;grid-template-columns:1fr 1fr 1fr}
+.sw p{padding:6px 8px;font-family:var(--f-mono);font-size:11px;line-height:1.4}
+.note{font-size:13px;color:var(--ink-2)}
+ul.tight{margin:0;padding-left:20px;display:grid;gap:4px}
+pre.mermaid{background:var(--sheet);border:1px solid var(--line);border-radius:12px;padding:12px;overflow-x:auto;margin:0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header>
+  <span class="eyebrow">BOB – Battle of the Broom · art/docs/21_AA_Art_Bible.md · 13 พ.ย. 2026</span>
+  <h1>สมุดภาพมาตรฐาน AA</h1>
+  <p class="lede">ภาพอ้างอิงประกอบรีวิว (doc 20) และ Art Bible (doc 21) ตัวละครบนเวทีด้านล่างเป็นโมเดล 3D จริงที่สคริปต์ Blender <code>art/tools/blender/bob_kit.py</code> สร้างจากรูปทรงพื้นฐานตาม concept ไม่มีคนปั้น มี rig ร่วม อนิเมชัน 3 ท่า และใช้ material เดียวกันทั้งหมด แสดงด้วย toon ramp 3 ขั้น เงาอมม่วง และเส้นขอบน้ำตาลเข้มตามสเปก</p>
+  <span class="badge"><i></i>โมเดลเป็นระดับ blockout ของ pipeline ไม่ใช่งานสุดท้าย หน้า (ตา ปาก) ในงานจริงเป็น texture flipbook</span>
+</header>
+
+<section aria-labelledby="s-stage">
+  <h2 id="s-stage">เวทีทดสอบที่มุมกล้องเกม</h2>
+  <p class="note">สลับกล้องเพื่อเทียบ "สเปกเดิม" (pitch 55°, ortho size 4.5, ตัวสูง 1.0 u) กับ "AA เสนอ" (pitch 45°, size 4.1 ให้ห้อง 14×8 เต็มจอพอดี, ตัวสูง 1.15 u) ตัวเลขด้านล่างวัดจากเรนเดอร์จริงที่ความสูงจอ 1080 px โดยใช้ฮีโร่ที่เตี้ยที่สุด เกณฑ์อ่านง่ายคือ ≥ 120 px</p>
+  <div class="stage">
+    <canvas id="cv" aria-label="ฉาก 3D ฮีโร่ 4 ตัวและศัตรู 4 ตัวในห้องเรียน"></canvas>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="กล้อง">
+        <button id="cam-old" aria-pressed="false">สเปกเดิม 55° size 4.5 ×1.0</button>
+        <button id="cam-aa" aria-pressed="true">AA เสนอ 45° size 4.1 ×1.15</button>
+        <button id="cam-orbit" aria-pressed="false">หมุนดูรอบตัว</button>
+      </div>
+      <div class="seg" role="group" aria-label="ท่า">
+        <button data-anim="idle" aria-pressed="true">idle</button>
+        <button data-anim="walk" aria-pressed="false">walk</button>
+        <button data-anim="cheer" aria-pressed="false">cheer</button>
+      </div>
+      <label class="chk"><input type="checkbox" id="t-outline" checked> เส้นขอบ</label>
+      <label class="chk"><input type="checkbox" id="t-ramp" checked> toon ramp</label>
+      <label class="chk"><input type="checkbox" id="t-sil"> ทดสอบ silhouette</label>
+      <label class="chk"><input type="checkbox" id="t-dirty" checked> พื้นสกปรกครึ่งซ้าย</label>
+    </div>
+    <div class="readout">
+      <div><span>ฮีโร่สูงบนจอ (1080p)</span><b id="r-px">–</b></div>
+      <div><span>สามเหลี่ยมบนจอ (งบ ≤ 100k)</span><b id="r-tris">–</b></div>
+      <div><span>draw calls (งบ ≤ 80)</span><b id="r-calls">–</b></div>
+      <div><span>material ตัวละคร+ศัตรู</span><b id="r-mat">1</b></div>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="s-gap">
+  <h2 id="s-gap">ช่องว่างระหว่างตอนนี้กับ AA</h2>
+  <p class="note">คะแนน 1–5 ประเมินจากภาพเกมจริง (<code>40_scene3d_build.png</code>, <code>32_modular_hud.png</code>), เอกสาร 00–19 และ concept art ส้ม = ตอนนี้, เขียว = เป้า AA รายละเอียดใน doc 20</p>
+  <div class="tbl"><table id="gap"><thead><tr><th>ด้าน</th><th>ตอนนี้</th><th>เป้า</th><th>สิ่งที่ขาด</th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<section aria-labelledby="s-shape">
+  <h2 id="s-shape">ภาษารูปทรง</h2>
+  <div class="grid2">
+    <div class="plate">
+      <h3>ฝ่ายเรา = วงกลม + สี่เหลี่ยมมน</h3>
+      <svg viewBox="0 0 320 150" role="img" aria-label="ฮีโร่สร้างจากวงกลมและสี่เหลี่ยมมุมมน">
+        <g fill="none" stroke="#4A2E22" stroke-width="3">
+          <circle cx="70" cy="58" r="40" fill="#FADDC1"/><rect x="42" y="96" width="56" height="40" rx="18" fill="#F79A2E"/>
+          <rect x="52" y="102" width="36" height="30" rx="8" fill="#FEEECF"/>
+          <path d="M30 46 Q70 26 110 46" stroke="#FB2F44" stroke-width="10"/>
+        </g>
+        <g fill="none" stroke="#4A2E22" stroke-width="3">
+          <circle cx="200" cy="58" r="40" fill="#FADDC1"/><circle cx="168" cy="22" r="14" fill="#8A5530"/><circle cx="232" cy="22" r="14" fill="#8A5530"/>
+          <rect x="172" y="96" width="56" height="40" rx="18" fill="#3D8FE0"/><rect x="236" y="98" width="40" height="28" rx="9" fill="#F7D046"/>
+        </g>
+        <text x="160" y="148" text-anchor="middle" font-size="10" fill="currentColor" font-family="IBM Plex Sans Thai, sans-serif">หัว 0.44 H · ไม่มีมุมแหลม · จุดจำอยู่บนหัว</text>
+      </svg>
+    </div>
+    <div class="plate">
+      <h3>ศัตรู = ก้อนเหลว + มุมแหลมเฉพาะคิ้วกับเขี้ยว</h3>
+      <svg viewBox="0 0 320 150" role="img" aria-label="ศัตรูเป็นก้อนกลมมีคิ้วและเขี้ยวแหลม">
+        <g stroke="#4A2E22" stroke-width="3">
+          <path d="M30 130 Q20 80 60 70 Q70 30 100 50 Q140 60 130 130 Z" fill="#8A5226"/>
+          <ellipse cx="68" cy="92" rx="11" ry="13" fill="#fff"/><ellipse cx="98" cy="92" rx="11" ry="13" fill="#fff"/>
+          <path d="M54 76 L80 84 M112 76 L86 84" stroke-width="6"/><path d="M72 114 L76 122 L80 114 M88 114 L92 122 L96 114" fill="#FFF6E8" stroke-width="2"/>
+          <path d="M190 132 Q170 132 175 105 Q180 70 215 40 Q250 70 255 105 Q260 132 240 132 Z" fill="#8B4FC8"/>
+          <ellipse cx="203" cy="100" rx="10" ry="12" fill="#fff"/><ellipse cx="228" cy="100" rx="10" ry="12" fill="#fff"/>
+          <path d="M190 84 L212 92 M241 84 L219 92" stroke-width="6"/>
+        </g>
+        <text x="160" y="148" text-anchor="middle" font-size="10" fill="currentColor" font-family="IBM Plex Sans Thai, sans-serif">ฐานกว้าง ไม่มีแขนขา · ตาขาวโต · แหลมได้แค่คิ้ว/เขี้ยว</text>
+      </svg>
+    </div>
+    <div class="plate">
+      <h3>พร็อพ = กล่อง bevel หนา ทรงอ้วน</h3>
+      <svg viewBox="0 0 320 150" role="img" aria-label="พร็อพเป็นกล่องลบมุมขนาดใหญ่">
+        <g stroke="#4A2E22" stroke-width="3">
+          <rect x="24" y="56" width="120" height="22" rx="8" fill="#C98A5A"/><rect x="34" y="78" width="14" height="52" rx="5" fill="#A0643A"/><rect x="120" y="78" width="14" height="52" rx="5" fill="#A0643A"/>
+          <path d="M190 130 L214 40 L238 130 Z" fill="#FD7713" stroke-linejoin="round"/><rect x="200" y="82" width="28" height="12" fill="#fff"/>
+          <path d="M256 130 L262 70 L298 70 L304 130 Z" fill="#3695F2" stroke-linejoin="round"/>
+        </g>
+        <text x="160" y="148" text-anchor="middle" font-size="10" fill="currentColor" font-family="IBM Plex Sans Thai, sans-serif">ขอบ bevel ≥ 8% ของด้านสั้น · ความหนาเกินจริง 1.5×</text>
+      </svg>
+    </div>
+    <div class="plate">
+      <h3>อ่านง่ายด้วยค่าความสว่าง</h3>
+      <svg viewBox="0 0 320 150" role="img" aria-label="ลำดับค่าความสว่าง พื้นกลาง ตัวละครสว่าง ศัตรูเข้ม">
+        <rect x="10" y="20" width="300" height="100" rx="10" fill="#C9C2B4"/>
+        <rect x="10" y="20" width="300" height="34" rx="10" fill="#B9C9DE"/>
+        <circle cx="90" cy="88" r="22" fill="#F3E3CF" stroke="#4A2E22" stroke-width="3"/>
+        <ellipse cx="220" cy="96" rx="30" ry="20" fill="#5E3518" stroke="#4A2E22" stroke-width="3"/>
+        <text x="90" y="138" text-anchor="middle" font-size="10" fill="currentColor" font-family="IBM Plex Sans Thai, sans-serif">ฮีโร่ สว่างกว่าพื้น ≥ 20%</text>
+        <text x="220" y="138" text-anchor="middle" font-size="10" fill="currentColor" font-family="IBM Plex Sans Thai, sans-serif">ศัตรู เข้มกว่าพื้น ≥ 25%</text>
+        <text x="160" y="40" text-anchor="middle" font-size="10" fill="#0B2152" font-family="IBM Plex Sans Thai, sans-serif">ผนัง/พื้น อยู่ช่วงกลาง saturation ต่ำ</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="s-pal">
+  <h2 id="s-pal">พาเลตและเงาอมสี</h2>
+  <p class="note">แต่ละช่อง: สีเต็ม · สีในเงา (คูณแสง ambient ม่วงฟ้า <code>#8F86BF</code> ไม่ใช่ดำ) · ไฮไลต์ (บวกแสงอุ่น <code>#FFF4E0</code>) สีอยู่ใน <code>T_BOB_Palette.png</code> 256² ช่องละ 16 px ทุกโมเดลใช้แผ่นเดียวกัน</p>
+  <div class="sw" id="sw"></div>
+</section>
+
+<section aria-labelledby="s-bud">
+  <h2 id="s-bud">งบต่อประเภท (มือถือระดับกลาง 60 fps)</h2>
+  <div class="tbl"><table id="bud"><thead><tr><th>ประเภท</th><th>tris LOD0</th><th>LOD1</th><th>texture</th><th>material</th><th>bones</th><th>ชุดจริงตอนนี้</th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<section aria-labelledby="s-pipe">
+  <h2 id="s-pipe">pipeline แบบไม่มี artist</h2>
+  <pre class="mermaid">
+flowchart LR
+  C[concept Art Board<br/>Asset Sheet] --> H[ฮีโร่/ศัตรู<br/>bob_kit.py สร้างจากรูปทรง]
+  C --> L[Leonardo RAW<br/>ภาพ 2D ตรงสไตล์]
+  L --> I[image-to-3D<br/>TRELLIS / Tripo / Meshy]
+  K[CC0 kit<br/>KayKit / Quaternius] --> P
+  I --> P[bob_prop_cleanup.py<br/>ลด tris · pivot · palette snap]
+  H --> F[face flipbook 512²<br/>ครอปจาก concept + แก้มือ]
+  H --> U[Unity URP<br/>BOB/ToonLit + Outline]
+  P --> U
+  F --> U
+  U --> Q[ด่านตรวจ: silhouette · px ≥ 120 · งบ · ตาคน]
+  </pre>
+</section>
+
+<section aria-labelledby="s-human">
+  <h2 id="s-human">ส่วนที่ยังต้องใช้คนจริง</h2>
+  <div class="grid2">
+    <div class="plate"><h3>Krits ทำเองได้ (ไม่ต้องวาด)</h3>
+      <ul class="tight">
+        <li>ตัดสินผ่าน/ไม่ผ่านตามเช็กลิสต์ด่านตรวจทุกชิ้น (ตาคนคือด่านสุดท้าย)</li>
+        <li>เลือกภาพ AI ที่ดีที่สุดจาก 4 ตัวเลือกต่อชิ้น</li>
+        <li>เล่นบนมือถือจริงทุกสัปดาห์ ดูอ่านง่ายและรู้สึก "หนัก-เบา"</li>
+      </ul></div>
+    <div class="plate"><h3>ควรจ้างเป็นชิ้นสั้นๆ ถ้ามีงบ</h3>
+      <ul class="tight">
+        <li>แผ่นหน้า 8 อารมณ์ × 4 ฮีโร่ (2D, 2–3 วัน) จุดที่คนสังเกตมากที่สุด</li>
+        <li>โลโก้ไทยที่ตัวอักษรถูกต้อง + app icon</li>
+        <li>รีวิวอนิเมชัน 1 รอบโดย animator (1 วัน) ก่อน soft launch</li>
+      </ul></div>
+  </div>
+</section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="BOB_AA_Kit_Models.js"></script>
+<script>
+(function(){
+"use strict";
+// ---------- static plates ----------
+var GAP=[
+ ["ความสอดคล้องสไตล์",1,5,"ฉากหลังภาพวาดกึ่งสมจริง + sprite chibi + กล่อง Unity ในเฟรมเดียว (3 สไตล์)"],
+ ["มุมกล้อง/มุมมอง",2,5,"ภาพหลังกับพื้นคนละมุม, sprite หันหน้าตรง; สเปก 00 (40–45°) กับ 5A (55°) ไม่ตรงกัน"],
+ ["silhouette / อ่านบนจอเล็ก",3,5,"หัว 4 แบบดีมาก แต่ตัวเล็กกว่า 120 px ที่กล้อง 55° และชื่อศัตรูเป็นข้อความแทนรูปทรง"],
+ ["สัดส่วน/ขนาดในโลก",2,5,"ตัวละคร 1.0 u ในห้อง 14×8 ดูเล็ก, ชั้นวาง/โซฟาไม่มีสเกลอ้างอิงร่วม"],
+ ["วัสดุ + shader",1,5,"ยังไม่มี BOB/ToonLit จริง ใช้ sprite unlit, ไม่มี dirty/clean ด้วย shader"],
+ ["แสง + สี",2,5,"แสงอบในภาพหลังไม่ตรงกับตัวละคร, ไม่มีเงาอมสี, พาเลตโลโก้ใน GDD ต่างจาก concept"],
+ ["rig + อนิเมชัน",1,5,"ท่านิ่ง + เด้งด้วยโค้ด ไม่มี anticipation / follow-through / น้ำหนัก"],
+ ["VFX / juice",2,5,"ภาพนิ่ง 10 ภาพขยาย-จาง ยังไม่มีชั้น core+spark+trail+decal+shake+เสียงตรงจังหวะ"],
+ ["UI polish",2,5,"ปุ่มไม่เป็น 9-slice, ตัวอักษรมั่วในภาพ Leonardo, โลโก้ไทยยังไม่มี"],
+ ["งบ poly / draw call",3,5,"มีตารางงบใน 03 แล้ว แต่ยังไม่มีตัววัดหรือด่านตรวจ"],
+ ["pipeline / naming",3,5,"มี naming ใน 03, ภาพ 740 ภาพยังไม่ลบพื้นหลัง, ไม่มี import preset"],
+ ["concept + เอกสาร",4,5,"concept แข็งแรงและสอดคล้อง เป็นจุดแข็งที่สุดของโปรเจกต์"]
+];
+function dots(n,t){var s='<span class="dots'+(t?' t':'')+'" aria-label="'+n+' จาก 5">';for(var i=1;i<=5;i++)s+='<i class="'+(i<=n?'on':'')+'"></i>';return s+'</span>'}
+document.querySelector('#gap tbody').innerHTML=GAP.map(function(r){return '<tr><td>'+r[0]+'</td><td>'+dots(r[1])+'</td><td>'+dots(r[2],1)+'</td><td>'+r[3]+'</td></tr>'}).join('');
+
+var report=(window.BOB_KIT_REPORT||[]);
+function real(k){return report.filter(function(r){return r.kind===k}).map(function(r){return r.id+' '+r.tris.toLocaleString()}).join(', ')}
+var BUD=[
+ ["ฮีโร่","4,000–6,000","2,000","palette 256² + หน้า 512²","1 (+หน้า 1)","≤ 32",real("hero")],
+ ["ศัตรูทั่วไป","1,500–3,000","800","palette","1","≤ 8",real("enemy")],
+ ["บอส","8,000–10,000","4,000","palette + 1 mask 512²","2","≤ 40",real("boss")],
+ ["พร็อพเล็ก (ไม่หยิบ)","150–300","–","palette","1","–","prop_bucket 800 (จากภาพ AI 23,372)"],
+ ["พร็อพในมือ/มินิเกม","800–1,500","–","palette + mask RT 512×256","1","–","–"],
+ ["ห้อง 1 ห้อง","≤ 40,000","–","palette + พื้น 1024²","≤ 4","–","–"],
+ ["ทั้งจอ","≤ 100,000","","","≤ 80 batches","","วัดสดบนเวทีด้านบน"]
+];
+document.querySelector('#bud tbody').innerHTML=BUD.map(function(r){return '<tr>'+r.map(function(c,i){return '<td'+(i>0&&i<6?' class="num"':'')+'>'+c+'</td>'}).join('')+'</tr>'}).join('');
+
+var SW=[["skin","#FADDC1"],["cream","#FEEECF"],["navy","#2E4484"],["sweep เสื้อ","#F79A2E"],["sweep ผ้าคาด","#FB2F44"],["bubble เสื้อ","#3D8FE0"],["press เสื้อ","#2FA97A"],["spray เสื้อ","#8E6BD8"],["metal","#B9BEC6"],["sponge","#F7D046"],["dirt","#8A5226"],["slime","#8B4FC8"],["trash","#7D8796"],["gold","#F6C431"],["outline","#4A2E22"]];
+function hx(h){return [1,3,5].map(function(i){return parseInt(h.substr(i,2),16)/255})}
+function th(c){return '#'+c.map(function(v){v=Math.max(0,Math.min(1,v));return ('0'+Math.round(v*255).toString(16)).slice(-2)}).join('')}
+var AMB=hx("#8F86BF"),KEY=hx("#FFF4E0");
+document.getElementById('sw').innerHTML=SW.map(function(s){var c=hx(s[1]);var sh=c.map(function(v,i){return v*(0.35+0.55*AMB[i])});var hi=c.map(function(v,i){return v*0.85+KEY[i]*0.25});
+ return '<div><div class="c"><span style="background:'+s[1]+'"></span><span style="background:'+th(sh)+'"></span><span style="background:'+th(hi)+'"></span></div><p>'+s[0]+'<br>'+s[1]+' · '+th(sh)+'</p></div>'}).join('');
+
+// ---------- 3D stage ----------
+if(!window.THREE||!THREE.GLTFLoader||!window.BOB_KIT){return}
+var cv=document.getElementById('cv');
+var R=new THREE.WebGLRenderer({canvas:cv,antialias:true,preserveDrawingBuffer:true});
+R.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+R.outputEncoding=THREE.sRGBEncoding;
+var scene=new THREE.Scene();
+var BG=new THREE.Color('#DCE6F4');scene.background=BG;
+var hemi=new THREE.HemisphereLight(0xDDEBFA,0x8F86BF,0.75);scene.add(hemi);
+var key=new THREE.DirectionalLight(0xFFF4E0,0.95);key.position.set(-4,8,6);scene.add(key);
+
+// 3-step soft ramp (BOB/ToonLit): shadow 0.45, mid 0.78, lit 1.0
+var rampData=new Uint8Array([115,115,115,255, 200,200,200,255, 255,255,255,255]);
+var ramp=new THREE.DataTexture(rampData,3,1,THREE.RGBAFormat);ramp.minFilter=ramp.magFilter=THREE.NearestFilter;ramp.needsUpdate=true;
+
+var OUT_PX=2.5, outlineU={value:0.02};
+var outlineMats=[], toonMats=[], flatMats=[], silMat=[];
+var state={cam:'aa',anim:'idle',outline:true,ramp:true,sil:false,dirty:true};
+
+function toonFor(src,skin){
+  var m=new THREE.MeshToonMaterial({color:src.color||0xffffff,map:src.map||null,gradientMap:ramp,skinning:!!skin});
+  m.onBeforeCompile=function(s){s.fragmentShader=s.fragmentShader.replace('#include <output_fragment>',
+   'float rimF=1.0-abs(dot(normalize(vNormal),normalize(vViewPosition)));outgoingLight+=vec3(1.0,0.97,0.9)*smoothstep(0.62,0.8,rimF)*0.18;\n#include <output_fragment>')};
+  var f=new THREE.MeshLambertMaterial({color:src.color||0xffffff,map:src.map||null,skinning:!!skin});
+  var k=new THREE.MeshBasicMaterial({color:0x111111,skinning:!!skin});
+  toonMats.push(m);flatMats.push(f);silMat.push(k);
+  return {toon:m,flat:f,sil:k};
+}
+function outlineFor(mesh){
+  var skin=!!mesh.isSkinnedMesh;
+  var m=new THREE.MeshBasicMaterial({color:0x4A2E22,side:THREE.BackSide,skinning:skin});
+  m.onBeforeCompile=function(s){s.uniforms.outW=outlineU;s.vertexShader='uniform float outW;\n'+s.vertexShader
+    .replace('#include <begin_vertex>','#include <beginnormal_vertex>\n#include <skinnormal_vertex>\n#include <begin_vertex>')
+    .replace('#include <project_vertex>','transformed+=normalize(objectNormal)*outW/max(0.0001,length(modelMatrix[0].xyz));\n#include <project_vertex>')};
+  var o=skin?new THREE.SkinnedMesh(mesh.geometry,m):new THREE.Mesh(mesh.geometry,m);
+  if(skin){o.bind(mesh.skeleton,mesh.bindMatrix)}
+  o.frustumCulled=false;outlineMats.push(o);
+  return o;
+}
+function dress(root){
+  root.traverse(function(o){
+    if(o.isMesh&&!o.userData.isOutline){
+      var mats=toonFor(o.material,o.isSkinnedMesh);o.userData.mats=mats;o.material=mats.toon;o.frustumCulled=false;
+      var ol=outlineFor(o);ol.userData.isOutline=true;
+      (o.isSkinnedMesh?o.parent:o).add(ol);if(!o.isSkinnedMesh){ol.position.set(0,0,0)}
+      if(o.isSkinnedMesh){ol.position.copy(o.position);ol.quaternion.copy(o.quaternion);ol.scale.copy(o.scale)}
+    }
+  });
+}
+
+// room: 14 x 8 tiles, centred on the origin
+var room=new THREE.Group();scene.add(room);
+function floorTex(dirty){
+  var c=document.createElement('canvas');c.width=1400;c.height=800;var g=c.getContext('2d');
+  for(var y=0;y<8;y++)for(var x=0;x<14;x++){var d=dirty&&x<7;var a=(x+y)%2;
+    g.fillStyle=d?(a?'#B9A889':'#AA9878'):(a?'#EDE3CF':'#E3D6BD');g.fillRect(x*100,y*100,100,100);
+    g.strokeStyle=d?'rgba(70,50,30,.25)':'rgba(120,100,70,.18)';g.lineWidth=3;g.strokeRect(x*100+1.5,y*100+1.5,97,97)}
+  if(dirty){var rs=[[150,520,70],[380,300,50],[560,640,60],[260,150,40],[620,420,34]];
+    rs.forEach(function(r){g.fillStyle='rgba(94,53,24,.55)';g.beginPath();g.ellipse(r[0],r[1],r[2],r[2]*.6,0.3,0,6.3);g.fill();
+      g.fillStyle='rgba(139,79,200,.35)';g.beginPath();g.ellipse(r[0]+r[2]*.9,r[1]+10,r[2]*.35,r[2]*.22,0,0,6.3);g.fill()})}
+  else{g.fillStyle='rgba(255,255,255,.7)';[[900,200],[1100,520],[1250,300],[820,650]].forEach(function(p){g.beginPath();g.moveTo(p[0],p[1]-14);g.lineTo(p[0]+4,p[1]);g.lineTo(p[0],p[1]+14);g.lineTo(p[0]-4,p[1]);g.fill()})}
+  var t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;t.anisotropy=4;return t;
+}
+var texDirty=floorTex(true),texClean=floorTex(false);
+var floorMat=new THREE.MeshLambertMaterial({map:texDirty});
+var floor=new THREE.Mesh(new THREE.PlaneGeometry(14,8),floorMat);floor.rotation.x=-Math.PI/2;room.add(floor);
+function box(w,h,d,col,x,y,z){var m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d,2,2,2),{color:new THREE.Color(col)});m.material={color:new THREE.Color(col)};m.position.set(x,y,z);return m}
+var wall=box(14.4,2.4,0.3,'#9DBBDD',0,1.2,-4.15);room.add(wall);
+var sw1=box(0.3,1.0,8.3,'#9DBBDD',-7.15,0.5,0),sw2=box(0.3,1.0,8.3,'#9DBBDD',7.15,0.5,0);sw1.userData.wall=sw2.userData.wall=true;room.add(sw1);room.add(sw2);
+room.add(box(4.2,1.4,0.08,'#2F6B57',0,1.45,-3.98));room.add(box(4.5,0.12,0.18,'#A0643A',0,0.7,-3.95));
+// kit props (stand-ins for CC0 kit + AI props)
+function desk(x,z){var g=new THREE.Group();g.add(box(1.2,0.12,0.7,'#C98A5A',0,0.62,0));[[-.5,-.27],[.5,-.27],[-.5,.27],[.5,.27]].forEach(function(p){g.add(box(0.1,0.58,0.1,'#A0643A',p[0],0.29,p[1]))});g.position.set(x,0,z);return g}
+room.add(desk(-4.6,-2.6));room.add(desk(-2.4,-2.6));
+var cone=new THREE.Mesh(new THREE.ConeGeometry(0.22,0.6,16),{});cone.material={color:new THREE.Color('#FD7713')};cone.position.set(6,0.3,2.8);room.add(cone);
+var buck=new THREE.Mesh(new THREE.CylinderGeometry(0.24,0.19,0.4,18),{});buck.material={color:new THREE.Color('#3695F2')};buck.position.set(-6,0.2,2.6);room.add(buck);
+var sign=new THREE.Mesh(new THREE.ConeGeometry(0.3,0.7,4),{});sign.material={color:new THREE.Color('#F6C431')};sign.position.set(5.6,0.35,-1.6);sign.rotation.y=Math.PI/4;room.add(sign);
+var roomMeshes=[];room.traverse(function(o){if(o.isMesh&&o!==floor)roomMeshes.push(o)});roomMeshes.forEach(function(o){{var m=toonFor(o.material,false);o.userData.mats=m;o.material=m.toon;var ol=outlineFor(o);ol.userData.isOutline=true;o.add(ol)}});
+
+// characters
+var loader=new THREE.GLTFLoader(), mixers=[], actors=[], heroes=[];
+var LAYOUT={sweep:[-3,1.3,0],bubble:[-1,1.3,0],press:[1,1.3,0],spray:[3,1.3,0],dirt:[-4.4,-0.6,0.5],slime:[-1.6,-0.9,0.3],trash:[1.6,-0.9,-0.3],boss_slime:[4.6,-2.4,-0.4]};
+var ids=Object.keys(LAYOUT),left=ids.length;
+function b64(s){var b=atob(s),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u.buffer}
+ids.forEach(function(id){
+  loader.parse(b64(window.BOB_KIT[id]),'',function(g){
+    var root=g.scene;root.traverse(function(o){if(o.isMesh&&o.material.map){o.material.map.encoding=THREE.sRGBEncoding;o.material.map.magFilter=THREE.NearestFilter}});
+    dress(root);var p=LAYOUT[id];root.position.set(p[0],0,p[1]);root.rotation.y=p[2];
+    if(id==='boss_slime')root.scale.setScalar(1.0);
+    scene.add(root);
+    var mx=new THREE.AnimationMixer(root);var clips={};g.animations.forEach(function(c){clips[c.name]=c});
+    var a={id:id,root:root,mixer:mx,clips:clips,hero:['sweep','bubble','press','spray'].indexOf(id)>=0,cur:null};
+    mixers.push(mx);actors.push(a);if(a.hero)heroes.push(a);
+    if(--left===0){applyAll();}
+  },function(e){console.error(id,e)});
+});
+function play(a){var name=a.hero?state.anim:(state.anim==='cheer'?'caught':'idle');var c=a.clips[name]||a.clips.idle;if(!c)return;
+  if(a.cur&&a.cur.getClip()===c)return;var act=a.mixer.clipAction(c);act.reset().setLoop(name==='caught'||name==='cheer'?THREE.LoopRepeat:THREE.LoopRepeat).play();
+  if(a.cur)a.cur.crossFadeTo(act,0.2,false);a.cur=act;}
+
+// cameras
+var ortho=new THREE.OrthographicCamera(-8,8,4.5,-4.5,0.1,100);
+var persp=new THREE.PerspectiveCamera(25,16/9,0.1,100);
+// preset: [pitch, ortho size, hero scale]. "old" = spec 11 §5A; "aa" = frame the 14x8 room tight
+var PRESET={old:[55,4.5,1.0],aa:[45,4.1,1.15],orbit:[45,4.1,1.15]};
+function setOrtho(){var pr=PRESET[state.cam],size=pr[1],asp=16/9;ortho.left=-size*asp;ortho.right=size*asp;ortho.top=size;ortho.bottom=-size;ortho.updateProjectionMatrix();
+  var p=pr[0]*Math.PI/180,m=(2.4*Math.cos(p)+0.15*Math.sin(p))/2,tx=new THREE.Vector3(0,m*Math.cos(p),-m*Math.sin(p));
+  if(state.cam==='old')tx.set(0,0,0.4);
+  ortho.position.set(tx.x,tx.y+Math.sin(p)*30,tx.z+Math.cos(p)*30);ortho.lookAt(tx);}
+function cam(){return state.cam==='orbit'?persp:ortho}
+function heroScale(){return PRESET[state.cam][2]}
+
+function applyAll(){
+  setOrtho();
+  actors.forEach(function(a){if(a.hero)a.root.scale.setScalar(heroScale());else if(a.id!=='boss_slime')a.root.scale.setScalar(heroScale());play(a)});
+  scene.traverse(function(o){if(o.userData.isOutline)o.visible=state.outline&&!state.sil;
+    if(o.userData.mats){o.material=state.sil?o.userData.mats.sil:(state.ramp?o.userData.mats.toon:o.userData.mats.flat)}});
+  floor.visible=!state.sil;room.children.forEach(function(o){if(o!==floor)o.visible=!state.sil&&!(state.cam==='orbit'&&o.userData.wall)});
+  scene.background=state.sil?new THREE.Color('#FFFFFF'):BG;
+  floorMat.map=state.dirty?texDirty:texClean;floorMat.needsUpdate=true;
+  measure();
+}
+function measure(){
+  if(!heroes.length)return;
+  var c=ortho;setOrtho();c.updateMatrixWorld();
+  var h=1e9;heroes.forEach(function(a){a.root.updateMatrixWorld(true);var bb=new THREE.Box3();
+    a.root.traverse(function(o){if(o.isMesh&&!o.userData.isOutline){o.geometry.computeBoundingBox();var b=o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld);bb.union(b)}});
+    var ys=[];for(var i=0;i<8;i++){var v=new THREE.Vector3(i&1?bb.max.x:bb.min.x,i&2?bb.max.y:bb.min.y,i&4?bb.max.z:bb.min.z).project(c);ys.push(v.y)}
+    h=Math.min(h,(Math.max.apply(null,ys)-Math.min.apply(null,ys))/2*1080)});
+  var el=document.getElementById('r-px');el.textContent=Math.round(h)+' px';el.className=h>=120?'pass':'fail';
+  if(state.cam==='orbit')el.textContent+=' (ที่กล้อง AA)';
+}
+function size(){var w=cv.clientWidth,hh=Math.round(w*9/16);R.setSize(w,hh,false);persp.aspect=w/hh;persp.updateProjectionMatrix()}
+window.addEventListener('resize',size);size();
+
+// controls
+function pressGroup(sel,btn){document.querySelectorAll(sel).forEach(function(b){b.setAttribute('aria-pressed',b===btn?'true':'false')})}
+[['cam-old','old'],['cam-aa','aa'],['cam-orbit','orbit']].forEach(function(p){var b=document.getElementById(p[0]);b.addEventListener('click',function(){state.cam=p[1];pressGroup('#cam-old,#cam-aa,#cam-orbit',b);applyAll()})});
+document.querySelectorAll('[data-anim]').forEach(function(b){b.addEventListener('click',function(){state.anim=b.dataset.anim;pressGroup('[data-anim]',b);actors.forEach(play)})});
+[['t-outline','outline'],['t-ramp','ramp'],['t-sil','sil'],['t-dirty','dirty']].forEach(function(p){var c=document.getElementById(p[0]);c.addEventListener('change',function(){state[p[1]]=c.checked;applyAll()})});
+
+var clock=new THREE.Clock(),t0=0,reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+function frame(){
+  var dt=Math.min(0.05,clock.getDelta());t0+=dt;
+  if(!reduce)mixers.forEach(function(m){m.update(dt)});
+  if(state.cam==='orbit'){var a=Math.sin(t0*0.35)*1.1;persp.position.set(Math.sin(a)*12,3.2,Math.cos(a)*12+1.3);persp.lookAt(0,0.55,0.6)}
+  var c=cam();
+  // outline: constant ~2.5 px at 1080p, whatever the camera
+  outlineU.value=state.cam==='orbit'?0.012:(ortho.top-ortho.bottom)/1080*OUT_PX;
+  R.info.autoReset=false;R.info.reset();R.render(scene,c);
+  document.getElementById('r-tris').textContent=R.info.render.triangles.toLocaleString();
+  document.getElementById('r-calls').textContent=R.info.render.calls;
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
