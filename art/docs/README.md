@@ -28,6 +28,7 @@
 | [15_Task_Minigame_Study.md](15_Task_Minigame_Study.md) | **ศึกษา (13 พ.ย. 2026):** ระบบ task ของ Among Us (common/short/long, แถบความคืบหน้ารวม, ทำไมสนุก) → ข้อเสนอเปลี่ยนรอบเล่น BOB เป็น task list มินิเกมทำความสะอาด 16 ตัว (MVP 8), แถบทีม+คู่แข่ง, ดนตรีเลเยอร์ และสิ่งที่กติกา/server ต้องเปลี่ยน (**อนุมัติแล้ว** ใช้เป็นเหตุผลและแหล่งที่มา) | Game designer / ทุกคน |
 | [16_Task_Race_Minigame_Spec.md](16_Task_Race_Minigame_Spec.md) | **สเปกใช้งานจริง (13 พ.ย. 2026):** รอบเล่น task race (ใบงาน = รายการงานของทีม, น้ำหนัก, แถบทีม/คู่แข่ง, ลมเป่าช่วย, คราบฉุกเฉิน, การชนะ), มินิเกม 16 ตัวแบบละเอียดครบ (MVP 8 ตัว + ระยะ 2 อีก 8 ตัว: ควบคุม, เกณฑ์, D1–D3, ถนัด, เวลาขั้นต่ำ server, เสียง, art) และสัญญา opcode | Game designer / Unity / Server |
 | [17_Music_Layers.md](17_Music_Layers.md) | แผนดนตรีเลเยอร์ 4 stem (120 bpm, เปิดตาม % ทีม/คู่แข่ง/เวลา, quantize ขอบห้อง, ชุด fast 130 bpm, stinger, ducking, `BobMusicLayers` ใน Unity, ทางเลือกการผลิต) | Sound / Unity dev |
+| [22_Tripo_CLI.md](22_Tripo_CLI.md) | **Tripo CLI (13 พ.ย. 2026):** ติดตั้ง `tripo-cli`, ตั้งคีย์ผ่าน `TRIPO_API_KEY` เท่านั้น, คำสั่งที่ไม่เสียเครดิต (doctor/balance/--dry-run), สูตรสร้าง prop จาก prompt/ภาพ Leonardo, ประมาณการเครดิต และตัวอย่างเรียก V3 API ด้วย Python | Art / ผู้ใช้ |
 
 ## สรุปสั้น
 
