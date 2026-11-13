@@ -24,6 +24,7 @@
 | [11_UX_UI_Spec.md](11_UX_UI_Spec.md) | สเปก UX/UI ทั้งเกม: แผนผังหน้าจอ 30+ จอ, flow, HUD, component library (ขนาด u/dp, สถานะ, เสียง/สั่น), tokens สี/ฟอนต์ไทย, accessibility, วิธีทำใน Unity (uGUI + TMP) + wireframe [`ux/BOB_UX_Wireframes.html`](ux/BOB_UX_Wireframes.html) และหน้าจอเล่น 3/4 โรงอาหาร [`ux/BOB_Play_Screen_Cafeteria.html`](ux/BOB_Play_Screen_Cafeteria.html) (ข้อ 5A) | Game designer / UI artist / Unity dev |
 | [12_Sound_Manifest.md](12_Sound_Manifest.md) | รายการเสียงทั้งเกม (39 ไฟล์ รวมเสียง co-op ใหม่ 6 ตัว), แหล่ง CC0 ที่คัดไว้ (Kenney, OpenGameArt, Freesound CC0), วิธีนำเข้า Unity และตารางบันทึก licence | Sound / Unity dev |
 | [13_Balance_Sim.md](13_Balance_Sim.md) | ผลจำลองสมดุลฮีโร่ 20,000 รอบ (`server/balance-sim.js`): ability แต่ละตัวช่วยได้แค่ไหน และข้อเสนอปรับตัวเลข (ยังไม่ได้แก้เกม) | Game design |
+| [15_Task_Minigame_Study.md](15_Task_Minigame_Study.md) | **ศึกษา (13 พ.ย. 2026):** ระบบ task ของ Among Us (common/short/long, แถบความคืบหน้ารวม, ทำไมสนุก) → ข้อเสนอเปลี่ยนรอบเล่น BOB เป็น task list มินิเกมทำความสะอาด 16 ตัว (MVP 8), แถบทีม+คู่แข่ง, ดนตรีเลเยอร์ และสิ่งที่กติกา/server ต้องเปลี่ยน (ยังไม่แก้ GDD/โค้ด รอตัดสินใจ) | Game designer / ทุกคน |
 
 ## สรุปสั้น
 
