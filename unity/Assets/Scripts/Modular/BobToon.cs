@@ -26,7 +26,17 @@ namespace Bob.Modular
         /// <summary>Add a constant-width outline to a renderer's mesh (a child copy drawn with the hull shader).</summary>
         public static GameObject Outline(GameObject target, float pixels = 2.5f, Color? colour = null)
         {
-            var mf = target.GetComponent<MeshFilter>(); var ob = OutlineBase;
+            var ob = OutlineBase; var smr = target.GetComponent<SkinnedMeshRenderer>();
+            if (smr != null && ob != null)
+            {
+                // skinned heroes: a second skinned renderer on the same bones, drawn with the hull shader
+                var sg = new GameObject("Outline"); sg.transform.SetParent(target.transform, false);
+                var o = sg.AddComponent<SkinnedMeshRenderer>(); o.sharedMesh = smr.sharedMesh; o.bones = smr.bones; o.rootBone = smr.rootBone; o.localBounds = smr.localBounds;
+                var sm = new Material(ob); sm.SetFloat("_Pixels", pixels); sm.SetColor("_OutlineColor", colour ?? LineColor);
+                o.sharedMaterial = sm; o.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; o.receiveShadows = false;
+                return sg;
+            }
+            var mf = target.GetComponent<MeshFilter>();
             if (mf == null || ob == null) return null;
             var go = new GameObject("Outline"); go.transform.SetParent(target.transform, false);
             go.AddComponent<MeshFilter>().sharedMesh = mf.sharedMesh;

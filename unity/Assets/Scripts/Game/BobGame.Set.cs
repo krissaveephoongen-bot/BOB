@@ -130,7 +130,7 @@ namespace Bob.Game
         {
             if (heroModel != null) { Destroy(heroModel); heroModel = null; heroAnim = null; }
             if (!World3D || playerSr == null) return;
-            var prefab = Resources.Load<GameObject>("Heroes/SK_" + charId);
+            var prefab = Resources.Load<GameObject>("Heroes/SK_" + charId); Debug.Log("Bob: hero model " + charId + " -> " + (prefab != null ? "3D prefab" : "sprite"));
             playerSr.enabled = prefab == null;
             if (prefab == null) return;
             heroModel = Instantiate(prefab); heroModel.name = "Hero3D";
@@ -148,7 +148,7 @@ namespace Bob.Game
                     mats[i] = BobToon.Toon(col, tex);
                 }
                 r.sharedMaterials = mats;
-                if (r is MeshRenderer) { var mf = r.GetComponent<MeshFilter>(); if (mf != null) BobToon.Outline(r.gameObject, 2.5f); }
+                if (r is MeshRenderer || r is SkinnedMeshRenderer) BobToon.Outline(r.gameObject, 2.5f);
             }
             heroAnim = heroModel.GetComponentInChildren<Animator>();
         }
