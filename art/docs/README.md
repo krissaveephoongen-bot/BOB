@@ -27,6 +27,9 @@
 | [13_Balance_Sim.md](13_Balance_Sim.md) | ผลจำลองสมดุลฮีโร่ 20,000 รอบ (`server/balance-sim.js`): ability แต่ละตัวช่วยได้แค่ไหน และข้อเสนอปรับตัวเลข (ยังไม่ได้แก้เกม) | Game design |
 | [15_Task_Minigame_Study.md](15_Task_Minigame_Study.md) | **ศึกษา (13 พ.ย. 2026):** ระบบ task ของ Among Us (common/short/long, แถบความคืบหน้ารวม, ทำไมสนุก) → ข้อเสนอเปลี่ยนรอบเล่น BOB เป็น task list มินิเกมทำความสะอาด 16 ตัว (MVP 8), แถบทีม+คู่แข่ง, ดนตรีเลเยอร์ และสิ่งที่กติกา/server ต้องเปลี่ยน (**อนุมัติแล้ว** ใช้เป็นเหตุผลและแหล่งที่มา) | Game designer / ทุกคน |
 | [16_Task_Race_Minigame_Spec.md](16_Task_Race_Minigame_Spec.md) | **สเปกใช้งานจริง (13 พ.ย. 2026):** รอบเล่น task race (ใบงาน = รายการงานของทีม, น้ำหนัก, แถบทีม/คู่แข่ง, ลมเป่าช่วย, คราบฉุกเฉิน, การชนะ), มินิเกม 16 ตัวแบบละเอียดครบ (MVP 8 ตัว + ระยะ 2 อีก 8 ตัว: ควบคุม, เกณฑ์, D1–D3, ถนัด, เวลาขั้นต่ำ server, เสียง, art) และสัญญา opcode | Game designer / Unity / Server |
+| [20_AA_Art_Review.md](20_AA_Art_Review.md) | **รีวิวมาตรฐาน AA (13 พ.ย. 2026):** คะแนนช่องว่าง 12 ด้าน, จุดที่เอกสารขัดกัน (โลก ศัตรู โลโก้ กล้อง เส้นขอบ), ผลทดลองสร้างโมเดลด้วยสคริปต์, ความเสี่ยง | ทุกคน |
+| [21_AA_Art_Bible.md](21_AA_Art_Bible.md) | **Art Bible ฉบับ AA (อนุมัติแล้ว 13 พ.ย. 2026):** หลัก 5 ข้อ, ภาษารูปทรง, กล้อง 45° + สเกลโลก, งบต่อประเภท, material library, ชุดแสง, หน้า flipbook, อนิเมชัน (หนัก-เบา), VFX 5 ชั้น, pipeline ไม่มี artist 3 สาย (สคริปต์ Blender / AI image-to-3D / CC0), ด่านตรวจ 8 ข้อ, ลำดับ asset ใหม่, สิ่งที่ต้องใช้คน | ทุกคน |
+| [ux/BOB_AA_Art_Bible.html](ux/BOB_AA_Art_Bible.html) | ภาพอ้างอิง AA: โมเดล 3D จริงจาก `art/tools/blender/bob_kit.py` ที่มุมกล้องเกม (สลับกล้องเดิม/ใหม่, ท่า idle/walk/cheer, ทดสอบ silhouette, วัดขนาดบนจอ/tris/draw call), คะแนนช่องว่าง, พาเลต+เงาอมสี, งบ, pipeline | Art / Unity |
 | [17_Music_Layers.md](17_Music_Layers.md) | แผนดนตรีเลเยอร์ 4 stem (120 bpm, เปิดตาม % ทีม/คู่แข่ง/เวลา, quantize ขอบห้อง, ชุด fast 130 bpm, stinger, ducking, `BobMusicLayers` ใน Unity, ทางเลือกการผลิต) | Sound / Unity dev |
 | [19_Level_Layout_Task_Stations.md](19_Level_Layout_Task_Stations.md) | **ผังฉาก task race (13 พ.ย. 2026):** แถบวางจุดงาน (เลี่ยง HUD/นิ้วโป้ง), แกนกลาง ชั้นวาง–จุดเกิด–รถเข็น, ชนิดจุด → มินิเกม, กติการะยะ R1–R13, seed กระจายงานตามโซน A–D, ดาว/ลูกศรพื้น/ป้ายย่อ, การ์ดเมื่อเข้าใกล้, ผัง 3 ห้อง (ห้องเรียน โรงอาหาร ห้องใต้ดิน) + ผลจำลองเวลาเดิน · ผังภาพ [`ux/BOB_Level_Layouts.html`](ux/BOB_Level_Layouts.html) · ตัวตรวจ `tools/check_layouts.js` | Level / Game designer / Unity |
 
@@ -49,3 +52,7 @@
 | M6 | UI/VFX ชุดจริง แทน placeholder ตาม `11_UX_UI_Spec.md` (F01–F24) | Sprite Atlas + UI prefabs + VFX prefabs | 1–2 สัปดาห์ |
 
 ระหว่างผลิต ไฟล์ placeholder ใน `bob-art/unity/` ใช้ต่อได้ตามเดิม ชื่อไฟล์และ id ไม่เปลี่ยน งานจริงจะค่อยๆ เข้ามาแทนทีละชิ้น
+
+## มาตรฐาน AA (13 พ.ย. 2026)
+
+รีวิว `20_AA_Art_Review.md` + Art Bible `21_AA_Art_Bible.md` (อนุมัติแล้ว: บทแรกเป็นห้องบ้านตาม GDD 20, ตัวละคร 3D, กล้อง 45°, โลโก้ตาม concept, Tripo/Meshy) ตัวละครและของในฉากเล่นย้ายเป็น 3D toon ที่ใช้ material + palette เดียวทั้งเกม ผลิตโดยไม่มี artist ผ่าน 3 สาย: สคริปต์ Blender (`art/tools/blender/bob_kit.py` สร้างฮีโร่ 4 + ศัตรู 4 พร้อม rig/อนิเมชันแล้ว ใน `art/aa/kit/`), AI image-to-3D + `bob_prop_cleanup.py`, และชุด CC0 ภาพ 2D จาก Leonardo ใช้ต่อเฉพาะ UI/เมนู/การ์ด ไม่อยู่ในฉากเล่น ลำดับ Milestone M1–M6 ด้านบนถูกแทนด้วย 21 ข้อ 12
