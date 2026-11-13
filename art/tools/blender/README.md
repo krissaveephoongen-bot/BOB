@@ -39,3 +39,11 @@ E
 Palette cells: the order of `PALETTE` in `bob_kit.py` is the cell order on the 16x16 grid. Add colours at the end only, never reorder (UVs point at cells).
 
 The kit models are blockouts: faces are geometry for preview; production faces are a flipbook texture (Art Bible 6.3).
+
+Characters from Tripo (heroes, enemies) keep their painted texture instead of the palette snap:
+
+```
+python art/tools/blender/bob_prop_cleanup.py art/aa/raw/hero_sweep_tripo_20261113.glb --name hero_sweep_tripo --class hero --height 1.15 --keep-texture --prefix SK_ --out art/aa/chars
+```
+
+`--min-island 0.08` drops a stray image frame that came with the model. `bob_prop_preview.py --fit width` frames long furniture by its widest side.

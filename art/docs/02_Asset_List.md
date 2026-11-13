@@ -151,6 +151,10 @@
 | C03 | ม้วนทิชชู (Tripo, 13 พ.ย. 2026) | B | ✓ `art/aa/props/SM_prop_toilet_paper` (4,844 → 798 tris, สี `mop`) |
 | C03 | ขวดน้ำยาฟ้า (Tripo, 13 พ.ย. 2026) | B | ✓ `art/aa/props/SM_prop_spray_blue` (4,842 → 798 tris, สี `bubble_shirt` + `shoe` + `white`) |
 | C03 | ภาพรวมชุด C03 8 ชิ้น (แถวบน = ดิบจาก Tripo, แถวล่าง = หลัง cleanup) | – | `art/docs/aa/aa_props_c03.png`; ข้อจำกัด: ป้ายพื้นเปียกไม่มีลายเตือน (ต้องใส่ decal), ฉลากขวดสเปรย์เป็นปื้นสี (ควรสร้างใหม่จากภาพไม่มีฉลากหรือใส่ decal) |
+| W-H03 / W-U01 | เตียงเดี่ยว, ฟูกล้ม (Tripo text to 3D, 13 พ.ย. 2026) | B | ✓ `art/aa/props/SM_prop_bed_single` (4,458 → 800 tris), `SM_prop_futon_fallen` (4,786 → 800 tris, สีเดียว ลายทางหาย); preview `art/docs/aa/aa_props_l1.png`; โซฟา `sofa_2seat` สร้างแล้วแต่ไฟล์ยังไม่เข้ารีโป |
+| A03 (ทางเลือก B) | ฮีโร่ 4 ตัวจาก Tripo image to 3D (13 พ.ย. 2026) เทียบกับ blockout สาย A | B | ✓ `art/aa/chars/SK_hero_{sweep,bubble,press,spray}_tripo` (4,043–4,966 tris, คง texture เดิม ไม่ snap palette, ยังไม่มี rig, ท่ายืนตามภาพไม่ใช่ T-pose, อุปกรณ์ติดมือ 3 ตัว); preview `art/docs/aa/aa_chars_tripo.png` |
+| B01 (ทางเลือก B) | เจ้าคราบจาก Tripo (13 พ.ย. 2026) | B | ✓ `art/aa/chars/SK_enemy_stain_tripo` (4,751 → 2,499 tris, คง texture เดิม, ยังไม่มี rig) |
+| B02–B06, พร็อพ AA-0/1/2 | สไลม์ ขยะปีศาจ เชื้อโรค บอส + พร็อพ 18 ชิ้น | B | Krits สร้างเองบน Tripo Studio ตาม `bob-art/tripo/Tripo_Prompt_Pack.md` แล้วส่ง .glb มา cleanup |
 | G01 (ใหม่) | shader `BOB/ToonLit`, `ToonFace`, `ToonSlime`, `ToonFloor`, Outline Renderer Feature, `PF_Light_Room` | โค้ด | – (P0) |
 | G02 (ใหม่) | `T_BOB_Palette.png` (แผ่นเดียวทั้งเกม) | A | ✓ |
 | E12 (ใหม่) | VFX 5 ชั้นสำหรับ 6 event หลัก (งานเสร็จ, จับคราบ, ของลงรถเข็น, ขึ้นนำ, หมดเวลา, ชนะรอบ) | Shuriken | – (P0) |

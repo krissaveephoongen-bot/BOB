@@ -185,6 +185,8 @@ event ที่ต้องมีสูตรครบ (P0): งานเสร�
 
 ค่าที่ใช้กับ Tripo Studio (เว็บ, แผน Pro; ทดสอบกับถัง 13 พ.ย. 2026): Image to 3D, HD Model, ปิด Ultra Mesh Quality, texture 2K, ปิด PBR, Topology = Triangle, Polycount 5,000 → Generate **25 เครดิตต่อชิ้น**, Export GLB ไม่เสียเครดิต (Smart Mesh ไม่จำเป็น เพราะ cleanup ลดเหลือตามงบเอง) เครดิตของ API (`art/tools/tripo/tripo_gen.py`) เป็นกระเป๋าแยกจากเครดิตบนเว็บ
 
+ตัวละครจาก Tripo (ฮีโร่ ศัตรู บอส; ทดลอง 13 พ.ย. 2026): ใช้ `--keep-texture --prefix SK_ --class hero|enemy|boss --out art/aa/chars` เพื่อคง texture ที่วาดหน้าไว้ (ไม่ snap palette เพราะหน้าจะหาย) งบ tris hero 6,000 / enemy 2,500 / boss 4,000 ถ้าภาพตั้งต้นมีขอบสี่เหลี่ยมชัดจะได้เส้นกรอบลอยติดมา ให้ทำขอบภาพจางเป็นขาวก่อน หรือลบด้วย `--min-island 0.08` ข้อจำกัด: ไม่ใช้ material ร่วม `M_BOB_Toon` (เพิ่ม 1 material ต่อตัว), ยังไม่มี rig, ท่าตามภาพ
+
 ### 9.4 สาย 2D (ยังใช้ภาพ AI ได้)
 
 UI, ไอคอน, หน้าเมนู, ภาพการ์ดโหมด, พื้นหลังการ์ดมินิเกม (F27) ใช้ภาพ Leonardo ได้ต่อ แต่ต้อง: ลบตัวอักษรในภาพทิ้งทุกครั้ง (ใส่ข้อความด้วย TextMeshPro), ตั้ง 9-slice, ใช้พาเลตเดียวกัน **ห้ามภาพ 2D อยู่ในฉากเล่น 3D**

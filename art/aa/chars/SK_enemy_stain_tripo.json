@@ -1,0 +1,9 @@
+{
+ "name": "enemy_stain_tripo",
+ "class": "enemy",
+ "tris_in": 4751,
+ "tris_out": 2499,
+ "budget": 2500,
+ "height_m": 0.85,
+ "colours": {}
+}

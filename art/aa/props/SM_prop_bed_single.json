@@ -1,0 +1,14 @@
+{
+ "name": "prop_bed_single",
+ "class": "prop_m",
+ "tris_in": 4458,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.6,
+ "colours": {
+  "bubble_shirt": 334,
+  "wood": 206,
+  "goggle_lens": 161,
+  "white": 99
+ }
+}

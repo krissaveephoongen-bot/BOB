@@ -20,6 +20,8 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--size", type=int, default=640, help="pixels per model")
     ap.add_argument("--samples", type=int, default=24)
+    ap.add_argument("--fit", choices=["height", "width"], default="height",
+                    help="width = normalise to the widest side (long furniture)")
     a = ap.parse_args(argv)
 
     bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -33,6 +35,8 @@ def main():
         mn = Vector((min(p.x for p in pts), min(p.y for p in pts), min(p.z for p in pts)))
         mx = Vector((max(p.x for p in pts), max(p.y for p in pts), max(p.z for p in pts)))
         s = 1.0 / max(1e-6, mx.z - mn.z)  # normalise every model to height 1
+        if a.fit == "width":
+            s = 1.3 / max(1e-6, mx.x - mn.x, mx.y - mn.y, mx.z - mn.z)
         root = bpy.data.objects.new("root%d" % i, None)
         bpy.context.scene.collection.objects.link(root)
         for o in objs:

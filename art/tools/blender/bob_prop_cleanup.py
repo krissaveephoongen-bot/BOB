@@ -30,7 +30,8 @@ from mathutils import Vector
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from bob_kit import PALETTE, cell_uv, hex_rgb, make_palette_image  # noqa: E402
 
-TRI_BUDGET = {"prop_s": 300, "prop_m": 800, "prop_hand": 1500, "room": 40000, "part": 500}
+TRI_BUDGET = {"prop_s": 300, "prop_m": 800, "prop_hand": 1500, "room": 40000, "part": 500,
+              "hero": 6000, "enemy": 2500, "boss": 4000}  # characters: 21_AA_Art_Bible.md section 4
 # props may only snap to these (no skin / face colours on furniture)
 PROP_COLOURS = [n for n, _ in PALETTE if n not in ("skin", "skin_shadow", "cheek", "eye", "mouth", "tongue", "brow")]
 
@@ -105,6 +106,11 @@ def main():
     ap.add_argument("--out", default="art/aa/props")
     ap.add_argument("--colours", default="", help="comma list of palette names this prop may use "
                     "(2-4 names from the concept); empty = whole prop palette")
+    ap.add_argument("--keep-texture", action="store_true", help="characters: keep the source texture and "
+                    "material (no palette snap) so the painted face survives; export as --prefix")
+    ap.add_argument("--min-island", type=float, default=0.01, help="drop loose islands smaller than this "
+                    "share of the faces (raise to ~0.08 when a stray image frame came with the model)")
+    ap.add_argument("--prefix", default="SM_", help="SM_ for props, SK_ for characters")
     a = ap.parse_args(argv)
     os.makedirs(a.out, exist_ok=True)
 
@@ -144,7 +150,7 @@ def main():
                         stack.append(h)
         islands.append(isl)
     total = len(bm.faces)
-    kill = [f for isl in islands if len(isl) < 0.01 * total for f in isl]
+    kill = [f for isl in islands if len(isl) < a.min_island * total for f in isl]
     if kill and len(kill) < total:
         bmesh.ops.delete(bm, geom=kill, context="FACES")
     bm.to_mesh(ob.data)
@@ -169,7 +175,32 @@ def main():
     for v in ob.data.vertices:
         v.co = (v.co - off) * s
 
-    # 4. palette snap per face
+    # 4. palette snap per face (skipped with --keep-texture)
+    me = ob.data
+    used = {}
+    if not a.keep_texture:
+        used = palette_snap(ob, img, a)
+    ob.name = me.name = a.prefix + a.name
+
+    tris_out = sum(len(p.vertices) - 2 for p in me.polygons)
+    base = os.path.join(a.out, a.prefix + a.name)
+    bpy.ops.object.select_all(action="DESELECT")
+    ob.select_set(True)
+    bpy.ops.export_scene.gltf(filepath=base + ".glb", use_selection=True, export_format="GLB")
+    try:
+        bpy.ops.export_scene.fbx(filepath=base + ".fbx", use_selection=True, axis_forward="-Z", axis_up="Y",
+                                 apply_unit_scale=True)
+    except Exception as e:
+        print("FBX skipped:", e)
+    rep = {"name": a.name, "class": a.cls, "tris_in": tris_in, "tris_out": tris_out, "budget": budget,
+           "height_m": a.height, "colours": dict(sorted(used.items(), key=lambda kv: -kv[1]))}
+    with open(base + ".json", "w") as f:
+        json.dump(rep, f, indent=1)
+    print(json.dumps(rep))
+
+
+
+def palette_snap(ob, img, a):
     me = ob.data
     bm = bmesh.new()
     bm.from_mesh(me)
@@ -221,23 +252,7 @@ def main():
     mat.node_tree.links.new(t.outputs["Color"], mat.node_tree.nodes["Principled BSDF"].inputs["Base Color"])
     me.materials.clear()
     me.materials.append(mat)
-    ob.name = me.name = "SM_" + a.name
-
-    tris_out = sum(len(p.vertices) - 2 for p in me.polygons)
-    base = os.path.join(a.out, "SM_" + a.name)
-    bpy.ops.object.select_all(action="DESELECT")
-    ob.select_set(True)
-    bpy.ops.export_scene.gltf(filepath=base + ".glb", use_selection=True, export_format="GLB")
-    try:
-        bpy.ops.export_scene.fbx(filepath=base + ".fbx", use_selection=True, axis_forward="-Z", axis_up="Y",
-                                 apply_unit_scale=True)
-    except Exception as e:
-        print("FBX skipped:", e)
-    rep = {"name": a.name, "class": a.cls, "tris_in": tris_in, "tris_out": tris_out, "budget": budget,
-           "height_m": a.height, "colours": dict(sorted(used.items(), key=lambda kv: -kv[1]))}
-    with open(base + ".json", "w") as f:
-        json.dump(rep, f, indent=1)
-    print(json.dumps(rep))
+    return used
 
 
 if __name__ == "__main__":
