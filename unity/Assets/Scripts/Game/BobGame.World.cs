@@ -415,8 +415,11 @@ namespace Bob.Game
             foreach (var f in fresh)
             {
                 var col = f.Sum >= 0 ? BobUi.Good : BobUi.Bad;
-                var tm = WorldLabel((f.Sum >= 0 ? "+ " : "- ") + f.Text, new Vector2(CartRect.center.x, y), 0.026f, col);
-                StartCoroutine(BobTween.FloatUp(tm.transform, 0.6f, 1.4f));
+                var grp = new GameObject("Fx").transform; grp.SetParent(worldRoot, false); grp.position = new Vector2(CartRect.center.x, y);
+                WorldLabel(f.Text, grp.position, 0.026f, col, grp);
+                var fxIcon = MakeSprite("FxIcon", grp, f.Sum >= 0 ? "icon_check" : "icon_cross", grp.position + new Vector3(0, 0.17f, 0), 0.2f, false);
+                fxIcon.color = col; fxIcon.sortingOrder = 3000;
+                StartCoroutine(BobTween.FloatUp(grp, 0.6f, 1.4f));
                 y += 0.22f;
                 if (f.Sum >= 0) { Sfx("reaction_good"); SpawnFx("fx_sparkle", CartTop); }
                 else { Sfx("reaction_bad"); SpawnFx(f.Text.Contains("ฟู่") ? "fx_fizz" : "fx_poof", CartTop); StartCoroutine(BobTween.Shake(cartT, 0.06f)); Buzz(); }

@@ -306,7 +306,7 @@ namespace Bob.Game
             }
             for (int i = 0; i < 4; i++) StatRow(orderBody, BobRules.StatKeys[i], e.Stats[i]);
             foreach (var f in e.Fx.Where(f => f.At == -1).Take(2))
-                BobUi.Label(orderBody, (f.Off ? "× " : f.Good ? "+ " : "- ") + f.Text, 19, f.Off ? BobUi.Muted : f.Good ? BobUi.Good : BobUi.Bad);
+                EffectRow(orderBody, f, 19);
             if (preview != null)
                 BobUi.Label(orderBody, "เล็งเป้า: " + preview.Total + " คะแนน" + (preview.Pass ? " ผ่าน" : " ยังไม่ผ่าน"), 22, BobUi.Teal, TextAnchor.MiddleLeft, FontStyle.Bold);
         }
@@ -331,6 +331,16 @@ namespace Bob.Game
             }
             var val = BobUi.Label(row.transform, hasT ? v + "/" + target : v.ToString(), 22, hasT ? (v >= target ? BobUi.Good : BobUi.Bad) : BobUi.Muted, TextAnchor.MiddleRight, FontStyle.Bold);
             BobUi.Size(val, 30, 30, 0, 64);
+        }
+
+        /// <summary>One reaction line: an icon (check = helps, cross = cancels, pause = switched off) + the text. Never colour alone.</summary>
+        void EffectRow(Transform parent, Effect f, int fontSize)
+        {
+            var row = BobUi.HBox(parent, 6, "Fx"); row.childForceExpandWidth = false; row.childForceExpandHeight = false; row.childAlignment = TextAnchor.MiddleLeft;
+            BobUi.Size(row, fontSize + 10, fontSize + 10);
+            var col = f.Off ? BobUi.Muted : f.Good ? BobUi.Good : BobUi.Bad;
+            BobUi.Img(row.transform, f.Off ? "icon_pause" : f.Good ? "icon_check" : "icon_cross", fontSize + 6, col);
+            var tx = BobUi.Label(row.transform, f.Text, fontSize, col); BobUi.Size(tx, fontSize + 10, fontSize + 10, 1);
         }
 
         void RenderCart()
@@ -374,7 +384,7 @@ namespace Bob.Game
             }
             // latest reactions, newest first
             foreach (var f in e.Fx.Where(f => f.At >= 0).Reverse().Take(3))
-                BobUi.Label(cartBody, (f.Off ? "× " : f.Good ? "+ " : "- ") + f.Text, 18, f.Off ? BobUi.Muted : f.Good ? BobUi.Good : BobUi.Bad);
+                EffectRow(cartBody, f, 18);
             if (!nearCart && phase == Phase.Build && (hand.Count > 0 || stack.Count > 0))
                 BobUi.Label(cartBody, "เดินไปใกล้รถเข็นเพื่อวางหรือยกออก", 18, BobUi.Muted, TextAnchor.MiddleCenter);
         }
@@ -524,7 +534,8 @@ namespace Bob.Game
             ScreenBackdrop("lobby_rental_room");
             // top-left server status, top-right coins + settings
             var net = Card(S, "Net", BobUi.Surface, 1f); BobUi.Pin(net, new Vector2(0, 1), new Vector2(0, 1), new Vector2(24, -24), new Vector2(330, 72));
-            var nt = BobUi.Label(net, (online ? "• ออนไลน์" : connecting ? "◦ กำลังเชื่อมต่อ…" : "◦ ออฟไลน์"), 24, online ? BobUi.Good : BobUi.Muted, TextAnchor.MiddleCenter); BobUi.Stretch(nt.rectTransform);
+            var nt = BobUi.Label(net, (online ? "ออนไลน์" : connecting ? "กำลังเชื่อมต่อ…" : "ออฟไลน์"), 24, online ? BobUi.Good : BobUi.Muted, TextAnchor.MiddleCenter); BobUi.Stretch(nt.rectTransform, 40, 0, 0, 0);
+            var dot = BobUi.Img(net, online ? "icon_check" : connecting ? "icon_timer" : "icon_cross", 34, online ? BobUi.Good : BobUi.Muted); BobUi.Pin(dot.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(22, 0), new Vector2(34, 34));
             var coin = Card(S, "Coins", BobUi.Surface, 1f); BobUi.Pin(coin, Vector2.one, Vector2.one, new Vector2(-150, -24), new Vector2(230, 96));
             BobUi.Pin(BobUi.Img(coin, "icon_star", 56).rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(16, 0), new Vector2(56, 56));
             var ctext = BobUi.Label(coin, coins.ToString(), 40, BobUi.Ink, TextAnchor.MiddleRight, FontStyle.Bold); BobUi.Stretch(ctext.rectTransform, 76, 0, 22, 0);
