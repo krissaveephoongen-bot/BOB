@@ -10,7 +10,7 @@ namespace Bob.Game
 {
     public partial class BobGame
     {
-        static readonly Color CreamWall = new Color(0.93f, 0.97f, 0.92f), TableTop = new Color(1f, 0.89f, 0.55f), TableSide = new Color(0.96f, 0.72f, 0.36f),
+        static readonly Color CreamWall = new Color(0.96f, 0.93f, 0.84f), TableTop = new Color(1f, 0.89f, 0.55f), TableSide = new Color(0.96f, 0.72f, 0.36f),
             Plate = new Color(0.98f, 0.97f, 0.95f), PlateMat = new Color(0.96f, 0.56f, 0.45f), Mat = new Color(0.62f, 0.86f, 0.80f);
 
         Transform setRoot;
@@ -73,8 +73,8 @@ namespace Bob.Game
             RenderSettings.ambientLight = new Color(0.7f, 0.72f, 0.8f);
 
             // floor: pale tiles everywhere, the play area is a teal mat with a light border
-            var tiles = TileTexture(new Color(1f, 0.97f, 0.82f), new Color(0.98f, 0.92f, 0.70f));
-            Quad("Floor", new Vector3(RoomW / 2, -0.02f, RoomH / 2), new Vector2(40, 30), Color.white, tiles, new Vector2(20, 15));
+            var tiles = Resources.Load<Texture2D>("Textures/floor_wood"); if (tiles == null) tiles = TileTexture(new Color(1f, 0.97f, 0.82f), new Color(0.98f, 0.92f, 0.70f));
+            Quad("Floor", new Vector3(RoomW / 2, -0.02f, RoomH / 2), new Vector2(40, 30), Color.white, tiles, new Vector2(10, 7.5f));
             Quad("MatBorder", new Vector3(RoomW / 2, -0.012f, RoomH / 2), new Vector2(RoomW + 0.5f, RoomH + 0.5f), new Color(0.80f, 0.94f, 0.90f));
             Quad("PlayMat", new Vector3(RoomW / 2, -0.008f, RoomH / 2), new Vector2(RoomW, RoomH), Mat);
             foreach (var sx in new[] { 0.12f, RoomW - 0.12f }) Quad("Lane", new Vector3(sx, -0.004f, RoomH / 2), new Vector2(0.06f, RoomH - 0.4f), new Color(1f, 0.88f, 0.35f));
@@ -82,25 +82,37 @@ namespace Bob.Game
             // back wall with shelves and a counter, low side walls
             BobToon.Shape(PrimitiveType.Cube, setRoot, "BackWall", new Vector3(RoomW / 2, 1.2f, RoomH + 1.5f), new Vector3(16f, 2.4f, 0.3f), CreamWall, true, 2.5f);
             BobToon.Shape(PrimitiveType.Cube, setRoot, "BackTrim", new Vector3(RoomW / 2, 0.3f, RoomH + 1.32f), new Vector3(16f, 0.6f, 0.1f), new Color(0.62f, 0.82f, 0.78f), false);
-            for (int i = 0; i < 4; i++)
-            {
-                float x = 0.2f + i * 2.5f;
-                BobToon.Shape(PrimitiveType.Cube, setRoot, "Shelf", new Vector3(x, 1.35f, RoomH + 1.28f), new Vector3(1.5f, 0.08f, 0.35f), TableSide, true, 2f);
-                for (int k = 0; k < 4; k++) BobToon.Shape(PrimitiveType.Cylinder, setRoot, "Jar", new Vector3(x - 0.5f + k * 0.33f, 1.5f, RoomH + 1.28f), new Vector3(0.18f, 0.12f, 0.18f), k % 2 == 0 ? new Color(0.55f, 0.78f, 0.95f) : new Color(0.98f, 0.62f, 0.5f), false);
-            }
-            BobToon.Shape(PrimitiveType.Cube, setRoot, "Counter", new Vector3(RoomW / 2, 0.45f, RoomH + 1.0f), new Vector3(13f, 0.9f, 0.7f), new Color(0.72f, 0.80f, 0.92f), true, 2.5f);
-            BobToon.Shape(PrimitiveType.Cube, setRoot, "CounterTop", new Vector3(RoomW / 2, 0.93f, RoomH + 1.0f), new Vector3(13.1f, 0.08f, 0.8f), new Color(0.62f, 0.45f, 0.45f), false);
 
-            // long tables with plates on both sides (benches on the play-floor side), a row across the front
-            Table(new Vector3(-1.9f, 0, RoomH / 2 + 0.2f), new Vector3(1.0f, 0.7f, 5.4f));
-            Table(new Vector3(-3.5f, 0, RoomH / 2 + 0.2f), new Vector3(1.0f, 0.7f, 5.4f));
-            Table(new Vector3(RoomW + 1.9f, 0, RoomH / 2 + 0.2f), new Vector3(1.0f, 0.7f, 5.4f));
-            Table(new Vector3(RoomW + 3.5f, 0, RoomH / 2 + 0.2f), new Vector3(1.0f, 0.7f, 5.4f));
-            Bench(new Vector3(-0.85f, 0, RoomH / 2 + 0.2f), new Vector3(0.4f, 0.3f, 5.2f));
-            Bench(new Vector3(RoomW + 0.85f, 0, RoomH / 2 + 0.2f), new Vector3(0.4f, 0.3f, 5.2f));
-            for (int i = 0; i < 3; i++) Table(new Vector3(1.2f + i * 2.8f, 0, -1.9f), new Vector3(2.4f, 0.7f, 1.0f));
-            for (int i = 0; i < 3; i++) Table(new Vector3(1.2f + i * 2.8f, 0, -3.6f), new Vector3(2.4f, 0.7f, 1.0f));
+            BuildRentalRoom();
             BuildSigns();
+        }
+
+        /// <summary>Rental room (GDD chapter 1, Art Bible D1): sofa, bed, fallen futon, kitchenette, TV, window and rug around the play floor.
+        /// Scripted placeholders in the toon style until the Tripo / Blender models (doc 23) are dropped into Resources.</summary>
+        void BuildRentalRoom()
+        {
+            var sofa = new Color(0.88f, 0.48f, 0.35f); var wood = TableSide; var white = new Color(0.97f, 0.96f, 0.93f);
+            // rug under the play area edge, window and poster on the back wall
+            Quad("Rug", new Vector3(RoomW / 2, -0.006f, RoomH / 2), new Vector2(RoomW - 1.0f, RoomH - 0.8f), new Color(0.58f, 0.80f, 0.74f));
+            BobToon.Shape(PrimitiveType.Cube, setRoot, "WindowFrame", new Vector3(RoomW / 2, 1.5f, RoomH + 1.32f), new Vector3(2.2f, 1.2f, 0.08f), white, true, 2f);
+            BobToon.Shape(PrimitiveType.Cube, setRoot, "WindowGlass", new Vector3(RoomW / 2, 1.5f, RoomH + 1.27f), new Vector3(2.0f, 1.0f, 0.04f), new Color(0.62f, 0.82f, 0.96f), false);
+            // sofa (left, outside the play floor) and single bed (right)
+            BobToon.Shape(PrimitiveType.Cube, setRoot, "SofaSeat", new Vector3(-1.9f, 0.3f, 1.6f), new Vector3(1.0f, 0.5f, 2.0f), sofa, true, 2.5f);
+            BobToon.Shape(PrimitiveType.Cube, setRoot, "SofaBack", new Vector3(-2.35f, 0.7f, 1.6f), new Vector3(0.2f, 0.7f, 2.0f), sofa * 0.9f, true, 2.5f);
+            foreach (var s in new[] { -1, 1 }) BobToon.Shape(PrimitiveType.Cube, setRoot, "SofaArm", new Vector3(-1.9f, 0.5f, 1.6f + s * 1.0f), new Vector3(1.0f, 0.6f, 0.2f), sofa * 0.95f, true, 2.5f);
+            BobToon.Shape(PrimitiveType.Cube, setRoot, "BedFrame", new Vector3(RoomW + 1.9f, 0.2f, 3.4f), new Vector3(1.1f, 0.3f, 2.2f), wood, true, 2.5f);
+            BobToon.Shape(PrimitiveType.Cube, setRoot, "BedMattress", new Vector3(RoomW + 1.9f, 0.42f, 3.4f), new Vector3(1.0f, 0.18f, 2.1f), new Color(0.6f, 0.78f, 0.95f), true, 2.5f);
+            BobToon.Shape(PrimitiveType.Cube, setRoot, "Pillow", new Vector3(RoomW + 1.9f, 0.58f, 4.2f), new Vector3(0.7f, 0.14f, 0.4f), white, false);
+            // fallen futon on the floor next to the bed (Tripo piece, placeholder for now)
+            BobToon.Shape(PrimitiveType.Cube, setRoot, "Futon", new Vector3(RoomW + 1.9f, 0.08f, 1.0f), new Vector3(1.0f, 0.14f, 1.8f), new Color(0.95f, 0.72f, 0.78f), true, 2f);
+            // kitchenette along the lower left: modular 0.6 m units
+            for (int i = 0; i < 4; i++)
+                BobToon.Shape(PrimitiveType.Cube, setRoot, i == 1 ? "Sink" : i == 2 ? "Stove" : "Cabinet", new Vector3(-2.0f + i * 0.6f, 0.45f, -1.4f), new Vector3(0.58f, 0.9f, 0.6f), i == 2 ? new Color(0.45f, 0.5f, 0.58f) : new Color(0.78f, 0.86f, 0.95f), true, 2.2f);
+            BobToon.Shape(PrimitiveType.Cube, setRoot, "KitchenTop", new Vector3(-1.4f, 0.93f, -1.4f), new Vector3(2.4f, 0.06f, 0.64f), new Color(0.62f, 0.45f, 0.45f), false);
+            // low table + TV unit at the front right
+            BobToon.Shape(PrimitiveType.Cube, setRoot, "TVUnit", new Vector3(RoomW + 1.6f, 0.3f, -1.4f), new Vector3(1.6f, 0.6f, 0.6f), wood, true, 2.2f);
+            BobToon.Shape(PrimitiveType.Cube, setRoot, "TV", new Vector3(RoomW + 1.6f, 0.95f, -1.4f), new Vector3(1.1f, 0.65f, 0.08f), new Color(0.2f, 0.22f, 0.3f), true, 2f);
+            BobToon.Shape(PrimitiveType.Cube, setRoot, "Table", new Vector3(RoomW / 2, 0.22f, -1.6f), new Vector3(2.0f, 0.44f, 0.9f), TableTop, true, 2.5f);
         }
 
         void BuildSigns()
