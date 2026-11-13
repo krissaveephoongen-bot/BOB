@@ -1,0 +1,134 @@
+[
+ {
+  "id": "sweep",
+  "kind": "hero",
+  "tris": 5380,
+  "budget": [
+   4000,
+   6000
+  ],
+  "ok": true,
+  "bones": 19,
+  "materials": 1,
+  "anims": [
+   "idle",
+   "walk",
+   "cheer"
+  ]
+ },
+ {
+  "id": "bubble",
+  "kind": "hero",
+  "tris": 5284,
+  "budget": [
+   4000,
+   6000
+  ],
+  "ok": true,
+  "bones": 19,
+  "materials": 1,
+  "anims": [
+   "idle",
+   "walk",
+   "cheer"
+  ]
+ },
+ {
+  "id": "press",
+  "kind": "hero",
+  "tris": 5480,
+  "budget": [
+   4000,
+   6000
+  ],
+  "ok": true,
+  "bones": 19,
+  "materials": 1,
+  "anims": [
+   "idle",
+   "walk",
+   "cheer"
+  ]
+ },
+ {
+  "id": "spray",
+  "kind": "hero",
+  "tris": 5704,
+  "budget": [
+   4000,
+   6000
+  ],
+  "ok": true,
+  "bones": 19,
+  "materials": 1,
+  "anims": [
+   "idle",
+   "walk",
+   "cheer"
+  ]
+ },
+ {
+  "id": "dirt",
+  "kind": "enemy",
+  "tris": 2452,
+  "budget": [
+   1500,
+   3000
+  ],
+  "ok": true,
+  "bones": 3,
+  "materials": 1,
+  "anims": [
+   "idle",
+   "caught"
+  ]
+ },
+ {
+  "id": "slime",
+  "kind": "enemy",
+  "tris": 1826,
+  "budget": [
+   1500,
+   3000
+  ],
+  "ok": true,
+  "bones": 3,
+  "materials": 1,
+  "anims": [
+   "idle",
+   "caught"
+  ]
+ },
+ {
+  "id": "trash",
+  "kind": "enemy",
+  "tris": 1084,
+  "budget": [
+   1500,
+   3000
+  ],
+  "ok": true,
+  "bones": 3,
+  "materials": 1,
+  "anims": [
+   "idle",
+   "caught"
+  ]
+ },
+ {
+  "id": "boss_slime",
+  "kind": "boss",
+  "tris": 3890,
+  "budget": [
+   8000,
+   10000
+  ],
+  "ok": true,
+  "bones": 3,
+  "materials": 1,
+  "anims": [
+   "idle",
+   "caught"
+  ]
+ }
+]

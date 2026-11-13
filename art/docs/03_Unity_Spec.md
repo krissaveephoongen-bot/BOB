@@ -2,6 +2,8 @@
 
 Unity 6 LTS · URP · Target: Android (min API 26, OpenGL ES 3.0 / Vulkan) + iOS · 60 fps บนเครื่องกลาง, 30 fps บนเครื่องต่ำ (2 GB RAM)
 
+> **อัปเดต 13 พ.ย. 2026:** Art Bible AA (`21_AA_Art_Bible.md`, อนุมัติแล้ว) แก้ข้อ 1 (กล้อง 45° size 4.1), ข้อ 2 (งบ + palette texture เดียว), ข้อ 5 (material library, เส้นขอบเป็นพิกเซลบนจอ) และเพิ่มชุดแสง โมเดล blockout ที่ทำตามสเปกนี้อยู่ใน `art/aa/kit/` (Generic rig, ชื่อ bone ตามข้อ 3)
+
 ## 1. สรุปสเปก
 
 | รายการ | ค่า |
@@ -143,3 +145,12 @@ PF_Sweep
 - Particle ต่อ effect ≤ 30 อนุภาค, ทั้งจอ ≤ 200
 - ทดสอบบนเครื่องจริงรุ่นต่ำ (เช่น Android 3 GB RAM) ตั้งแต่ M3 ห้ามรอจนจบ
 - Addressables แยก group ตามห้อง/Chapter เพื่อลดขนาดดาวน์โหลดแรก (เป้า APK ≤ 150 MB)
+
+## 11. ข้อเพิ่มจาก Art Bible AA (13 พ.ย. 2026, อนุมัติแล้ว)
+
+- **Palette texture เดียว:** `T_BOB_Palette.png` 256² (ช่อง 16×16, ลำดับตาม `PALETTE` ใน `art/tools/blender/bob_kit.py`) Import: Filter Point, ไม่มี mip, ASTC 4×4 ทุกโมเดลจาก kit, AI และ CC0 ใช้ `M_BOB_Toon` ตัวเดียว → SRP Batcher รวม batch ได้
+- **Rig ใน kit:** 19 bone (ชุดย่อยของข้อ 3: Root, Hips, Spine, Chest, Neck, Head, UpperArm/LowerArm/Hand ซ้ายขวา, Socket_Tool, Apron_01, UpperLeg/Foot ซ้ายขวา, Socket_Carry) skin แบบ rigid 1 influence ต่อ vertex; ศัตรู 3 bone (Root, Body, Top)
+- **Outline:** ความหนาคำนวณเป็นพิกเซลบนจอ (2.5 px ที่ 1080p ตัวละคร, 2 px ฉาก) แทน 0.008–0.010 unit ซึ่งเหลือราว 1 px ที่ ortho 4.1
+- **กล้อง:** pitch 45°, ortho size 4.1, ฮีโร่ scale 1.15 (วัดได้ 164 px ที่ 1080p)
+- **ชุดแสง:** `PF_Light_Room` (key `#FFF4E0`, ambient gradient `#DDEBFA`/`#8F86BF`) ทุกห้อง
+- **นำเข้าไฟล์จากสคริปต์:** `art/aa/kit/SK_<id>.fbx` (หรือ `.glb` ผ่าน glTFast) Rig = Generic, Avatar = Create From This Model (ฮีโร่ตัวแรก) แล้ว Copy From สำหรับตัวที่เหลือ อนิเมชันอยู่ใน take ชื่อ idle / walk / cheer
