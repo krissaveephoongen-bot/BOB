@@ -77,7 +77,7 @@ Parameters: `speed` (float), `carrying` (bool), `working` (bool), triggers `pick
 - `_DirtAmount` 0–1: ผสม albedo กับ dirt overlay + ลด saturation (ใช้กับห้องและพร็อพ → ทำ Dirty/Clean variant ได้ด้วย material เดียว)
 - รับ AO จาก vertex color R
 
-**`BOB/Outline`**: inverted hull, ความหนา `_OutlineWidth` 0.012 (ปรับตาม camera size ให้คงที่บนจอ), สี `#2B2D42`
+**`BOB/Outline`**: inverted hull, ความหนา `_OutlineWidth` 0.008–0.010 (ปรับตาม camera size ให้คงที่บนจอ), สีน้ำตาลเข้ม `#4A2E22` ตาม `00_Art_Direction.md` ข้อ 5 (ตัดสิน 13 พ.ย. 2026 แทนค่าเดิม `#2B2D42`) ปรับสีตามวัสดุได้ เช่นขอบโลหะใช้เทาเข้ม
 - ใช้ Renderer Feature "Render Objects" pass ที่ 2 แทนการทำ material ซ้ำ
 
 **ศัตรู**: `BOB/ToonLit` + ตัวแปร Grease `_Specular` สูง, Scale ใช้ fresnel ใสๆ (ไม่ใช้ transparency จริงเพื่อเลี่ยง overdraw)
