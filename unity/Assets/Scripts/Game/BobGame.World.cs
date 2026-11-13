@@ -14,18 +14,20 @@ namespace Bob.Game
 {
     public partial class BobGame
     {
-        const float RoomW = 8f, RoomH = 5f, Radius = 0.16f, Speed = 2.3f, NearStation = 0.46f, NearCart = 0.5f;
+        const float RoomW = 14f, RoomH = 8f, HeroH = 1.15f, Radius = 0.16f, Speed = 2.3f, NearStation = 0.46f, NearCart = 0.5f;
 
         // Prototype rects (x, y from the top-left, w, h in px) -> world rects.
+        static Rect SR(float cx, float cy, float w, float h) => new Rect(cx - w / 2, cy - h / 2, w, h); // world rect from its centre
         static Rect PR(float x, float y, float w, float h) => new Rect(x / 100f, (500f - y - h) / 100f, w / 100f, h / 100f);
 
         static readonly string[] StationIds = { "tool", "chem", "energy", "method" };
         static readonly string[] StationNames = { "ชั้นวางอุปกรณ์", "ตู้น้ำยา", "จุดแรงทำงาน", "กระดานวิธีใช้" };
-        static readonly Rect[] StationRects = { PR(30, 30, 170, 64), PR(600, 30, 170, 64), PR(30, 406, 170, 64), PR(600, 406, 170, 64) };
-        static readonly Rect CartHome = PR(355, 215, 90, 64), SofaRect = PR(300, 385, 200, 30); // sofa sits lower than the prototype so its sprite does not hide the cart
+        // Level layout doc 19, L1 rental room (14 x 8, y = depth from the front): tool shelf S1, chem cabinet S5, energy S8, method board S9 (the other 7 stations come with the 9-station rules)
+        static readonly Rect[] StationRects = { SR(3.0f, 6.8f, 1.7f, 0.64f), SR(11.05f, 6.8f, 1.7f, 0.64f), SR(3.25f, 3.55f, 1.7f, 0.64f), SR(10.75f, 3.55f, 1.7f, 0.64f) };
+        static readonly Rect CartHome = SR(7.0f, 2.0f, 0.9f, 0.64f), SofaRect = SR(1.3f, 5.2f, 2.0f, 0.3f); // sofa sits lower than the prototype so its sprite does not hide the cart
         Rect cartRect = CartHome;
         Rect CartRect => cartRect; // solo: the hero can push the cart (BobGame.Extras.cs)
-        static readonly Vector2 PlayerStart = new Vector2(4f, 0.6f);
+        static readonly Vector2 PlayerStart = new Vector2(6.5f, 3.3f);
 
         Camera cam;
         SpriteRenderer themeBg;
@@ -131,7 +133,7 @@ namespace Bob.Game
 
             var sofa = MakeSprite("Sofa", worldRoot, "sofa", new Vector2(SofaRect.center.x, SofaRect.yMin), SofaRect.width, true);
             if (!art.Has("sofa")) { sofa.transform.localScale = new Vector3(SofaRect.width, SofaRect.height, 1); sofa.transform.localPosition = SofaRect.center; sofa.color = BobUi.Surface; }
-            sofa.sortingOrder = Order(SofaRect.yMin);
+            sofa.sortingOrder = Order(SofaRect.yMin); if (World3D) sofa.enabled = false; // the 3D set draws the sofa
 
             cartSr = MakeSprite("Cart", worldRoot, "cart", new Vector2(CartRect.center.x, CartRect.yMin), 1.2f, true);
             if (!art.Has("cart")) { cartSr.transform.localScale = new Vector3(CartRect.width, CartRect.height, 1); cartSr.transform.localPosition = CartRect.center; cartSr.color = BobUi.Surface; }
@@ -186,7 +188,7 @@ namespace Bob.Game
             if (playerSr == null) return;
             playerAnimKey = null;
             var s = art.Get(charId + "_idle");
-            playerSr.transform.localScale = Vector3.one * (0.95f / Mathf.Max(0.01f, s.bounds.size.y));
+            playerSr.transform.localScale = Vector3.one * (HeroH / Mathf.Max(0.01f, s.bounds.size.y));
             if (!art.Has(charId + "_idle")) { playerSr.transform.localScale = new Vector3(0.3f, 0.45f, 1); playerSr.color = BobUi.Hex(Hero.Color); }
             heroBase = playerSr.transform.localScale;
             TryHeroModel();
@@ -212,16 +214,16 @@ namespace Bob.Game
             {
                 var x = RoomW / 2 + (i - (ids.Length - 1) / 2f) * 1.2f;
                 var holder = new GameObject("Enemy_" + ids[i]).transform; holder.SetParent(enemyRoot, false);
-                var sr = MakeSprite("Sprite", holder, ids[i] + "_idle", new Vector2(x, 3.75f), 0f, true);
+                var sr = MakeSprite("Sprite", holder, ids[i] + "_idle", new Vector2(x, 5.6f), 0f, true);
                 var idle = art.Find(ids[i] + "_idle");
-                sr.transform.localScale = Vector3.one * (0.95f / Mathf.Max(0.01f, sr.sprite.bounds.size.y));
+                sr.transform.localScale = Vector3.one * (HeroH / Mathf.Max(0.01f, sr.sprite.bounds.size.y));
                 if (idle == null) { sr.transform.localScale = new Vector3(0.6f, 0.5f, 1); sr.color = BobUi.Hex(BobMatch.Enemy(ids[i]).Color); }
-                sr.sortingOrder = Order(3.75f);
-                if (World3D) MakeShadow(holder, new Vector2(x, 3.75f), 0.7f);
-                if (World3D) TryEnemyModel(ids[i], holder, new Vector2(x, 3.75f), sr);
+                sr.sortingOrder = Order(5.6f);
+                if (World3D) MakeShadow(holder, new Vector2(x, 5.6f), 0.7f);
+                if (World3D) TryEnemyModel(ids[i], holder, new Vector2(x, 5.6f), sr);
                 var an = sr.gameObject.AddComponent<BobSpriteAnimator>();
                 if (idle != null) an.Play(idle.frames, idle.fps, true);
-                WorldLabel(BobMatch.Enemy(ids[i]).Name, new Vector2(x, 3.62f), 0.03f, BobUi.Ink, holder);
+                WorldLabel(BobMatch.Enemy(ids[i]).Name, new Vector2(x, 5.47f), 0.03f, BobUi.Ink, holder);
                 holder.gameObject.SetActive(false); // appear 2.5 s after the countdown (TickSignals)
                 enemies.Add((ids[i], an, holder));
             }
@@ -574,7 +576,7 @@ namespace Bob.Game
             {
                 Sfx("enemy_defeat");
                 foreach (var t in floorTiles) t.sprite = art.Get("floor_tile");
-                SpawnFx("fx_sparkle", Raise(new Vector2(RoomW / 2, 3.7f), 0.5f)); SpawnFx("fx_sparkle", CartTop);
+                SpawnFx("fx_sparkle", Raise(new Vector2(RoomW / 2, 5.5f), 0.5f)); SpawnFx("fx_sparkle", CartTop);
             }
             else Sfx("enemy_hit");
         }

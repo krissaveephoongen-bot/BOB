@@ -81,8 +81,8 @@ namespace Bob.Game
             foreach (var sx in new[] { 0.12f, RoomW - 0.12f }) Quad("Lane", new Vector3(sx, -0.004f, RoomH / 2), new Vector2(0.06f, RoomH - 0.4f), new Color(1f, 0.88f, 0.35f));
 
             // back wall with shelves and a counter, low side walls
-            BobToon.Shape(PrimitiveType.Cube, setRoot, "BackWall", new Vector3(RoomW / 2, 1.2f, RoomH + 1.5f), new Vector3(16f, 2.4f, 0.3f), CreamWall, true, 2.5f);
-            BobToon.Shape(PrimitiveType.Cube, setRoot, "BackTrim", new Vector3(RoomW / 2, 0.3f, RoomH + 1.32f), new Vector3(16f, 0.6f, 0.1f), new Color(0.62f, 0.82f, 0.78f), false);
+            BobToon.Shape(PrimitiveType.Cube, setRoot, "BackWall", new Vector3(RoomW / 2, 1.2f, RoomH + 1.5f), new Vector3(RoomW + 4f, 2.4f, 0.3f), CreamWall, true, 2.5f);
+            BobToon.Shape(PrimitiveType.Cube, setRoot, "BackTrim", new Vector3(RoomW / 2, 0.3f, RoomH + 1.32f), new Vector3(RoomW + 4f, 0.6f, 0.1f), new Color(0.62f, 0.82f, 0.78f), false);
 
             BuildRentalRoom();
             BuildSigns();
@@ -98,9 +98,10 @@ namespace Bob.Game
             BobToon.Shape(PrimitiveType.Cube, setRoot, "WindowFrame", new Vector3(RoomW / 2, 1.5f, RoomH + 1.32f), new Vector3(2.2f, 1.2f, 0.08f), white, true, 2f);
             BobToon.Shape(PrimitiveType.Cube, setRoot, "WindowGlass", new Vector3(RoomW / 2, 1.5f, RoomH + 1.27f), new Vector3(2.0f, 1.0f, 0.04f), new Color(0.62f, 0.82f, 0.96f), false);
             // sofa (left, outside the play floor) and single bed (right)
-            BobToon.Shape(PrimitiveType.Cube, setRoot, "SofaSeat", new Vector3(-1.9f, 0.3f, 1.6f), new Vector3(1.0f, 0.5f, 2.0f), sofa, true, 2.5f);
-            BobToon.Shape(PrimitiveType.Cube, setRoot, "SofaBack", new Vector3(-2.35f, 0.7f, 1.6f), new Vector3(0.2f, 0.7f, 2.0f), sofa * 0.9f, true, 2.5f);
-            foreach (var s in new[] { -1, 1 }) BobToon.Shape(PrimitiveType.Cube, setRoot, "SofaArm", new Vector3(-1.9f, 0.5f, 1.6f + s * 1.0f), new Vector3(1.0f, 0.6f, 0.2f), sofa * 0.95f, true, 2.5f);
+            { float sx = SofaRect.center.x, sz = SofaRect.center.y;
+              BobToon.Shape(PrimitiveType.Cube, setRoot, "SofaSeat", new Vector3(sx, 0.3f, sz), new Vector3(2.0f, 0.5f, 0.9f), sofa, true, 2.5f);
+              BobToon.Shape(PrimitiveType.Cube, setRoot, "SofaBack", new Vector3(sx, 0.7f, sz + 0.4f), new Vector3(2.0f, 0.7f, 0.2f), sofa * 0.9f, true, 2.5f);
+              foreach (var s in new[] { -1, 1 }) BobToon.Shape(PrimitiveType.Cube, setRoot, "SofaArm", new Vector3(sx + s * 0.9f, 0.5f, sz), new Vector3(0.2f, 0.6f, 0.9f), sofa * 0.95f, true, 2.5f); }
             BobToon.Shape(PrimitiveType.Cube, setRoot, "BedFrame", new Vector3(RoomW + 1.9f, 0.2f, 3.4f), new Vector3(1.1f, 0.3f, 2.2f), wood, true, 2.5f);
             BobToon.Shape(PrimitiveType.Cube, setRoot, "BedMattress", new Vector3(RoomW + 1.9f, 0.42f, 3.4f), new Vector3(1.0f, 0.18f, 2.1f), new Color(0.6f, 0.78f, 0.95f), true, 2.5f);
             BobToon.Shape(PrimitiveType.Cube, setRoot, "Pillow", new Vector3(RoomW + 1.9f, 0.58f, 4.2f), new Vector3(0.7f, 0.14f, 0.4f), white, false);
@@ -150,7 +151,7 @@ namespace Bob.Game
             // scale to the hero height of the 2D sprite so the room stays in proportion (Art Bible: hero 1.15 u in a 14 x 8 room, ours is 8 x 5)
             var rs = heroModel.GetComponentsInChildren<Renderer>(); var b = rs.Length > 0 ? rs[0].bounds : new Bounds(Vector3.zero, Vector3.one);
             foreach (var r in rs) b.Encapsulate(r.bounds);
-            float k = 0.95f / Mathf.Max(0.01f, b.size.y); heroModel.transform.localScale *= k;
+            float k = HeroH / Mathf.Max(0.01f, b.size.y); heroModel.transform.localScale *= k;
             foreach (var r in rs)
             {
                 var mats = r.sharedMaterials;
@@ -176,7 +177,7 @@ namespace Bob.Game
             sr.enabled = false;
             var m = Instantiate(prefab, holder); m.name = "Enemy3D";
             var rs = m.GetComponentsInChildren<Renderer>(); var b = rs[0].bounds; foreach (var r in rs) b.Encapsulate(r.bounds);
-            m.transform.localScale *= 0.95f / Mathf.Max(0.01f, b.size.y);
+            m.transform.localScale *= HeroH / Mathf.Max(0.01f, b.size.y);
             var tint = Color.Lerp(Color.white, BobUi.Hex(BobMatch.Enemy(id).Color), 0.35f);
             foreach (var r in rs)
             {

@@ -16,7 +16,7 @@ namespace Bob.Game
     {
         IEnumerator RouteTo(Vector2 p, System.Func<bool> arrived)
         {
-            float lane = pos.x < RoomW / 2 ? 2.6f : 5.4f; // lanes clear of stations, cart and sofa
+            float lane = pos.x < RoomW / 2 ? 5.0f : 9.0f; // lanes clear of stations, cart and sofa
             foreach (var w in new[] { new Vector2(lane, pos.y), new Vector2(lane, 3.3f), new Vector2(p.x, 3.3f), p })
             {
                 target = w; stuck = 0;
