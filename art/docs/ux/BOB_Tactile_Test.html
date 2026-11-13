@@ -1,0 +1,307 @@
+<title>BOB Tactile Test</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mitr:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@400;500&display=swap">
+<style>
+/* Layout: two stacked test benches (sponge, cloth), each a 2:1 play area like the S28 card, with a meter and a short "how it is made" note. */
+:root{
+  --bg:#F4F6FB; --panel:#FFFFFF; --fg:#0B1A3A; --muted:#55607A; --line:#D7DDEA; --accent:#1A6FC4; --chip:#E8EEF8; --good:#178A4F; --card:#FEEECF; --frame:#2E4484;
+  --display:"Mitr","IBM Plex Sans Thai",system-ui,sans-serif;
+  --body:"IBM Plex Sans Thai","Noto Sans Thai",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0B1222;--panel:#121B30;--fg:#E8EDF8;--muted:#9AA6C2;--line:#26324D;--accent:#6CB2FF;--chip:#1B2742;--good:#4ED38A;--card:#2A2416;--frame:#6C86D6;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0B1222;--panel:#121B30;--fg:#E8EDF8;--muted:#9AA6C2;--line:#26324D;--accent:#6CB2FF;--chip:#1B2742;--good:#4ED38A;--card:#2A2416;--frame:#6C86D6;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.6}
+.wrap{max-width:1100px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 64px;display:grid;gap:30px}
+h1,h2{font-family:var(--display);font-weight:600;margin:0;text-wrap:balance}
+h1{font-size:clamp(26px,4vw,36px)} h2{font-size:22px}
+p{margin:0;max-width:70ch} .lead{color:var(--muted);margin-top:6px}
+.bench{display:grid;gap:12px}
+.stage{position:relative;background:var(--card);border:5px solid var(--frame);border-radius:26px;padding:10px;display:grid;gap:10px;min-width:0}
+.stage canvas{width:100%;aspect-ratio:2/1;max-width:100%;display:block;border-radius:16px;touch-action:none;cursor:grab;background:#E8EEF3}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;font-family:var(--display);font-size:16px;color:#0B1A3A}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .bar{color:var(--fg)}}
+:root[data-theme="dark"] .bar{color:var(--fg)}
+.meter{flex:1 1 200px;height:20px;border-radius:10px;background:#E3E7F0;border:3px solid #041E4F;overflow:hidden;min-width:0}
+.meter i{display:block;height:100%;width:0;background:#178A4F;transition:width .15s}
+button{font-family:var(--display);font-size:15px;border:3px solid #041E4F;background:#F6C431;color:#041E4F;border-radius:999px;padding:4px 16px;cursor:pointer}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.how{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:grid;gap:6px;font-size:14px;color:var(--muted)}
+.how b{color:var(--fg);font-weight:500}
+.err{color:#D81E36}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>BOB · ทดสอบผิวสัมผัสของวัตถุ</h1>
+    <p class="lead">ชิ้นทดสอบว่าความสมจริงมาจาก shader และโค้ดได้โดยไม่ต้องมี artist รูปทรงยังเป็นการ์ตูนเส้นหนา แสงเงา 3 ระดับ สีจากพาเลต concept ลองด้วยนิ้วหรือเมาส์ได้เลย</p>
+  </header>
+
+  <section class="bench" aria-labelledby="h-sponge">
+    <h2 id="h-sponge">ฟองน้ำถูคราบ (T02)</h2>
+    <div class="stage">
+      <canvas id="cv-sponge" aria-label="ลากฟองน้ำบนคราบ"></canvas>
+      <div class="bar"><span>ลากวนบนคราบ</span><div class="meter"><i id="m-sponge"></i></div><span id="t-sponge">คราบ 100%</span><button id="r-sponge" type="button">เริ่มใหม่</button></div>
+    </div>
+    <div class="how">
+      <p><b>คราบ</b> เป็น mask ที่ถูกลบทีละนิดตามรอยฟองน้ำ ถูเร็วเหลือรอยเป็นทาง คราบมันมีเงาวาวแยกชั้น</p>
+      <p><b>น้ำและฟอง</b> เป็นอีก mask ที่วาดตามรอยถูแล้วค่อยๆ แห้ง ฟองหายเร็วกว่ารอยเปียก</p>
+      <p><b>ฟองน้ำ</b> ยุบเมื่อกด ยืดตามทิศที่ลาก เอียงตามความเร็ว และซึมสีคราบเข้าไปเรื่อยๆ</p>
+    </div>
+  </section>
+
+  <section class="bench" aria-labelledby="h-cloth">
+    <h2 id="h-cloth">บิดผ้าถู (T06)</h2>
+    <div class="stage">
+      <canvas id="cv-cloth" aria-label="หมุนนิ้วเพื่อบิดผ้า"></canvas>
+      <div class="bar"><span>กดค้างแล้วหมุนเป็นวง</span><div class="meter"><i id="m-cloth"></i></div><span id="t-cloth">เปียก 100%</span><button id="r-cloth" type="button">เริ่มใหม่</button></div>
+    </div>
+    <div class="how">
+      <p><b>การบิด</b> ทำใน vertex shader ปลายบนยึดอยู่ ปลายล่างหมุนตามนิ้ว ผ้าเป็นเกลียวและคอดลงตามแรงบิด รอยพับกลายเป็นลายเกลียวเอง ปล่อยนิ้วแล้วคลายกลับนิดหนึ่ง</p>
+      <p><b>น้ำ</b> หยดถี่ตามความเร็วที่บิดและความเปียกที่เหลือ ผ้าสีจางลงจากเปียกเป็นหมาด หยดน้ำตกลงถังแล้วเป็นวงกระเพื่อม</p>
+    </div>
+  </section>
+  <p id="msg" class="lead"></p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+if(!window.THREE){document.getElementById('msg').innerHTML='<span class="err">โหลด three.js ไม่ได้ ลองเปิดหน้าใหม่อีกครั้ง</span>';return;}
+const INK=0x4A2E22; // outline brown from 00_Art_Direction
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function toonRamp(){const d=new Uint8Array([70,70,70,255, 160,160,160,255, 255,255,255,255]);const t=new THREE.DataTexture(d,3,1,THREE.RGBAFormat);t.minFilter=t.magFilter=THREE.NearestFilter;t.needsUpdate=true;return t;}
+const RAMP=toonRamp();
+function setup(canvas){
+  const r=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});
+  r.setPixelRatio(Math.min(2,devicePixelRatio||1));
+  const scene=new THREE.Scene();
+  const cam=new THREE.PerspectiveCamera(30,2,0.1,100);
+  const resize=()=>{const w=canvas.clientWidth,h=canvas.clientHeight;if(!w||!h)return;r.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();};
+  new ResizeObserver(resize).observe(canvas);resize();
+  scene.add(new THREE.HemisphereLight(0xffffff,0x8899aa,0.55));
+  const sun=new THREE.DirectionalLight(0xffffff,0.75);sun.position.set(-3,8,5);scene.add(sun);
+  return {r,scene,cam};
+}
+function outline(mesh,thick){const m=new THREE.Mesh(mesh.geometry,new THREE.MeshBasicMaterial({color:INK,side:THREE.BackSide}));m.scale.setScalar(1+thick);mesh.add(m);return m;}
+function noiseCanvas(w,h,fn){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');fn(g,w,h);return c;}
+const rnd=(a,b)=>a+Math.random()*(b-a);
+
+/* ================= SPONGE ================= */
+(function(){
+  const cv=document.getElementById('cv-sponge');const {r,scene,cam}=setup(cv);
+  scene.background=new THREE.Color(0xD9B27C);
+  cam.position.set(0,9.2,6.4);cam.lookAt(0,0,0.2);
+  const TW=12,TH=6.6;
+  // wood
+  const wood=noiseCanvas(512,256,(g,w,h)=>{g.fillStyle='#D9B27C';g.fillRect(0,0,w,h);for(let i=0;i<7;i++){g.fillStyle='#B98E57';g.fillRect(0,i*h/7,w,3);}for(let i=0;i<260;i++){g.strokeStyle='rgba(150,100,50,.18)';g.lineWidth=1;g.beginPath();const y=Math.random()*h;g.moveTo(0,y);g.bezierCurveTo(w*.3,y+rnd(-6,6),w*.6,y+rnd(-6,6),w,y+rnd(-4,4));g.stroke();}});
+  const woodTex=new THREE.CanvasTexture(wood);
+  // dirt mask (rgba, painted)
+  const DS=512;const dirt=document.createElement('canvas');dirt.width=DS;dirt.height=DS/2;const dg=dirt.getContext('2d');
+  const wet=document.createElement('canvas');wet.width=256;wet.height=128;const wg=wet.getContext('2d');
+  const dirtTex=new THREE.CanvasTexture(dirt),wetTex=new THREE.CanvasTexture(wet);
+  function paintDirt(){
+    dg.globalCompositeOperation='source-over';dg.clearRect(0,0,DS,DS/2);
+    const cx=DS*.52,cy=DS*.25;
+    for(let i=0;i<70;i++){const a=Math.random()*6.28,d=Math.pow(Math.random(),.7)*95;const x=cx+Math.cos(a)*d*1.5,y=cy+Math.sin(a)*d*.75,rr=rnd(18,46);
+      const gr=dg.createRadialGradient(x,y,0,x,y,rr);gr.addColorStop(0,'rgba(110,63,27,.55)');gr.addColorStop(1,'rgba(110,63,27,0)');dg.fillStyle=gr;dg.beginPath();dg.arc(x,y,rr,0,7);dg.fill();}
+    // greasy core: blue channel marks grease
+    for(let i=0;i<14;i++){const x=cx+rnd(-60,60),y=cy+rnd(-28,28),rr=rnd(16,34);const gr=dg.createRadialGradient(x,y,0,x,y,rr);gr.addColorStop(0,'rgba(92,52,20,.85)');gr.addColorStop(1,'rgba(92,52,20,0)');dg.fillStyle=gr;dg.beginPath();dg.arc(x,y,rr,0,7);dg.fill();}
+    for(let i=0;i<500;i++){dg.fillStyle=`rgba(70,40,15,${rnd(.1,.4)})`;dg.fillRect(cx+rnd(-150,150),cy+rnd(-70,70),rnd(1,3),rnd(1,3));}
+    dirtTex.needsUpdate=true;
+    wg.clearRect(0,0,256,128);wetTex.needsUpdate=true;
+  }
+  const tableMat=new THREE.ShaderMaterial({
+    uniforms:{uWood:{value:woodTex},uDirt:{value:dirtTex},uWet:{value:wetTex},uTime:{value:0},uLight:{value:new THREE.Vector3(-0.4,0.8,0.45).normalize()},uCam:{value:cam.position}},
+    vertexShader:`varying vec2 vUv;varying vec3 vW;void main(){vUv=uv;vec4 w=modelMatrix*vec4(position,1.);vW=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}`,
+    fragmentShader:`uniform sampler2D uWood,uDirt,uWet;uniform float uTime;uniform vec3 uLight,uCam;varying vec2 vUv;varying vec3 vW;
+      float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+      float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
+      void main(){
+        vec3 base=texture2D(uWood,vUv*vec2(1.,1.)).rgb;
+        vec4 d=texture2D(uDirt,vUv);
+        float a=d.a;
+        vec3 col=mix(base,d.rgb*.92,clamp(a*1.1,0.,1.));
+        // grease sheen: toon-stepped highlight on thick dirt
+        vec3 V=normalize(uCam-vW);
+        vec3 N=normalize(vec3((n(vUv*60.)-.5)*.35,1.,(n(vUv*60.+7.)-.5)*.35));
+        float spec=pow(max(dot(reflect(-uLight,N),V),0.),24.);
+        col+=step(.5,spec)*smoothstep(.45,.75,a)*vec3(1.,.93,.75)*.35;
+        // wet + foam
+        vec4 w=texture2D(uWet,vUv);
+        float wetA=w.a;
+        col*=1.-wetA*.22;
+        vec3 Nw=normalize(vec3((n(vUv*22.+uTime*.05)-.5)*.6,1.,(n(vUv*22.+3.)-.5)*.6));
+        float s2=pow(max(dot(reflect(-uLight,Nw),V),0.),40.);
+        col+=step(.5,s2)*smoothstep(.2,.5,wetA)*vec3(.9,.97,1.)*.5;
+        float foam=w.r*wetA;
+        float cells=n(vUv*vec2(180.,90.))*.7+n(vUv*vec2(420.,210.))*.3;
+        float fm=smoothstep(.3,.48,foam*(.3+cells*1.));
+        col=mix(col,vec3(.97,.99,1.),fm*.92);
+        col=mix(col,vec3(.62,.8,.95),fm*(1.-smoothstep(.2,.5,cells))*.35);
+        gl_FragColor=vec4(col,1.);
+      }`});
+  const table=new THREE.Mesh(new THREE.PlaneGeometry(TW,TH),tableMat);table.rotation.x=-Math.PI/2;scene.add(table);
+
+  // sponge: rounded box, porous texture, green scrubber
+  const pores=noiseCanvas(256,256,(g,w,h)=>{g.fillStyle='#FFE066';g.fillRect(0,0,w,h);for(let i=0;i<900;i++){const x=Math.random()*w,y=Math.random()*h,rr=rnd(1,5);g.fillStyle=`rgba(190,140,20,${rnd(.25,.6)})`;g.beginPath();g.ellipse(x,y,rr,rr*rnd(.5,1),Math.random()*3,0,7);g.fill();}});
+  const poreTex=new THREE.CanvasTexture(pores);
+  function rounded(w,h,d,seg,rad){const g=new THREE.BoxGeometry(w,h,d,seg,seg,seg);const p=g.attributes.position,v=new THREE.Vector3();const hw=w/2-rad,hh=h/2-rad,hd=d/2-rad;
+    for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i);const c=new THREE.Vector3(THREE.MathUtils.clamp(v.x,-hw,hw),THREE.MathUtils.clamp(v.y,-hh,hh),THREE.MathUtils.clamp(v.z,-hd,hd));const dlt=v.clone().sub(c);if(dlt.length()>0)dlt.setLength(rad);v.copy(c.add(dlt));p.setXYZ(i,v.x,v.y,v.z);}g.computeVertexNormals();return g;}
+  const sponge=new THREE.Group();scene.add(sponge);
+  const body=new THREE.Group();sponge.add(body);
+  const spMat=new THREE.MeshToonMaterial({color:0xffffff,map:poreTex,gradientMap:RAMP});
+  const top=new THREE.Mesh(rounded(1.9,.62,1.2,10,.22),spMat);top.position.y=.62;body.add(top);outline(top,.05);
+  const scr=new THREE.Mesh(rounded(1.9,.26,1.2,10,.1),new THREE.MeshToonMaterial({color:0x2E9E5B,gradientMap:RAMP}));scr.position.y=.17;body.add(scr);outline(scr,.06);
+  const shadow=new THREE.Mesh(new THREE.CircleGeometry(1.1,32),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.18,depthWrite:false}));shadow.rotation.x=-Math.PI/2;shadow.position.y=.01;scene.add(shadow);
+
+  // bubbles
+  const bubGeo=new THREE.SphereGeometry(1,12,8);const bubMat=new THREE.MeshToonMaterial({color:0xF4FBFF,gradientMap:RAMP,transparent:true,opacity:.9});
+  const bubbles=[];
+  function spawnBubble(x,z){if(bubbles.length>70)return;const m=new THREE.Mesh(bubGeo,bubMat);const s=rnd(.06,.16);m.scale.setScalar(s);m.position.set(x+rnd(-.6,.6),.2,z+rnd(-.4,.4));m.userData={v:rnd(.3,.8),life:rnd(.8,1.6),s};scene.add(m);bubbles.push(m);}
+
+  // input
+  const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
+  let down=false,target=new THREE.Vector3(2.5,0,1.2),pos=target.clone(),vel=new THREE.Vector3(),absorbed=0,press=0;
+  function hit(e){const b=cv.getBoundingClientRect();ndc.set((e.clientX-b.left)/b.width*2-1,-(e.clientY-b.top)/b.height*2+1);ray.setFromCamera(ndc,cam);const h=ray.intersectObject(table)[0];return h;}
+  cv.addEventListener('pointerdown',e=>{down=true;cv.setPointerCapture(e.pointerId);const h=hit(e);if(h)target.copy(h.point);});
+  cv.addEventListener('pointermove',e=>{const h=hit(e);if(h)target.copy(h.point);});
+  const up=()=>{down=false;};cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+
+  function stamp(p,speed){
+    const u=(p.x+TW/2)/TW,v=1-(p.z+TH/2)/TH; // canvas y down
+    const x=u*DS,y=(1-v)*DS/2;
+    const rad=DS*0.075;
+    dg.globalCompositeOperation='destination-out';
+    const k=Math.min(.22,.05+speed*.03);
+    // streaky wipe: several small dabs across the sponge width, perpendicular to motion
+    for(let i=0;i<5;i++){const ox=rnd(-rad*.8,rad*.8),oy=rnd(-rad*.45,rad*.45);const gr=dg.createRadialGradient(x+ox,y+oy,0,x+ox,y+oy,rad*.55);gr.addColorStop(0,`rgba(0,0,0,${k})`);gr.addColorStop(1,'rgba(0,0,0,0)');dg.fillStyle=gr;dg.beginPath();dg.arc(x+ox,y+oy,rad*.55,0,7);dg.fill();}
+    dirtTex.needsUpdate=true;
+    const wx=u*256,wy=(1-v)*128;
+    wg.globalCompositeOperation='source-over';
+    const gw=wg.createRadialGradient(wx,wy,0,wx,wy,22);gw.addColorStop(0,'rgba(255,0,0,.3)');gw.addColorStop(1,'rgba(255,0,0,0)');wg.fillStyle=gw;wg.beginPath();wg.arc(wx,wy,22,0,7);wg.fill();
+    wetTex.needsUpdate=true;
+  }
+  // measure remaining dirt
+  const probe=document.createElement('canvas');probe.width=64;probe.height=32;const pg=probe.getContext('2d',{willReadFrequently:true});let start=1;
+  function measure(){pg.clearRect(0,0,64,32);pg.drawImage(dirt,0,0,64,32);const d=pg.getImageData(0,0,64,32).data;let s=0;for(let i=3;i<d.length;i+=4)s+=d[i];return s;}
+  const mEl=document.getElementById('m-sponge'),tEl=document.getElementById('t-sponge');
+  function reset(){paintDirt();start=measure();absorbed=0;}
+  document.getElementById('r-sponge').addEventListener('click',reset);
+  reset();
+
+  let last=performance.now(),acc=0,mt=0;
+  function frame(now){
+    const dt=Math.min(.05,(now-last)/1000);last=now;
+    const prev=pos.clone();
+    pos.lerp(target,1-Math.pow(.0005,dt));
+    pos.x=THREE.MathUtils.clamp(pos.x,-TW/2+1,TW/2-1);pos.z=THREE.MathUtils.clamp(pos.z,-TH/2+.8,TH/2-.8);
+    vel.copy(pos).sub(prev).divideScalar(Math.max(dt,1e-3));
+    const speed=vel.length();
+    press+=((down?1:0)-press)*Math.min(1,dt*14);
+    // squash & stretch
+    const st=Math.min(.35,speed*.035);
+    body.scale.set(1+st*.9+press*.12,1-press*.32-st*.15,1-st*.35+press*.08);
+    if(speed>.3){let yaw=Math.atan2(-vel.z,vel.x);if(yaw>Math.PI/2)yaw-=Math.PI;if(yaw<-Math.PI/2)yaw+=Math.PI;let d=yaw-sponge.rotation.y;d=Math.atan2(Math.sin(d),Math.cos(d));sponge.rotation.y+=d*Math.min(1,dt*6);}
+    body.rotation.z=THREE.MathUtils.lerp(body.rotation.z,-Math.min(.25,vel.x*.02),Math.min(1,dt*8));
+    body.rotation.x=THREE.MathUtils.lerp(body.rotation.x,Math.min(.25,vel.z*.02),Math.min(1,dt*8));
+    sponge.position.set(pos.x,(1-press)*.55,pos.z);
+    shadow.position.set(pos.x,.01,pos.z);shadow.scale.setScalar(1+(1-press)*.2);
+    if(down&&press>.6){acc+=speed*dt;while(acc>.12){acc-=.12;stamp(pos,speed);absorbed=Math.min(1,absorbed+.0025);if(Math.random()<.6)spawnBubble(pos.x,pos.z);}}
+    // sponge soaks up dirt colour
+    spMat.color.setRGB(1-absorbed*.45,1-absorbed*.55,1-absorbed*.7);
+    // dry the wet layer
+    wg.globalCompositeOperation='destination-out';wg.fillStyle=`rgba(0,0,0,${dt*.16})`;wg.fillRect(0,0,256,128);wetTex.needsUpdate=true;
+    for(let i=bubbles.length-1;i>=0;i--){const b=bubbles[i];b.userData.life-=dt;b.position.y+=b.userData.v*dt;const k=Math.max(0,b.userData.life);b.scale.setScalar(b.userData.s*(k<.25?k/.25:1));if(b.userData.life<=0){scene.remove(b);bubbles.splice(i,1);}}
+    tableMat.uniforms.uTime.value=now/1000;
+    mt+=dt;if(mt>.3){mt=0;const left=Math.max(0,measure()/start);const shown=Math.max(0,Math.round((left-.05)/.95*100));mEl.style.width=(100-shown)+'%';tEl.textContent=shown<=0?'สะอาด!':'คราบ '+shown+'%';}
+    r.render(scene,cam);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+
+/* ================= CLOTH ================= */
+(function(){
+  const cv=document.getElementById('cv-cloth');const {r,scene,cam}=setup(cv);
+  scene.background=new THREE.Color(0xDDE6EE);
+  cam.position.set(0,1.6,12.5);cam.lookAt(0,-.55,0);
+  const H=3.6,RAD=.85;
+  const towel=noiseCanvas(256,512,(g,w,h)=>{g.fillStyle='#B79BE8';g.fillRect(0,0,w,h);g.fillStyle='#9E7FDA';for(let y=40;y<h;y+=140)g.fillRect(0,y,w,22);for(let i=0;i<5000;i++){g.fillStyle=`rgba(255,255,255,${rnd(.04,.14)})`;g.fillRect(Math.random()*w,Math.random()*h,1,rnd(2,5));}for(let i=0;i<2500;i++){g.fillStyle=`rgba(60,30,110,${rnd(.04,.12)})`;g.fillRect(Math.random()*w,Math.random()*h,1,rnd(2,4));}});
+  const tTex=new THREE.CanvasTexture(towel);tTex.wrapS=tTex.wrapT=THREE.RepeatWrapping;
+  const U={uTwist:{value:0},uSqueeze:{value:0},uH:{value:H}};
+  function twistify(mat,out){
+    mat.onBeforeCompile=s=>{
+      s.uniforms.uTwist=U.uTwist;s.uniforms.uSqueeze=U.uSqueeze;s.uniforms.uH=U.uH;s.uniforms.uOut={value:out};
+      s.vertexShader='uniform float uTwist;uniform float uSqueeze;uniform float uH;uniform float uOut;\n'+s.vertexShader
+        .replace('#include <beginnormal_vertex>',`#include <beginnormal_vertex>
+          float tN=clamp((uH*.5-position.y)/uH,0.,1.);float aN=-uTwist*tN;float cN=cos(aN),sN=sin(aN);
+          objectNormal=vec3(cN*objectNormal.x-sN*objectNormal.z,objectNormal.y,sN*objectNormal.x+cN*objectNormal.z);`)
+        .replace('#include <begin_vertex>',`
+          vec3 transformed=position;
+          float t=clamp((uH*.5-position.y)/uH,0.,1.);
+          float th=atan(position.z,position.x);
+          float r0=length(position.xz);
+          float pinch=1.-uSqueeze*.42*sin(3.14159*mix(.15,1.,t));
+          float ridge=1.+uSqueeze*.16*sin(th*6.+t*2.)*smoothstep(0.,.2,t)*smoothstep(1.,.85,t);
+          float rr=r0*pinch*ridge+uOut;
+          float th2=th+uTwist*t;
+          transformed.x=cos(th2)*rr;transformed.z=sin(th2)*rr;
+          transformed.y=position.y+uSqueeze*.25*t;`);
+    };
+    return mat;
+  }
+  const geo=new THREE.CylinderGeometry(RAD,RAD,H,64,90,true);
+  const clothMat=twistify(new THREE.MeshToonMaterial({color:0x8A6BD1,map:tTex,gradientMap:RAMP,side:THREE.DoubleSide}),0);
+  const cloth=new THREE.Mesh(geo,clothMat);scene.add(cloth);
+  const oMat=twistify(new THREE.MeshBasicMaterial({color:INK,side:THREE.BackSide}),.05);
+  const oMesh=new THREE.Mesh(geo,oMat);cloth.add(oMesh);
+  // rod at top, handle ring at bottom
+  const rod=new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,3.2,24),new THREE.MeshToonMaterial({color:0xB7793A,gradientMap:RAMP}));rod.rotation.z=Math.PI/2;rod.position.y=H/2+.12;scene.add(rod);outline(rod,.08);
+  const handle=new THREE.Mesh(new THREE.TorusGeometry(.7,.13,12,40),new THREE.MeshToonMaterial({color:0xF6C431,gradientMap:RAMP}));handle.rotation.x=Math.PI/2;scene.add(handle);outline(handle,.06);
+  // bucket
+  const bucket=new THREE.Mesh(new THREE.CylinderGeometry(1.7,1.35,1.3,48,1,true),new THREE.MeshToonMaterial({color:0x9AA3B8,gradientMap:RAMP,side:THREE.DoubleSide}));bucket.position.y=-H/2-1.25;scene.add(bucket);outline(bucket,.03);
+  const water=new THREE.Mesh(new THREE.CircleGeometry(1.62,48),new THREE.MeshToonMaterial({color:0x7DC4F2,gradientMap:RAMP}));water.rotation.x=-Math.PI/2;water.position.y=bucket.position.y+.42;scene.add(water);
+  // drops and ripples
+  const dropGeo=new THREE.SphereGeometry(1,10,8);const dropMat=new THREE.MeshToonMaterial({color:0x7DC4F2,gradientMap:RAMP});
+  const ringMat=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.8});
+  const drops=[],rings=[];
+  function drop(){if(drops.length>60)return;const m=new THREE.Mesh(dropGeo,dropMat);m.scale.set(.07,.11,.07);const a=Math.random()*6.28,y=-H/2+rnd(0,H*.55);const rr=RAD*(1-U.uSqueeze.value*.4);m.position.set(Math.cos(a)*rr*.9,y,Math.sin(a)*rr*.9);m.userData={vy:rnd(-.5,0)};scene.add(m);drops.push(m);}
+  function ring(x,z){const m=new THREE.Mesh(new THREE.RingGeometry(.1,.14,32),ringMat.clone());m.rotation.x=-Math.PI/2;m.position.set(x,water.position.y+.01,z);m.userData={t:0};scene.add(m);rings.push(m);}
+
+  // input: angle around the cloth's screen centre
+  let down=false,lastA=0,twist=0,target=0,wetness=1,spin=0,released=0;
+  const centre=()=>{const v=new THREE.Vector3(0,-.2,0).project(cam);const b=cv.getBoundingClientRect();return [b.left+(v.x+1)/2*b.width,b.top+(1-v.y)/2*b.height];};
+  const ang=e=>{const c=centre();return Math.atan2(e.clientY-c[1],e.clientX-c[0]);};
+  cv.addEventListener('pointerdown',e=>{down=true;cv.setPointerCapture(e.pointerId);lastA=ang(e);});
+  cv.addEventListener('pointermove',e=>{if(!down)return;const a=ang(e);let d=a-lastA;if(d>Math.PI)d-=Math.PI*2;if(d<-Math.PI)d+=Math.PI*2;lastA=a;target+=d*1.15;});
+  const up=()=>{if(down){released=target;}down=false;};cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+  const mEl=document.getElementById('m-cloth'),tEl=document.getElementById('t-cloth');
+  document.getElementById('r-cloth').addEventListener('click',()=>{target=twist=0;wetness=1;});
+  const MAXT=Math.PI*4;
+  let last=performance.now(),dropAcc=0;
+  function frame(now){
+    const dt=Math.min(.05,(now-last)/1000);last=now;
+    target=THREE.MathUtils.clamp(target,-MAXT,MAXT);
+    if(!down){target*=Math.pow(.55,dt);} // relaxes back a little when released
+    const prev=twist;twist+=(target-twist)*Math.min(1,dt*12);
+    spin=Math.abs(twist-prev)/Math.max(dt,1e-3);
+    const sq=Math.min(1,Math.abs(twist)/MAXT*1.4);
+    U.uTwist.value=twist;U.uSqueeze.value=sq;
+    if(down)wetness=Math.max(0,wetness-spin*dt*.022);
+    const wetCol=new THREE.Color(0x6F52B8),dryCol=new THREE.Color(0xC8B4F2);
+    clothMat.color.copy(wetCol).lerp(dryCol,1-wetness);
+    handle.position.y=-H/2+sq*.25-.05;handle.rotation.z=twist;
+    dropAcc+=dt*(1.2*wetness+spin*wetness*3.5);
+    while(dropAcc>1){dropAcc-=1;drop();}
+    for(let i=drops.length-1;i>=0;i--){const d=drops[i];d.userData.vy-=9.8*dt;d.position.y+=d.userData.vy*dt;d.scale.y=.11+Math.min(.12,-d.userData.vy*.02);if(d.position.y<water.position.y){ring(d.position.x,d.position.z);scene.remove(d);drops.splice(i,1);}}
+    for(let i=rings.length-1;i>=0;i--){const g=rings[i];g.userData.t+=dt;const k=g.userData.t/.7;g.scale.setScalar(1+k*5);g.material.opacity=.8*(1-k);if(k>=1){scene.remove(g);rings.splice(i,1);}}
+    water.position.y=bucket.position.y+.42+(1-wetness)*.12;
+    const p=Math.round((1-wetness)*100);mEl.style.width=p+'%';tEl.textContent=wetness<=0.02?'หมาดแล้ว!':'เปียก '+Math.round(wetness*100)+'%';
+    r.render(scene,cam);requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+})();
+</script>
