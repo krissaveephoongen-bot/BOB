@@ -4,6 +4,8 @@
 
 ## A. แทนด้วยภาพ Leonardo ที่ลบพื้นหลังแล้ว (มีภาพพร้อม นำเข้าได้เลย)
 
+**นำเข้าแล้ว (13 พ.ย.): ชั้นวางสถานี 4 จุด + ชิ้นส่วนวางบนชั้น, โต๊ะพักของ (prop_desk), ศัตรู 8 ชนิด (idle/attack/hit/defeat/spawn/portrait สร้างจากท่านิ่ง)**
+
 | กลุ่ม | ไฟล์ใน Unity ที่เป็น placeholder | ภาพจริงที่มี (`bob-art/cutouts_alt_best` / `cutouts_best`) | วิธีทำ |
 | --- | --- | --- | --- |
 | ชั้นวางสถานี 4 จุด | `Props/station_tool, chem, energy, method` | `cart/shelf_tool, chem, energy, method` (v3 ไม่มีตุ๊กตา) | ใส่ในกรอบ 384×256 แล้วคงสีตระกูลเป็นขอบ/ป้าย |
