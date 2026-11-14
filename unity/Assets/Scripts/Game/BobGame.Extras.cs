@@ -253,7 +253,7 @@ namespace Bob.Game
 
             // enemies appear 2.5 s after "ลุย!" (UX 5A.8) and never before everyone could move
             if (phase == Phase.Build && overlay == Overlay.None && !Online) buildElapsed += dt;
-            if (!enemiesLive && phase == Phase.Build && buildElapsed >= EnemySpawnDelay) ActivateEnemies(true);
+            if (!taskMode && !enemiesLive && phase == Phase.Build && buildElapsed >= EnemySpawnDelay) ActivateEnemies(true);
         }
 
         void ActivateEnemies(bool withFx)

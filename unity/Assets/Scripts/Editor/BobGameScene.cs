@@ -83,6 +83,8 @@ namespace Bob.EditorTools
         [MenuItem("Bob/Run Game Test")]
         public static void RunTestFromMenu() { SessionState.SetBool(ExitKey, false); BeginTest(); }
 
+        public static void RunTaskTest() { SessionState.SetBool(ExitKey, true); SessionState.SetBool("bob.taskbot", true); BeginTest(); }
+
         public static void RunTest() { SessionState.SetBool(ExitKey, true); BeginTest(); }
 
         // Online: start the bots first (cd server && node mp-host.js 2 ../unity/Logs/bob-mp-match.txt), then run this.
@@ -145,7 +147,7 @@ namespace Bob.EditorTools
         {
             Application.logMessageReceived -= OnLog;
             EditorApplication.update -= Watchdog;
-            SessionState.SetBool(BobGame.AutoKey, false); SessionState.SetBool(BobGame.OnlineKey, false);
+            SessionState.SetBool(BobGame.AutoKey, false); SessionState.SetBool(BobGame.OnlineKey, false); SessionState.SetBool("bob.taskbot", false);
             bool exit = SessionState.GetBool(ExitKey, false);
             SessionState.SetBool(ExitKey, false);
             EditorApplication.ExitPlaymode();

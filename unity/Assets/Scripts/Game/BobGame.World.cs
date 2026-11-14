@@ -285,7 +285,7 @@ namespace Bob.Game
 
         void TickInput()
         {
-            if (phase != Phase.Build || overlay != Overlay.None) { joyActive = false; return; }
+            if (phase != Phase.Build || overlay != Overlay.None || (taskMode && miniCard != null)) { joyActive = false; return; }
             // keyboard shortcuts: 1-3 place from hand, Q lift the top layer, F ability, Enter submit
             for (int i = 0; i < HandMax; i++) if (Input.GetKeyDown(KeyCode.Alpha1 + i)) Place(i);
             if (Input.GetKeyDown(KeyCode.Q)) LiftTop();

@@ -125,7 +125,8 @@ namespace Bob.Game
             TickInput();
             TickMenus(); UpdateMusic();
             TickOnline();
-            if (phase == Phase.Build && overlay == Overlay.None && !Online) // online, the server runs the clock
+            if (taskMode && phase == Phase.Build) TickTasks(Time.deltaTime);
+            else if (phase == Phase.Build && overlay == Overlay.None && !Online) // online, the server runs the clock
             {
                 tasks.Tick(Time.deltaTime);
                 if (tasks.TimeUp) { if (stack.Count == 0) Toast("หมดเวลา! ส่งรถเข็นเปล่า"); Submit(); }
@@ -186,6 +187,7 @@ namespace Bob.Game
         /// <summary>Android back button / Esc: close overlay, pause during a round, else go home.</summary>
         void OnBack()
         {
+            if (taskMode) { OnTaskBack(); return; }
             if (overlay != Overlay.None) SetOverlay(phase == Phase.Build && overlay == Overlay.Settings ? Overlay.Pause : Overlay.None);
             else if (phase == Phase.Build) SetOverlay(Overlay.Pause);
             else if (phase == Phase.Intro || phase == Phase.Test || phase == Phase.Result) ToTitle();

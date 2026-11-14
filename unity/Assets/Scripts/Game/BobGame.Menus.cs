@@ -33,6 +33,7 @@ namespace Bob.Game
         {
             new ModeInfo { Id = "story",     Name = "Story",     Players = "1-4 คน", Length = "ต่อบท",   Lock = "เร็วๆ นี้: โหมดเนื้อเรื่อง", Color = new Color(0.98f, 0.62f, 0.28f) },
             new ModeInfo { Id = "solo",      Name = "Solo",      Players = "1 คน",   Length = "6 นาที",  Lock = null,                          Color = new Color(0.40f, 0.71f, 0.95f) },
+            new ModeInfo { Id = "tasks",     Name = "Task Race", Players = "1 คน",   Length = "2 นาที",  Lock = null,                          Color = new Color(0.98f, 0.8f, 0.25f) },
             new ModeInfo { Id = "duo",       Name = "Duo",       Players = "2 คน",   Length = "6 นาที",  Lock = "เร็วๆ นี้: ต้องผูกคู่ก่อน",   Color = new Color(0.93f, 0.28f, 0.38f) },
             new ModeInfo { Id = "friends",   Name = "Friends",   Players = "2-4 คน", Length = "6 นาที",  Lock = null,                          Color = new Color(0.24f, 0.72f, 0.52f) },
             new ModeInfo { Id = "party",     Name = "Party",     Players = "3-7 คน", Length = "8 นาที",  Lock = "เร็วๆ นี้: ปลดที่ระดับ 6",   Color = new Color(0.58f, 0.46f, 0.88f) },
@@ -205,6 +206,7 @@ namespace Bob.Game
             if (m.Lock != null) { Toast(m.Lock); Sfx("drop_invalid"); return; }
             Sfx("ui_confirm");
             if (m.Id == "friends") { FindOnline(); return; }
+            if (m.Id == "tasks") { StartTaskRace(); return; }
             OpenHeroSelect(true);
         }
 
