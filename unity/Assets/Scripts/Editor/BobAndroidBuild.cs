@@ -61,7 +61,9 @@ namespace Bob.EditorTools
         public static void BuildApk()
         {
             Apply();
-            var scenes = new[] { "Assets/Scenes/Game.unity", "Assets/Scenes/Coop.unity" }.Where(File.Exists).ToArray();
+            // The lobby shell and the one match scene of docs 24. Coop is retired: the APK must not boot a mode
+            // whose rules no longer exist.
+            var scenes = new[] { "Assets/Scenes/Game.unity", "Assets/Scenes/TaskRace.unity" }.Where(File.Exists).ToArray();
             Directory.CreateDirectory("../Builds");
             var path = Path.GetFullPath("../Builds/BOB-prototype-v1.apk");
             EditorUserBuildSettings.buildAppBundle = false;

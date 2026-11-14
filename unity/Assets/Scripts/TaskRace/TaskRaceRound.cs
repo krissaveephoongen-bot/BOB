@@ -110,6 +110,8 @@ namespace Bob.TaskRace
 
         /// <summary>The round list in plan order (T04 first). The HUD reads Spot / Done for each row.</summary>
         public IReadOnlyList<TaskEntry> Tasks => tasks;
+        /// <summary>The stations of one island in spot-id order (the rival walks the Team B list).</summary>
+        public IReadOnlyList<TaskSpot> StationsOf(TeamId team) => team == TeamId.TeamB ? sideB.Spots : sideA.Spots;
         /// <summary>Bumps when a row changes: new round, a task moves to a station, a lock opens or closes, a task is done.</summary>
         public int Version { get; private set; }
 
@@ -350,7 +352,7 @@ namespace Bob.TaskRace
                 return;
             }
             spot.ResetTask();
-            spot.Configure(spot.SpotId, spec.Value.Name, spot.Category, ScaleSeconds(spec.Value, difficulty));
+            spot.Configure(spot.SpotId, spec.Value.Name, spot.Category, ScaleSeconds(spec.Value, difficulty), spec.Value.Id);
             spot.SetTaskActive(true);
             assigned[spot] = spec.Value;
             if (entryOf.TryGetValue(spec.Value.Id, out var entry)) entry.Spot = spot;

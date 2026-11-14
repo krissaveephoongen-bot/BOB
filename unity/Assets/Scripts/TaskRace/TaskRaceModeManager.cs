@@ -103,6 +103,10 @@ namespace Bob.TaskRace
         public event Action BridgesOpened;
         /// <summary>Any one-line message the HUD should toast.</summary>
         public event Action<string> ToastRequested;
+        /// <summary>The match is on: the clock restarted, the score is zero and both islands are fresh.</summary>
+        public event Action MatchStarted;
+        /// <summary>The clock ran out or one team finished its list. Raised once per match, rewards already paid.</summary>
+        public event Action<MatchResult> MatchEnded;
 
         readonly List<BobBridgeBarrier> barriers = new List<BobBridgeBarrier>();
         TaskRaceRound round;
@@ -117,12 +121,17 @@ namespace Bob.TaskRace
         public int TeamAPoints => teamAPoints;
         public int TeamBPoints => teamBPoints;
         public IReadOnlyList<BobBridgeBarrier> Barriers => barriers;
+        /// <summary>A player holds a TASK_LOCK and the S28 card is up: the hero stands still.</summary>
+        public bool CardOpen { get; private set; }
+        /// <summary>Set once the match is decided; the HUD draws the result overlay from it.</summary>
+        public MatchResult? LastResult { get; private set; }
+        public TeamId OtherTeam => localTeam == TeamId.TeamB ? TeamId.TeamA : TeamId.TeamB;
 
         public int PointsOf(TeamId team) =>
             team == TeamId.TeamB ? teamBPoints : team == TeamId.TeamA ? teamAPoints : 0;
 
         public int LocalPoints => PointsOf(localTeam);
-        public int RivalPoints => PointsOf(localTeam == TeamId.TeamA ? TeamId.TeamB : TeamId.TeamA);
+        public int RivalPoints => PointsOf(OtherTeam);
 
         void Awake()
         {
@@ -134,6 +143,7 @@ namespace Bob.TaskRace
 
         void OnDestroy()
         {
+            if (round != null) round.RoundWon -= OnRoundWon;
             if (cached == this) cached = null;
         }
 
@@ -168,9 +178,13 @@ namespace Bob.TaskRace
                 if (hero != null) joystickInput = () => hero.InputVector;
             }
             round = FindAnyObjectByType<TaskRaceRound>();
+            if (round != null) round.RoundWon += OnRoundWon;
             ApplyMode();
             BeginMatch();
         }
+
+        /// <summary>The local island finished its whole list: the race is over even with time on the clock.</summary>
+        void OnRoundWon(TaskRaceRound finished) => EndMatch();
 
         void Update()
         {
@@ -178,6 +192,7 @@ namespace Bob.TaskRace
             {
                 RemainingSeconds = Mathf.Max(0f, RemainingSeconds - Time.deltaTime);
                 TickClock();
+                if (IsMatchOver) EndMatch();
             }
 
             float tilt = ReadJoystick();
@@ -197,11 +212,53 @@ namespace Bob.TaskRace
             teamAPoints = 0; teamBPoints = 0;
             RemainingSeconds = matchDuration;
             warned = opened = false;
+            LastResult = null;
             TaskSpot.LocalTeam = localTeam;
             CloseBarriers();
             PointsChanged?.Invoke(TeamId.TeamA, teamAPoints);
             PointsChanged?.Invoke(TeamId.TeamB, teamBPoints);
+            MatchStarted?.Invoke();
             if (Application.isPlaying) Debug.Log($"[TaskRace] match start: {matchDuration:0} s, {mode}, local team {localTeam}.");
+        }
+
+        /// <summary>
+        /// Decide and pay the match. Runs when the clock hits zero or when either list is finished; the second call
+        /// in the same match is a no-op, so rewards are never paid twice. `record` false composes the result for the
+        /// editor's verify shot without touching the wallet.
+        /// </summary>
+        public void EndMatch(bool record = true)
+        {
+            if (LastResult.HasValue) return;
+            if (round == null) round = FindAnyObjectByType<TaskRaceRound>();
+
+            int total = round != null ? round.TaskCount : 0;
+            int tasksA = round?.DoneCountOf(TeamId.TeamA) ?? 0;
+            int tasksB = round?.DoneCountOf(TeamId.TeamB) ?? 0;
+            int mine = localTeam == TeamId.TeamB ? tasksB : tasksA;
+            int theirs = localTeam == TeamId.TeamB ? tasksA : tasksB;
+            int localPool = PointsOf(localTeam);
+            int rivalPool = PointsOf(OtherTeam);
+
+            bool localFinished = total > 0 && mine >= total;
+            bool rivalFinished = total > 0 && theirs >= total;
+            bool draw = !localFinished && !rivalFinished && localPool == rivalPool;
+            bool won = localFinished || (!rivalFinished && !draw && localPool > rivalPool);
+
+            RemainingSeconds = 0f;
+            LastResult = BobTaskRaceProfile.Record(won, draw, teamAPoints, teamBPoints, tasksA, tasksB, total,
+                localPool, mine, record);
+            MatchEnded?.Invoke(LastResult.Value);
+            if (Application.isPlaying)
+                Debug.Log($"[TaskRace] match end: {LastResult.Value}");
+        }
+
+        /// <summary>Play another round from zero: new seed, fresh score and clock, both islands restocked.</summary>
+        public void RestartMatch()
+        {
+            BeginMatch();
+            if (round == null) round = FindAnyObjectByType<TaskRaceRound>();
+            round?.StartRound(UnityEngine.Random.Range(1, 100000));
+            if (Application.isPlaying) Debug.Log("[TaskRace] restart: score 0, clock 120 s, gates shut, new round.");
         }
 
         void TickClock()
@@ -476,11 +533,13 @@ namespace Bob.TaskRace
 
         void OnSpotOpened(TaskSpot spot)
         {
+            CardOpen = true;
             if (cameraRig != null) cameraRig.SetMinigameFocus(true);
         }
 
         void OnSpotClosed(TaskSpot spot)
         {
+            CardOpen = false;
             if (cameraRig != null) cameraRig.SetMinigameFocus(false);
         }
 
@@ -532,13 +591,7 @@ namespace Bob.TaskRace
             return true;
         }
 
-        public void DebugResetMatch()
-        {
-            BeginMatch();
-            if (round == null) round = FindAnyObjectByType<TaskRaceRound>();
-            round?.StartRound(UnityEngine.Random.Range(1, 100000));
-            if (Application.isPlaying) Debug.Log("[TaskRace] debug reset: score 0, clock 120 s, gates shut, round restarted.");
-        }
+        public void DebugResetMatch() => RestartMatch();
 
         void OnValidate()
         {

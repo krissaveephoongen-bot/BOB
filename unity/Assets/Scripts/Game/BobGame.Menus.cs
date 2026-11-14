@@ -11,6 +11,7 @@ using Bob.Art;
 using Bob.Rules;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace Bob.Game
@@ -203,10 +204,14 @@ namespace Bob.Game
             DockButton(dock, "menu_shop", "ร้านค้า", () => { Phase p = Phase.Shop; phase = p; Sfx("ui_confirm"); RenderAll(); }, false);
             DockButton(dock, "menu_home", "บ้าน", () => { Toast("เร็วๆ นี้: แต่งบ้านและห้องของฉัน"); Sfx("ui_tap"); }, true);
 
-            // mode selector + PLAY (bottom right, thumb zone)
-            var m = CurrentMode;
-            var mb = BobUi.Button(S, m.Name + "  ▾".Replace("▾", ""), BobUi.Surface, () => { Sfx("ui_tap"); phase = Phase.Modes; RenderAll(); }, 36);
+            // Task Race is the only match (docs 24): the mode chip is a label, PLAY goes straight to the map. The
+            // chapter picker that replaces it is future work; the old seven-card mode grid is no longer reachable.
+            var mb = BobUi.Panel(S, BobUi.Hex("#FFF0C2"), "ui_panel", "ModeInfo");
             BobUi.Pin((RectTransform)mb.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-590, 40), new Vector2(300, 160));
+            BobUi.Pin(BobUi.Label(mb.transform, "Task Race", 40, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform,
+                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -18f), new Vector2(280f, 60f));
+            BobUi.Pin(BobUi.Label(mb.transform, "2 นาที · แข่งกับคู่แข่ง", 26, BobUi.Muted, TextAnchor.MiddleCenter).rectTransform,
+                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -84f), new Vector2(280f, 44f));
             var play = BobUi.Button(S, "เล่น", BobUi.Sun, PressPlay, 76);
             BobUi.Pin((RectTransform)play.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-40, 30), new Vector2(520, 200));
             play.GetComponentInChildren<TMP_Text>().fontStyle = FontStyles.Bold;
@@ -242,12 +247,15 @@ namespace Bob.Game
 
         void PressPlay()
         {
-            var m = CurrentMode;
-            if (m.Lock != null) { Toast(m.Lock); Sfx("drop_invalid"); return; }
             Sfx("ui_confirm");
-            if (m.Id == "friends") { FindOnline(); return; }
-            if (m.Id == "tasks") { StartTaskRace(); return; }
-            OpenHeroSelect(true);
+            // The lobby is only the shell: the match lives in its own scene (docs 24), so a match can re-enter the
+            // lobby with fresh player prefs (coins and XP paid by the result overlay).
+            if (Application.CanStreamedLevelBeLoaded("TaskRace")) SceneManager.LoadScene("TaskRace");
+            else
+            {
+                Debug.LogWarning("[BobGame] TaskRace scene is not in Build Settings: no match to start.");
+                Toast("ยังไม่มีฉากแข่งขัน (TaskRace)");
+            }
         }
 
         // ---------------------------------------------------------------- S11 mode select

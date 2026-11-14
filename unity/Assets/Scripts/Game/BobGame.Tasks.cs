@@ -35,7 +35,6 @@ namespace Bob.Game
         readonly List<MiniFx> miniFx = new List<MiniFx>();
 
         static string TaskName(string kind) => kind == "T01" ? "กวาดตามทาง" : kind == "T05" ? "แยกขยะ" : "เช็ดกระจก";
-        bool IsHero(string id) => charId == id;
         /// <summary>4.6: the task family this hero works 25% faster / wider in, for the Home and HUD labels.</summary>
         static string SpecialtyName(string id) => id == "sweep" ? "กวาด" : id == "bubble" ? "ล้าง" : id == "spray" ? "ฉีดน้ำยา" : "ขัด";
         static Vector2 TaskPos(string id) { foreach (var p in L1Points) if (p.id == id) return new Vector2(p.x, RoomH - p.y); return new Vector2(RoomW / 2, RoomH / 2); }
@@ -171,6 +170,21 @@ namespace Bob.Game
             }
             taskOpen = null; if (taskUi != null) RefreshTaskRows();
         }
+
+        // ---------------------------------------------------------------- minigame helpers
+
+        // dev bot: when botPtr is set the minigames read this pointer instead of the mouse
+        bool botPtr, botDown, botPressed, botReleased; Vector2 botPos;
+        List<(Vector2 from, Vector2 to)> miniDrags = new List<(Vector2, Vector2)>();
+
+        bool MiniPointer(out Vector2 local, out bool down, out bool pressed, out bool released)
+        {
+            if (botPtr) { local = botPos; down = botDown; pressed = botPressed; released = botReleased; botPressed = botReleased = false; return true; }
+            down = Input.GetMouseButton(0); pressed = Input.GetMouseButtonDown(0); released = Input.GetMouseButtonUp(0);
+            return RectTransformUtility.ScreenPointToLocalPointInRectangle(miniArea, Input.mousePosition, null, out local);
+        }
+
+        bool IsHero(string id) => charId == id;
 
         // ---------------------------------------------------------------- minigame card chrome (S28: a visible verb, one bar, match clock)
 
