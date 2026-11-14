@@ -39,9 +39,9 @@ namespace Bob.EditorTools
             var spots = Object.FindObjectsByType<TaskSpot>(FindObjectsInactive.Exclude)
                 .OrderBy(s => s.SpotId).ToArray();
             Debug.Log("[TaskRaceVerify] spots: " + string.Join(", ", spots.Select(s =>
-                $"{s.SpotId}({s.Category},{s.ExpectedSeconds:0}s)@({s.transform.position.x:0.0},{s.transform.position.z:0.0})")));
+                $"{s.SpotId}({s.TaskId},{s.Category},{s.ExpectedSeconds:0}s)@({s.transform.position.x:0.0},{s.transform.position.z:0.0})")));
             Debug.Log("[TaskRaceVerify] baked tasks: " + string.Join(", ", spots.Select(s =>
-                $"{s.SpotId}={s.TaskName}({s.ExpectedSeconds:0.#}s)")));
+                $"{s.SpotId}={s.TaskId} {s.TaskName}({s.ExpectedSeconds:0.#}s)")));
 
             var round = Object.FindAnyObjectByType<TaskRaceRound>();
             if (round != null)
@@ -117,13 +117,67 @@ namespace Bob.EditorTools
                 // the saved scene carries the authored canvas; rebuild from a fresh round so the render is honest
                 if (round != null) round.StartRound(round.ConfiguredSeed);
                 hud.Build(Camera.main);
-                Debug.Log($"[TaskRaceVerify] HUD: {hud.RowCount} task row(s), canvas {hud.UiCanvas.renderMode}, " +
+                hud.SetDebugBarVisible(false); // the shot must show the player's HUD, not the authoring bar
+                var touch = hud.GetComponent<BobTaskRaceTouch>();
+                var rival = Object.FindAnyObjectByType<BobTaskRaceRival>();
+                Debug.Log($"[TaskRaceVerify] player HUD: {hud.RowCount} task row(s), canvas {hud.UiCanvas.renderMode}, " +
+                          $"touch={(touch != null && touch.HasHero ? "joystick + walk" : "missing")}, " +
+                          $"rival={(rival != null ? $"pace {rival.pace:0.00}" : "missing")}, " +
                           $"the round bar reads {round?.DoneWeight}/{round?.TotalWeight} weight");
             }
             else Debug.LogWarning("[TaskRaceVerify] no BobTaskRaceHud in the scene: the task list is not drawn.");
 
             Render(suffix, hud);
+            RenderS28(suffix, hud, spots, hero);
+            RenderResult(suffix, hud, manager, hero);
             Debug.Log($"[TaskRaceVerify] {scenePath} done.");
+        }
+
+        /// <summary>Shoot the S27 result overlay: the score, both task counts and the reward line.</summary>
+        static void RenderResult(string suffix, BobTaskRaceHud hud, TaskRaceModeManager manager, GameObject hero)
+        {
+            if (hud == null || manager == null) return;
+            hud.DebugShowResult();
+            Debug.Log($"[TaskRaceVerify] result overlay: open={hud.ResultOpen} {hud.ShownResult}");
+            var eye = hero != null ? hero.transform.position + new Vector3(0f, 8.5f, -7.5f) : new Vector3(0f, 10.5f, -15f);
+            var look = hero != null ? hero.transform.position + new Vector3(0f, 0.6f, 0f) : new Vector3(0f, 0.4f, 0.5f);
+            Shot($"Logs/taskrace{suffix}-result.png", eye, look, 40f, hud);
+            hud.DebugCloseResult();
+            manager.DebugResetMatch();
+        }
+
+        /// <summary>Open the S28 card on each kind of card task and shoot it: the play area, the step and the bar.</summary>
+        static void RenderS28(string suffix, BobTaskRaceHud hud, TaskSpot[] spots, GameObject hero)
+        {
+            if (hud == null || hero == null) return;
+            var spot = spots.FirstOrDefault(s => s.OwnerTeam == TeamId.TeamA && s.HasTask);
+            if (spot == null)
+            {
+                Debug.LogWarning("[TaskRaceVerify] no card task on Team A: the S28 shot is skipped.");
+                return;
+            }
+            var camera = hero.transform.position + new Vector3(0f, 8.5f, -7.5f);
+            var look = hero.transform.position + new Vector3(0f, 0.6f, 0f);
+            // One shot per interaction kind: scrub, trace, sort, fill, sequence, hold, tap, multi-step glass.
+            foreach (var id in new[] { "T02", "T01", "T05", "T11", "T15", "T06", "T10", "T08" })
+            {
+                var spec = MinigameLibrary.All.FirstOrDefault(g => g.Id == id);
+                if (spec.Id != id) continue;
+                spot.ResetTask();
+                spot.Configure(spot.SpotId, spec.Name, spec.Category, spec.Seconds, id);
+                if (!spot.TryOpen("verify", out var why))
+                {
+                    Debug.LogWarning($"[TaskRaceVerify] S28 {id}: station refused to open ({why}).");
+                    continue;
+                }
+                bool live = hud.DebugOpenCard(spot);
+                hud.DebugAdvanceCard(id == "T15" ? 1.5f : 0.9f);
+                Debug.Log($"[TaskRaceVerify] S28 card {id}: {spot.SpotId} \"{spot.TaskName}\" " +
+                          $"live={live} cardOpen={hud.CardOpen} step=\"{hud.CardStep}\" hint=\"{hud.CardHint}\"");
+                Shot($"Logs/taskrace{suffix}-s28-{id.ToLowerInvariant()}.png", camera, look, 40f, hud);
+                spot.Close(false);
+                hud.DebugCloseCard();
+            }
         }
 
         /// <summary>Drive the rules the scene builder cannot prove by looking: the clock and gate state, the team pool on
@@ -307,13 +361,22 @@ namespace Bob.EditorTools
             tex.ReadPixels(new Rect(0, 0, 1600, 900), 0, 0);
             tex.Apply();
             Directory.CreateDirectory("Logs");
-            File.WriteAllBytes(Path.GetFullPath(file), tex.EncodeToPNG());
+            var png = tex.EncodeToPNG();
+            string written = file;
+            try { File.WriteAllBytes(Path.GetFullPath(file), png); }
+            catch (IOException)
+            {
+                // An open image viewer locks the old PNG on Windows; write beside it instead of failing the check.
+                written = Path.Combine(Path.GetDirectoryName(file) ?? "Logs",
+                    Path.GetFileNameWithoutExtension(file) + "-new" + Path.GetExtension(file));
+                File.WriteAllBytes(Path.GetFullPath(written), png);
+            }
             RenderTexture.active = null;
             cam.targetTexture = null;
             Object.DestroyImmediate(rt);
             Object.DestroyImmediate(tex);
             Object.DestroyImmediate(go);
-            Debug.Log($"[TaskRaceVerify] preview written to {file}");
+            Debug.Log($"[TaskRaceVerify] preview written to {written}");
         }
     }
 }

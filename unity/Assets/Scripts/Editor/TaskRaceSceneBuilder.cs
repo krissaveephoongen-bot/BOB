@@ -169,6 +169,8 @@ namespace Bob.EditorTools
                 var round = systems.gameObject.AddComponent<TaskRaceRound>();
                 round.ConfigureRound(players, 1, 1975);
                 round.StartRound(1975);
+                // The opponent until the server exists: a pace model on Team B (docs 24 section 12).
+                systems.gameObject.AddComponent<BobTaskRaceRival>();
 
                 // The HUD of docs 24 section 10: task list, weight bar and the main context button. Built here so the
                 // scene carries it and the verify renders show the list.
@@ -492,6 +494,15 @@ namespace Bob.EditorTools
                 ("rocks_grass",       1.80f,  0.20f,  80f, 0.3f),
                 ("pot_blue",         -4.05f, -0.15f,   0f, 0.6f),
                 ("pot_ceramic_gold",  4.05f, -0.30f,   0f, 0.55f),
+                // Cleaning gear of the trade, kept small and in the clear band: the island reads as a crew's courtyard,
+                // not a garden. All seven footprints stay inside |z| <= 0.74, so the bridge lanes keep their 1.0 u.
+                ("bucket_blue",      -2.20f,  0.35f,  10f, 0.32f),
+                ("brush_scrub_wood", -1.80f,  0.30f, -30f, 0.45f),
+                ("hose_coil",        -2.60f,  0.38f,   0f, 0.28f),
+                ("detergent_pump",    1.45f,  0.32f,   5f, 0.50f),
+                ("spray_bottle",      1.95f,  0.35f, -15f, 0.30f),
+                ("sign_wet_floor",   -3.55f,  0.42f,  20f, 0.80f),
+                ("trash_bag_black",   2.15f,  0.40f, -35f, 0.45f),
             };
             int n = 0;
             foreach (var (name, x, z, yaw, height) in set)

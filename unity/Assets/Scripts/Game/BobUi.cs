@@ -27,8 +27,8 @@ namespace Bob.Game
         public static BobArtLibrary Art;
         static Font font;
 
-        /// <summary>A font with Thai glyphs: the OS font on Windows / Android, Unity's built-in one as a last resort.
-        /// TODO: ship Mitr / IBM Plex Sans Thai as a TextMeshPro asset for correct Thai mark placement on every device.</summary>
+        /// <summary>A font with Thai glyphs: the bundled Mitr / IBM Plex Sans Thai, the OS font on Windows / Android as a fallback.
+        /// TextMeshPro labels use the SDF twins under Resources/Fonts/TMP.</summary>
         static Font heading;
         /// <summary>Mitr for titles and bold labels; falls back to the body font.</summary>
         public static Font Heading { get { if (heading == null) heading = Resources.Load<Font>("Fonts/Mitr-Medium"); return heading != null ? heading : Font; } }

@@ -29,6 +29,8 @@ namespace Bob.TaskRace
         [Tooltip("Unique on the map, e.g. S3_A. The assembler appends _B when the Team A layout is cloned.")]
         [SerializeField] string spotId = "S1_A";
         [SerializeField] string taskName = "งาน";
+        [Tooltip("Minigame id of docs 16 (T01..T16). The round writes it when it hands this station its task; the S28 card picks its interaction from it.")]
+        [SerializeField] string taskId = "";
         [Tooltip("Off when the round has no task left for this station: no ring, no label, cannot be opened.")]
         [SerializeField] bool hasTask = true;
         [SerializeField] TaskCategory category = TaskCategory.Everyone;
@@ -108,6 +110,8 @@ namespace Bob.TaskRace
 
         public string SpotId => spotId;
         public string TaskName => taskName;
+        /// <summary>Minigame id (T01..T16, docs 16) the round dealt to this station.</summary>
+        public string TaskId => taskId;
         public TaskCategory Category => category;
         public float ExpectedSeconds => expectedSeconds;
         public float PreviewRadius => previewRadius;
@@ -250,6 +254,20 @@ namespace Bob.TaskRace
                 retained = true; retainUntil = Time.unscaledTime + retainedProgressSeconds;
             }
             Closed?.Invoke(this, completed); AnyClosed?.Invoke(this);
+            RefreshRing();
+        }
+
+        /// <summary>
+        /// The AI rival's clean: the same state change as a completed card, without a TASK_LOCK or a card. Points and
+        /// the round's count both run through the normal Closed path, so nothing else has to know who cleaned.
+        /// </summary>
+        public void ForceComplete()
+        {
+            if (!hasTask || state == SpotState.Clean) return;
+            IsOpen = false; LockedBy = null; sabotageSession = false;
+            state = SpotState.Clean; Progress = 1f; retained = false;
+            TaskRaceModeManager.Instance?.OnTaskCleaned(this);
+            Closed?.Invoke(this, true); AnyClosed?.Invoke(this);
             RefreshRing();
         }
 
@@ -417,12 +435,16 @@ namespace Bob.TaskRace
 
         public void SetSpotId(string id) { if (!string.IsNullOrEmpty(id)) spotId = id; }
 
-        public void Configure(string id, string name, TaskCategory cat, float seconds)
+        public void Configure(string id, string name, TaskCategory cat, float seconds, string minigameId = null)
         {
             spotId = id; taskName = name; category = cat; expectedSeconds = Mathf.Max(1f, seconds);
+            if (!string.IsNullOrEmpty(minigameId)) taskId = minigameId;
             hasTask = true;
             RebuildVisuals();
         }
+
+        /// <summary>Editor / verify: give the station a minigame without going through the round.</summary>
+        public void SetTaskId(string id) { if (!string.IsNullOrEmpty(id)) taskId = id; }
 
         /// <summary>Verify / test hooks, never used by gameplay.</summary>
         public void DebugForceClean()
