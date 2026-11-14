@@ -11,23 +11,14 @@ namespace Bob.Game
 {
     public partial class BobGame
     {
-        static readonly Color CreamWall = new Color(0.96f, 0.93f, 0.84f), TableTop = new Color(1f, 0.89f, 0.55f), TableSide = new Color(0.96f, 0.72f, 0.36f),
-            Plate = new Color(0.98f, 0.97f, 0.95f), PlateMat = new Color(0.96f, 0.56f, 0.45f), Mat = new Color(0.62f, 0.86f, 0.80f);
+        static readonly Color CreamWall = new Color(0.94f, 0.89f, 0.78f), TableTop = new Color(1f, 0.89f, 0.55f), TableSide = new Color(0.96f, 0.72f, 0.36f),
+            Plate = new Color(0.98f, 0.97f, 0.95f), PlateMat = new Color(0.96f, 0.56f, 0.45f);
+
+        // The room is a diorama (BobGame.Diorama.cs): a wooden deck inset in a grass island on a pedestal, framed by
+        // FitCamera3D so the set reads as one display piece.
 
         Transform setRoot;
         readonly System.Collections.Generic.List<TextMeshPro> signs = new System.Collections.Generic.List<TextMeshPro>();
-
-        Texture2D TileTexture(Color a, Color b)
-        {
-            const int N = 64; var tex = new Texture2D(N, N, TextureFormat.RGBA32, true) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Repeat };
-            for (int y = 0; y < N; y++) for (int x = 0; x < N; x++)
-                {
-                    bool edge = x < 2 || y < 2 || x >= N - 1 || y >= N - 1;
-                    bool alt = (x / 32 + y / 32) % 2 == 0;
-                    var c = edge ? Color.Lerp(a, b, 0.5f) * 0.92f : alt ? a : b; c.a = 1; tex.SetPixel(x, y, c);
-                }
-            tex.Apply(); return tex;
-        }
 
         void Quad(string name, Vector3 centre, Vector2 size, Color c, Texture tex = null, Vector2? tiling = null)
         {
@@ -73,49 +64,108 @@ namespace Bob.Game
             RenderSettings.ambientSkyColor = new Color(0.867f, 0.922f, 0.98f); RenderSettings.ambientEquatorColor = new Color(0.75f, 0.74f, 0.86f); RenderSettings.ambientGroundColor = new Color(0.56f, 0.525f, 0.75f);
             RenderSettings.ambientLight = new Color(0.7f, 0.72f, 0.8f);
 
-            // floor: pale tiles everywhere, the play area is a teal mat with a light border
-            var tiles = Resources.Load<Texture2D>("Textures/floor_wood"); if (tiles == null) tiles = TileTexture(new Color(1f, 0.97f, 0.82f), new Color(0.98f, 0.92f, 0.70f));
-            Quad("Floor", new Vector3(RoomW / 2, -0.02f, RoomH / 2), new Vector2(40, 30), Color.white, tiles, new Vector2(10, 7.5f));
-            Quad("MatBorder", new Vector3(RoomW / 2, -0.012f, RoomH / 2), new Vector2(RoomW + 0.5f, RoomH + 0.5f), new Color(0.76f, 0.58f, 0.40f));
-            Quad("PlayMat", new Vector3(RoomW / 2, -0.008f, RoomH / 2), new Vector2(RoomW, RoomH), Mat);
-            foreach (var sx in new[] { 0.12f, RoomW - 0.12f }) Quad("Lane", new Vector3(sx, -0.004f, RoomH / 2), new Vector2(0.06f, RoomH - 0.4f), new Color(1f, 0.88f, 0.35f));
+            // diorama island, deck and pedestal; the play area is a checker floor with a cream border and gold inlay
+            BuildDiorama();
+            Quad("MatBorder", new Vector3(RoomW / 2, 0f, RoomH / 2), new Vector2(RoomW + 0.6f, RoomH + 0.6f), new Color(0.97f, 0.93f, 0.84f));
+            Quad("PlayMat", new Vector3(RoomW / 2, 0.004f, RoomH / 2), new Vector2(RoomW, RoomH), Color.white, CheckerTex(), new Vector2(7f, 4f));
+            foreach (var sx in new[] { 0.12f, RoomW - 0.12f }) Quad("Lane", new Vector3(sx, 0.008f, RoomH / 2), new Vector2(0.06f, RoomH - 0.4f), new Color(1f, 0.88f, 0.35f));
 
             // back wall with shelves and a counter, low side walls
             BobToon.Shape(PrimitiveType.Cube, setRoot, "BackWall", new Vector3(RoomW / 2, 1.2f, RoomH + 1.5f), new Vector3(RoomW + 4f, 2.4f, 0.3f), CreamWall, true, 2.5f);
             BobToon.Shape(PrimitiveType.Cube, setRoot, "BackTrim", new Vector3(RoomW / 2, 0.3f, RoomH + 1.32f), new Vector3(RoomW + 4f, 0.6f, 0.1f), new Color(0.62f, 0.82f, 0.78f), false);
+            Upright("Wallpaper", new Vector3(RoomW / 2, 1.53f, RoomH + 1.31f), new Vector2(RoomW + 4f, 1.78f), WallTex(), new Vector2(6f, 1f));
+            BobToon.Shape(PrimitiveType.Cube, setRoot, "ChairRail", new Vector3(RoomW / 2, 0.63f, RoomH + 1.30f), new Vector3(RoomW + 4f, 0.07f, 0.05f), new Color(0.62f, 0.82f, 0.78f), false);
 
             BuildRentalRoom();
+            DressDioramaRim();
             BuildTaskPoints();
             BuildSigns();
         }
 
-        /// <summary>Rental room (GDD chapter 1, Art Bible D1): sofa, bed, fallen futon, kitchenette, TV, window and rug around the play floor.
-        /// Scripted placeholders in the toon style until the Tripo / Blender models (doc 23) are dropped into Resources.</summary>
+        /// <summary>Cleaned Tripo prop from Resources/Props (menu Bob > Art > Build Prop Prefabs). Returns null when the art
+        /// pack is not imported so the caller keeps its scripted placeholder. Yaw 270 turns a model's front to the camera.</summary>
+        Transform TryProp(string name, Vector3 pos, float yaw = 270f, float scale = 1f)
+        {
+            var prefab = Resources.Load<GameObject>("Props/SM_" + name);
+            if (prefab == null) return null;
+            var go = Instantiate(prefab, setRoot);
+            go.name = "SM_" + name;
+            // the prefab root carries the FBX importer's upright rotation (X 270) and unit-scale compensation (100);
+            // writing either instead of composing it lays the model on its back or shrinks it 100x
+            go.transform.localPosition = pos;
+            go.transform.localRotation = Quaternion.Euler(0, yaw, 0) * prefab.transform.localRotation;
+            go.transform.localScale = prefab.transform.localScale * scale;
+            return go.transform;
+        }
+
+        /// <summary>Rental room (GDD chapter 1, Art Bible D1): sofa, bed, fallen futon, kitchenette, TV and window around the play floor.
+        /// Tripo models (doc 23) replace the scripted placeholders when the art pack is imported; heights come from the clean pass.</summary>
         void BuildRentalRoom()
         {
             var sofa = new Color(0.88f, 0.48f, 0.35f); var wood = TableSide; var white = new Color(0.97f, 0.96f, 0.93f);
-            // rug under the play area edge, window and poster on the back wall
-            Quad("Rug", new Vector3(RoomW / 2, -0.006f, RoomH / 2), new Vector2(RoomW - 1.0f, RoomH - 0.8f), new Color(0.58f, 0.80f, 0.74f));
-            BobToon.Shape(PrimitiveType.Cube, setRoot, "WindowFrame", new Vector3(RoomW / 2, 1.5f, RoomH + 1.32f), new Vector3(2.2f, 1.2f, 0.08f), white, true, 2f);
-            BobToon.Shape(PrimitiveType.Cube, setRoot, "WindowGlass", new Vector3(RoomW / 2, 1.5f, RoomH + 1.27f), new Vector3(2.0f, 1.0f, 0.04f), new Color(0.62f, 0.82f, 0.96f), false);
-            // sofa (left, outside the play floor) and single bed (right)
+            // window, wall unit and clock on the back wall
+            if (TryProp("window_arched", new Vector3(RoomW / 2, 0.85f, RoomH + 1.26f)) == null)
+            {
+                BobToon.Shape(PrimitiveType.Cube, setRoot, "WindowFrame", new Vector3(RoomW / 2, 1.5f, RoomH + 1.32f), new Vector3(2.2f, 1.2f, 0.08f), white, true, 2f);
+                BobToon.Shape(PrimitiveType.Cube, setRoot, "WindowGlass", new Vector3(RoomW / 2, 1.5f, RoomH + 1.27f), new Vector3(2.0f, 1.0f, 0.04f), new Color(0.62f, 0.82f, 0.96f), false);
+            }
+            TryProp("ac_wall_teal", new Vector3(11.9f, 1.45f, RoomH + 1.28f));
+            TryProp("clock_alarm", new Vector3(9.5f, 1.78f, RoomH + 1.29f));
+            // sofa (left, inside the play floor) and single bed (right)
+            if (TryProp("sofa_3seat_tan", new Vector3(SofaRect.center.x, 0f, SofaRect.center.y)) == null)
             { float sx = SofaRect.center.x, sz = SofaRect.center.y;
               BobToon.Shape(PrimitiveType.Cube, setRoot, "SofaSeat", new Vector3(sx, 0.3f, sz), new Vector3(2.0f, 0.5f, 0.9f), sofa, true, 2.5f);
               BobToon.Shape(PrimitiveType.Cube, setRoot, "SofaBack", new Vector3(sx, 0.7f, sz + 0.4f), new Vector3(2.0f, 0.7f, 0.2f), sofa * 0.9f, true, 2.5f);
               foreach (var s in new[] { -1, 1 }) BobToon.Shape(PrimitiveType.Cube, setRoot, "SofaArm", new Vector3(sx + s * 0.9f, 0.5f, sz), new Vector3(0.2f, 0.6f, 0.9f), sofa * 0.95f, true, 2.5f); }
-            BobToon.Shape(PrimitiveType.Cube, setRoot, "BedFrame", new Vector3(RoomW + 1.9f, 0.2f, 3.4f), new Vector3(1.1f, 0.3f, 2.2f), wood, true, 2.5f);
-            BobToon.Shape(PrimitiveType.Cube, setRoot, "BedMattress", new Vector3(RoomW + 1.9f, 0.42f, 3.4f), new Vector3(1.0f, 0.18f, 2.1f), new Color(0.6f, 0.78f, 0.95f), true, 2.5f);
-            BobToon.Shape(PrimitiveType.Cube, setRoot, "Pillow", new Vector3(RoomW + 1.9f, 0.58f, 4.2f), new Vector3(0.7f, 0.14f, 0.4f), white, false);
-            // fallen futon on the floor next to the bed (Tripo piece, placeholder for now)
-            BobToon.Shape(PrimitiveType.Cube, setRoot, "Futon", new Vector3(RoomW + 1.9f, 0.08f, 1.0f), new Vector3(1.0f, 0.14f, 1.8f), new Color(0.95f, 0.72f, 0.78f), true, 2f);
-            // kitchenette along the lower left: modular 0.6 m units
+            if (TryProp("bed_single_blue", new Vector3(RoomW + 1.9f, 0f, 3.4f)) == null)
+            {
+                BobToon.Shape(PrimitiveType.Cube, setRoot, "BedFrame", new Vector3(RoomW + 1.9f, 0.2f, 3.4f), new Vector3(1.1f, 0.3f, 2.2f), wood, true, 2.5f);
+                BobToon.Shape(PrimitiveType.Cube, setRoot, "BedMattress", new Vector3(RoomW + 1.9f, 0.42f, 3.4f), new Vector3(1.0f, 0.18f, 2.1f), new Color(0.6f, 0.78f, 0.95f), true, 2.5f);
+                BobToon.Shape(PrimitiveType.Cube, setRoot, "Pillow", new Vector3(RoomW + 1.9f, 0.58f, 4.2f), new Vector3(0.7f, 0.14f, 0.4f), white, false);
+            }
+            // fallen futon on the floor next to the bed
+            if (TryProp("futon_rolled", new Vector3(RoomW + 0.9f, 0f, 1.0f)) == null)
+                BobToon.Shape(PrimitiveType.Cube, setRoot, "Futon", new Vector3(RoomW + 1.9f, 0.08f, 1.0f), new Vector3(1.0f, 0.14f, 1.8f), new Color(0.95f, 0.72f, 0.78f), true, 2f);
+            // kitchenette along the lower left: modular 0.6 m units (the counter height is fixed by the station rules)
             for (int i = 0; i < 4; i++)
                 BobToon.Shape(PrimitiveType.Cube, setRoot, i == 1 ? "Sink" : i == 2 ? "Stove" : "Cabinet", new Vector3(-2.0f + i * 0.6f, 0.45f, -1.4f), new Vector3(0.58f, 0.9f, 0.6f), i == 2 ? new Color(0.45f, 0.5f, 0.58f) : new Color(0.78f, 0.86f, 0.95f), true, 2.2f);
             BobToon.Shape(PrimitiveType.Cube, setRoot, "KitchenTop", new Vector3(-1.4f, 0.93f, -1.4f), new Vector3(2.4f, 0.06f, 0.64f), new Color(0.62f, 0.45f, 0.45f), false);
             // low table + TV unit at the front right
             BobToon.Shape(PrimitiveType.Cube, setRoot, "TVUnit", new Vector3(RoomW + 1.6f, 0.3f, -1.4f), new Vector3(1.6f, 0.6f, 0.6f), wood, true, 2.2f);
-            BobToon.Shape(PrimitiveType.Cube, setRoot, "TV", new Vector3(RoomW + 1.6f, 0.95f, -1.4f), new Vector3(1.1f, 0.65f, 0.08f), new Color(0.2f, 0.22f, 0.3f), true, 2f);
-            BobToon.Shape(PrimitiveType.Cube, setRoot, "Table", new Vector3(RoomW / 2, 0.22f, -1.6f), new Vector3(2.0f, 0.44f, 0.9f), TableTop, true, 2.5f);
+            if (TryProp("tv_flat", new Vector3(RoomW + 1.6f, 0.63f, -1.4f)) == null)
+                BobToon.Shape(PrimitiveType.Cube, setRoot, "TV", new Vector3(RoomW + 1.6f, 0.95f, -1.4f), new Vector3(1.1f, 0.65f, 0.08f), new Color(0.2f, 0.22f, 0.3f), true, 2f);
+            if (TryProp("table_low_wood", new Vector3(RoomW / 2, 0f, -1.6f)) == null)
+                BobToon.Shape(PrimitiveType.Cube, setRoot, "Table", new Vector3(RoomW / 2, 0.22f, -1.6f), new Vector3(2.0f, 0.44f, 0.9f), TableTop, true, 2.5f);
+            // counter-top pieces from the cleaned pack
+            TryProp("pot_on_burner", new Vector3(-0.8f, 0.96f, -1.4f));
+            TryProp("espresso_machine", new Vector3(-2.1f, 0.96f, -1.42f));
+            TryProp("utensil_rack", new Vector3(0.0f, 0.96f, -1.42f));
+            TryProp("pot_ceramic_gold", new Vector3(7.9f, 0.36f, -1.6f));
+            // station furniture: shelf (S3), bins (S9), lockers (S5), little cafe corner in front
+            TryProp("shelf_rack_metal", new Vector3(7.0f, 0f, RoomH - 1.2f));
+            TryProp("bin_trash_grey", new Vector3(10.75f, 0f, RoomH - 4.45f));
+            TryProp("bin_recycle_blue", new Vector3(11.75f, 0f, RoomH - 4.45f));
+            TryProp("lockers_teal", new Vector3(11.6f, 0f, RoomH + 0.4f));
+            TryProp("table_round_cafe", new Vector3(0.9f, 0f, -1.3f));
+            TryProp("stool_red", new Vector3(1.8f, 0f, -1.3f));
+            TryProp("chair_bentwood", new Vector3(0.0f, 0f, -1.3f), 300f);
+            // wall and corner decor
+            TryProp("plant_pot", new Vector3(0.4f, 0f, RoomH - 0.4f));
+            TryProp("basket_clothes", new Vector3(RoomW + 1.9f, 0f, 1.9f));
+            TryProp("washing_machine", new Vector3(15.2f, 0f, 7.6f));
+            TryProp("water_dispenser", new Vector3(14.6f, 0f, 8.55f));
+            TryProp("shoe_rack", new Vector3(-0.95f, 0f, 3.0f), 180f);
+            TryProp("fire_extinguisher", new Vector3(-0.95f, 0f, 7.9f));
+            TryProp("chalkboard_easel", new Vector3(-1.45f, 0f, 5.4f), 330f);
+            TryProp("sign_wet_floor", new Vector3(5.4f, 0f, -0.7f));
+            TryProp("cone_traffic", new Vector3(12.9f, 0f, -0.6f));
+            TryProp("bucket_blue", new Vector3(12.4f, 0f, RoomH - 1.05f));
+            TryProp("radiator_red", new Vector3(4.6f, 0f, RoomH + 1.24f));
+            TryProp("ac_wall_teal", new Vector3(10.2f, 1.95f, RoomH + 1.24f));
+            TryProp("cctv_camera", new Vector3(0.55f, 2.35f, RoomH + 1.24f));
+            TryProp("clock_alarm", new Vector3(12.6f, 1.95f, RoomH + 1.24f));
+            TryProp("bush_green", new Vector3(-1.6f, 0f, 6.5f));
+            TryProp("rocks_grass", new Vector3(13.6f, 0f, RoomH + 1.1f));
         }
 
         // Level layout doc 19, L1 rental room: the 11 task points (S1-S11), emergency points E1-E3 and the 4 spawns. Doc y runs from the back wall, world z from the front.

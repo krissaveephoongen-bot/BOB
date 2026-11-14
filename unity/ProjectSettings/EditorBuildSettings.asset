@@ -11,5 +11,14 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Coop.unity
     guid: 103ca0e90c2c3bb42aad3469f86da335
+  - enabled: 1
+    path: Assets/Scenes/TaskRace.unity
+    guid: 6092a40e9a132454cb14bb34869103e8
+  - enabled: 1
+    path: Assets/Scenes/TaskRace_Duo.unity
+    guid: 74bb1e44ad2abea45a0255cb1a075206
+  - enabled: 1
+    path: Assets/Scenes/TaskRace_Team.unity
+    guid: f0cbc75667f7d3842a6acc506f6f5d5a
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}

@@ -55,10 +55,12 @@ namespace Bob.Game
 
         // ---- 2.5D: the room is a real 3D floor (x right, room y = depth) seen by a tilted perspective camera; sprites stand up.
         public const bool World3D = true;
-        const float CamPitch = 45f, CamFov = 30f; // Art Bible 21 D3: orthographic, pitch 45
+        // Reference framing: a low, front-on perspective shot. The back wall stands up behind the play floor, the garden
+        // trees rise over it and the island runs past the frame edges, like a close photo of the diorama. The vertical
+        // band from the tallest canopy down to the island's front lip keeps FrameFill of the screen at every aspect.
+        const float CamPitch = 30f, CamFov = 32f, CamWidthShare = 1.30f, CamFrameFill = 0.86f, CamFrameTop = 0.06f;
         static readonly System.Collections.Generic.HashSet<string> FlatNames =
             new System.Collections.Generic.HashSet<string> { "tile", "RoomBorder", "Target", "TeamRing", "SpawnRing", "ThemeBackdrop", "Floor", "Shadow" };
-        float camFollowX = RoomW / 2;
 
         /// <summary>A point `h` units above the floor point `floor` (room coordinates), in worldRoot's local space.</summary>
         static Vector3 Raise(Vector2 floor, float h) => World3D ? new Vector3(floor.x, floor.y, -h) : new Vector3(floor.x, floor.y + h, 0);
@@ -419,19 +421,23 @@ namespace Bob.Game
         {
             var sa = Screen.safeArea; float W = Mathf.Max(1, Screen.width), H = Mathf.Max(1, Screen.height);
             cam.rect = new Rect(sa.xMin / W, sa.yMin / H, Mathf.Max(0.1f, sa.width / W), Mathf.Max(0.1f, sa.height / H));
-            cam.orthographic = true; cam.nearClipPlane = 0.1f; cam.farClipPlane = 120f;
+            cam.orthographic = false; cam.fieldOfView = CamFov; cam.nearClipPlane = 0.1f; cam.farClipPlane = 160f;
             var rot = Quaternion.Euler(CamPitch, 0, 0); cam.transform.rotation = rot;
-            // fit the floor's width (between the HUD side columns) and depth (between the top / bottom strips); tables and walls spill past the edges
-            float fw = Mathf.Max(0.3f, 1f - 2 * SideCol), fh = Mathf.Max(0.3f, 1f - TopStrip - BottomStrip);
-            float depthOnScreen = RoomH * Mathf.Sin(CamPitch * Mathf.Deg2Rad) + 1.0f;
-            float half = Mathf.Max(depthOnScreen / 2f / fh, (RoomW + 0.8f) / 2f / (Mathf.Max(0.1f, cam.aspect) * fw));
-            cam.orthographicSize = half;
-            // gentle follow: drift a little towards the hero, never far enough to hide a shelf
-            float wantX = Mathf.Lerp(RoomW / 2, pos.x, 0.12f);
-            camFollowX = Mathf.Lerp(camFollowX, wantX, 1 - Mathf.Exp(-3f * Time.unscaledDeltaTime));
-            var target = new Vector3(camFollowX, 0.3f, RoomH / 2 - 0.1f);
-            float bandShift = (BottomStrip - TopStrip) * half; // keep the floor centred in the free band
-            cam.transform.position = target - rot * Vector3.forward * 40f - rot * Vector3.up * bandShift;
+            // the camera is fixed: the hero moves inside the display piece. The vertical band from the tallest back canopy
+            // to the island's front lip fills CamFrameFill of the screen and the canopy sits just under the top HUD strip;
+            // the island is then allowed to run past the side edges (CamWidthShare) and the front garden, rock and plinth
+            // run off behind the bottom button row, the way the reference frames its diorama
+            var camUp = rot * Vector3.up;
+            float topDot = 3.88f * camUp.y + 10.45f * camUp.z; // tallest canopy (h 3.4 tree at the back rim)
+            float lipDot = -3.65f * camUp.z;                    // island front edge at deck height
+            float half = Mathf.Max((topDot - lipDot) / (2f * CamFrameFill),
+                                   (DioW * 0.5f) / (Mathf.Max(0.1f, cam.aspect) * CamWidthShare));
+            float dist = half / Mathf.Tan(CamFov * 0.5f * Mathf.Deg2Rad);
+            float centre = topDot - (0.5f - CamFrameTop) * 2f * half;
+            var target = new Vector3(DioCx, 0.5f, DioCz);
+            target += (centre - Vector3.Dot(target, camUp)) * camUp;
+            cam.transform.position = target - rot * Vector3.forward * dist;
+            FitSky();
             if (themeBg != null) themeBg.gameObject.SetActive(false);
             FaceSigns();
         }

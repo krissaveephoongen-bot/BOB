@@ -1,0 +1,1080 @@
+[
+ {
+  "file": "bob_boss_stain_giant_tripo.glb",
+  "mb": 0.7,
+  "verts": 3142,
+  "tris": 4746,
+  "dim": [
+   1,
+   0.888,
+   0.903
+  ]
+ },
+ {
+  "file": "bob_prop_bed_single_tripo.glb",
+  "mb": 0.72,
+  "verts": 3254,
+  "tris": 4458,
+  "dim": [
+   0.616,
+   0.362,
+   1
+  ]
+ },
+ {
+  "file": "bob_prop_bucket_tripo.glb",
+  "mb": 0.77,
+  "verts": 3474,
+  "tris": 4740,
+  "dim": [
+   0.985,
+   0.835,
+   1
+  ]
+ },
+ {
+  "file": "tripo_convert_0ecd124a-6909-4559-b8df-650e93153ee5.glb",
+  "mb": 62.83,
+  "verts": 1198472,
+  "tris": 1976489,
+  "dim": [
+   0.981,
+   0.474,
+   0.92
+  ]
+ },
+ {
+  "file": "tripo_convert_0eedc264-8fab-4ef4-8ac6-c54973e556de.glb",
+  "mb": 64.37,
+  "verts": 1236967,
+  "tris": 1979925,
+  "dim": [
+   0.95,
+   0.979,
+   0.926
+  ]
+ },
+ {
+  "file": "tripo_convert_12e717df-fa83-4968-9ea3-0aee9234c714.glb",
+  "mb": 58.05,
+  "verts": 1098473,
+  "tris": 1821959,
+  "dim": [
+   0.98,
+   0.744,
+   0.49
+  ]
+ },
+ {
+  "file": "tripo_convert_1afe831f-8456-44ba-af0d-909ba897365f.glb",
+  "mb": 0.78,
+  "verts": 3316,
+  "tris": 4682,
+  "dim": [
+   0.568,
+   1,
+   0.708
+  ]
+ },
+ {
+  "file": "tripo_convert_1c824107-f95c-4610-925a-d69493059cb4.glb",
+  "mb": 0.67,
+  "verts": 3158,
+  "tris": 4746,
+  "dim": [
+   0.903,
+   0.888,
+   1
+  ]
+ },
+ {
+  "file": "tripo_convert_2072cc56-bf1d-47fa-9833-fd60af1d3e76.glb",
+  "mb": 62.45,
+  "verts": 1217487,
+  "tris": 1846461,
+  "dim": [
+   0.299,
+   0.847,
+   0.979
+  ]
+ },
+ {
+  "file": "tripo_convert_26ce0aab-f783-4e43-987a-065899dd4e14.glb",
+  "mb": 61.82,
+  "verts": 1216205,
+  "tris": 1819126,
+  "dim": [
+   0.693,
+   0.98,
+   0.908
+  ]
+ },
+ {
+  "file": "tripo_convert_2923ad19-2b49-474f-938c-dca7ed008a27.glb",
+  "mb": 64.69,
+  "verts": 1251886,
+  "tris": 1955446,
+  "dim": [
+   0.372,
+   0.979,
+   0.603
+  ]
+ },
+ {
+  "file": "tripo_convert_2a8a60a7-43e3-4a0a-aa14-93bae976a1b0.glb",
+  "mb": 59.65,
+  "verts": 1116693,
+  "tris": 1919158,
+  "dim": [
+   0.98,
+   0.911,
+   0.979
+  ]
+ },
+ {
+  "file": "tripo_convert_2cc1e0ad-537b-4bf6-a8d1-4421863377dd.glb",
+  "mb": 0.74,
+  "verts": 3375,
+  "tris": 4906,
+  "dim": [
+   0.615,
+   1,
+   0.724
+  ]
+ },
+ {
+  "file": "tripo_convert_2f253a0b-4143-4a83-a60a-77cf2a69ab3c.glb",
+  "mb": 0.6,
+  "verts": 3453,
+  "tris": 4815,
+  "dim": [
+   0.693,
+   1,
+   0.697
+  ]
+ },
+ {
+  "file": "tripo_convert_313044a7-0c8e-4887-82f3-b2de9e8c39e4.glb",
+  "mb": 66.82,
+  "verts": 1380908,
+  "tris": 1923376,
+  "dim": [
+   0.622,
+   0.98,
+   0.979
+  ]
+ },
+ {
+  "file": "tripo_convert_36046c02-4c7e-4e1b-aa37-2dafaeca4dfd.glb",
+  "mb": 70.48,
+  "verts": 1459906,
+  "tris": 1974158,
+  "dim": [
+   0.502,
+   0.244,
+   0.982
+  ]
+ },
+ {
+  "file": "tripo_convert_3661fa30-0479-4c15-965e-5fc95430ee13.glb",
+  "mb": 66.12,
+  "verts": 1300803,
+  "tris": 1962299,
+  "dim": [
+   0.631,
+   0.981,
+   0.814
+  ]
+ },
+ {
+  "file": "tripo_convert_3b86ab9e-4ffd-4b26-9f1b-930d53509a2e.glb",
+  "mb": 0.77,
+  "verts": 3404,
+  "tris": 4318,
+  "dim": [
+   0.861,
+   1,
+   0.858
+  ]
+ },
+ {
+  "file": "tripo_convert_3d8fec71-7345-4c7f-a350-6c4e80d335e2.glb",
+  "mb": 65.01,
+  "verts": 1225051,
+  "tris": 1967969,
+  "dim": [
+   0.631,
+   0.449,
+   0.981
+  ]
+ },
+ {
+  "file": "tripo_convert_42212267-cd7c-4988-ac10-7134f7c3a749.glb",
+  "mb": 63.69,
+  "verts": 1191456,
+  "tris": 1992129,
+  "dim": [
+   0.716,
+   0.982,
+   0.597
+  ]
+ },
+ {
+  "file": "tripo_convert_425c39fb-0178-4848-b9aa-9fe3c7e2a30d.glb",
+  "mb": 72.99,
+  "verts": 1532509,
+  "tris": 1923708,
+  "dim": [
+   0.133,
+   0.913,
+   0.978
+  ]
+ },
+ {
+  "file": "tripo_convert_44f3fe53-0cf8-4759-a51c-f894cc04cc96.glb",
+  "mb": 62.8,
+  "verts": 1220170,
+  "tris": 1906783,
+  "dim": [
+   0.312,
+   0.381,
+   0.98
+  ]
+ },
+ {
+  "file": "tripo_convert_4641edbf-cf0d-4142-9f96-2ab7528c710f.glb",
+  "mb": 73.75,
+  "verts": 1575075,
+  "tris": 1976170,
+  "dim": [
+   0.348,
+   0.981,
+   0.837
+  ]
+ },
+ {
+  "file": "tripo_convert_467a0170-586b-4695-9422-13a3edd8bc6c.glb",
+  "mb": 64.88,
+  "verts": 1296255,
+  "tris": 1947574,
+  "dim": [
+   0.691,
+   0.981,
+   0.899
+  ]
+ },
+ {
+  "file": "tripo_convert_487470a1-1e8b-4d06-b407-5348c57af885.glb",
+  "mb": 63.49,
+  "verts": 1243622,
+  "tris": 1913108,
+  "dim": [
+   0.382,
+   0.322,
+   0.979
+  ]
+ },
+ {
+  "file": "tripo_convert_4c2b380f-afe6-4eda-9da5-4fa01b3d1561.glb",
+  "mb": 68.78,
+  "verts": 1404115,
+  "tris": 1945972,
+  "dim": [
+   0.248,
+   0.922,
+   0.978
+  ]
+ },
+ {
+  "file": "tripo_convert_4e0a9f40-cabe-411e-a22d-3623d3adfbf5.glb",
+  "mb": 0.58,
+  "verts": 3087,
+  "tris": 4751,
+  "dim": [
+   0.741,
+   0.916,
+   1
+  ]
+ },
+ {
+  "file": "tripo_convert_4e3967fd-564c-4b8d-a30f-9db1947806dd.glb",
+  "mb": 63.5,
+  "verts": 1213311,
+  "tris": 1983636,
+  "dim": [
+   0.863,
+   0.422,
+   0.98
+  ]
+ },
+ {
+  "file": "tripo_convert_50698ccb-dfc0-4db8-a583-d6f32495fc85.glb",
+  "mb": 66.84,
+  "verts": 1301401,
+  "tris": 1947244,
+  "dim": [
+   0.442,
+   0.642,
+   0.986
+  ]
+ },
+ {
+  "file": "tripo_convert_540fe6d5-931e-4877-843a-a8dccc786c1a.glb",
+  "mb": 65.08,
+  "verts": 1259412,
+  "tris": 1933872,
+  "dim": [
+   0.312,
+   0.883,
+   0.978
+  ]
+ },
+ {
+  "file": "tripo_convert_551013b5-bc80-417f-8177-6ffe413ae5e7.glb",
+  "mb": 60.75,
+  "verts": 1184554,
+  "tris": 1859603,
+  "dim": [
+   0.448,
+   0.959,
+   0.979
+  ]
+ },
+ {
+  "file": "tripo_convert_558f5920-dc84-411f-84f0-b01c727dfd46.glb",
+  "mb": 62.06,
+  "verts": 1183370,
+  "tris": 1954128,
+  "dim": [
+   0.981,
+   0.621,
+   0.762
+  ]
+ },
+ {
+  "file": "tripo_convert_590dcdb0-54d7-471d-a626-2b755338e16d.glb",
+  "mb": 67.47,
+  "verts": 1368771,
+  "tris": 1986744,
+  "dim": [
+   0.336,
+   0.98,
+   0.464
+  ]
+ },
+ {
+  "file": "tripo_convert_595ad2c4-6b94-4ee1-9523-cd152233d72e.glb",
+  "mb": 0.65,
+  "verts": 3199,
+  "tris": 4652,
+  "dim": [
+   0.508,
+   1,
+   0.794
+  ]
+ },
+ {
+  "file": "tripo_convert_5b341d7a-35fd-4885-896e-c7cb73dffc15.glb",
+  "mb": 68.97,
+  "verts": 1442794,
+  "tris": 1959270,
+  "dim": [
+   0.504,
+   0.981,
+   0.697
+  ]
+ },
+ {
+  "file": "tripo_convert_5be038d2-84b7-4ea3-9fa7-c4ac6caea1d1.glb",
+  "mb": 63.54,
+  "verts": 1225027,
+  "tris": 1997514,
+  "dim": [
+   0.285,
+   0.978,
+   0.493
+  ]
+ },
+ {
+  "file": "tripo_convert_5f321553-7a94-4425-8a1c-c855e469cade.glb",
+  "mb": 0.61,
+  "verts": 3596,
+  "tris": 4811,
+  "dim": [
+   0.88,
+   0.564,
+   1
+  ]
+ },
+ {
+  "file": "tripo_convert_5f81c18f-7afa-49c4-99a9-5b63169cfea7.glb",
+  "mb": 61.61,
+  "verts": 1133887,
+  "tris": 1964610,
+  "dim": [
+   0.98,
+   0.487,
+   0.584
+  ]
+ },
+ {
+  "file": "tripo_convert_615057bf-d216-4e67-9381-471003a4224a.glb",
+  "mb": 62.92,
+  "verts": 1192872,
+  "tris": 1972188,
+  "dim": [
+   0.346,
+   0.653,
+   0.979
+  ]
+ },
+ {
+  "file": "tripo_convert_64fc864a-da8a-4fa9-b6d4-d0d8240fa090.glb",
+  "mb": 61.48,
+  "verts": 1206813,
+  "tris": 1905868,
+  "dim": [
+   0.772,
+   0.98,
+   0.801
+  ]
+ },
+ {
+  "file": "tripo_convert_667208fd-8538-49ae-b271-b9f270eb13e3.glb",
+  "mb": 0.66,
+  "verts": 3268,
+  "tris": 4720,
+  "dim": [
+   0.809,
+   1,
+   0.824
+  ]
+ },
+ {
+  "file": "tripo_convert_671635f4-6001-474a-baba-c38ac4c9e74c.glb",
+  "mb": 64.95,
+  "verts": 1298380,
+  "tris": 1885578,
+  "dim": [
+   0.464,
+   0.751,
+   0.979
+  ]
+ },
+ {
+  "file": "tripo_convert_674708b0-94c3-4819-b092-59c1821ff264.glb",
+  "mb": 66.33,
+  "verts": 1352811,
+  "tris": 1900234,
+  "dim": [
+   0.215,
+   0.495,
+   0.978
+  ]
+ },
+ {
+  "file": "tripo_convert_6af0beea-dba3-47ab-8650-0f4201835315.glb",
+  "mb": 59.57,
+  "verts": 1143728,
+  "tris": 1881474,
+  "dim": [
+   0.354,
+   0.969,
+   0.98
+  ]
+ },
+ {
+  "file": "tripo_convert_6cc8be52-76ca-424d-905d-8fa6a98c9f14.glb",
+  "mb": 62.27,
+  "verts": 1182683,
+  "tris": 1940550,
+  "dim": [
+   0.976,
+   0.778,
+   0.98
+  ]
+ },
+ {
+  "file": "tripo_convert_6ef51361-46f8-4ccf-a216-4ff680d3db0e.glb",
+  "mb": 64.6,
+  "verts": 1301152,
+  "tris": 1895600,
+  "dim": [
+   0.98,
+   0.651,
+   0.966
+  ]
+ },
+ {
+  "file": "tripo_convert_757eb359-d81f-4b78-ba72-fb9aa6164d62.glb",
+  "mb": 0.73,
+  "verts": 3505,
+  "tris": 4640,
+  "dim": [
+   0.726,
+   1,
+   0.737
+  ]
+ },
+ {
+  "file": "tripo_convert_76cbc377-e3a1-4ae9-9498-95fc813000b5.glb",
+  "mb": 65.78,
+  "verts": 1312406,
+  "tris": 1984656,
+  "dim": [
+   0.446,
+   0.978,
+   0.422
+  ]
+ },
+ {
+  "file": "tripo_convert_7c699820-3a2e-45a3-b83c-01c0665be2a2.glb",
+  "mb": 0.61,
+  "verts": 3595,
+  "tris": 4844,
+  "dim": [
+   1,
+   0.611,
+   0.856
+  ]
+ },
+ {
+  "file": "tripo_convert_7ca2f5c6-a38d-4b4d-b5af-c4665632a2d0.glb",
+  "mb": 64.35,
+  "verts": 1270239,
+  "tris": 1969058,
+  "dim": [
+   0.976,
+   0.69,
+   0.979
+  ]
+ },
+ {
+  "file": "tripo_convert_7cdc46d5-b6b4-494c-9843-16d4c0b9e3c8.glb",
+  "mb": 68.99,
+  "verts": 1379408,
+  "tris": 1929542,
+  "dim": [
+   0.42,
+   0.94,
+   0.979
+  ]
+ },
+ {
+  "file": "tripo_convert_7dd5fae6-e21a-462c-bccb-3df4c7a27c4b.glb",
+  "mb": 64.94,
+  "verts": 1269895,
+  "tris": 1967077,
+  "dim": [
+   0.25,
+   0.684,
+   0.979
+  ]
+ },
+ {
+  "file": "tripo_convert_80009009-9481-4edb-ad50-c95bbf8f47e0.glb",
+  "mb": 65.28,
+  "verts": 1313654,
+  "tris": 1902526,
+  "dim": [
+   0.415,
+   0.72,
+   0.98
+  ]
+ },
+ {
+  "file": "tripo_convert_866daa53-aac1-41d0-81c1-0799fe4f6ddc.glb",
+  "mb": 64.69,
+  "verts": 1296493,
+  "tris": 1890994,
+  "dim": [
+   0.573,
+   0.968,
+   0.981
+  ]
+ },
+ {
+  "file": "tripo_convert_8838f1b4-b292-4df1-810b-dbf94c814c54.glb",
+  "mb": 60.03,
+  "verts": 1085510,
+  "tris": 1946860,
+  "dim": [
+   0.852,
+   0.978,
+   0.978
+  ]
+ },
+ {
+  "file": "tripo_convert_8da42e49-2544-4d84-b576-0e4c2d02dba1.glb",
+  "mb": 62.68,
+  "verts": 1211926,
+  "tris": 1939825,
+  "dim": [
+   0.377,
+   0.907,
+   0.981
+  ]
+ },
+ {
+  "file": "tripo_convert_9371af3e-e253-4a3a-9d90-882c0ed29152.glb",
+  "mb": 65.27,
+  "verts": 1289952,
+  "tris": 1946683,
+  "dim": [
+   0.525,
+   0.833,
+   0.98
+  ]
+ },
+ {
+  "file": "tripo_convert_94effc93-06f2-4efc-98cc-5c85c1f509f9.glb",
+  "mb": 61.89,
+  "verts": 1197576,
+  "tris": 1940268,
+  "dim": [
+   0.839,
+   0.845,
+   0.979
+  ]
+ },
+ {
+  "file": "tripo_convert_962a918a-e43e-44a0-8a89-f79d6886aa34.glb",
+  "mb": 62.88,
+  "verts": 1217110,
+  "tris": 1912044,
+  "dim": [
+   0.584,
+   0.981,
+   0.972
+  ]
+ },
+ {
+  "file": "tripo_convert_9d14d780-3e5b-4eee-8640-936c8ddc53f4.glb",
+  "mb": 59.76,
+  "verts": 1141731,
+  "tris": 1903268,
+  "dim": [
+   0.98,
+   0.719,
+   0.943
+  ]
+ },
+ {
+  "file": "tripo_convert_a6b6cd5e-62cc-49b5-8e90-964a26006501.glb",
+  "mb": 0.76,
+  "verts": 3641,
+  "tris": 4870,
+  "dim": [
+   0.29,
+   0.238,
+   1
+  ]
+ },
+ {
+  "file": "tripo_convert_a881ece9-3ecd-4288-9bd0-da3288012a28.glb",
+  "mb": 66.04,
+  "verts": 1264644,
+  "tris": 1962776,
+  "dim": [
+   0.98,
+   0.755,
+   0.829
+  ]
+ },
+ {
+  "file": "tripo_convert_ac00ecb1-793d-44eb-bc84-1dc6c9cc169a.glb",
+  "mb": 60.3,
+  "verts": 1128917,
+  "tris": 1885068,
+  "dim": [
+   0.98,
+   0.647,
+   0.973
+  ]
+ },
+ {
+  "file": "tripo_convert_af3fba60-81ff-46ba-897d-8de7fc42ffec.glb",
+  "mb": 68.25,
+  "verts": 1347453,
+  "tris": 1974993,
+  "dim": [
+   0.534,
+   0.599,
+   0.979
+  ]
+ },
+ {
+  "file": "tripo_convert_af7cbdfe-2cca-4c9f-a27f-e638076352ec.glb",
+  "mb": 66.16,
+  "verts": 1284030,
+  "tris": 1968716,
+  "dim": [
+   0.527,
+   0.798,
+   0.979
+  ]
+ },
+ {
+  "file": "tripo_convert_afd48964-71c4-4541-979a-92ffb43feaa9.glb",
+  "mb": 63.85,
+  "verts": 1204233,
+  "tris": 1961852,
+  "dim": [
+   0.98,
+   0.687,
+   0.557
+  ]
+ },
+ {
+  "file": "tripo_convert_b05cd33d-bf4d-48ca-973d-daa6b38f35da.glb",
+  "mb": 64.8,
+  "verts": 1291811,
+  "tris": 1954568,
+  "dim": [
+   0.178,
+   0.979,
+   0.208
+  ]
+ },
+ {
+  "file": "tripo_convert_b1b959fe-586c-4326-92fd-7b5f4028f65e.glb",
+  "mb": 63.46,
+  "verts": 1239647,
+  "tris": 1893160,
+  "dim": [
+   0.434,
+   0.414,
+   0.98
+  ]
+ },
+ {
+  "file": "tripo_convert_b3afd3a9-b50e-4945-a946-975774fa3c81.glb",
+  "mb": 68.03,
+  "verts": 1378667,
+  "tris": 1997188,
+  "dim": [
+   0.237,
+   0.98,
+   0.403
+  ]
+ },
+ {
+  "file": "tripo_convert_b3c11304-0db3-47ea-b094-6ed87f6e5b72.glb",
+  "mb": 0.81,
+  "verts": 3345,
+  "tris": 4842,
+  "dim": [
+   0.297,
+   1,
+   0.501
+  ]
+ },
+ {
+  "file": "tripo_convert_b55f456f-e116-409c-9976-1b8c315f728b.glb",
+  "mb": 0.82,
+  "verts": 3709,
+  "tris": 4398,
+  "dim": [
+   0.544,
+   1,
+   0.584
+  ]
+ },
+ {
+  "file": "tripo_convert_b904565f-301e-492c-b2fe-7a8ca701fee3.glb",
+  "mb": 68.56,
+  "verts": 1389020,
+  "tris": 1993835,
+  "dim": [
+   0.585,
+   0.982,
+   0.659
+  ]
+ },
+ {
+  "file": "tripo_convert_bd23a918-15fd-4652-b4b4-6352039975da.glb",
+  "mb": 64.86,
+  "verts": 1264791,
+  "tris": 1986964,
+  "dim": [
+   0.98,
+   0.845,
+   0.971
+  ]
+ },
+ {
+  "file": "tripo_convert_c37b995b-dd36-4a13-bb83-a4eec2f0984f.glb",
+  "mb": 74.33,
+  "verts": 1586576,
+  "tris": 1998016,
+  "dim": [
+   0.228,
+   0.149,
+   0.983
+  ]
+ },
+ {
+  "file": "tripo_convert_c5d1233f-4e2b-45ed-82bc-a662cd72eb7e.glb",
+  "mb": 63.99,
+  "verts": 1252198,
+  "tris": 1973100,
+  "dim": [
+   0.831,
+   0.674,
+   0.98
+  ]
+ },
+ {
+  "file": "tripo_convert_c77889b9-a3da-45cb-be55-04ed62fc8432.glb",
+  "mb": 63.51,
+  "verts": 1195598,
+  "tris": 1917144,
+  "dim": [
+   0.748,
+   0.935,
+   0.979
+  ]
+ },
+ {
+  "file": "tripo_convert_ce3ca72d-ddb3-425b-a692-c789d685ac25.glb",
+  "mb": 61.2,
+  "verts": 1159925,
+  "tris": 1940839,
+  "dim": [
+   0.742,
+   0.979,
+   0.77
+  ]
+ },
+ {
+  "file": "tripo_convert_cf003d15-e05e-4dbd-9f5b-a62676b054c0.glb",
+  "mb": 0.7,
+  "verts": 3355,
+  "tris": 4982,
+  "dim": [
+   0.551,
+   1,
+   0.731
+  ]
+ },
+ {
+  "file": "tripo_convert_cf07386e-85b3-4494-88d0-2fda7e61615d.glb",
+  "mb": 0.62,
+  "verts": 3058,
+  "tris": 4778,
+  "dim": [
+   0.559,
+   0.951,
+   1
+  ]
+ },
+ {
+  "file": "tripo_convert_d0955ac6-dbf9-468a-be77-bab3dd254e25.glb",
+  "mb": 0.6,
+  "verts": 2996,
+  "tris": 4786,
+  "dim": [
+   0.448,
+   0.212,
+   1
+  ]
+ },
+ {
+  "file": "tripo_convert_d1317581-65aa-4da3-a70b-bf66402a2cc7.glb",
+  "mb": 64.2,
+  "verts": 1242314,
+  "tris": 1905830,
+  "dim": [
+   0.348,
+   0.979,
+   0.9
+  ]
+ },
+ {
+  "file": "tripo_convert_d4502bdc-4eec-4d0f-97af-87de2d63333e.glb",
+  "mb": 62.69,
+  "verts": 1239057,
+  "tris": 1928882,
+  "dim": [
+   0.798,
+   0.981,
+   0.914
+  ]
+ },
+ {
+  "file": "tripo_convert_d78eedaa-7245-42f8-aede-c290a3816ef1.glb",
+  "mb": 68.72,
+  "verts": 1426006,
+  "tris": 1907656,
+  "dim": [
+   0.504,
+   0.593,
+   0.977
+  ]
+ },
+ {
+  "file": "tripo_convert_daa2ebdb-38d8-43d4-8e73-4043c021ae01.glb",
+  "mb": 64.98,
+  "verts": 1293584,
+  "tris": 1967834,
+  "dim": [
+   0.299,
+   0.979,
+   0.454
+  ]
+ },
+ {
+  "file": "tripo_convert_dbe641aa-f5fc-4070-870a-2e5ca852c118.glb",
+  "mb": 65.14,
+  "verts": 1275003,
+  "tris": 1978658,
+  "dim": [
+   0.981,
+   0.521,
+   0.979
+  ]
+ },
+ {
+  "file": "tripo_convert_dc71244e-b854-4fc6-abbe-322e9d33375b.glb",
+  "mb": 64.69,
+  "verts": 1283360,
+  "tris": 1922602,
+  "dim": [
+   0.838,
+   0.981,
+   0.722
+  ]
+ },
+ {
+  "file": "tripo_convert_e476cc32-0c30-4e47-9105-90741b25c035.glb",
+  "mb": 64.29,
+  "verts": 1259855,
+  "tris": 1889870,
+  "dim": [
+   0.599,
+   0.916,
+   0.979
+  ]
+ },
+ {
+  "file": "tripo_convert_e567d4c8-2d59-40ec-9610-74e19cbd8fbe.glb",
+  "mb": 63.62,
+  "verts": 1215432,
+  "tris": 1960104,
+  "dim": [
+   0.303,
+   0.979,
+   0.847
+  ]
+ },
+ {
+  "file": "tripo_convert_ea0954c0-b79f-475e-8e64-94370c7f638e.glb",
+  "mb": 63.69,
+  "verts": 1243287,
+  "tris": 1929948,
+  "dim": [
+   0.98,
+   0.769,
+   0.448
+  ]
+ },
+ {
+  "file": "tripo_convert_eac52d09-a0ae-4761-942e-49d0c7102447.glb",
+  "mb": 0.72,
+  "verts": 3228,
+  "tris": 4387,
+  "dim": [
+   0.475,
+   1,
+   0.825
+  ]
+ },
+ {
+  "file": "tripo_convert_ecc46427-0339-403d-b066-422184325189.glb",
+  "mb": 0.6,
+  "verts": 3224,
+  "tris": 4958,
+  "dim": [
+   0.553,
+   0.992,
+   1
+  ]
+ },
+ {
+  "file": "tripo_convert_eff11c95-f763-46e5-9ce5-0a0d66ca59d8.glb",
+  "mb": 66.57,
+  "verts": 1366547,
+  "tris": 1894659,
+  "dim": [
+   0.195,
+   0.661,
+   0.98
+  ]
+ },
+ {
+  "file": "tripo_convert_f10b9b81-2f77-4ff8-a57d-bbaa8f48c0ee.glb",
+  "mb": 64,
+  "verts": 1240873,
+  "tris": 1973057,
+  "dim": [
+   0.463,
+   0.978,
+   0.978
+  ]
+ },
+ {
+  "file": "tripo_convert_f82bb372-a74e-46d7-9e6f-8995f49497fc.glb",
+  "mb": 69.54,
+  "verts": 1405249,
+  "tris": 1925114,
+  "dim": [
+   0.257,
+   0.98,
+   0.98
+  ]
+ },
+ {
+  "file": "tripo_convert_f8de3daa-3669-428d-83d3-65b6c19608ef.glb",
+  "mb": 65.44,
+  "verts": 1287721,
+  "tris": 1847879,
+  "dim": [
+   0.794,
+   0.98,
+   0.528
+  ]
+ },
+ {
+  "file": "tripo_convert_fa1ca082-5d67-4747-b732-7cd4e7b9e089.glb",
+  "mb": 61.19,
+  "verts": 1182517,
+  "tris": 1895150,
+  "dim": [
+   0.98,
+   0.52,
+   0.918
+  ]
+ },
+ {
+  "file": "tripo_convert_fcf88a5c-76d0-4510-813e-f42407dd3201.glb",
+  "mb": 61.91,
+  "verts": 1203482,
+  "tris": 1874222,
+  "dim": [
+   0.574,
+   0.752,
+   0.979
+  ]
+ },
+ {
+  "file": "tripo_convert_fd5de428-e055-404f-9882-8bcfa07dd317.glb",
+  "mb": 0.7,
+  "verts": 3335,
+  "tris": 4458,
+  "dim": [
+   1,
+   0.362,
+   0.616
+  ]
+ }
+]

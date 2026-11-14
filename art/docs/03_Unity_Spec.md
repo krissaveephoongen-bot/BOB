@@ -28,6 +28,8 @@ Unity 6 LTS · URP · Target: Android (min API 26, OpenGL ES 3.0 / Vulkan) + iOS
 | บอส | 8,000–10,000 | 1024² | 2 | ≤ 40 |
 | ชิ้นส่วน 15 ชิ้น | 150–500 ต่อชิ้น | Atlas 1024² รวมทุกชิ้น | 1 (แชร์) | – |
 | ห้อง 1 ห้อง (รวม) | ≤ 40,000 | Atlas 2048² 1–2 แผ่น | ≤ 4 | – |
+| ชิ้นแผนที่ Task Race (`bob_map_*`: เกาะ / แม่น้ำ / สะพาน / หน้าผา) | ≤ 8,000 ต่อชิ้น | `T_BOB_Palette` 512² | 1 (`BOB/CurvedWorld`) | – |
+| แผนที่เกาะคู่รวม (6 ชิ้น) | ≤ 48,000 | | | |
 | **งบรวมบนจอ** | **≤ 100k tris, ≤ 80 draw calls (batches)** | | | |
 
 Texture format: ASTC 6×6 (Android/iOS), Mip-map เปิดกับ 3D, ปิดกับ UI
