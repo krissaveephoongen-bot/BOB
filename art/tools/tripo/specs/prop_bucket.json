@@ -1,0 +1,15 @@
+{
+ "name": "prop_bucket",
+ "class": "prop_m",
+ "height_m": 0.45,
+ "reference_image": "art/leonardo_raw/props/prop_bucket_3.jpg",
+ "prompt": "a single plastic cleaning bucket with a curved brown handle, ribbed sides and a thick rounded rim, stylized chibi cartoon game prop, chunky soft vinyl-toy shapes, bright blue #3D8FE0 body, grey metal handle hinges, flat colours, no text, no water, no character",
+ "negative_prompt": "realistic, photo, text, logo, character, face, water splash, thin parts, base plate",
+ "tripo": {
+  "face_limit": 800,
+  "smart_low_poly": true,
+  "texture": true,
+  "pbr": false
+ },
+ "notes": "image_to_model from Leonardo RAW prop_bucket_3 (cleanest silhouette of the 4); prompt is the text_to_model fallback (drop reference_image). Cleanup: bob_prop_cleanup.py --class prop_m --height 0.45"
+}

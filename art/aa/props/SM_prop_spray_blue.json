@@ -1,0 +1,13 @@
+{
+ "name": "prop_spray_blue",
+ "class": "prop_m",
+ "tris_in": 4842,
+ "tris_out": 798,
+ "budget": 800,
+ "height_m": 0.3,
+ "colours": {
+  "bubble_shirt": 495,
+  "shoe": 165,
+  "white": 138
+ }
+}

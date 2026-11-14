@@ -1,0 +1,12 @@
+{
+ "name": "prop_cone",
+ "class": "prop_s",
+ "tris_in": 4815,
+ "tris_out": 299,
+ "budget": 300,
+ "height_m": 0.5,
+ "colours": {
+  "sweep_shirt": 253,
+  "white": 46
+ }
+}
