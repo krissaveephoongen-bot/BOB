@@ -59,12 +59,13 @@ namespace Bob.TaskRace
         TMP_Text mainLabel;
 
         RectTransform topBar, timeFill;
-        TMP_Text timerText, pointsText, modeText;
+        TMP_Text timerText, pointsText, rivalText, teamPctText, modeText;
 
         Image cardDim, cardPanel, cardTrack;
         RectTransform cardFill;
-        TMP_Text cardTitle, cardSub, cardPercent;
+        TMP_Text cardTitle, cardSub, cardPercent, cardChip;
         Button cardClose;
+        float cardChipUntil;
 
         RectTransform debugBar, debugToggle;
         TMP_Text debugModeLabel;
@@ -183,8 +184,8 @@ namespace Bob.TaskRace
             }
             card = fill = rowsRoot = footer = topBar = timeFill = debugBar = debugToggle = null;
             mainButton = null; mainLabel = null;
-            timerText = pointsText = modeText = null;
-            cardDim = cardPanel = cardTrack = null; cardFill = null; cardTitle = cardSub = cardPercent = null; cardClose = null;
+            timerText = pointsText = rivalText = teamPctText = modeText = null;
+            cardDim = cardPanel = cardTrack = null; cardFill = null; cardTitle = cardSub = cardPercent = cardChip = null; cardClose = null;
             debugModeLabel = null;
         }
 
@@ -250,19 +251,33 @@ namespace Bob.TaskRace
 
             var tasks = round.Tasks;
             RowCount = tasks.Count;
-            for (int i = 0; i < tasks.Count; i++) BuildRow(tasks[i], i);
+            int nextIndex = -1;
+            for (int i = 0; i < tasks.Count; i++) if (!tasks[i].Done) { nextIndex = i; break; } // highlight the next job
+            for (int i = 0; i < tasks.Count; i++) BuildRow(tasks[i], i, i == nextIndex);
             FitCard(tasks.Count);
         }
 
-        void BuildRow(TaskEntry entry, int index)
+        void BuildRow(TaskEntry entry, int index, bool next)
         {
             var row = BobUi.Rect("Task_" + entry.Spec.Id, rowsRoot);
             BobUi.Pin(row, new Vector2(0f, 1f), new Vector2(0f, 1f),
                 new Vector2(0f, -index * (rowHeight + rowGap)), new Vector2(ContentW, rowHeight));
 
-            var disc = BobUi.Disc(row, TaskSpot.CategoryColour(entry.Spec.Category), DiscW);
-            BobUi.Pin((RectTransform)disc.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
-                Vector2.zero, new Vector2(DiscW, DiscW));
+            if (next) // the eye lands on the one job to do next
+            {
+                var hi = BobUi.Panel(row, new Color(T.accent.r, T.accent.g, T.accent.b, 0.16f), null, "Next");
+                BobUi.Stretch((RectTransform)hi.transform);
+                hi.raycastTarget = false;
+                var stripe = BobUi.Panel(row, T.accent, null, "NextStripe");
+                BobUi.Pin((RectTransform)stripe.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
+                    Vector2.zero, new Vector2(6f, rowHeight));
+                stripe.raycastTarget = false;
+            }
+
+            // category icon instead of a bare colour dot
+            var icon = BobUi.Img(row, CategoryIcon(entry.Spec.Category), 30, TaskSpot.CategoryColour(entry.Spec.Category));
+            BobUi.Pin(icon.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
+                new Vector2(4f, 0f), new Vector2(30f, 30f));
 
             float nameW = ContentW - DiscW - ColGap - StatusW - ColGap - WeightW - ColGap;
             var name = BobUi.Label(row, NameText(entry), 32, NameColour(entry));
@@ -293,8 +308,17 @@ namespace Bob.TaskRace
                 new Vector2(PadL, -footerTop), new Vector2(ContentW, FooterH));
         }
 
+        static string CategoryIcon(TaskCategory c) => c switch
+        {
+            TaskCategory.Sweep => "icon_skill_sweep",
+            TaskCategory.Wash => "icon_skill_bubble",
+            TaskCategory.Scrub => "icon_skill_press",
+            TaskCategory.Spray => "icon_skill_spray",
+            _ => "icon_ability",
+        };
+
         string NameText(TaskEntry entry) =>
-            entry.Done ? $"<color=#{Hex(T.success)}>✓</color> {entry.Spec.Name}"
+            entry.Done ? $"<color=#{Hex(T.success)}>✓</color> <s>{entry.Spec.Name}</s>"
             : entry.Locked ? $"<color=#{Hex(T.accent)}>⋯</color> {entry.Spec.Name}"
             : entry.Spec.Name;
 
@@ -329,23 +353,32 @@ namespace Bob.TaskRace
         {
             topBar = (RectTransform)BobUi.Panel(page, T.surface, null, "TopBar").transform;
             BobUi.Pin(topBar, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0f, -cardInset.y), new Vector2(700f, 88f));
+                new Vector2(0f, -cardInset.y), new Vector2(940f, 104f));
 
-            timerText = BobUi.Label(topBar, "เวลา 02:00", 40, T.ink, TextAnchor.MiddleLeft, FontStyle.Bold);
+            // the clock is the loudest thing on screen (S28/HUD: "see it in half a second")
+            timerText = BobUi.Label(topBar, "เวลา 02:00", 48, T.ink, TextAnchor.MiddleLeft, FontStyle.Bold);
             BobUi.Pin(timerText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f),
-                new Vector2(PadL, -8f), new Vector2(300f, 48f));
+                new Vector2(PadL, -10f), new Vector2(330f, 56f));
 
-            modeText = BobUi.Label(topBar, "Bridge Raid", 20, T.inkMuted, TextAnchor.MiddleLeft);
+            modeText = BobUi.Label(topBar, "Bridge Raid", 22, T.inkMuted, TextAnchor.MiddleLeft);
             BobUi.Pin(modeText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f),
-                new Vector2(PadL + 2f, -56f), new Vector2(420f, 26f));
+                new Vector2(PadL + 2f, -66f), new Vector2(470f, 28f));
 
-            pointsText = BobUi.Label(topBar, "Team Points: 0", 32, T.ink, TextAnchor.MiddleRight, FontStyle.Bold);
+            pointsText = BobUi.Label(topBar, "คะแนนทีม 0", 30, T.ink, TextAnchor.MiddleRight, FontStyle.Bold);
             BobUi.Pin(pointsText.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f),
-                new Vector2(-PadR, -8f), new Vector2(360f, 48f));
+                new Vector2(-PadR, -10f), new Vector2(310f, 40f));
+
+            rivalText = BobUi.Label(topBar, "คู่แข่ง 0", 24, T.inkMuted, TextAnchor.MiddleRight);
+            BobUi.Pin(rivalText.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f),
+                new Vector2(-PadR, -52f), new Vector2(310f, 30f));
+
+            teamPctText = BobUi.Label(topBar, "ทีมเรา 0%", 24, T.inkMuted, TextAnchor.MiddleRight, FontStyle.Bold);
+            BobUi.Pin(teamPctText.rectTransform, new Vector2(1f, 0f), new Vector2(1f, 0f),
+                new Vector2(-PadR, 18f), new Vector2(310f, 28f));
 
             var track = BobUi.Panel(topBar, T.surfaceCream, null, "ClockTrack");
             BobUi.Pin((RectTransform)track.transform, new Vector2(0f, 0f), new Vector2(0f, 0f),
-                new Vector2(PadL, 8f), new Vector2(700f - PadL - PadR, 8f));
+                new Vector2(PadL, 8f), new Vector2(940f - PadL - PadR, 8f));
             timeFill = BobUi.Rect("ClockFill", track.transform);
             timeFill.anchorMin = new Vector2(0f, 0f);
             timeFill.anchorMax = new Vector2(1f, 1f);
@@ -361,7 +394,9 @@ namespace Bob.TaskRace
             if (manager == null)
             {
                 timerText.text = "เวลา 02:00";
-                pointsText.text = "Team Points: 0";
+                pointsText.text = "คะแนนทีม 0";
+                if (rivalText != null) rivalText.text = "คู่แข่ง 0";
+                if (teamPctText != null) teamPctText.text = "ทีมเรา 0%";
                 modeText.text = "ไม่มี TaskRaceModeManager";
                 return;
             }
@@ -371,7 +406,13 @@ namespace Bob.TaskRace
             timerText.text = $"เวลา {secs / 60:00}:{secs % 60:00}";
             timerText.color = r <= 10f ? T.danger : manager.BridgeRaid && r <= manager.warningAtRemaining ? T.warn : T.ink;
 
-            pointsText.text = "Team Points: " + manager.LocalPoints;
+            pointsText.text = "คะแนนทีม " + manager.LocalPoints;
+            if (rivalText != null) rivalText.text = "คู่แข่ง " + manager.RivalPoints;
+            if (teamPctText != null)
+            {
+                float p = round != null && round.TotalWeight > 0 ? round.DoneWeight / (float)round.TotalWeight : 0f;
+                teamPctText.text = "ทีมเรา " + Mathf.RoundToInt(p * 100f) + "%";
+            }
             if (debugModeLabel != null) debugModeLabel.text = manager.BridgeRaid ? "โหมด: Raid" : "โหมด: Pure";
 
             if (!manager.BridgeRaid) modeText.text = "Pure Race · สะพานปิดทั้งแมตช์";
@@ -500,6 +541,17 @@ namespace Bob.TaskRace
             BobUi.Pin(cardSub.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f),
                 new Vector2(36f, -100f), new Vector2(900f, 70f));
 
+            // one-time, two-second chip: how to close the card (docs 16: teach in the doing)
+            cardChip = BobUi.Label(panel, "ลากจอยเพื่อปิดการ์ด", 26, T.surface, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Pin(cardChip.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(0f, 22f), new Vector2(460f, 42f));
+            var chipBg = BobUi.Panel(cardChip.transform, T.ink, null, "ChipBg");
+            BobUi.Stretch((RectTransform)chipBg.transform, -24f, -6f, -24f, -6f);
+            chipBg.transform.SetAsFirstSibling();
+            chipBg.raycastTarget = false;
+            cardChip.transform.SetAsLastSibling();
+            cardChip.gameObject.SetActive(false);
+
             cardTrack = BobUi.Panel(panel, T.surfaceCream, null, "S28Track");
             BobUi.Pin((RectTransform)cardTrack.transform, new Vector2(0f, 0f), new Vector2(0f, 0f),
                 new Vector2(36f, 92f), new Vector2(928f, 46f));
@@ -539,6 +591,11 @@ namespace Bob.TaskRace
                 ? "ขยับจอยเกิน 70% หรือกด × เพื่อยกเลิก"
                 : $"งานนี้ใช้เวลาประมาณ {spot.ExpectedSeconds:0} วินาที · ขยับจอยเกิน 70% เพื่อยกเลิก";
             cardTrack.GetComponent<Image>().color = T.surfaceCream;
+            if (cardChip != null)
+            {
+                cardChipUntil = Time.unscaledTime + 2f;
+                cardChip.gameObject.SetActive(true);
+            }
             SetCardFill(cardStartProgress);
             cardDim.gameObject.SetActive(true);
             cardPanel.gameObject.SetActive(true);
@@ -552,6 +609,8 @@ namespace Bob.TaskRace
             if (!cardSpot.IsOpen) { HideCard(); return; } // joystick cancel / another close path
 
             cardElapsed += Time.unscaledDeltaTime;
+            if (cardChip != null && cardChip.gameObject.activeSelf && Time.unscaledTime >= cardChipUntil)
+                cardChip.gameObject.SetActive(false);
             float progress = Mathf.Clamp01(cardStartProgress + cardElapsed / Mathf.Max(0.01f, cardDuration));
             if (!cardSabotage) cardSpot.SetProgress(progress);
             SetCardFill(progress);
@@ -583,6 +642,7 @@ namespace Bob.TaskRace
         {
             cardSpot = null;
             cardSabotage = false;
+            if (cardChip != null) cardChip.gameObject.SetActive(false);
             if (cardDim != null) cardDim.gameObject.SetActive(false);
             if (cardPanel != null) cardPanel.gameObject.SetActive(false);
         }
