@@ -1,0 +1,9 @@
+{
+ "name": "hero_press_tripo",
+ "class": "hero",
+ "tris_in": 4682,
+ "tris_out": 4668,
+ "budget": 6000,
+ "height_m": 1.3,
+ "colours": {}
+}

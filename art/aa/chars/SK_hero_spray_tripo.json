@@ -1,0 +1,9 @@
+{
+ "name": "hero_spray_tripo",
+ "class": "hero",
+ "tris_in": 4906,
+ "tris_out": 4852,
+ "budget": 6000,
+ "height_m": 1.2,
+ "colours": {}
+}

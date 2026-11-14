@@ -1,0 +1,9 @@
+{
+ "name": "hero_sweep_tripo",
+ "class": "hero",
+ "tris_in": 4982,
+ "tris_out": 4966,
+ "budget": 6000,
+ "height_m": 1.15,
+ "colours": {}
+}

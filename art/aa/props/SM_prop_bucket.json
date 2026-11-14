@@ -1,12 +1,12 @@
 {
  "name": "prop_bucket",
  "class": "prop_m",
- "tris_in": 23372,
+ "tris_in": 4740,
  "tris_out": 800,
  "budget": 800,
  "height_m": 0.45,
  "colours": {
-  "bubble_shirt": 718,
-  "metal_dark": 82
+  "bubble_shirt": 689,
+  "shoe": 111
  }
 }
