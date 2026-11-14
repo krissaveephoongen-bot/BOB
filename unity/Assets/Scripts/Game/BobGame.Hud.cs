@@ -440,7 +440,7 @@ namespace Bob.Game
         void RenderButtons()
         {
             var h = Hero;
-            abilityLabel.text = $"<b>{h.Ability}</b>\n<size=16>{(abUsed ? "ใช้แล้ว" : swapMode ? "แตะ สลับ↑" : "พร้อม")}</size>";
+            abilityLabel.text = $"<b>{h.Ability}</b>\n<size=16>{(abUsed ? "ใช้แล้ว" : swapMode ? "แตะ สลับ↑" : "พร้อม · 1 ครั้ง/แมตช์")}</size>";
             abilityBtn.interactable = phase == Phase.Build && !abUsed;
             var pt = abilityBtn.transform.Find("Portrait");
             if (pt != null) pt.GetComponent<Image>().sprite = art.Get(charId + "_portrait");

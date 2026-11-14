@@ -227,6 +227,7 @@ namespace Bob.Game
             matchId = "u" + DateTime.UtcNow.Ticks.ToString("x") + UnityEngine.Random.Range(0, 0xFFFF).ToString("x");
             seed = UnityEngine.Random.Range(1, 8388608);
             roundNo = 0; wins = 0; losses = 0; carry = 0; rivalCarry = 0; results.Clear();
+            abUsed = false; // 4.6: one hero ability per match, not per round
             Time.timeScale = 1;
             Sfx("ui_confirm");
             Log("match_start", $"{{\"seed\":{seed},\"char\":\"{charId}\"}}");
@@ -246,7 +247,8 @@ namespace Bob.Game
             R = room ?? BobMatch.MakeRound(roundNo, seed);
             stack.Clear(); hand.Clear();
             tasks.Begin(R.Need, RoundTime); budget = BobRules.RoundBudget + carry / 2;
-            abUsed = false; shield = false; swapMode = false; freeze = 0; preview = null;
+            if (online) abUsed = false; // online: each round's flag comes from the server; offline: one ability per match (4.6)
+            shield = false; swapMode = false; freeze = 0; preview = null;
             ResetRoomForRound();
             phase = Phase.Intro; RenderAll();
         }

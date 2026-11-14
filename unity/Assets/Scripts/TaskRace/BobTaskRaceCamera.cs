@@ -1,7 +1,8 @@
 // Battle of the Brooms: Task Race camera (docs 24). A smooth third-person follow camera for the local hero on the twin
-// islands: 8.5 units up, 7.5 units behind (about 48 degrees of pitch), 40 degree perspective lens. It replaces the fixed
-// diorama camera only where it is added (the task-race map scene), and it runs in LateUpdate so it always wins over a
-// code-built camera that re-frames in Update.
+// islands: 6.2 units up, 5.2 units behind (about 50 degrees of pitch), 40 degree perspective lens. The closer, lower rig
+// (4.3) puts the hero at roughly a fifth of the screen height, so the character reads at phone size and the nearest task
+// sign is findable within a second. It replaces the fixed diorama camera only where it is added (the task-race map
+// scene), and it runs in LateUpdate so it always wins over a code-built camera that re-frames in Update.
 //
 // S28 focus: while the minigame card is open, SetMinigameFocus(true) tightens the lens to 85% and slides the look target
 // 1.2 units right, so the hero and the workstation stay visible on the left of the card instead of behind it.
@@ -15,12 +16,12 @@ namespace Bob.TaskRace
         [Header("Follow")]
         [Tooltip("The local player. Left empty, the component looks for a GameObject tagged Player.")]
         public Transform target;
-        [Tooltip("Camera height above the target.")] public float height = 8.5f;
-        [Tooltip("Horizontal distance behind the target.")] public float distance = 7.5f;
+        [Tooltip("Camera height above the target.")] public float height = 6.2f;
+        [Tooltip("Horizontal distance behind the target.")] public float distance = 5.2f;
         [Tooltip("Seconds for the position to settle.")] public float followTime = 0.22f;
         [Tooltip("Seconds for the look target to settle.")] public float lookTime = 0.14f;
         [Tooltip("Yaw around Y. 0 looks north (+Z), which is the twin-island layout's forward.")] [Range(-180f, 180f)] public float yaw;
-        [Tooltip("Height above the target's origin the camera aims at.")] public float lookHeight = 0.6f;
+        [Tooltip("Height above the target's origin the camera aims at.")] public float lookHeight = 0.72f;
 
         [Header("Lens")]
         public float fieldOfView = 40f;

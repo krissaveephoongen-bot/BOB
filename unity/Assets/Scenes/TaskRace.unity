@@ -13471,7 +13471,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Bob.TaskRace.BobBridgeDressing
   centre: {x: 0, y: 0, z: -2.7}
   length: 12.050197
-  width: 2
+  width: 1.7
   drop: 2.4
   waterHalfWidth: 2.15
   seed: 1975
@@ -21394,8 +21394,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Bob.TaskRace.BobWaterfallDressing
   centre: {x: 0, y: 0, z: 6.08}
-  halfWidth: 2.7
-  topY: 2.2
+  halfWidth: 2.2
+  topY: 2.0
   waterY: -1.33
   depth: 1.5
   seed: 1975
@@ -23124,12 +23124,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Bob.TaskRace.BobTaskRaceCamera
   target: {fileID: 675460652}
-  height: 8.5
-  distance: 7.5
+  height: 6.2
+  distance: 5.2
   followTime: 0.22
   lookTime: 0.14
   yaw: 0
-  lookHeight: 0.6
+  lookHeight: 0.72
   fieldOfView: 40
   minigameFocus: 0
   focusZoom: 0.85
@@ -25603,7 +25603,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Bob.TaskRace.BobBridgeDressing
   centre: {x: 0, y: 0, z: 2.7}
   length: 12.050197
-  width: 2
+  width: 1.7
   drop: 2.4
   waterHalfWidth: 2.15
   seed: 1975

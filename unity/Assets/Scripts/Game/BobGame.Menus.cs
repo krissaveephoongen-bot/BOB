@@ -21,6 +21,7 @@ namespace Bob.Game
 
         string mode = "solo";
         int xp, gems, xpGain;
+        int band = 1; // 4.6 chapter band: 1 = chapters 1-2, 2 = 3-4, 3 = 5-6
         readonly HashSet<string> owned = new HashSet<string>();
         float heroTimer; bool heroTimerOn; TMP_Text heroTimerText;
         Image pendingShopRoot;
@@ -41,6 +42,14 @@ namespace Bob.Game
         };
         ModeInfo CurrentMode => Modes.FirstOrDefault(m => m.Id == mode) ?? Modes[1];
 
+        // 4.6 chapter bands: a difficulty selector that opens with level, each band keeps its own best Task Race score.
+        static int BandUnlockLevel(int b) => b <= 1 ? 1 : b == 2 ? 4 : 7;
+        int TaskBest(int b) { try { return PlayerPrefs.GetInt("bob.taskbest." + b, 0); } catch (Exception) { return 0; } }
+        void SaveTaskBest(int b, int score)
+        {
+            try { if (score > TaskBest(b)) { PlayerPrefs.SetInt("bob.taskbest." + b, score); PlayerPrefs.Save(); } } catch (Exception) { }
+        }
+
         static readonly (string id, string name, string sprite, int price)[] ShopItems =
         {
             ("broom",  "ไม้กวาดฟาง",     "menu_equip_broom",  120),
@@ -50,12 +59,23 @@ namespace Bob.Game
             ("hat",    "หมวกถังน้ำ",      "menu_equip_hat",    200),
         };
 
+        /// <summary>4.6: where an owned item actually shows up, spelled out before the player spends coins.</summary>
+        static string ItemUse(string id) => id switch
+        {
+            "broom" => "เปลี่ยนไม้กวาดในมินิเกมกวาดฝุ่น",
+            "sponge" => "เปลี่ยนฟองน้ำในมินิเกมเช็ดกระจก",
+            "spray" => "เปลี่ยนขวดสเปรย์ในมินิเกมเช็ดกระจก",
+            "mop" => "คอลเลกชันสำหรับห้องของฉัน",
+            _ => "หมวกของตัวละครบนหน้า Home",
+        };
+
         void LoadProfile()
         {
             try
             {
                 mode = PlayerPrefs.GetString("bob.mode", "solo"); if (Modes.All(m => m.Id != mode)) mode = "solo";
                 xp = PlayerPrefs.GetInt("bob.xp", 0); gems = PlayerPrefs.GetInt("bob.gems", 0);
+                band = Mathf.Clamp(PlayerPrefs.GetInt("bob.band", 1), 1, 3);
                 foreach (var s in PlayerPrefs.GetString("bob.owned", "").Split(',')) if (s.Length > 0) owned.Add(s);
             }
             catch (Exception) { }
@@ -66,6 +86,7 @@ namespace Bob.Game
             try
             {
                 PlayerPrefs.SetString("bob.mode", mode); PlayerPrefs.SetInt("bob.xp", xp); PlayerPrefs.SetInt("bob.gems", gems);
+                PlayerPrefs.SetInt("bob.band", band);
                 PlayerPrefs.SetInt("bob.coins", coins); PlayerPrefs.SetString("bob.owned", string.Join(",", owned)); PlayerPrefs.Save();
             }
             catch (Exception) { }
@@ -173,8 +194,8 @@ namespace Bob.Game
             var hb = hero.gameObject.AddComponent<Button>(); hb.onClick.AddListener(() => { Sfx("ui_tap"); OpenHeroSelect(false); });
             var hn = H1(S, Hero.Name, 60, BobUi.Surface); BobUi.OutlineText(hn, BobUi.Ink, 0.3f);
             BobUi.Pin(hn.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -225), new Vector2(700, 80));
-            var hs = BobUi.Label(S, "แตะตัวละครเพื่อเปลี่ยน · " + Hero.Ability, 26, BobUi.Surface, TextAnchor.MiddleCenter); BobUi.OutlineText(hs, BobUi.Ink, 0.25f);
-            BobUi.Pin(hs.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -280), new Vector2(900, 44));
+            var hs = BobUi.Label(S, "แตะตัวละครเพื่อเปลี่ยน · ถนัด" + SpecialtyName(charId) + " +25% · " + Hero.Ability, 24, BobUi.Surface, TextAnchor.MiddleCenter); BobUi.OutlineText(hs, BobUi.Ink, 0.25f);
+            BobUi.Pin(hs.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -280), new Vector2(1000, 44));
 
             // dock (bottom left): only buttons that have real icons and a working screen
             var dock = BobUi.Pin(BobUi.Rect("Dock", S), Vector2.zero, Vector2.zero, new Vector2(30, 30), new Vector2(2 * 190, 190));
@@ -190,6 +211,25 @@ namespace Bob.Game
             BobUi.Pin((RectTransform)play.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-40, 30), new Vector2(520, 200));
             play.GetComponentInChildren<TMP_Text>().fontStyle = FontStyles.Bold;
             StartCoroutine(Breathe(play.transform));
+
+            // chapter band selector (4.6): three chips above PLAY, each unlocked by level and showing its own best score
+            float bw = 162f, bgap = 16f;
+            for (int i = 0; i < 3; i++)
+            {
+                int b = i + 1; bool unlocked = Level >= BandUnlockLevel(b), sel = band == b;
+                var chip = BobUi.Button(S, "", sel ? BobUi.Hex("#FFF0C2") : BobUi.Surface, () =>
+                {
+                    if (!unlocked) { Toast("ปลดที่ระดับ " + BandUnlockLevel(b)); Sfx("drop_invalid"); return; }
+                    band = b; SaveProfile(); Sfx("ui_confirm"); RenderAll();
+                }, 22);
+                BobUi.Pin((RectTransform)chip.transform, new Vector2(1, 0), new Vector2(1, 0),
+                    new Vector2(-40 - (2 - i) * (bw + bgap), 250), new Vector2(bw, 96));
+                var ct = chip.GetComponentInChildren<TMP_Text>();
+                ct.text = unlocked ? $"บท {b}\n<size=18>ดีสุด {TaskBest(b)}</size>" : $"บท {b}\n<size=18>ล็อก LV{BandUnlockLevel(b)}</size>";
+                ct.color = unlocked ? BobUi.Ink : BobUi.Muted;
+                ct.fontStyle = FontStyles.Bold;
+                if (!unlocked) { var li = BobUi.Img(chip.transform, "icon_cross", 26, BobUi.Muted); BobUi.Pin(li.rectTransform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-8, -8), new Vector2(26, 26)); }
+            }
         }
 
         void DockButton(Transform dock, string icon, string label, Action onClick, bool dim)
@@ -336,6 +376,7 @@ namespace Bob.Game
             BobUi.Label(card, "ยืนยันการซื้อ", 52, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
             var ic = BobUi.Img(card, it.sprite, 200); BobUi.Size(ic, 200, 200, 0, 200);
             BobUi.Label(card, it.name, 40, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Label(card, ItemUse(it.id), 26, BobUi.Muted, TextAnchor.MiddleCenter);
             int left = coins - it.price; bool can = left >= 0;
             BobUi.Label(card, $"ราคา {it.price} เหรียญ · มี {coins} · เหลือ {(can ? left.ToString() : "ไม่พอ")}", 30, can ? BobUi.Muted : BobUi.Bad, TextAnchor.MiddleCenter);
             var btns = BobUi.HBox(card, 18, "Buttons"); BobUi.Size(btns, 144, 144); btns.childForceExpandHeight = true;

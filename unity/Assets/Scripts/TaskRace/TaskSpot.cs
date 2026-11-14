@@ -69,6 +69,14 @@ namespace Bob.TaskRace
         [Tooltip("Floor point for the ring and label. Empty = this transform (put it on the floor, not on a counter top).")]
         [SerializeField] Transform ringAnchor;
 
+        [Header("Floating category sign (4.3)")]
+        [Tooltip("Optional sprite override; empty = the category icon under Resources/Icons.")]
+        [SerializeField] Sprite iconSprite;
+        [Tooltip("Height of the floating icon above the ring anchor.")]
+        [SerializeField] float iconHeight = 2.05f;
+        [Tooltip("World size of the icon sign.")]
+        [SerializeField] float iconSize = 0.78f;
+
         [Header("Feedback")]
         [Tooltip("ping_pop for a successful sabotage (docs 12); optional until the SFX pack is imported.")]
         [SerializeField] AudioClip pingPop;
@@ -139,6 +147,7 @@ namespace Bob.TaskRace
 
         LineRenderer ring;
         TextMeshPro label, lockBadge, shieldBadge;
+        SpriteRenderer icon;
         readonly Vector3[] ringPoints = new Vector3[RingSegments];
 
         // ---------------------------------------------------------------- lifecycle
@@ -403,6 +412,7 @@ namespace Bob.TaskRace
             if (label != null) label.gameObject.SetActive(false);
             if (lockBadge != null) lockBadge.gameObject.SetActive(false);
             if (shieldBadge != null) shieldBadge.gameObject.SetActive(false);
+            if (icon != null) icon.gameObject.SetActive(false);
             if (ring != null) ring.enabled = false;
         }
 
@@ -449,10 +459,11 @@ namespace Bob.TaskRace
             for (int i = transform.childCount - 1; i >= 0; i--)
             {
                 var c = transform.GetChild(i);
-                if (c.name == "F29_Ring" || c.name == "TaskLabel" || c.name == "LockBadge" || c.name == "ShieldBadge")
+                if (c.name == "F29_Ring" || c.name == "TaskLabel" || c.name == "LockBadge" || c.name == "ShieldBadge"
+                    || c.name == "TaskIcon")
                     DestroyNow(c.gameObject);
             }
-            ring = null; label = null; lockBadge = null; shieldBadge = null;
+            ring = null; label = null; lockBadge = null; shieldBadge = null; icon = null;
             if (buildVisuals) BuildVisuals();
         }
 
@@ -475,7 +486,7 @@ namespace Bob.TaskRace
             ring.useWorldSpace = true;
             ring.loop = true;
             ring.positionCount = RingSegments;
-            ring.startWidth = ring.endWidth = 0.09f;
+            ring.startWidth = ring.endWidth = 0.12f;
             ring.numCapVertices = 2;
             ring.numCornerVertices = 2;
             ring.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -491,6 +502,34 @@ namespace Bob.TaskRace
             lockBadge = MakeLabel("LockBadge", anchor, labelHeight + 0.42f, "", new Color(0.94f, 0.28f, 0.44f), 1.3f, 13);
             shieldBadge = MakeLabel("ShieldBadge", anchor, labelHeight + 0.84f, "",
                 new Color(1f, 0.84f, 0.35f), 1.2f, 14);
+
+            // Floating category sign: one icon per task family, big enough to read across the island and always on while
+            // the station still has work. The compact name label stays a preview-radius extra.
+            var iconGo = new GameObject("TaskIcon");
+            iconGo.transform.SetParent(transform, false);
+            icon = iconGo.AddComponent<SpriteRenderer>();
+            icon.sprite = iconSprite != null ? iconSprite : CategoryIconSprite(category);
+            icon.color = Color.white;
+            icon.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            icon.receiveShadows = false;
+            icon.sortingOrder = 12;
+            var ls = transform.lossyScale;
+            iconGo.transform.localScale = Vector3.one * iconSize / Mathf.Max(0.0001f, Mathf.Abs(ls.x));
+            iconGo.SetActive(false);
+        }
+
+        /// <summary>The category icon that floats over a dirty station (Assets/Resources/Icons, 4.3).</summary>
+        public static Sprite CategoryIconSprite(TaskCategory c)
+        {
+            string name = c switch
+            {
+                TaskCategory.Sweep => "icon_skill_sweep",
+                TaskCategory.Wash => "icon_skill_bubble",
+                TaskCategory.Scrub => "icon_skill_press",
+                TaskCategory.Spray => "icon_skill_spray",
+                _ => "icon_ability",
+            };
+            return Resources.Load<Sprite>("Icons/" + name);
         }
 
         TextMeshPro MakeLabel(string name, Transform anchor, float height, string text, Color colour, float size, int order)
@@ -560,28 +599,50 @@ namespace Bob.TaskRace
 
             // Clean stations are ring-less, except while shielded: the gold ring is what the opponent sees from across
             // the bridge, docs 19 "turn the F29 ground ring glowing Gold".
-            bool showRing = hasTask && (dirty || isProtected) && (inPreview || IsOpen || isProtected);
+            // 4.3: a dirty station keeps its category ring on from any distance and breathes gently, so the nearest
+            // task is identifiable in under a second without walking into the preview radius.
+            bool showRing = hasTask && (dirty || isProtected);
             ring.enabled = showRing;
-            if (!showRing) return;
-
-            var colour = isProtected ? ShieldGold : CategoryColour(category);
-            if (near && !isProtected)
+            if (showRing)
             {
-                float pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 6f);
-                colour = Color.Lerp(colour, new Color(1f, 0.82f, 0.4f), 0.35f + 0.25f * pulse);
-            }
-            colour.a = 0.9f;
-            ring.startColor = ring.endColor = colour;
+                var colour = isProtected ? ShieldGold : CategoryColour(category);
+                if (!isProtected)
+                {
+                    float pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 3.2f);
+                    float heat = near ? 0.42f + 0.26f * pulse : 0.16f + 0.12f * pulse;
+                    colour = Color.Lerp(colour, new Color(1f, 0.86f, 0.5f), heat);
+                }
+                colour.a = near ? 0.95f : 0.74f;
+                ring.startColor = ring.endColor = colour;
 
-            var centre = anchor.position;
-            for (int i = 0; i < RingSegments; i++)
-            {
-                float a = i / (float)RingSegments * Mathf.PI * 2f;
-                var p = centre + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * interactRadius;
-                p.y = centre.y + 0.035f;
-                ringPoints[i] = p + Vector3.up * BobCurvedWorld.Drop(p);
+                var centre = anchor.position;
+                for (int i = 0; i < RingSegments; i++)
+                {
+                    float a = i / (float)RingSegments * Mathf.PI * 2f;
+                    var p = centre + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * interactRadius;
+                    p.y = centre.y + 0.035f;
+                    ringPoints[i] = p + Vector3.up * BobCurvedWorld.Drop(p);
+                }
+                ring.SetPositions(ringPoints);
             }
-            ring.SetPositions(ringPoints);
+
+            // The floating category sign: always readable while the station has work, bobbing just enough to read as
+            // "come here". It is the same icon the HUD job list uses, so the colour and the picture never disagree.
+            bool showIcon = hasTask && dirty;
+            if (icon != null)
+            {
+                icon.gameObject.SetActive(showIcon);
+                if (showIcon)
+                {
+                    float phase = Mathf.Abs(transform.position.x) * 0.35f;
+                    float bob = Mathf.Sin(Time.unscaledTime * 2.1f + phase) * 0.06f;
+                    icon.transform.position = LabelPoint(anchor, iconHeight) + Vector3.up * bob;
+                    if (cam != null) icon.transform.rotation = cam.transform.rotation;
+                    var ls = transform.lossyScale;
+                    float beat = 1f + 0.035f * Mathf.Sin(Time.unscaledTime * 4.4f + phase);
+                    icon.transform.localScale = Vector3.one * iconSize / Mathf.Max(0.0001f, Mathf.Abs(ls.x)) * beat;
+                }
+            }
         }
 
         Vector3 LabelPoint(Transform anchor, float height)

@@ -20,6 +20,7 @@ namespace Bob.Game
         sealed class TaskDef { public string Kind, Point, Name; public bool Done; }
 
         bool taskMode; float taskTime, taskStarted; bool taskEnded;
+        float taskRoundTime = TaskRoundTime; // 4.6: scaled by the chapter band (120 / 105 / 90 s)
         readonly List<TaskDef> taskList = new List<TaskDef>();
         RectTransform taskUi, taskRows, taskBarFill; TMP_Text taskTimeText, taskCountText, taskBtnLabel; Button taskBtn;
         TaskDef taskNear, taskOpen;
@@ -29,10 +30,14 @@ namespace Bob.Game
         // S28 card chrome: one progress bar at the bottom, a match clock chip, and shared fx feedback
         RectTransform miniBarFill; TMP_Text miniBarPct, miniTimeChip, miniHint;
         float miniProg, miniProgShown, miniHapticAt;
+        System.Action<Vector2> miniGhostStroke; // 4.5: the real sweep step the ghost demo replays once
         sealed class MiniFx { public Image img; public RectTransform rt; public Vector2 at; public float size, life, age, rise; }
         readonly List<MiniFx> miniFx = new List<MiniFx>();
 
         static string TaskName(string kind) => kind == "T01" ? "กวาดตามทาง" : kind == "T05" ? "แยกขยะ" : "เช็ดกระจก";
+        bool IsHero(string id) => charId == id;
+        /// <summary>4.6: the task family this hero works 25% faster / wider in, for the Home and HUD labels.</summary>
+        static string SpecialtyName(string id) => id == "sweep" ? "กวาด" : id == "bubble" ? "ล้าง" : id == "spray" ? "ฉีดน้ำยา" : "ขัด";
         static Vector2 TaskPos(string id) { foreach (var p in L1Points) if (p.id == id) return new Vector2(p.x, RoomH - p.y); return new Vector2(RoomW / 2, RoomH / 2); }
 
         // ---------------------------------------------------------------- start / end
@@ -46,7 +51,7 @@ namespace Bob.Game
             taskList.Clear();
             foreach (var (k, p) in new[] { ("T01", "S6"), ("T05", "S9"), ("T08", "S1"), ("T01", "S7"), ("T05", "S9"), ("T08", "S1") })
                 taskList.Add(new TaskDef { Kind = k, Point = p, Name = TaskName(k) });
-            taskTime = TaskRoundTime; taskStarted = Time.time; taskEnded = false; taskOpen = null; taskNear = null; taskMode = true;
+            taskTime = taskRoundTime = TaskRoundTime - (band - 1) * 15f; taskStarted = Time.time; taskEnded = false; taskOpen = null; taskNear = null; taskMode = true;
             phase = Phase.Build; BuildTaskUi(); RenderAll();
             Toast("Task Race: เดินไปที่วงงานแล้วกดทำงาน");
         }
@@ -63,15 +68,22 @@ namespace Bob.Game
         {
             if (taskEnded) return; taskEnded = true; CloseMini(false);
             Sfx(win ? "round_win" : "round_lose");
-            int done = taskList.Count(t => t.Done); float used = TaskRoundTime - taskTime;
-            var card = BobUi.Panel(taskUi, BobUi.Surface); BobUi.Pin(card.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900, 520));
+            int done = taskList.Count(t => t.Done); float used = taskRoundTime - taskTime;
+            // 4.6: a band keeps its own best score (tasks are worth more than the seconds they took).
+            int score = done * 1000 + (win ? 500 : 0) - Mathf.RoundToInt(used * 5f);
+            int oldBest = TaskBest(band);
+            bool record = score > oldBest;
+            if (record) SaveTaskBest(band, score);
+            var card = BobUi.Panel(taskUi, BobUi.Surface); BobUi.Pin(card.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900, 540));
             var t1 = BobUi.Label(card.transform, win ? "ห้องสะอาดแล้ว!" : "หมดเวลา", 64, win ? BobUi.Good : BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
             BobUi.Pin(t1.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -50), new Vector2(800, 90));
-            var t2 = BobUi.Label(card.transform, $"งานเสร็จ {done}/{taskList.Count}  ·  ใช้เวลา {Mathf.RoundToInt(used)} วิ", 38, BobUi.Ink, TextAnchor.MiddleCenter);
-            BobUi.Pin(t2.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 30), new Vector2(800, 70));
+            var t2 = BobUi.Label(card.transform, $"งานเสร็จ {done}/{taskList.Count}  ·  ใช้เวลา {Mathf.RoundToInt(used)} วิ  ·  บท {band}", 36, BobUi.Ink, TextAnchor.MiddleCenter);
+            BobUi.Pin(t2.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 40), new Vector2(800, 70));
+            var t3 = BobUi.Label(card.transform, record ? $"สถิติใหม่! {score} คะแนน" : $"คะแนน {score}  ·  ดีสุด {oldBest}", 32, record ? BobUi.Good : BobUi.Muted, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Pin(t3.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -25), new Vector2(800, 50));
             var b = BobUi.Button(card.transform, "กลับหน้าหลัก", BobUi.Sun, ExitTaskRace, 40);
             BobUi.Pin((RectTransform)b.transform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 50), new Vector2(480, 120));
-            xp += win ? 40 : 10; SaveProfile();
+            xp += (win ? 40 : 10) * band; SaveProfile();
         }
 
         // ---------------------------------------------------------------- HUD
@@ -81,12 +93,12 @@ namespace Bob.Game
             if (taskUi != null) Destroy(taskUi.gameObject);
             taskUi = BobUi.Stretch(BobUi.Rect("TaskUi", hudRoot));
             var time = BobUi.Panel(taskUi, BobUi.Surface); BobUi.Pin(time.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -14), new Vector2(520, 100));
-            taskTimeText = BobUi.Label(time.transform, "120", 56, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold); BobUi.Stretch(taskTimeText.rectTransform);
+            taskTimeText = BobUi.Label(time.transform, Mathf.CeilToInt(taskRoundTime).ToString(), 56, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold); BobUi.Stretch(taskTimeText.rectTransform);
             var bar = BobUi.Panel(taskUi, new Color(1, 1, 1, 0.85f)); BobUi.Pin(bar.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -126), new Vector2(520, 34));
             var fill = BobUi.Panel(bar.transform, BobUi.Good); taskBarFill = fill.rectTransform; taskBarFill.anchorMin = Vector2.zero; taskBarFill.anchorMax = new Vector2(0, 1); taskBarFill.offsetMin = taskBarFill.offsetMax = Vector2.zero;
             taskCountText = BobUi.Label(bar.transform, "0/6", 26, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold); BobUi.Stretch(taskCountText.rectTransform);
             var list = BobUi.Panel(taskUi, BobUi.Surface); BobUi.Pin(list.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(14, -14), new Vector2(430, 40 + 66 * taskList.Count));
-            var head = BobUi.Label(list.transform, "ใบงานห้องเช่า", 30, BobUi.Ink, TextAnchor.MiddleLeft, FontStyle.Bold); BobUi.Pin(head.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(20, -8), new Vector2(380, 44));
+            var head = BobUi.Label(list.transform, "ใบงานห้องเช่า · บท " + band, 30, BobUi.Ink, TextAnchor.MiddleLeft, FontStyle.Bold); BobUi.Pin(head.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(20, -8), new Vector2(380, 44));
             taskRows = BobUi.Rect("Rows", list.transform); BobUi.Pin(taskRows, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, -58), new Vector2(430, 66 * taskList.Count));
             taskBtn = BobUi.Button(taskUi, "ทำงาน", BobUi.Sun, OpenNearTask, 44);
             BobUi.Pin((RectTransform)taskBtn.transform, Vector2.one * new Vector2(1, 0), new Vector2(1, 0), new Vector2(-60, 70), new Vector2(420, 170));
@@ -149,7 +161,7 @@ namespace Bob.Game
         {
             BobSfx.Loop("scrub_loop", false);
             if (miniCard != null) Destroy(miniCard.gameObject);
-            miniCard = null; miniArea = null; miniTick = null; miniParts.Clear(); miniFx.Clear();
+            miniCard = null; miniArea = null; miniTick = null; miniGhostStroke = null; miniParts.Clear(); miniFx.Clear();
             miniBarFill = null; miniBarPct = null; miniTimeChip = null; miniHint = null;
             miniProg = miniProgShown = 0f;
             if (done && taskOpen != null)
@@ -321,11 +333,9 @@ namespace Bob.Game
             var broom = MiniTool(ToolSprite("broom", "part_broom"), 156);
             MiniHint("ลากกวาดฝุ่น");
             var cleared = new bool[n]; int done = 0; float sweepAt = 0f;
-            miniTick = dt =>
+
+            bool SweepAt(Vector2 p)
             {
-                if (!MiniPointer(out var p, out var down, out _, out _)) return;
-                broom.anchoredPosition = p + new Vector2(44, -38);
-                if (!down) return;
                 bool hit = false;
                 for (int i = 0; i < n; i++)
                     if (!cleared[i] && Vector2.Distance(dust[i].at, p) < reach)
@@ -342,7 +352,62 @@ namespace Bob.Game
                 }
                 SetMiniProgress(done / (float)n);
                 if (done >= Mathf.CeilToInt(n * 0.9f)) CloseMini(true);
+                return hit;
+            }
+
+            miniTick = dt =>
+            {
+                if (!MiniPointer(out var p, out var down, out _, out _)) return;
+                broom.anchoredPosition = p + new Vector2(44, -38);
+                if (!down) return;
+                SweepAt(p);
             };
+            miniGhostStroke = p => SweepAt(p);
+
+            // 4.5: the very first job ever shows a translucent broom doing one pass by itself. The player watches one
+            // stroke (about 1.4 s), the ghost fades, and the rest of the job is real. No paragraph, no separate screen.
+            if (TutorialDue()) StartCoroutine(GhostSweep());
+        }
+
+        // First-run guide: one ghost stroke, then hand over. Runs inside the real card so the match clock never stops.
+        System.Collections.IEnumerator GhostSweep()
+        {
+            var ghost = BobUi.Img(miniArea, "part_broom", 156, new Color(1, 1, 1, 0.55f));
+            ghost.name = "GhostHand"; ghost.raycastTarget = false;
+            var rt = ghost.rectTransform; rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = new Vector2(-476, -38); rt.SetAsLastSibling();
+            MiniHint("ลากตามไม้กวาด");
+            var a = new Vector2(-520f, 0f); var b = new Vector2(-180f, 120f);
+            for (float e = 0f; e < 1.4f; e += Time.unscaledDeltaTime)
+            {
+                if (miniCard == null) yield break;
+                float k = Mathf.SmoothStep(0f, 1f, e / 1.4f);
+                var p = Vector2.Lerp(a, b, k) + new Vector2(0f, 46f) * Mathf.Sin(k * Mathf.PI);
+                rt.anchoredPosition = p + new Vector2(44, -38);
+                miniGhostStroke?.Invoke(p);
+                yield return null;
+            }
+            if (miniCard == null) yield break;
+            for (float e = 0f; e < 0.3f; e += Time.unscaledDeltaTime)
+            {
+                if (ghost == null) break;
+                var c = ghost.color; c.a = 0.55f * (1f - e / 0.3f); ghost.color = c;
+                yield return null;
+            }
+            if (ghost != null) Destroy(ghost.gameObject);
+            miniGhostStroke = null;
+            TutorialDone();
+            if (miniCard != null) MiniHint("ลากกวาดฝุ่น");
+        }
+
+        static bool TutorialDue()
+        {
+            try { return PlayerPrefs.GetInt("bob.tutorial", 0) == 0; } catch (Exception) { return false; }
+        }
+
+        static void TutorialDone()
+        {
+            try { PlayerPrefs.SetInt("bob.tutorial", 1); PlayerPrefs.Save(); } catch (Exception) { }
         }
 
         // T05: drag each piece into the matching bin; a correct drop flies in, a wrong one springs back
@@ -371,6 +436,8 @@ namespace Bob.Game
                 miniDrags.Add((home, bins[items[i].cat].at + new Vector2(0, 40)));
             }
             MiniHint("ลากลงถัง");
+            // 4.6 specialty: the Press hero reads a bin 25% wider (scrub family).
+            float binThreshold = IsHero("press") ? 237f : 190f;
             RectTransform held = null; int heldCat = -1; Vector2 heldHome = Vector2.zero;
             miniTick = dt =>
             {
@@ -380,7 +447,7 @@ namespace Bob.Game
                 if (held != null && released)
                 {
                     RectTransform bin = null; int binCat = -1;
-                    foreach (var b in bins) if (Mathf.Abs(b.at.x - p.x) < 190f && p.y < -110f) { bin = b.rt; binCat = b.cat; break; }
+                    foreach (var b in bins) if (Mathf.Abs(b.at.x - p.x) < binThreshold && p.y < -110f) { bin = b.rt; binCat = b.cat; break; }
                     if (bin != null && binCat == heldCat)
                     {
                         var rt = held; var from = rt.anchoredPosition;
@@ -425,6 +492,10 @@ namespace Bob.Game
                 sprayed = true; Sfx("spray_psst"); MiniHaptic();
                 foreach (var f in fog) { var img = f.rt.GetComponent<Image>(); if (img != null) img.color = new Color(0.5f, 0.7f, 0.88f, 0.94f); }
                 for (int i = 0; i < 5; i++) MiniFxAt("fx_spray_mist", new Vector2(-250 + i * 130, 90 - i * 30), 150f, 0.45f, 22f);
+                // 4.6 specialty: the Spray hero's first pass loosens a quarter of the grime outright.
+                if (IsHero("spray"))
+                    for (int i = 0; i < fog.Count; i += 4)
+                        if (!fog[i].clear) { fog[i] = (fog[i].rt, fog[i].at, true); StartCoroutine(FadeResidue(fog[i].rt)); }
                 MiniHint("ลากเช็ดให้ใส");
             }, 34);
             BobUi.Pin((RectTransform)spray.transform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(10, 0), new Vector2(220, 160));

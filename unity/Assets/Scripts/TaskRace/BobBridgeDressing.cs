@@ -12,16 +12,17 @@ namespace Bob.TaskRace
     {
         public Vector3 centre;
         public float length = 20f;
-        public float width = 1.9f;
+        public float width = 1.7f;
         [Tooltip("How far the piers drop under the deck, in units.")]
         public float drop = 2.4f;
         [Tooltip("Piers stand just outside this half-width (the water channel).")]
         public float waterHalfWidth = 2.1f;
         public int seed = 1975;
 
-        // Palette cells (16x16 grid, see art/aa/props/T_BOB_Palette.png).
-        static readonly Vector2 Plank = Cell(0, 1), PlankWarm = Cell(10, 1);
-        static readonly Vector2 Beam = Cell(15, 1), Post = Cell(14, 1), Cap = Cell(3, 0);
+        // Palette cells (16x16 grid, see art/aa/props/T_BOB_Palette.png). 4.3: the deck uses the pale stone cell so the
+        // walkway stays the brightest lane on the island instead of a saturated brown stripe; the rails keep the warm wood.
+        static readonly Vector2 Plank = Cell(10, 2), PlankWarm = Cell(7, 2);
+        static readonly Vector2 Beam = Cell(10, 1), Post = Cell(14, 1), Cap = Cell(3, 0);
 
         GameObject root;
         Mesh mesh;
