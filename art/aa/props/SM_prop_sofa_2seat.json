@@ -1,0 +1,12 @@
+{
+ "name": "prop_sofa_2seat",
+ "class": "prop_m",
+ "tris_in": 4811,
+ "tris_out": 799,
+ "budget": 800,
+ "height_m": 0.75,
+ "colours": {
+  "sweep_shirt": 694,
+  "straw": 105
+ }
+}

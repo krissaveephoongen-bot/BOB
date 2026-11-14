@@ -181,9 +181,13 @@ event ที่ต้องมีสูตรครบ (P0): งานเสร�
 
 1. เลือกภาพ Leonardo ที่ตรง concept 1 ภาพ (พื้นหลังเรียบ มุม 3/4)
 2. แปลงเป็น 3D (TRELLIS / Tripo / Meshy) ได้ `.glb`
-3. `blender -b -P art/tools/blender/bob_prop_cleanup.py -- raw/<file>.glb --name prop_<id> --class prop_m --height <m>`
+3. `blender -b -P art/tools/blender/bob_prop_cleanup.py -- art/aa/raw/<file>.glb --name prop_<id> --class prop_m --height <m> --colours <สี concept 2–4 สี>` (`--colours` จำกัดสีที่ snap ได้ ไม่สนแสงเงาที่ bake มาใน texture และลบจุดสีกระจาย) แล้วเรนเดอร์เทียบด้วย `bob_prop_preview.py`
 4. ตรวจ `SM_prop_<id>.json`: tris ≤ งบ, สีที่ใช้อยู่ในพาเลต
 5. ผ่านด่านตรวจข้อ 10 แล้ววางใน `Assets/Art/Props/`
+
+ค่าที่ใช้กับ Tripo Studio (เว็บ, แผน Pro; ทดสอบกับถัง 13 พ.ย. 2026): Image to 3D, HD Model, ปิด Ultra Mesh Quality, texture 2K, ปิด PBR, Topology = Triangle, Polycount 5,000 → Generate **25 เครดิตต่อชิ้น**, Export GLB ไม่เสียเครดิต (Smart Mesh ไม่จำเป็น เพราะ cleanup ลดเหลือตามงบเอง) เครดิตของ API (`art/tools/tripo/tripo_gen.py`) เป็นกระเป๋าแยกจากเครดิตบนเว็บ
+
+ตัวละครจาก Tripo (ฮีโร่ ศัตรู บอส; ทดลอง 13 พ.ย. 2026): ใช้ `--keep-texture --prefix SK_ --class hero|enemy|boss --out art/aa/chars` เพื่อคง texture ที่วาดหน้าไว้ (ไม่ snap palette เพราะหน้าจะหาย) งบ tris hero 6,000 / enemy 2,500 / boss 4,000 ถ้าภาพตั้งต้นมีขอบสี่เหลี่ยมชัดจะได้เส้นกรอบลอยติดมา ให้ทำขอบภาพจางเป็นขาวก่อน หรือลบด้วย `--min-island 0.08` ข้อจำกัด: ไม่ใช้ material ร่วม `M_BOB_Toon` (เพิ่ม 1 material ต่อตัว), ยังไม่มี rig, ท่าตามภาพ
 
 ### 9.4 สาย 2D (ยังใช้ภาพ AI ได้)
 

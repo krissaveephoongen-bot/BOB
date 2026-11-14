@@ -1,0 +1,9 @@
+{
+ "name": "hero_bubble_tripo",
+ "class": "hero",
+ "tris_in": 4387,
+ "tris_out": 4043,
+ "budget": 6000,
+ "height_m": 1.15,
+ "colours": {}
+}

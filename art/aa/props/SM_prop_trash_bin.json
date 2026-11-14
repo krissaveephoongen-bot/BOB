@@ -1,0 +1,12 @@
+{
+ "name": "prop_trash_bin",
+ "class": "prop_m",
+ "tris_in": 4640,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.8,
+ "colours": {
+  "trash_dark": 468,
+  "trash": 332
+ }
+}

@@ -30,7 +30,8 @@ from mathutils import Vector
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from bob_kit import PALETTE, cell_uv, hex_rgb, make_palette_image  # noqa: E402
 
-TRI_BUDGET = {"prop_s": 300, "prop_m": 800, "prop_hand": 1500, "room": 40000, "part": 500}
+TRI_BUDGET = {"prop_s": 300, "prop_m": 800, "prop_hand": 1500, "room": 40000, "part": 500,
+              "hero": 6000, "enemy": 2500, "boss": 4000}  # characters: 21_AA_Art_Bible.md section 4
 # props may only snap to these (no skin / face colours on furniture)
 PROP_COLOURS = [n for n, _ in PALETTE if n not in ("skin", "skin_shadow", "cheek", "eye", "mouth", "tongue", "brow")]
 
@@ -52,8 +53,14 @@ def srgb_to_lab(c):
 PAL_LAB = {n: srgb_to_lab(hex_rgb(h)) for n, h in PALETTE if n in PROP_COLOURS}
 
 
-def nearest(rgb):
+def nearest(rgb, allowed=None):
+    """Nearest palette colour. With an allowed list (--colours) lightness counts for
+    only a quarter: AI textures have lighting baked in, so a shaded blue must stay
+    the prop's blue instead of jumping to navy."""
     L = srgb_to_lab(rgb)
+    if allowed:
+        return min(allowed, key=lambda n: (0.25 * (L[0] - PAL_LAB[n][0])) ** 2
+                   + (L[1] - PAL_LAB[n][1]) ** 2 + (L[2] - PAL_LAB[n][2]) ** 2)
     return min(PAL_LAB, key=lambda n: sum((a - b) ** 2 for a, b in zip(L, PAL_LAB[n])))
 
 
@@ -97,6 +104,15 @@ def main():
     ap.add_argument("--class", dest="cls", default="prop_m", choices=TRI_BUDGET)
     ap.add_argument("--height", type=float, required=True, help="game height in metres (1 tile = 1 m)")
     ap.add_argument("--out", default="art/aa/props")
+    ap.add_argument("--colours", default="", help="comma list of palette names this prop may use "
+                    "(2-4 names from the concept); empty = whole prop palette")
+    ap.add_argument("--keep-texture", action="store_true", help="characters: keep the source texture and "
+                    "material (no palette snap) so the painted face survives; export as --prefix")
+    ap.add_argument("--min-island", type=float, default=0.01, help="drop loose islands smaller than this "
+                    "share of the faces (raise to ~0.08 when a stray image frame came with the model)")
+    ap.add_argument("--rot-z", type=float, default=0.0, help="degrees to turn the model about the up axis "
+                    "so its front faces -Y")
+    ap.add_argument("--prefix", default="SM_", help="SM_ for props, SK_ for characters")
     a = ap.parse_args(argv)
     os.makedirs(a.out, exist_ok=True)
 
@@ -113,6 +129,9 @@ def main():
         bpy.ops.object.join()
     ob = bpy.context.active_object
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    if a.rot_z:
+        from mathutils import Matrix
+        ob.data.transform(Matrix.Rotation(math.radians(a.rot_z), 4, "Z"))
     tris_in = sum(len(p.vertices) - 2 for p in ob.data.polygons)
 
     # 1. clean
@@ -136,7 +155,7 @@ def main():
                         stack.append(h)
         islands.append(isl)
     total = len(bm.faces)
-    kill = [f for isl in islands if len(isl) < 0.01 * total for f in isl]
+    kill = [f for isl in islands if len(isl) < a.min_island * total for f in isl]
     if kill and len(kill) < total:
         bmesh.ops.delete(bm, geom=kill, context="FACES")
     bm.to_mesh(ob.data)
@@ -161,13 +180,42 @@ def main():
     for v in ob.data.vertices:
         v.co = (v.co - off) * s
 
-    # 4. palette snap per face
+    # 4. palette snap per face (skipped with --keep-texture)
+    me = ob.data
+    used = {}
+    if not a.keep_texture:
+        used = palette_snap(ob, img, a)
+    ob.name = me.name = a.prefix + a.name
+
+    tris_out = sum(len(p.vertices) - 2 for p in me.polygons)
+    base = os.path.join(a.out, a.prefix + a.name)
+    bpy.ops.object.select_all(action="DESELECT")
+    ob.select_set(True)
+    bpy.ops.export_scene.gltf(filepath=base + ".glb", use_selection=True, export_format="GLB")
+    try:
+        bpy.ops.export_scene.fbx(filepath=base + ".fbx", use_selection=True, axis_forward="-Z", axis_up="Y",
+                                 apply_unit_scale=True)
+    except Exception as e:
+        print("FBX skipped:", e)
+    rep = {"name": a.name, "class": a.cls, "tris_in": tris_in, "tris_out": tris_out, "budget": budget,
+           "height_m": a.height, "colours": dict(sorted(used.items(), key=lambda kv: -kv[1]))}
+    with open(base + ".json", "w") as f:
+        json.dump(rep, f, indent=1)
+    print(json.dumps(rep))
+
+
+
+def palette_snap(ob, img, a):
     me = ob.data
     bm = bmesh.new()
     bm.from_mesh(me)
     uv = bm.loops.layers.uv.verify()
     px = list(img.pixels) if img else None
-    used = {}
+    allowed = [c.strip() for c in a.colours.split(",") if c.strip()]
+    bad = [c for c in allowed if c not in PAL_LAB]
+    if bad:
+        raise SystemExit("not a prop palette colour: " + ", ".join(bad))
+    pick = {}
     for f in bm.faces:
         if px:
             u = sum(l[uv].uv.x for l in f.loops) / len(f.loops)
@@ -176,7 +224,24 @@ def main():
         else:
             m = me.materials[f.material_index] if me.materials else None
             rgb = tuple(m.diffuse_color[:3]) if m else (0.7, 0.7, 0.7)
-        n = nearest(rgb)
+        pick[f.index] = nearest(rgb, allowed)
+    # despeckle: a face that disagrees with most of its edge neighbours takes their colour
+    for _ in range(3):
+        nxt = dict(pick)
+        for f in bm.faces:
+            votes = {}
+            for e in f.edges:
+                for g in e.link_faces:
+                    if g is not f:
+                        votes[pick[g.index]] = votes.get(pick[g.index], 0) + 1
+            if votes:
+                best = max(votes, key=votes.get)
+                if best != pick[f.index] and votes[best] >= 2 and votes.get(pick[f.index], 0) == 0:
+                    nxt[f.index] = best
+        pick = nxt
+    used = {}
+    for f in bm.faces:
+        n = pick[f.index]
         used[n] = used.get(n, 0) + 1
         cu, cv = cell_uv(n)
         for l in f.loops:
@@ -192,23 +257,7 @@ def main():
     mat.node_tree.links.new(t.outputs["Color"], mat.node_tree.nodes["Principled BSDF"].inputs["Base Color"])
     me.materials.clear()
     me.materials.append(mat)
-    ob.name = me.name = "SM_" + a.name
-
-    tris_out = sum(len(p.vertices) - 2 for p in me.polygons)
-    base = os.path.join(a.out, "SM_" + a.name)
-    bpy.ops.object.select_all(action="DESELECT")
-    ob.select_set(True)
-    bpy.ops.export_scene.gltf(filepath=base + ".glb", use_selection=True, export_format="GLB")
-    try:
-        bpy.ops.export_scene.fbx(filepath=base + ".fbx", use_selection=True, axis_forward="-Z", axis_up="Y",
-                                 apply_unit_scale=True)
-    except Exception as e:
-        print("FBX skipped:", e)
-    rep = {"name": a.name, "class": a.cls, "tris_in": tris_in, "tris_out": tris_out, "budget": budget,
-           "height_m": a.height, "colours": dict(sorted(used.items(), key=lambda kv: -kv[1]))}
-    with open(base + ".json", "w") as f:
-        json.dump(rep, f, indent=1)
-    print(json.dumps(rep))
+    return used
 
 
 if __name__ == "__main__":
