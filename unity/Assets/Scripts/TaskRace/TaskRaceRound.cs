@@ -86,6 +86,8 @@ namespace Bob.TaskRace
         [SerializeField] int seed = 1975;
         [SerializeField] bool randomSeedEachPlay = true;
         [SerializeField] bool autoStart = true;
+        [Tooltip("A cleaned station stays Clean (and sabotageable) this long before the next queued task arrives.")]
+        [SerializeField, Min(0f)] float restockDelay = 6f;
 
         public int Players => players;
         public int Difficulty => difficulty;
@@ -94,6 +96,8 @@ namespace Bob.TaskRace
         public int CurrentSeed { get; private set; }
         public int TaskCount { get; private set; }
         public int DoneCount => sideA.done;
+        /// <summary>Completed tasks of either island: the defender's count drops back by one after a sabotage.</summary>
+        public int DoneCountOf(TeamId team) => team == TeamId.TeamB ? sideB.done : sideA.done;
         public int TotalWeight { get; private set; }
         public int DoneWeight => sideA.doneWeight;
         public bool Won => TaskCount > 0 && sideA.done >= TaskCount;
@@ -122,7 +126,16 @@ namespace Bob.TaskRace
         readonly List<TaskEntry> tasks = new List<TaskEntry>();
         readonly Dictionary<string, TaskEntry> entryOf = new Dictionary<string, TaskEntry>();
         readonly Dictionary<TaskSpot, MinigameSpec> assigned = new Dictionary<TaskSpot, MinigameSpec>();
+        readonly Dictionary<TaskSpot, MinigameSpec> completedSpec = new Dictionary<TaskSpot, MinigameSpec>();
         readonly Dictionary<TaskSpot, Side> sideOf = new Dictionary<TaskSpot, Side>();
+        readonly List<Restock> restocks = new List<Restock>();
+
+        struct Restock
+        {
+            public TaskSpot Spot;
+            public Side Side;
+            public float At;
+        }
         readonly List<TaskSpot> subscribed = new List<TaskSpot>();
         readonly Side sideA = new Side();
         readonly Side sideB = new Side();
@@ -198,6 +211,8 @@ namespace Bob.TaskRace
                 side.Remaining = new List<MinigameSpec>(plan);
             }
             assigned.Clear();
+            completedSpec.Clear();
+            restocks.Clear();
             foreach (var side in new[] { sideA, sideB })
                 foreach (var spot in side.Spots)
                     AssignTo(spot, side);
@@ -323,6 +338,10 @@ namespace Bob.TaskRace
 
         void AssignTo(TaskSpot spot, Side side)
         {
+            for (int i = restocks.Count - 1; i >= 0; i--)
+                if (restocks[i].Spot == spot) restocks.RemoveAt(i);
+            completedSpec.Remove(spot);
+
             var spec = TakeNext(side, spot.Category);
             if (spec == null)
             {
@@ -361,15 +380,59 @@ namespace Bob.TaskRace
 
             side.done++;
             side.doneWeight += spec.Weight;
+            // The station stays Clean for `restockDelay` seconds (docs 24 section 12): that clean window is what the
+            // opponent can sabotage once the bridges are open. `completedSpec` remembers the task so a sabotage can
+            // put the very same one back.
             assigned.Remove(spot);
+            completedSpec[spot] = spec;
             if (entryOf.TryGetValue(spec.Id, out var entry)) { entry.Done = true; entry.Spot = null; }
-            AssignTo(spot, side);
+            if (side.Remaining.Count > 0)
+                restocks.Add(new Restock { Spot = spot, Side = side, At = Time.time + restockDelay });
+            Version++;
 
             if (!wonNotified && Won)
             {
                 wonNotified = true;
                 Debug.Log($"[TaskRaceRound] won: {sideA.done}/{TaskCount} tasks, weight {sideA.doneWeight}/{TotalWeight}.");
                 RoundWon?.Invoke(this);
+            }
+        }
+
+        /// <summary>
+        /// The opponent's sabotage undid this station: drop the team's completed count by one and put the same task
+        /// back (Dirty, ring on). The next clean completion scores again, docs 24 section 12.
+        /// </summary>
+        public void HandleSabotage(TaskSpot spot)
+        {
+            if (spot == null) return;
+            for (int i = restocks.Count - 1; i >= 0; i--)
+                if (restocks[i].Spot == spot) restocks.RemoveAt(i);
+            if (!completedSpec.TryGetValue(spot, out var spec)) { Version++; return; }
+            completedSpec.Remove(spot);
+            if (!sideOf.TryGetValue(spot, out var side)) return;
+
+            side.done = Mathf.Max(0, side.done - 1);
+            side.doneWeight = Mathf.Max(0, side.doneWeight - spec.Weight);
+            assigned[spot] = spec;
+            if (entryOf.TryGetValue(spec.Id, out var entry)) { entry.Done = false; entry.Spot = spot; }
+            spot.RestoreSabotagedTask();
+            Version++;
+            Debug.Log($"[TaskRaceRound] sabotage undid {spec.Id} on {spot.SpotId}: " +
+                      $"{side.done}/{TaskCount} tasks, weight {side.doneWeight}/{TotalWeight}.");
+        }
+
+        void Update()
+        {
+            if (restocks.Count == 0) return;
+            float now = Time.time;
+            for (int i = restocks.Count - 1; i >= 0; i--)
+            {
+                var restock = restocks[i];
+                if (restock.Spot == null) { restocks.RemoveAt(i); continue; }
+                if (now < restock.At) continue;
+                restocks.RemoveAt(i);
+                completedSpec.Remove(restock.Spot);
+                AssignTo(restock.Spot, restock.Side);
             }
         }
 

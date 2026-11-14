@@ -5,7 +5,7 @@
 //   1 · Build map         two islands, river, north/south bridges, waterfall cliff, flat walk colliders, mode groups
 //   2 · Clone Team A      duplicates every prop and TaskSpot to Team B with an exact +X translation (never mirrored)
 //                         and gives each cloned spot a unique id (S3_A -> S3_B)
-//   3 · Mode buttons      PureRace / BridgeRaid, applied to the TaskRaceModeManager in the scene
+//   3 · Mode buttons      PureRace / TimedBridgeRaid, applied to the TaskRaceModeManager in the scene
 //
 // The bob_map_* prefabs do not exist in the project yet (the raw GLBs are in OneDrive/Rig). Every slot can be assigned
 // by hand; an empty slot builds a labelled placeholder box so the layout and the modes can be tested immediately.
@@ -27,7 +27,7 @@ namespace Bob.EditorTools
         const float FieldInset = 0.8f; // flat play field covers this share of the island's footprint
 
         [Header("Terrain prefabs (bob_map_*)")]
-        public GameObject islandPrefab, islandPrefabB, riverPrefab, bridgePrefab, cliffPrefab;
+        public GameObject islandPrefab, riverPrefab, bridgePrefab, cliffPrefab;
 
         [Header("Layout")]
         [SerializeField] float islandSize = 12f;
@@ -42,7 +42,7 @@ namespace Bob.EditorTools
         [Header("Clone")]
         [SerializeField] bool replaceTeamBProps = true;
 
-        [SerializeField] TaskRaceMode mode = TaskRaceMode.PureRace;
+        [SerializeField] TaskRaceMode mode = TaskRaceMode.TimedBridgeRaid;
 
         Vector2 scroll;
 
@@ -54,7 +54,6 @@ namespace Bob.EditorTools
         public void LoadDefaultPrefabs()
         {
             if (islandPrefab == null) islandPrefab = FindPrefab("bob_map_island_land", "island_land", "floating island");
-            if (islandPrefabB == null) islandPrefabB = FindPrefab("bob_map_island_land2", "island_land2", "floating island 2");
             if (riverPrefab == null) riverPrefab = FindPrefab("bob_map_river_channel", "river_channel", "river water");
             if (bridgePrefab == null) bridgePrefab = FindPrefab("bob_map_wooden_bridge", "wooden_bridge", "wooden footbridge");
             if (cliffPrefab == null) cliffPrefab = FindPrefab("bob_map_cliff_waterfall", "cliff_waterfall", "waterfall");
@@ -80,15 +79,14 @@ namespace Bob.EditorTools
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("1 · Terrain prefabs", EditorStyles.boldLabel);
-            DrawPrefab("Island A (land)", ref islandPrefab);
-            DrawPrefab("Island B (land, optional)", ref islandPrefabB);
+            DrawPrefab("Island (both teams)", ref islandPrefab);
             DrawPrefab("River channel", ref riverPrefab);
             DrawPrefab("Wooden bridge", ref bridgePrefab);
             DrawPrefab("Cliff / waterfall", ref cliffPrefab);
             using (new EditorGUILayout.HorizontalScope())
             {
                 if (GUILayout.Button("Find by name")) LoadDefaultPrefabs();
-                if (GUILayout.Button("Clear")) { islandPrefab = islandPrefabB = riverPrefab = bridgePrefab = cliffPrefab = null; }
+                if (GUILayout.Button("Clear")) { islandPrefab = riverPrefab = bridgePrefab = cliffPrefab = null; }
             }
 
             bool missing = islandPrefab == null || riverPrefab == null || bridgePrefab == null;
@@ -130,9 +128,9 @@ namespace Bob.EditorTools
             using (new EditorGUILayout.HorizontalScope())
             {
                 GUI.backgroundColor = mode == TaskRaceMode.PureRace ? new Color(0.75f, 0.9f, 1f) : Color.white;
-                if (GUILayout.Button("PureRace\nbank barrier on")) { mode = TaskRaceMode.PureRace; ApplyMode(); }
-                GUI.backgroundColor = mode == TaskRaceMode.BridgeRaid ? new Color(1f, 0.86f, 0.75f) : Color.white;
-                if (GUILayout.Button("BridgeRaid\nbridges on")) { mode = TaskRaceMode.BridgeRaid; ApplyMode(); }
+                if (GUILayout.Button("PureRace\ngates shut 120 s")) { mode = TaskRaceMode.PureRace; ApplyMode(); }
+                GUI.backgroundColor = mode == TaskRaceMode.TimedBridgeRaid ? new Color(1f, 0.86f, 0.75f) : Color.white;
+                if (GUILayout.Button("TimedBridgeRaid\nopen at 60 s")) { mode = TaskRaceMode.TimedBridgeRaid; ApplyMode(); }
                 GUI.backgroundColor = Color.white;
             }
             if (GUILayout.Button("Validate map")) ValidateMap();
@@ -140,8 +138,8 @@ namespace Bob.EditorTools
             EditorGUILayout.Space();
             EditorGUILayout.HelpBox(
                 "Physics and NavMesh stay flat: only the shader bends the vertices. NavMeshObstacle(Carve) is added to the " +
-                "bank colliders in PureRace; the bridges get a NavMeshLink (or OffMeshLink when the AI Navigation package " +
-                "is not installed) in BridgeRaid.",
+                "bank colliders in PureRace; TimedBridgeRaid bakes the bridge decks into the NavMesh and lets the red-white " +
+                "gates carve it at runtime until the 60 s mark.",
                 MessageType.Info);
             EditorGUILayout.EndScrollView();
         }
@@ -192,10 +190,11 @@ namespace Bob.EditorTools
             }
             var propsA = Child(teamA, "Props");
 
+            // A race demands parity: Team B is the same island prefab at +X, never a second, differently shaped island.
             var teamB = Child(root, "TeamB");
             teamB.localPosition = new Vector3(half, 0f, 0f);
-            var islandB = SpawnPiece(islandPrefabB != null ? islandPrefabB : islandPrefab, "Island", teamB, Vector3.zero,
-                new Color(0.45f, 0.6f, 0.4f), new Vector3(islandSize, 0.6f, islandDepth), 0f, islandSize);
+            var islandB = SpawnPiece(islandPrefab, "Island", teamB, Vector3.zero,
+                new Color(0.42f, 0.62f, 0.36f), new Vector3(islandSize, 0.6f, islandDepth), 0f, islandSize);
             if (islandB != null)
             {
                 FitAxisAligned(islandB, islandSize, islandDepth);
@@ -211,7 +210,12 @@ namespace Bob.EditorTools
             if (river != null)
             {
                 FitAxisAligned(river, channel, islandDepth * 1.15f);
-                AlignTop(river, -0.15f);
+                // A river that sits just under the walk plane reads as a glass sheet between the islands; drop it into
+                // the gorge so the bridges visibly span water.
+                AlignTop(river, -1.35f);
+                // The channel mesh is longer than the islands so it reaches past both banks; the southern overflow
+                // hung below the front cliff. Cut the sheet flush with the islands' south edge (docs 24 section 3.1).
+                TrimRiverSouth(river, islandDepth);
             }
 
             // ---- waterfall cliff as the back drop, north of the river mouth
@@ -219,6 +223,10 @@ namespace Bob.EditorTools
             var cliff = SpawnPiece(cliffPrefab, "CliffWaterfall", root, new Vector3(0f, 0f, islandDepth * 0.8f + 2f),
                 new Color(0.48f, 0.45f, 0.5f), new Vector3(cliffWidth, cliffWidth * 0.31f, cliffWidth * 0.37f), 0f, cliffWidth);
             if (cliff != null) AlignTop(cliff, 0.5f);
+            // The imported cliff is one mesh of rock plus a huge glassy water slab; the built waterfall replaces both
+            // (docs 24 section 3.1), so the Tripo renders stay out of the shot.
+            HideRenderers(cliff);
+            AddWaterfall(root, channel, islandDepth);
 
             // ---- mode groups
             var barrier = Child(root, "RiverBarrier_Group");
@@ -227,7 +235,13 @@ namespace Bob.EditorTools
             CreateHedge(barrier, "Bank_West", new Vector3(-bankX, 0.22f, 0f), new Vector3(0.32f, 0.45f, bankDepth));
             CreateHedge(barrier, "Bank_East", new Vector3(bankX, 0.22f, 0f), new Vector3(0.32f, 0.45f, bankDepth));
 
+            // The deck, rails and piers stay in the shot in both modes (PureRace seals the middle with a gate instead of
+            // making the islands look unconnected); only the walk colliders and NavMeshLinks live in Bridges_Group.
+            var bridgeDetail = Child(root, "BridgeDetail_Group");
             var bridges = Child(root, "Bridges_Group");
+            // The red-white gates live in their own group: always active, because they are the barrier the TimedBridgeRaid
+            // clock lowers at 60 s. RiverBarrier_Group (hedges) still belongs to PureRace only.
+            var bridgeBarriers = Child(root, "BridgeBarrier_Group");
             float bridgeZ = islandDepth * 0.3f;
             const float bridgeWidth = 2f; // a footbridge: wide enough for the walk collider, narrow enough to read as a plank
             // The Field slab is an ellipse, so the bank at the bridge's z sits inboard of the island's widest line.
@@ -247,6 +261,10 @@ namespace Bob.EditorTools
                 FitAxisAligned(b, bridgeTarget, bridgeWidth);
                 AlignTop(b, 0f);
                 AddWalkable(b, 0f, 0.02f);
+                // The Tripo bridge reads as two cream planks from the play camera; the seeded deck replaces it.
+                HideRenderers(b);
+                AddBridgeDeck(bridgeDetail, name, z, bridgeTarget, bridgeWidth, channel);
+                AddBridgeGate(bridgeBarriers, name, z, bridgeWidth);
             }
 
             // ---- systems
@@ -254,6 +272,7 @@ namespace Bob.EditorTools
             var manager = systems.gameObject.AddComponent<TaskRaceModeManager>();
             manager.riverBarrierGroup = barrier.gameObject;
             manager.bridgesGroup = bridges.gameObject;
+            manager.bridgeBarrierGroup = bridgeBarriers.gameObject;
             manager.teamA = teamA;
             manager.teamB = teamB;
             manager.mode = mode;
@@ -287,6 +306,7 @@ namespace Bob.EditorTools
             Undo.RegisterFullObjectHierarchyUndo(barrier.gameObject, "Apply Task Race mode");
             manager.SetMode(mode);
 
+            ValidateClearance(root);
             Selection.activeGameObject = root.gameObject;
             EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
             Debug.Log($"[TaskRaceMap] built: islands {islandSize} u wide, {islandGap} u apart, channel {channel:0.##} u, " +
@@ -336,6 +356,7 @@ namespace Bob.EditorTools
                         ? spot.SpotId.Substring(0, spot.SpotId.Length - 2) + "_B"
                         : spot.SpotId + "_B";
                     spot.SetSpotId(UniqueSpotId(wanted, spot));
+                    spot.SetOwnerTeam(TeamId.TeamB);
                     spots++;
                 }
             }
@@ -382,6 +403,7 @@ namespace Bob.EditorTools
             string mgr = manager == null ? "missing TaskRaceModeManager"
                 : manager.riverBarrierGroup == null ? "manager has no RiverBarrier_Group"
                 : manager.bridgesGroup == null ? "manager has no Bridges_Group"
+                : manager.bridgeBarrierGroup == null ? "manager has no BridgeBarrier_Group"
                 : "manager ok";
             Debug.Log($"[TaskRaceMap] validate: {spots.Length} task spot(s), {duplicates.Count} duplicate id(s)" +
                       (duplicates.Count > 0 ? " (" + string.Join(", ", duplicates) + ")" : "") +
@@ -437,6 +459,189 @@ namespace Bob.EditorTools
             return go;
         }
 
+        /// <summary>The imported pieces are replaced by seeded detail (bridge deck, waterfall); keep them as layout
+        /// references and colliders, but out of the picture.</summary>
+        static void HideRenderers(GameObject go)
+        {
+            if (go == null) return;
+            foreach (var r in go.GetComponentsInChildren<MeshRenderer>(true)) r.enabled = false;
+        }
+
+        static void AddBridgeDeck(Transform parent, string name, float z, float length, float width, float channel)
+        {
+            var go = new GameObject(name + "_Deck");
+            Undo.RegisterCreatedObjectUndo(go, "Build Task Race Map");
+            go.transform.SetParent(parent, false);
+            go.SetActive(false);
+            var deck = go.AddComponent<BobBridgeDressing>();
+            deck.Configure(new Vector3(0f, 0f, z), length, width, channel);
+            go.SetActive(true);
+        }
+
+        static void AddBridgeGate(Transform parent, string name, float z, float width)
+        {
+            var go = new GameObject(name + "_Gate");
+            Undo.RegisterCreatedObjectUndo(go, "Build Task Race Map");
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = new Vector3(0f, 0f, z);
+            go.transform.localRotation = Quaternion.identity;
+            go.transform.localScale = Vector3.one;
+            go.SetActive(false);
+            var gate = go.AddComponent<BobBridgeGate>();
+            gate.Configure(width);
+            var barrier = go.AddComponent<BobBridgeBarrier>();
+            barrier.Configure(width);
+            barrier.CloseInstant();
+            go.SetActive(true);
+        }
+
+        /// <summary>Cut the river mesh flush with the islands' south (front cliff) edge: the channel piece is longer
+        /// than the islands so it used to hang below the cliff in the play shot.</summary>
+        static void TrimRiverSouth(GameObject river, float islandDepth)
+        {
+            if (river == null) return;
+            float cutZ = -islandDepth * 0.5f;
+            int moved = 0;
+            foreach (var mf in river.GetComponentsInChildren<MeshFilter>(true))
+            {
+                var mesh = mf.sharedMesh;
+                if (mesh == null) continue;
+                var toWorld = mf.transform.localToWorldMatrix;
+                var toLocal = mf.transform.worldToLocalMatrix;
+                var verts = mesh.vertices;
+                bool changed = false;
+                for (int i = 0; i < verts.Length; i++)
+                {
+                    var w = toWorld.MultiplyPoint3x4(verts[i]);
+                    if (w.z >= cutZ) continue;
+                    w.z = cutZ;
+                    verts[i] = toLocal.MultiplyPoint3x4(w);
+                    changed = true;
+                    moved++;
+                }
+                if (!changed) continue;
+                var copy = Object.Instantiate(mesh);
+                copy.name = mesh.name + "_Trimmed";
+                copy.vertices = verts;
+                copy.RecalculateNormals();
+                copy.RecalculateBounds();
+                mf.sharedMesh = copy;
+            }
+            Debug.Log($"[TaskRaceMap] river trimmed flush with the south cliff at z {cutZ:0.00}: {moved} vertex/vertices moved.");
+        }
+
+        /// <summary>
+        /// The prop-free bridge lane (docs 24 section 3.1). Three bands, measured in flat X-Z: nothing may stand on the
+        /// deck itself (1.5 u zone), props may not crowd its long sides (1.0 u, the stations need only 0.2 u so a counter
+        /// can face the landing), and the landings need 1.5 u so the entrance reads open. Runs for both islands, because
+        /// Team B is a translation: a prop on A's outer side can sit on B's inner side after the clone.
+        /// </summary>
+        public static void ValidateClearance(Transform root)
+        {
+            var decks = new List<Bounds>();
+            var bridges = root.Find("Bridges_Group");
+            if (bridges != null)
+                foreach (Transform child in bridges)
+                {
+                    var walk = child.Find("Walkable");
+                    var col = walk != null ? walk.GetComponent<BoxCollider>() : null;
+                    if (col != null) decks.Add(col.bounds);
+                }
+            if (decks.Count == 0) { Debug.LogWarning("[TaskRaceMap] clearance: no bridge deck colliders found."); return; }
+            Debug.Log("[TaskRaceMap] clearance decks: " +
+                      string.Join(", ", decks.Select(d => $"x[{d.min.x:0.00},{d.max.x:0.00}] z[{d.min.z:0.00},{d.max.z:0.00}]")));
+
+            const float OnDeck = 1.5f, BesideDeck = 1.0f, StationBeside = 0.2f, Landing = 1.5f;
+            int checkedProps = 0, decorOffenders = 0, stationOffenders = 0;
+            foreach (var side in new[] { "TeamA", "TeamB" })
+            {
+                var props = root.Find(side + "/Props");
+                if (props == null) continue;
+                foreach (Transform t in props)
+                {
+                    bool station = t.name.StartsWith("Station_");
+                    bool decor = t.name.StartsWith("Decor_");
+                    if (!station && !decor) continue;
+                    var bounds = station ? StationBounds(t) : PropBounds(t);
+                    if (bounds == null) continue;
+                    checkedProps++;
+                    var lane = Clearance(bounds.Value, decks);
+                    float need = lane.Zone switch
+                    {
+                        0 => OnDeck,
+                        1 => station ? StationBeside : BesideDeck,
+                        _ => Landing,
+                    };
+                    if (lane.Distance >= need) continue;
+                    if (station) stationOffenders++; else decorOffenders++;
+                    string zone = lane.Zone == 0 ? "on the deck" : lane.Zone == 1 ? "beside the deck" : "in a bridge landing";
+                    Debug.LogWarning($"[TaskRaceMap] clearance: {t.name} on {side} is {lane.Distance:0.00} u {zone} (need {need:0.00}) " +
+                                     $"x[{bounds.Value.min.x:0.00},{bounds.Value.max.x:0.00}] z[{bounds.Value.min.z:0.00},{bounds.Value.max.z:0.00}]");
+                }
+            }
+            Debug.Log($"[TaskRaceMap] clearance: {checkedProps} prop(s) checked, {decorOffenders} decor and " +
+                      $"{stationOffenders} station overlap(s) on {decks.Count} deck(s) (deck 1.5 u, sides 1.0 u, landings 1.5 u).");
+        }
+
+        static Bounds? StationBounds(Transform station)
+        {
+            Bounds? result = null;
+            foreach (var part in new[] { "Counter", "CounterTop" })
+            {
+                var r = station.Find(part)?.GetComponent<Renderer>();
+                if (r == null) continue;
+                if (result == null) result = r.bounds;
+                else { var v = result.Value; v.Encapsulate(r.bounds); result = v; }
+            }
+            return result;
+        }
+
+        static Bounds? PropBounds(Transform prop)
+        {
+            var renderers = prop.GetComponentsInChildren<MeshRenderer>(true);
+            if (renderers.Length == 0) return null;
+            var b = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++) b.Encapsulate(renderers[i].bounds);
+            return b;
+        }
+
+        /// <summary>Flat X-Z gap to the nearest deck plus which band it fell in: 0 = over the deck footprint,
+        /// 1 = to the side of it, 2 = at a landing (past an end, inside the lane the deck's walk-in sweeps).</summary>
+        static (float Distance, int Zone) Clearance(Bounds b, List<Bounds> decks)
+        {
+            float best = float.MaxValue;
+            int zone = 1;
+            foreach (var deck in decks)
+            {
+                bool overX = b.min.x <= deck.max.x && b.max.x >= deck.min.x;
+                bool overZ = b.min.z <= deck.max.z && b.max.z >= deck.min.z;
+                float dx = Mathf.Max(0f, Mathf.Max(deck.min.x - b.max.x, b.min.x - deck.max.x));
+                float dz = Mathf.Max(0f, Mathf.Max(deck.min.z - b.max.z, b.min.z - deck.max.z));
+
+                int z; float d;
+                if (overX && overZ) { z = 0; d = 0f; }
+                else if (overX) { z = 1; d = dz; }
+                else if (dz < 1f) { z = 2; d = Mathf.Sqrt(dx * dx + dz * dz); } // a landing: 0.07 u past the end is still the walk-in
+                else { z = 1; d = Mathf.Sqrt(dx * dx + dz * dz); }
+
+                if (d < best - 0.0001f || (Mathf.Abs(d - best) <= 0.0001f && z < zone)) { best = d; zone = z; }
+            }
+            return (best, zone);
+        }
+
+        static void AddWaterfall(Transform parent, float channel, float islandDepth)
+        {
+            var go = new GameObject("Waterfall_Detail");
+            Undo.RegisterCreatedObjectUndo(go, "Build Task Race Map");
+            go.transform.SetParent(parent, false);
+            go.SetActive(false);
+            var falls = go.AddComponent<BobWaterfallDressing>();
+            // The plunge pool has to land on the river's north mouth (the channel is islandDepth * 1.15 long), or the
+            // falls read as a sheet of water hanging behind the map instead of feeding the gorge.
+            falls.Configure(new Vector3(0f, 0f, islandDepth * 0.62f + 0.5f), channel, 2.2f);
+            go.SetActive(true);
+        }
+
         void CreateHedge(Transform parent, string name, Vector3 localPos, Vector3 size)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -446,7 +651,7 @@ namespace Bob.EditorTools
             go.transform.localPosition = localPos;
             go.transform.localRotation = Quaternion.identity;
             go.transform.localScale = size;
-            UsePaletteCell(go, 10, 2);   // PALETTE "stone"
+            UsePaletteCell(go, 14, 1);   // PALETTE "dirt": stone read as a pale concrete beam crossing the bridge
         }
 
         static void ScaleToWidth(GameObject go, float width)

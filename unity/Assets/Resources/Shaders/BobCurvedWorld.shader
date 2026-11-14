@@ -21,6 +21,9 @@ Shader "BOB/CurvedWorld"
         _Shininess ("Sheen tightness", Range(1,128)) = 24
         _Sheen ("Sheen strength", Range(0,0.5)) = 0.06
         _Mottle ("Ground mottle", Range(0,0.15)) = 0.035
+        _Strata ("Rock strata", Range(0,0.5)) = 0.12
+        _StrataScale ("Strata bands per unit", Float) = 2.2
+        _CliffShade ("Cliff underside shade", Color) = (0.55,0.48,0.58,1)
         _RimColor ("Rim colour", Color) = (1,0.96,0.88,1)
         _Rim ("Rim strength", Range(0,1)) = 0.18
         _DirtAmount ("Dirt amount", Range(0,1)) = 0
@@ -91,6 +94,8 @@ Shader "BOB/CurvedWorld"
             fixed4 _Color, _RimColor, _SheenColor, _ShadowTint, _DirtColor;
             float _RampLow, _RampMid, _RampSoft, _Rim, _DirtAmount, _CurvatureScale;
             float _AmbientBoost, _Shininess, _Sheen, _Mottle;
+            float _Strata, _StrataScale;
+            fixed4 _CliffShade;
 
             struct appdata { float4 vertex : POSITION; float3 normal : NORMAL; float2 uv : TEXCOORD0; fixed4 color : COLOR; };
             struct v2f
@@ -128,9 +133,20 @@ Shader "BOB/CurvedWorld"
                 float3 n = normalize(i.nrm);
 
                 // A faint written-in mottle keeps the flat palette fields from reading as one printed green.
+                // Two octaves, so the patches have a large shape and a fine grain instead of one sine pattern.
                 float ground = saturate((n.y - 0.45) * 2.5);
-                float mottle = sin(i.flatPos.x * 1.31 + sin(i.flatPos.z * 0.77)) * sin(i.flatPos.z * 1.07 + sin(i.flatPos.x * 0.61));
-                albedo.rgb *= 1.0 + mottle * _Mottle * ground;
+                float wall = saturate((0.45 - n.y) * 2.0);
+                float m1 = sin(i.flatPos.x * 1.31 + sin(i.flatPos.z * 0.77)) * sin(i.flatPos.z * 1.07 + sin(i.flatPos.x * 0.61));
+                float m2 = sin(i.flatPos.x * 3.7 + 1.7) * sin(i.flatPos.z * 2.9 + 0.6);
+                albedo.rgb *= 1.0 + (m1 + m2 * 0.55) * _Mottle * ground;
+
+                // Vertical faces (cliff sides, the Field slab rim, the bridge edge) get layered rock bands and a shade
+                // toward the underside, so a flat brown cliff reads as strata instead of one painted face.
+                float strata = sin(i.flatPos.y * _StrataScale + m1 * 1.4) * 0.5 + 0.5;
+                float3 rock = albedo.rgb * lerp(1.0 - _Strata, 1.0 + _Strata * 0.35, strata);
+                float depthAO = saturate((i.flatPos.y + 8.0) * 0.125);
+                rock *= lerp(_CliffShade.rgb, float3(1, 1, 1), depthAO);
+                albedo.rgb = lerp(albedo.rgb, rock, wall);
                 albedo.rgb = lerp(albedo.rgb, albedo.rgb * 0.45 + _DirtColor.rgb * 0.55, _DirtAmount);
 
                 float ndl = dot(n, normalize(_WorldSpaceLightPos0.xyz)) * 0.5 + 0.5;

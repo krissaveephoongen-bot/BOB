@@ -30,9 +30,12 @@ namespace Bob.EditorTools
         // same relative layout on its field (92% of the field ellipse is usable after the counter footprint).
         static readonly StationSpec[] SoloStations =
         {
-            new StationSpec("S1_A", "ล้างเครื่องชงกาแฟ", TaskCategory.Wash, 12f, new Vector3(-3f, 0f, -2f),
+            // The south bridge deck cuts across the island at z = -islandDepth * 0.3, so every inner counter sits
+            // 1.0 u farther toward the island's centre line than the round-2 layout (docs 24 section 3.1); S2 sits on
+            // the centre line itself, because its counter is the one nearest the west bridge landing.
+            new StationSpec("S1_A", "ล้างเครื่องชงกาแฟ", TaskCategory.Wash, 12f, new Vector3(-3f, 0f, -1f),
                 ("espresso_machine", new Vector3(0f, 0.63f, 0f), 270f)),
-            new StationSpec("S2_A", "ขัดพื้นทางเดิน", TaskCategory.Scrub, 16f, new Vector3(0.5f, 0f, 1.5f),
+            new StationSpec("S2_A", "ขัดพื้นทางเดิน", TaskCategory.Scrub, 16f, new Vector3(0.5f, 0f, 0f),
                 ("bucket_metal_blue", new Vector3(-0.38f, 0.63f, 0.1f), 270f),
                 ("brush_scrub_wood", new Vector3(0.32f, 0.63f, 0f), 250f)),
             new StationSpec("S3_A", "กวาดใบไม้", TaskCategory.Sweep, 10f, new Vector3(3f, 0f, -1f),
@@ -42,17 +45,17 @@ namespace Bob.EditorTools
 
         static readonly StationSpec[] DuoStations = SoloStations.Concat(new[]
         {
-            new StationSpec("S4_A", "ฉีดน้ำยาเช็ดกระจก", TaskCategory.Spray, 14f, new Vector3(-3f, 0f, 1.5f),
+            new StationSpec("S4_A", "ฉีดน้ำยาเช็ดกระจก", TaskCategory.Spray, 14f, new Vector3(-3f, 0f, 0.5f),
                 ("spray_bottle", new Vector3(-0.3f, 0.63f, 0f), 260f),
                 ("gloves_pair", new Vector3(0.35f, 0.63f, 0.05f), 280f)),
         }).ToArray();
 
         static readonly StationSpec[] TeamStations = DuoStations.Concat(new[]
         {
-            new StationSpec("S5_A", "ล้างถังน้ำยา", TaskCategory.Wash, 20f, new Vector3(3.2f, 0f, 1.8f),
+            new StationSpec("S5_A", "ล้างถังน้ำยา", TaskCategory.Wash, 20f, new Vector3(3.2f, 0f, 0.8f),
                 ("bucket_blue", new Vector3(-0.3f, 0.63f, 0f), 270f),
                 ("detergent_pump", new Vector3(0.32f, 0.63f, 0f), 250f)),
-            new StationSpec("S6_A", "เก็บขยะและใบไม้", TaskCategory.Everyone, 18f, new Vector3(-0.5f, 0f, -2.4f),
+            new StationSpec("S6_A", "เก็บขยะและใบไม้", TaskCategory.Everyone, 18f, new Vector3(-0.5f, 0f, -1.4f),
                 ("trash_bag_black", new Vector3(0f, 0.63f, 0f), 270f),
                 ("brush_pair_yellow", new Vector3(0.9f, 0f, 0.5f), 300f)),
         }).ToArray();
@@ -101,6 +104,19 @@ namespace Bob.EditorTools
             sun.shadowNearPlane = 0.2f;
             sunGo.transform.rotation = Quaternion.Euler(46f, 75f, 0f);
 
+            // A cool fill from the far side: it lifts the shadow side of the counters and heroes without a second
+            // shadow map, which is what keeps the pastel shadow readable instead of a flat grey band.
+            var fillGo = new GameObject("Fill", typeof(Light));
+            var fill = fillGo.GetComponent<Light>();
+            fill.type = LightType.Directional;
+            fill.color = new Color(0.62f, 0.75f, 1f);
+            fill.intensity = 0.3f;
+            fill.shadows = LightShadows.None;
+            fillGo.transform.rotation = Quaternion.Euler(28f, -110f, 0f);
+
+            // The map is ~30 u across; the 150 u default shadow distance spends all the cascade resolution on empty sky.
+            QualitySettings.shadowDistance = 45f;
+
             var camGo = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener)) { tag = "MainCamera" };
             var cam = camGo.GetComponent<Camera>();
             cam.clearFlags = CameraClearFlags.SolidColor;
@@ -109,10 +125,14 @@ namespace Bob.EditorTools
             cam.farClipPlane = 400f;
             camGo.transform.position = new Vector3(-islandGap * 0.5f, 9f, -7f);
             camGo.AddComponent<BobSkyBackdrop>();
+            camGo.AddComponent<BobPostGrade>();
 
             var hero = BuildHero(ChooseSpawn(-islandGap * 0.5f, islandSize, stations));
 
             // The window's own builder: prefabs, flat walk colliders, mode groups, camera rig, curved materials.
+            // The dressing material has to exist before the map builds, because the seeded bridge deck and waterfall
+            // load it while they are created.
+            DressingMaterial();
             var assembler = ScriptableObject.CreateInstance<BobMapAssemblerEditor>();
             assembler.LoadDefaultPrefabs();
             assembler.SetLayout(islandSize, islandGap);
@@ -126,11 +146,16 @@ namespace Bob.EditorTools
             var mat = StationMaterialAsset();
             float k = islandSize / 12f;
             foreach (var spec in stations) AddStation(propsA, spec, k, mat);
+            AddIslandDecor(propsA, k);
             assembler.CloneTeamA();
             // The prop/character prefabs ship with shadows off (the rental room's painted look), so a Task Race scene
             // has to switch them back on or no cast shadow ever reaches the grass.
             EnableShadows(map);
             EnableShadows(hero);
+            AddContactShadows(map);
+            AddDressing(map);
+            // Now that both teams carry their stations and decor: the bridge lanes can only be judged after the clone.
+            BobMapAssemblerEditor.ValidateClearance(map.transform);
 
             var rig = camGo.GetComponent<BobTaskRaceCamera>();
             if (rig != null) rig.SetTarget(hero.transform, true);
@@ -140,6 +165,7 @@ namespace Bob.EditorTools
             var systems = map.transform.Find("Systems");
             if (systems != null)
             {
+                systems.gameObject.AddComponent<BobCloudSea>();
                 var round = systems.gameObject.AddComponent<TaskRaceRound>();
                 round.ConfigureRound(players, 1, 1975);
                 round.StartRound(1975);
@@ -186,6 +212,109 @@ namespace Bob.EditorTools
             Debug.Log($"[TaskRaceScene] cast/receive shadows on for {renderers.Length} renderer(s) under {root.name}.");
         }
 
+        /// <summary>A soft radial shadow on the grass under every counter (docs 24 section 3.1). A shadow map alone
+        /// leaves the contact edge bright, so props read as pasted on; this decal grounds them.</summary>
+        static void AddContactShadows(GameObject map)
+        {
+            var mat = ContactShadowMaterial();
+            if (mat == null) return;
+            int n = 0;
+            foreach (var spot in Object.FindObjectsByType<TaskSpot>(FindObjectsInactive.Exclude))
+            {
+                // Measure the counter top, not every renderer under the station: a station can carry a ring or a long
+                // tool, and union bounds of those produced a 20 u decal — the violet pool that ringed each island.
+                var top = spot.transform.Find("CounterTop")?.GetComponent<Renderer>();
+                var b = top != null ? top.bounds : spot.GetComponentInChildren<Renderer>(true).bounds;
+
+                var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                Undo.RegisterCreatedObjectUndo(quad, "Build Task Race Map");
+                quad.name = "ContactAO";
+                quad.transform.SetParent(spot.transform, true);
+                quad.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+                quad.transform.position = new Vector3(b.center.x, 0.02f, b.center.z);
+                float s = Mathf.Clamp(Mathf.Max(b.size.x, b.size.z) * 1.45f, 1.6f, 2.6f);
+                quad.transform.localScale = new Vector3(s, s, 1f);
+                Object.DestroyImmediate(quad.GetComponent<Collider>());
+                var mr = quad.GetComponent<MeshRenderer>();
+                mr.sharedMaterial = mat;
+                mr.shadowCastingMode = ShadowCastingMode.Off;
+                mr.receiveShadows = false;
+                n++;
+            }
+            Debug.Log($"[TaskRaceScene] contact shadows under {n} station(s).");
+        }
+
+        static Material ContactShadowMaterial()
+        {
+            const string path = "Assets/Resources/Materials/M_BOB_ContactAO.mat";
+            var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (m != null) return m;
+            var shader = Resources.Load<Shader>("Shaders/BobGroundAO") ?? Shader.Find("BOB/GroundAO");
+            if (shader == null) { Debug.LogWarning("[TaskRaceScene] BOB/GroundAO shader not found: no contact shadows."); return null; }
+            m = new Material(shader) { name = "M_BOB_ContactAO" };
+            AssetDatabase.CreateAsset(m, path);
+            return m;
+        }
+
+        /// <summary>Grass tufts, daisies and stones over each island (docs 24 section 3.1). Density follows the field
+        /// area, the seed is fixed per side, and a station keeps a 1.7 u clear ring.</summary>
+        static void AddDressing(GameObject map)
+        {
+            if (DressingMaterial() == null) return;
+            int i = 0;
+            foreach (var side in new[] { "TeamA", "TeamB" })
+            {
+                // Same seed both sides: the island must look identical, or the race is not fair to the eye.
+                var field = map.transform.Find(side + "/Field");
+                if (field == null) continue;
+                var r = field.GetComponent<Renderer>();
+                if (r == null) continue;
+                var b = r.bounds;
+                var go = new GameObject("Dressing_" + side);
+                go.transform.SetParent(map.transform, false);
+                var d = go.AddComponent<BobFieldDressing>();
+                d.centre = new Vector3(b.center.x, 0f, b.center.z);
+                d.halfX = b.extents.x * 0.9f;
+                d.halfZ = b.extents.z * 0.9f;
+                d.seed = 1975;
+                // Short blades disappear at play distance unless they are dense: scale counts by the ellipse area.
+                float area = Mathf.PI * d.halfX * d.halfZ;
+                int tufts = Mathf.RoundToInt(area * 18f);
+                d.tufts = tufts;
+                d.flowers = Mathf.RoundToInt(area * 1.8f);
+                d.rocks = Mathf.Max(10, Mathf.RoundToInt(area * 0.3f));
+                d.patches = Mathf.Max(8, Mathf.RoundToInt(area * 0.35f));
+                // AddComponent already built once with the component's defaults; rebuild with the island's numbers.
+                d.Build();
+                i++;
+            }
+            Debug.Log("[TaskRaceScene] field dressing: " + i + " island(s).");
+        }
+
+        static Material DressingMaterial()
+        {
+            const string path = "Assets/Resources/Materials/M_BOB_Dressing.mat";
+            var shader = Resources.Load<Shader>("Shaders/BobDressing") ?? Shader.Find("BOB/Dressing");
+            var palette = AssetDatabase.LoadAssetAtPath<Material>("Assets/Resources/Materials/M_BOB_CurvedMap.mat");
+            if (shader == null || palette == null) return null;
+            var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (m == null)
+            {
+                m = new Material(shader) { name = "M_BOB_Dressing" };
+                AssetDatabase.CreateAsset(m, path);
+            }
+            // No inverted-hull outline on this shader: the zero-width pass painted the back of every grass blade with
+            // the dark outline colour. Strata and mottle stay off — the dressing bakes its shape into vertex colours.
+            m.shader = shader;
+            m.mainTexture = palette.mainTexture;
+            m.SetFloat("_Mottle", 0f);
+            m.SetFloat("_Strata", 0f);
+            m.SetFloat("_Rim", 0f);
+            m.SetFloat("_Sheen", 0.04f);
+            EditorUtility.SetDirty(m);
+            return m;
+        }
+
         /// <summary>Only the Field slabs and the bridge decks may enter the NavMesh; hedges, cliffs and decor may not.</summary>
         static void TagWalkables(GameObject map)
         {
@@ -216,10 +345,13 @@ namespace Bob.EditorTools
             string stem = Path.GetFileNameWithoutExtension(scenePath);
             var previous = manager.mode;
 
-            manager.SetMode(TaskRaceMode.BridgeRaid);
-            var raid = Bake(surface, $"Assets/Scenes/NavMesh/{stem}_BridgeRaid.asset");
+            manager.SetMode(TaskRaceMode.TimedBridgeRaid);
+            var raid = Bake(surface, $"Assets/Scenes/NavMesh/{stem}_TimedBridgeRaid.asset");
             manager.SetMode(TaskRaceMode.PureRace);
             var pure = Bake(surface, $"Assets/Scenes/NavMesh/{stem}_PureRace.asset");
+            // the mode used to be called BridgeRaid; drop the asset left behind by that name
+            var legacy = $"Assets/Scenes/NavMesh/{stem}_BridgeRaid.asset";
+            if (AssetDatabase.LoadAssetAtPath<NavMeshData>(legacy) != null) AssetDatabase.DeleteAsset(legacy);
 
             manager.pureNavMesh = pure;
             manager.raidNavMesh = raid;
@@ -230,11 +362,11 @@ namespace Bob.EditorTools
             // NavMesh.CalculateTriangulation reads whatever bake is added right now, so switch once per mode to measure.
             manager.SetMode(TaskRaceMode.PureRace);
             int pureTri = NavMesh.CalculateTriangulation().indices.Length / 3;
-            manager.SetMode(TaskRaceMode.BridgeRaid);
+            manager.SetMode(TaskRaceMode.TimedBridgeRaid);
             int raidTri = NavMesh.CalculateTriangulation().indices.Length / 3;
             manager.SetMode(previous);
 
-            Debug.Log($"[TaskRaceScene] navmesh baked: PureRace {pureTri} tri, BridgeRaid {raidTri} tri " +
+            Debug.Log($"[TaskRaceScene] navmesh baked: PureRace {pureTri} tri, TimedBridgeRaid {raidTri} tri " +
                       $"(bridge decks add {raidTri - pureTri}), saved as Assets/Scenes/NavMesh/{stem}_*.asset.");
         }
 
@@ -330,6 +462,68 @@ namespace Bob.EditorTools
 
             var spot = station.AddComponent<TaskSpot>();
             spot.Configure(spec.Id, spec.Name, spec.Category, spec.Seconds);
+            // Team A is the left island; the assembler sets TeamB on each clone.
+            spot.SetOwnerTeam(TeamId.TeamA);
+        }
+
+        /// <summary>The dressed set (docs 24 section 8, "อุปกรณ์ประกอบฉาก"): lamps, bushes, a cafe corner, crates, a
+        /// planter rim and a few stones, all placed under TeamA/Props before the clone so Team B gets the exact same
+        /// arrangement by translation. Positions are authored on the 12 u island and scaled by the mode.</summary>
+        static void AddIslandDecor(Transform props, float k)
+        {
+            // Every prop sits in the clear centre band: the north and south bridge decks cross the island at
+            // z = +-islandDepth * 0.3 and the rebuild keeps a 1.0 u lane along each deck's sides plus a 1.5 u landing at
+            // its ends (docs 24 section 3.1). The decks cover the field's north and south edges, so the band between
+            // them (|z| <= 0.74 after the prop's own footprint) is the only real estate that clears the lanes.
+            var set = new (string name, float x, float z, float yaw, float height)[]
+            {
+                ("street_lamp",      -4.30f, -0.45f,   0f, 2.2f),
+                ("street_lamp",       4.30f, -0.45f,   0f, 2.2f),
+                // the flowering bush is 3.0 x 2.9 u at 1.3 m, far wider than the band: keep it as a 0.6 m shrub
+                ("bush_green",       -4.35f,  0.00f,  15f, 0.6f),
+                ("table_round_cafe",  4.15f,  0.00f,  10f, 0.75f),
+                ("stool_red",         4.60f,  0.10f,   0f, 0.45f),
+                ("stool_red",         3.30f,  0.00f,   0f, 0.45f),
+                ("crate_oranges",    -1.20f,  0.15f,  20f, 0.55f),
+                ("crate_oranges",    -0.80f,  0.00f,  35f, 0.5f),
+                ("chalkboard_easel", -4.30f,  0.10f,  75f, 1.1f),
+                ("sign_stand_wood",  -4.35f, -0.10f,  90f, 1.0f),
+                ("rocks_grass",       2.40f,  0.15f, 140f, 0.35f),
+                ("rocks_grass",       1.80f,  0.20f,  80f, 0.3f),
+                ("pot_blue",         -4.05f, -0.15f,   0f, 0.6f),
+                ("pot_ceramic_gold",  4.05f, -0.30f,   0f, 0.55f),
+            };
+            int n = 0;
+            foreach (var (name, x, z, yaw, height) in set)
+                if (AddDecor(props, name, new Vector3(x * k, 0f, z * k), yaw, height)) n++;
+            Debug.Log($"[TaskRaceScene] island decor: {n} prop(s) placed on Team A, cloned to Team B.");
+        }
+
+        /// <summary>Instantiate a prop from Assets/Resources/Props, scale it to a target height and sit it on the
+        /// grass (the FBX pivots are not at the bottom).</summary>
+        static bool AddDecor(Transform parent, string name, Vector3 at, float yaw, float height)
+        {
+            var prefab = Resources.Load<GameObject>("Props/SM_" + name);
+            if (prefab == null) { Debug.LogWarning("[TaskRaceScene] decor prefab missing: SM_" + name); return false; }
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+            go.name = "Decor_" + name;
+            go.transform.localPosition = at;
+            go.transform.localRotation = Quaternion.Euler(0f, yaw, 0f) * prefab.transform.localRotation;
+            if (height > 0.01f && BoundsOf(go, out var b0) && b0.size.y > 0.001f)
+                go.transform.localScale *= height / b0.size.y;
+            if (BoundsOf(go, out var b1))
+                go.transform.localPosition = at + Vector3.up * (0.02f - b1.min.y);
+            return true;
+        }
+
+        static bool BoundsOf(GameObject go, out Bounds b)
+        {
+            var renderers = go.GetComponentsInChildren<Renderer>();
+            b = default;
+            if (renderers.Length == 0) return false;
+            b = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++) b.Encapsulate(renderers[i].bounds);
+            return true;
         }
 
         static Transform AddProp(Transform parent, string name, Vector3 localPos, float yaw)

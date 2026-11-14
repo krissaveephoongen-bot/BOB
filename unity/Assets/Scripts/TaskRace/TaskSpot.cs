@@ -1,10 +1,11 @@
 // Battle of the Brooms: a task spot for the Task Race map (docs 16 section 3, F29). Drop it on a station prop
 // (espresso machine, sink counter, washing machine, cafe table ...). It builds the ground ring and the compact world
-// label itself, owns the TASK_LOCK and the 10-second partial-progress retention, and raises events for the HUD.
+// label itself, owns the TASK_LOCK, the 10-second partial-progress retention, the Dirty/Clean state, the one-time
+// sabotage of a clean station and the timed shield, and raises events for the HUD and the round.
 //
-// The component never builds UI: the game listens to NearChanged / Opened / Closed / Blocked and drives the main
-// context button ("ทำงาน: <TaskName>"), the S28 minigame card and the toast. Activation and the card live in the game
-// layer, the reach rules live here.
+// The component never builds UI: the game listens to NearChanged / Opened / Closed / Blocked / Sabotaged and drives the
+// main context button ("ทำงาน: <TaskName>" / "ป่วนจุดงาน: <TaskName>" / "ติดเกราะป้องกัน (-150 Pts)"), the S28 card and
+// the toast. Activation and the card live in the game layer, the reach rules live here.
 using System;
 using System.Collections.Generic;
 using TMPro;
@@ -12,8 +13,14 @@ using UnityEngine;
 
 namespace Bob.TaskRace
 {
+    /// <summary>The two islands; a task spot, a point pool and a player all belong to one.</summary>
+    public enum TeamId { None, TeamA, TeamB }
+
     /// <summary>The five task families of the F29 ground ring (docs 16 section 3).</summary>
     public enum TaskCategory { Sweep, Wash, Scrub, Spray, Everyone }
+
+    /// <summary>A station is Dirty while it has work, Clean after its task is done (and until it is restocked or sabotaged).</summary>
+    public enum SpotState { Dirty, Clean }
 
     [DisallowMultipleComponent]
     public class TaskSpot : MonoBehaviour
@@ -28,10 +35,23 @@ namespace Bob.TaskRace
         [Tooltip("Estimated duration shown in the preview label, in seconds.")]
         [SerializeField, Min(1f)] float expectedSeconds = 12f;
 
+        [Header("Team / state")]
+        [Tooltip("Left island = TeamA, right island = TeamB. Set on the clone by the assembler.")]
+        [SerializeField] TeamId ownerTeam = TeamId.TeamA;
+        [SerializeField] SpotState state = SpotState.Dirty;
+        [Tooltip("One sabotage per station per match; a sabotaged station is permanently immune afterwards.")]
+        public const int MaxSabotagesPerMatch = 1;
+        [SerializeField, Min(0)] int _sabotageCount;
+
+        [Header("Shield (timed)")]
+        [SerializeField] bool isProtected;
+        [SerializeField, Min(1f)] float shieldDuration = 30f;
+        [SerializeField, Min(0f)] float _shieldTimer;
+
         [Header("Reach (flat X-Z world units)")]
-        [Tooltip("Compact label shows inside this radius.")]
+        [Tooltip("Compact label shows inside this radius (docs 19: 2.6).")]
         [SerializeField] float previewRadius = 2.6f;
-        [Tooltip("NEAR: ring highlights and the main button turns into ทำงาน: <name> (docs 16: 1.2).")]
+        [Tooltip("NEAR: ring highlights and the main button turns into the action (docs 16: 1.2).")]
         [SerializeField] float interactRadius = 1.2f;
 
         [Header("Player")]
@@ -49,7 +69,12 @@ namespace Bob.TaskRace
         [Tooltip("Floor point for the ring and label. Empty = this transform (put it on the floor, not on a counter top).")]
         [SerializeField] Transform ringAnchor;
 
+        [Header("Feedback")]
+        [Tooltip("ping_pop for a successful sabotage (docs 12); optional until the SFX pack is imported.")]
+        [SerializeField] AudioClip pingPop;
+
         const int RingSegments = 48;
+        static readonly Color ShieldGold = new Color(1f, 0.78f, 0.22f);
 
         // ---------------------------------------------------------------- events for the game / HUD
 
@@ -61,9 +86,12 @@ namespace Bob.TaskRace
         public event Action<TaskSpot, bool> Closed;
         /// <summary>Raised when the spot cannot open (already done, or locked by another player). Show `message` as a toast.</summary>
         public event Action<TaskSpot, string> Blocked;
+        /// <summary>Raised after a successful sabotage: the station is Dirty again.</summary>
+        public event Action<TaskSpot> Sabotaged;
         /// <summary>Global hooks for the mode manager: camera focus on open, unfocus on close.</summary>
         public static event Action<TaskSpot> AnyOpened;
         public static event Action<TaskSpot> AnyClosed;
+        public static event Action<TaskSpot> AnySabotaged;
 
         // ---------------------------------------------------------------- state
 
@@ -75,6 +103,8 @@ namespace Bob.TaskRace
 
         /// <summary>The closest spot inside its NEAR radius this frame; the HUD reads this for the main button.</summary>
         public static TaskSpot ActiveNear { get; private set; }
+        /// <summary>The local player's team, set by the mode manager (TeamA by default).</summary>
+        public static TeamId LocalTeam { get; set; } = TeamId.TeamA;
 
         public string SpotId => spotId;
         public string TaskName => taskName;
@@ -82,21 +112,33 @@ namespace Bob.TaskRace
         public float ExpectedSeconds => expectedSeconds;
         public float PreviewRadius => previewRadius;
         public float InteractRadius => interactRadius;
+        public TeamId OwnerTeam => ownerTeam;
+        public SpotState State => state;
+        public bool IsProtected => isProtected;
+        public float ShieldRemaining => isProtected ? Mathf.Max(0f, _shieldTimer) : 0f;
+        public float ShieldDuration => shieldDuration;
+        public int SabotageCount => _sabotageCount;
+        public bool SabotageUsed => _sabotageCount >= MaxSabotagesPerMatch;
+        public bool HasTask => hasTask;
         public bool IsNear { get; private set; }
         public bool IsOpen { get; private set; }
         public bool IsLocked => IsOpen;
         public string LockedBy { get; private set; }
-        public bool Done { get; private set; }
+        /// <summary>Clean (task done). The round reads this like the old `Done` flag.</summary>
+        public bool Done => state == SpotState.Clean;
         public float Progress { get; private set; }
         /// <summary>Progress still inside the 10-second retention window; 0 when it expired.</summary>
         public float RetainedProgress => retained && Time.unscaledTime < retainUntil ? Progress : 0f;
         public Transform Player => player;
+        /// <summary>A clean station of the opponent can be sabotaged while the bridges are open.</summary>
+        public bool IsEnemySpot => LocalTeam != ownerTeam;
 
         bool retained;
         float retainUntil;
+        bool sabotageSession;
 
         LineRenderer ring;
-        TextMeshPro label, lockBadge;
+        TextMeshPro label, lockBadge, shieldBadge;
         readonly Vector3[] ringPoints = new Vector3[RingSegments];
 
         // ---------------------------------------------------------------- lifecycle
@@ -130,6 +172,7 @@ namespace Bob.TaskRace
         void Update()
         {
             if (retained && Time.unscaledTime >= retainUntil) { retained = false; Progress = 0f; }
+            if (isProtected) TickShield(Time.deltaTime);
 
             var t = ResolvePlayer();
             float dist = float.MaxValue;
@@ -138,7 +181,8 @@ namespace Bob.TaskRace
             {
                 var d = t.position - transform.position; d.y = 0f;
                 dist = d.magnitude;
-                near = hasTask && !Done && dist <= interactRadius;
+                // Clean stations stay "near" so the HUD can offer the shield / sabotage action there.
+                near = hasTask && dist <= interactRadius;
             }
 
             if (near != IsNear) { IsNear = near; NearChanged?.Invoke(this, near); }
@@ -151,6 +195,9 @@ namespace Bob.TaskRace
         /// <summary>Set by the map manager once the local hero exists.</summary>
         public static void SetLocalPlayer(Transform hero) => localPlayer = hero;
 
+        /// <summary>Assembler: the left island is TeamA, the cloned right island TeamB.</summary>
+        public void SetOwnerTeam(TeamId team) => ownerTeam = team;
+
         /// <summary>Try to take TASK_LOCK and open the S28 card. `who` is the player's display name.
         /// Returns false and raises Blocked when the spot is done or another player is working here.</summary>
         public bool TryOpen(string who, out string message)
@@ -162,9 +209,9 @@ namespace Bob.TaskRace
                 Blocked?.Invoke(this, message);
                 return false;
             }
-            if (Done)
+            if (state == SpotState.Clean)
             {
-                message = taskName + " เสร็จแล้ว";
+                message = taskName + " สะอาดแล้ว";
                 Blocked?.Invoke(this, message);
                 return false;
             }
@@ -176,7 +223,7 @@ namespace Bob.TaskRace
                 return false;
             }
 
-            IsOpen = true; LockedBy = who; message = null;
+            IsOpen = true; LockedBy = who; sabotageSession = false; message = null;
             Opened?.Invoke(this); AnyOpened?.Invoke(this);
             RefreshRing();
             return true;
@@ -185,15 +232,18 @@ namespace Bob.TaskRace
         /// <summary>Open with this spot's own player name.</summary>
         public bool Open() => TryOpen(playerName, out _);
 
-        /// <summary>Close the card. Completed sets the spot clean; otherwise the partial progress is kept for
+        /// <summary>Close the card. Completed turns the spot Clean; otherwise the partial progress is kept for
         /// `retainedProgressSeconds` (S28: close with × or by pushing the joystick past 70%).</summary>
         public void Close(bool completed)
         {
             if (!IsOpen) return;
-            IsOpen = false; LockedBy = null;
+            IsOpen = false; LockedBy = null; sabotageSession = false;
             if (completed)
             {
-                Done = true; Progress = 1f; retained = false;
+                state = SpotState.Clean; Progress = 1f; retained = false;
+                // Clean/Dirty is the only place points are awarded: every completion, including a re-clean after
+                // a sabotage, runs through here.
+                TaskRaceModeManager.Instance?.OnTaskCleaned(this);
             }
             else if (retainedProgressSeconds > 0f)
             {
@@ -203,16 +253,143 @@ namespace Bob.TaskRace
             RefreshRing();
         }
 
+        /// <summary>HUD: show whether the opponent may sabotage this station right now (the bridges and the state are
+        /// checked by the manager; `isProtected` is deliberately not part of "may try" so the tap can explain the shield).</summary>
+        public bool CanSabotageNow
+        {
+            get
+            {
+                var m = TaskRaceModeManager.Instance;
+                return m != null && m.AreBridgesOpen && IsEnemySpot && hasTask
+                       && state == SpotState.Clean && !SabotageUsed;
+            }
+        }
+
+        /// <summary>Enemy near a clean spot while the bridges are closed: the prompt stays hidden (docs: interact only
+        /// when the bridges are open).</summary>
+        public bool ShowSabotagePrompt => IsNear && CanSabotageNow;
+
+        /// <summary>Owner near a clean spot that can still be shielded. Hidden once the sabotage is spent (permanent
+        /// immunity for the rest of the match, docs 19).</summary>
+        public bool ShowShieldPrompt
+        {
+            get
+            {
+                var m = TaskRaceModeManager.Instance;
+                return IsNear && m != null && !IsEnemySpot && hasTask && state == SpotState.Clean
+                       && !isProtected && !SabotageUsed;
+            }
+        }
+
+        /// <summary>The shield prompt is shown but greyed while the pool is below the cost.</summary>
+        public bool CanAffordShield
+        {
+            get
+            {
+                var m = TaskRaceModeManager.Instance;
+                return m != null && m.PointsOf(LocalTeam) >= m.shieldItemCost;
+            }
+        }
+
+        /// <summary>Try to take the sabotage TASK_LOCK. The HUD opens the S28 card when this returns true.</summary>
+        public bool TrySabotage(string who, out string message)
+        {
+            who = string.IsNullOrEmpty(who) ? playerName : who;
+            message = null;
+            var m = TaskRaceModeManager.Instance;
+            if (m == null || !m.AreBridgesOpen) { message = "สะพานยังปิดอยู่ ข้ามไม่ได้"; return false; }
+            if (!IsEnemySpot) { message = "จุดนี้เป็นของทีมเรา"; return false; }
+            if (state != SpotState.Clean) return false;
+            if (SabotageUsed) { message = "จุดนี้ถูกป่วนไปแล้ว"; return false; }
+            if (isProtected) { message = "จุดงานนี้มีเกราะป้องกันอยู่!"; Blocked?.Invoke(this, message); return false; }
+            if (IsOpen)
+            {
+                if (LockedBy == who) return false;
+                message = LockedBy + " กำลังทำอยู่ ไปจุดอื่นนะ";
+                Blocked?.Invoke(this, message);
+                return false;
+            }
+
+            IsOpen = true; LockedBy = who; sabotageSession = true;
+            Opened?.Invoke(this); AnyOpened?.Invoke(this);
+            RefreshRing();
+            return true;
+        }
+
+        /// <summary>Card finished: the stain comes back, the count drops by one and the ring returns (docs 19).</summary>
+        public bool CompleteSabotage()
+        {
+            if (!IsOpen || !sabotageSession) return false;
+            IsOpen = false; LockedBy = null; sabotageSession = false;
+            _sabotageCount = Mathf.Min(MaxSabotagesPerMatch, _sabotageCount + 1);
+            state = SpotState.Dirty; Progress = 0f; retained = false;
+            isProtected = false; _shieldTimer = 0f;
+
+            Closed?.Invoke(this, false); AnyClosed?.Invoke(this);
+            Sabotaged?.Invoke(this); AnySabotaged?.Invoke(this);
+            TaskRaceModeManager.Instance?.OnSpotSabotaged(this);
+            PlayPingPop();
+            RefreshRing();
+            return true;
+        }
+
+        /// <summary>HUD: buy the timed shield for the owner team through the manager's atomic pool check.</summary>
+        public bool TryBuyShield(out string message)
+        {
+            message = null;
+            var m = TaskRaceModeManager.Instance;
+            if (m == null) { message = "ยังไม่มีตัวจัดการโหมด"; return false; }
+            if (IsEnemySpot) { message = "จุดนี้เป็นของคู่แข่ง"; return false; }
+            if (state != SpotState.Clean) { message = "ทำจุดงานให้สะอาดก่อน"; return false; }
+            if (isProtected) { message = "จุดนี้มีเกราะอยู่แล้ว"; return false; }
+            if (SabotageUsed) return false;
+            if (!m.TryPurchaseShield(LocalTeam, this)) { message = $"แต้มทีมไม่พอ ({m.shieldItemCost} Pts)"; return false; }
+            message = "ติดเกราะป้องกันแล้ว!";
+            return true;
+        }
+
+        /// <summary>Manager: deduct happened; start the 30-second protection.</summary>
+        public void ApplyShield(float duration)
+        {
+            shieldDuration = Mathf.Max(1f, duration);
+            isProtected = true;
+            _shieldTimer = shieldDuration;
+            RefreshRing();
+        }
+
+        void TickShield(float dt)
+        {
+            _shieldTimer -= dt;
+            if (_shieldTimer > 0f) return;
+            isProtected = false; _shieldTimer = 0f;
+            RefreshRing();
+        }
+
         public void AddProgress(float delta)
         {
             if (Done) return;
             Progress = Mathf.Clamp01(Progress + delta);
         }
 
+        /// <summary>S28 card: drive the bar from the card's own clock (0..1). The 10 s retention keeps it on close.</summary>
+        public void SetProgress(float value)
+        {
+            if (Done) return;
+            Progress = Mathf.Clamp01(value);
+        }
+
         public void ResetTask()
         {
             if (IsOpen) Close(false);
-            Done = false; Progress = 0f; retained = false;
+            state = SpotState.Dirty; Progress = 0f; retained = false;
+        }
+
+        /// <summary>Round: put a sabotaged task back on its station (Dirty, ring on) without reconfiguring it.</summary>
+        public void RestoreSabotagedTask()
+        {
+            state = SpotState.Dirty; Progress = 0f; retained = false;
+            SetTaskActive(true);
+            RefreshRing();
         }
 
         /// <summary>Turn the station on or off for the round. Off hides the ring and label and refuses to open.</summary>
@@ -221,10 +398,11 @@ namespace Bob.TaskRace
             hasTask = on;
             if (on) return;
             if (IsOpen) Close(false);
-            Done = false; Progress = 0f; retained = false;
+            state = SpotState.Dirty; Progress = 0f; retained = false;
             if (IsNear) { IsNear = false; NearChanged?.Invoke(this, false); }
             if (label != null) label.gameObject.SetActive(false);
             if (lockBadge != null) lockBadge.gameObject.SetActive(false);
+            if (shieldBadge != null) shieldBadge.gameObject.SetActive(false);
             if (ring != null) ring.enabled = false;
         }
 
@@ -235,7 +413,7 @@ namespace Bob.TaskRace
                 if (All[i] != null && All[i].IsOpen) All[i].Close(false);
         }
 
-        // ---------------------------------------------------------------- editor / assembler
+        // ---------------------------------------------------------------- editor / assembler / verify
 
         public void SetSpotId(string id) { if (!string.IsNullOrEmpty(id)) spotId = id; }
 
@@ -246,16 +424,35 @@ namespace Bob.TaskRace
             RebuildVisuals();
         }
 
+        /// <summary>Verify / test hooks, never used by gameplay.</summary>
+        public void DebugForceClean()
+        {
+            state = SpotState.Clean; Progress = 1f; retained = false;
+            RefreshRing();
+        }
+
+        public bool DebugForceSabotage()
+        {
+            if (state != SpotState.Clean || SabotageUsed) return false;
+            if (IsOpen) { IsOpen = false; LockedBy = null; sabotageSession = false; }
+            _sabotageCount = Mathf.Min(MaxSabotagesPerMatch, _sabotageCount + 1);
+            state = SpotState.Dirty; Progress = 0f; retained = false;
+            Sabotaged?.Invoke(this); AnySabotaged?.Invoke(this);
+            TaskRaceModeManager.Instance?.OnSpotSabotaged(this);
+            RefreshRing();
+            return true;
+        }
+
         /// <summary>Rebuild the ring and labels after Configure (editor or runtime).</summary>
         public void RebuildVisuals()
         {
             for (int i = transform.childCount - 1; i >= 0; i--)
             {
                 var c = transform.GetChild(i);
-                if (c.name == "F29_Ring" || c.name == "TaskLabel" || c.name == "LockBadge")
+                if (c.name == "F29_Ring" || c.name == "TaskLabel" || c.name == "LockBadge" || c.name == "ShieldBadge")
                     DestroyNow(c.gameObject);
             }
-            ring = null; label = null; lockBadge = null;
+            ring = null; label = null; lockBadge = null; shieldBadge = null;
             if (buildVisuals) BuildVisuals();
         }
 
@@ -292,6 +489,8 @@ namespace Bob.TaskRace
                 $"<color=#{ColorUtility.ToHtmlStringRGB(colour)}>●</color> {taskName} · ~{Mathf.RoundToInt(expectedSeconds)} วิ",
                 Color.white, 1.6f, 12);
             lockBadge = MakeLabel("LockBadge", anchor, labelHeight + 0.42f, "", new Color(0.94f, 0.28f, 0.44f), 1.3f, 13);
+            shieldBadge = MakeLabel("ShieldBadge", anchor, labelHeight + 0.84f, "",
+                new Color(1f, 0.84f, 0.35f), 1.2f, 14);
         }
 
         TextMeshPro MakeLabel(string name, Transform anchor, float height, string text, Color colour, float size, int order)
@@ -327,7 +526,8 @@ namespace Bob.TaskRace
             if (ring == null || label == null) return;
             var anchor = ringAnchor != null ? ringAnchor : transform;
             var cam = BobCurvedWorld.SampleCamera;
-            bool inPreview = hasTask && !Done && dist <= previewRadius;
+            bool dirty = state == SpotState.Dirty;
+            bool inPreview = hasTask && dirty && dist <= previewRadius;
 
             label.gameObject.SetActive(inPreview);
             if (inPreview)
@@ -347,12 +547,25 @@ namespace Bob.TaskRace
                 }
             }
 
-            bool showRing = hasTask && !Done && (inPreview || IsOpen);
+            if (shieldBadge != null)
+            {
+                shieldBadge.gameObject.SetActive(isProtected && dist <= previewRadius);
+                if (isProtected)
+                {
+                    shieldBadge.text = $"เกราะ {Mathf.CeilToInt(_shieldTimer)} วิ";
+                    shieldBadge.transform.position = LabelPoint(anchor, labelHeight + 0.84f);
+                    if (cam != null) shieldBadge.transform.rotation = cam.transform.rotation;
+                }
+            }
+
+            // Clean stations are ring-less, except while shielded: the gold ring is what the opponent sees from across
+            // the bridge, docs 19 "turn the F29 ground ring glowing Gold".
+            bool showRing = hasTask && (dirty || isProtected) && (inPreview || IsOpen || isProtected);
             ring.enabled = showRing;
             if (!showRing) return;
 
-            var colour = CategoryColour(category);
-            if (near)
+            var colour = isProtected ? ShieldGold : CategoryColour(category);
+            if (near && !isProtected)
             {
                 float pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 6f);
                 colour = Color.Lerp(colour, new Color(1f, 0.82f, 0.4f), 0.35f + 0.25f * pulse);
@@ -380,9 +593,18 @@ namespace Bob.TaskRace
         void RefreshRing()
         {
             if (ring == null) return;
-            var colour = CategoryColour(category);
+            var colour = isProtected ? ShieldGold : CategoryColour(category);
             colour.a = 0.9f;
             ring.startColor = ring.endColor = colour;
+        }
+
+        void PlayPingPop()
+        {
+            if (pingPop == null) return;
+            var source = GetComponent<AudioSource>();
+            if (source == null) source = gameObject.AddComponent<AudioSource>();
+            source.playOnAwake = false;
+            source.PlayOneShot(pingPop);
         }
 
         // ---------------------------------------------------------------- helpers

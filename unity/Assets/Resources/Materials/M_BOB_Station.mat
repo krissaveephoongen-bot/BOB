@@ -40,7 +40,10 @@ Material:
     - _Rim: 0.18
     - _Sheen: 0.06
     - _Shininess: 24
+    - _Strata: 0.12
+    - _StrataScale: 2.2
     m_Colors:
+    - _CliffShade: {r: 0.55, g: 0.48, b: 0.58, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _DirtColor: {r: 0.42, g: 0.34, b: 0.36, a: 1}
     - _GroundColor: {r: 0.56, g: 0.525, b: 0.75, a: 1}

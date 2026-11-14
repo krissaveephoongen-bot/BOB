@@ -75,24 +75,41 @@ namespace Bob.EditorTools
             Debug.Log("[TaskRaceVerify] floor under spots: " + string.Join(", ", floors));
 
             var mode = manager.mode;
-            manager.SetMode(TaskRaceMode.BridgeRaid);
+            manager.SetMode(TaskRaceMode.TimedBridgeRaid);
             var links = Object.FindObjectsByType<NavMeshLink>(FindObjectsInactive.Include)
                 .Where(l => l.gameObject.transform.root == map.transform).ToArray();
-            Debug.Log($"[TaskRaceVerify] BridgeRaid: barrier active={manager.riverBarrierGroup.activeSelf} " +
-                      $"bridges active={manager.bridgesGroup.activeSelf} links={links.Length} ({linksBefore} before)");
-            if (hero != null && farSpot != null) CheckNav("BridgeRaid", hero.transform.position, farSpot.transform.position);
+            Debug.Log($"[TaskRaceVerify] TimedBridgeRaid: river barrier active={manager.riverBarrierGroup.activeSelf} " +
+                      $"bridges active={manager.bridgesGroup.activeSelf} gates active={manager.bridgeBarrierGroup?.activeSelf} " +
+                      $"barriers={manager.Barriers.Count} links={links.Length} ({linksBefore} before)");
+            // Two proofs, because the rule is "shut until 60 s, then cross": with the gates down the carve must cut the
+            // deck (PathPartial), with the gates up the same query must reach Team B (PathComplete).
+            if (hero != null && farSpot != null)
+                CheckNav("TimedBridgeRaid gates shut", hero.transform.position, farSpot.transform.position);
+            manager.DebugOpenBridges();
+            if (manager.bridgeBarrierGroup != null) manager.bridgeBarrierGroup.SetActive(false);
+            if (manager.navMeshSurface != null && manager.raidNavMesh != null)
+            {
+                manager.navMeshSurface.RemoveData();
+                manager.navMeshSurface.navMeshData = manager.raidNavMesh;
+                manager.navMeshSurface.AddData();
+            }
+            if (hero != null && farSpot != null)
+                CheckNav("TimedBridgeRaid gates open", hero.transform.position, farSpot.transform.position);
             if (manager.bridgesGroup != null)
                 foreach (Transform bridge in manager.bridgesGroup.transform)
                     ProbeBridge(bridge);
+            if (manager.bridgeBarrierGroup != null) manager.bridgeBarrierGroup.SetActive(true);
 
             manager.SetMode(TaskRaceMode.PureRace);
             var obstacles = Object.FindObjectsByType<NavMeshObstacle>(FindObjectsInactive.Include)
                 .Where(o => o.gameObject.transform.root == map.transform).ToArray();
-            Debug.Log($"[TaskRaceVerify] PureRace: barrier active={manager.riverBarrierGroup.activeSelf} " +
+            Debug.Log($"[TaskRaceVerify] PureRace: river barrier active={manager.riverBarrierGroup.activeSelf} " +
                       $"bridges active={manager.bridgesGroup.activeSelf} obstacles={obstacles.Length} " +
                       $"({obstaclesBefore} before) carving={obstacles.Count(o => o.carving)}");
             if (hero != null && farSpot != null) CheckNav("PureRace", hero.transform.position, farSpot.transform.position);
             manager.SetMode(mode);
+
+            CheckGameplay(manager, spots);
 
             var hud = Object.FindAnyObjectByType<BobTaskRaceHud>();
             if (hud != null)
@@ -109,7 +126,73 @@ namespace Bob.EditorTools
             Debug.Log($"[TaskRaceVerify] {scenePath} done.");
         }
 
-        /// <summary>Prove the mode's bake: the path from the hero to a Team B spot must cross in BridgeRaid and must not in PureRace.</summary>
+        /// <summary>Drive the rules the scene builder cannot prove by looking: the clock and gate state, the team pool on
+        /// clean, the one-time sabotage undoing the defender's count, and the paid shield blocking the next sabotage.</summary>
+        static void CheckGameplay(TaskRaceModeManager manager, TaskSpot[] spots)
+        {
+            var mine = spots.FirstOrDefault(s => s.OwnerTeam == TeamId.TeamA);
+            var theirs = spots.FirstOrDefault(s => s.OwnerTeam == TeamId.TeamB);
+            if (mine == null || theirs == null) { Debug.LogWarning("[TaskRaceVerify] gameplay: need one spot per team."); return; }
+
+            manager.DebugResetMatch();
+            Debug.Log($"[TaskRaceVerify] gameplay start: clock {manager.RemainingSeconds:0}s, bridges open={manager.AreBridgesOpen}, " +
+                      $"barriers={manager.Barriers.Count}, points A/B {manager.PointsOf(TeamId.TeamA)}/{manager.PointsOf(TeamId.TeamB)}");
+
+            if (!mine.TryOpen("verify", out var m)) Debug.LogWarning("[TaskRaceVerify] gameplay: own spot refused to open: " + m);
+            else mine.Close(true);
+            if (!theirs.TryOpen("verify", out m)) Debug.LogWarning("[TaskRaceVerify] gameplay: enemy spot refused to open: " + m);
+            else theirs.Close(true);
+            var round = Object.FindAnyObjectByType<TaskRaceRound>();
+            Debug.Log($"[TaskRaceVerify] gameplay clean: points A/B {manager.PointsOf(TeamId.TeamA)}/{manager.PointsOf(TeamId.TeamB)} " +
+                      $"(expected +{manager.pointsPerTaskComplete} each), round done A {round?.DoneCount}/{round?.TaskCount} " +
+                      $"B {round?.DoneCountOf(TeamId.TeamB)}/{round?.TaskCount}");
+
+            bool blocked = !theirs.TrySabotage("verify", out var closedMsg);
+            Debug.Log($"[TaskRaceVerify] gameplay sabotage while shut: blocked={blocked} msg=\"{closedMsg}\"");
+            manager.DebugOpenBridges();
+            int defenderBefore = round?.DoneCountOf(TeamId.TeamB) ?? 0;
+            bool sabotaged = theirs.TrySabotage("verify", out var sbMsg);
+            if (sabotaged) theirs.CompleteSabotage();
+            Debug.Log($"[TaskRaceVerify] gameplay sabotage open: opened={sabotaged} msg=\"{sbMsg}\" " +
+                      $"state={theirs.State} count={theirs.SabotageCount}/{TaskSpot.MaxSabotagesPerMatch} " +
+                      $"defender B done {defenderBefore}->{round?.DoneCountOf(TeamId.TeamB)}/{round?.TaskCount} " +
+                      $"(points A/B {manager.PointsOf(TeamId.TeamA)}/{manager.PointsOf(TeamId.TeamB)})");
+            // One per station per match: the defender re-cleans the restored task, and the second attempt is refused
+            // with the "already sabotaged" message instead of opening the card again.
+            theirs.TryOpen("verify", out _);
+            theirs.Close(true);
+            bool again = theirs.TrySabotage("verify", out var againMsg);
+            Debug.Log($"[TaskRaceVerify] gameplay sabotage repeat: opened={again} msg=\"{againMsg}\" " +
+                      $"re-clean B done {round?.DoneCountOf(TeamId.TeamB)}/{round?.TaskCount}");
+
+            // The shield costs 150 and a clean awards 100, so the second clean is topped up the way two tasks would.
+            mine.TryOpen("verify", out _);
+            mine.Close(true);
+            if (manager.PointsOf(TeamId.TeamA) < manager.shieldItemCost)
+                manager.DebugAddPoints(manager.shieldItemCost - manager.PointsOf(TeamId.TeamA));
+            int poolBeforeShield = manager.PointsOf(TeamId.TeamA);
+            bool bought = mine.TryBuyShield(out var shieldMsg);
+            // Fire the sabotage as the other team: the shield branch only runs for an enemy standing on the clean spot.
+            var savedTeam = TaskSpot.LocalTeam;
+            TaskSpot.LocalTeam = TeamId.TeamB;
+            bool shieldBlocked = !mine.TrySabotage("raid", out var enemyMsg);
+            TaskSpot.LocalTeam = savedTeam;
+            Debug.Log($"[TaskRaceVerify] gameplay shield: bought={bought} msg=\"{shieldMsg}\" " +
+                      $"protected={mine.IsProtected} timer {mine.ShieldRemaining:0}s, pool A {poolBeforeShield}->" +
+                      $"{manager.PointsOf(TeamId.TeamA)} (cost {manager.shieldItemCost}), " +
+                      $"enemy sabotage blocked={shieldBlocked} msg=\"{enemyMsg}\"");
+
+            // Start from a shut clock so the 65 -> 60 crossing is exercised by this check, not by the earlier manual open.
+            manager.DebugResetMatch();
+            manager.DebugSetRemaining(65f);
+            manager.DebugSetRemaining(60f);
+            Debug.Log($"[TaskRaceVerify] gameplay clock: at {manager.RemainingSeconds:0}s bridges open={manager.AreBridgesOpen}, " +
+                      $"gates dropped={manager.Barriers.Count > 0 && manager.Barriers.All(b => b.IsOpen)} " +
+                      $"({manager.Barriers.Count} barrie(s))");
+            manager.DebugResetMatch();
+        }
+
+        /// <summary>Prove the mode's bake: the path from the hero to a Team B spot must cross in TimedBridgeRaid and must not in PureRace.</summary>
         static void CheckNav(string label, Vector3 from, Vector3 to)
         {
             var tri = NavMesh.CalculateTriangulation();
@@ -135,7 +218,7 @@ namespace Bob.EditorTools
                       $"(snap {Vector3.Distance(from, a.position):0.00}/{Vector3.Distance(to, b.position):0.00} u)");
         }
 
-        /// <summary>Where the bridge ends land relative to the baked NavMesh: the join that makes BridgeRaid walkable.</summary>
+        /// <summary>Where the bridge ends land relative to the baked NavMesh: the join that makes TimedBridgeRaid walkable.</summary>
         static void ProbeBridge(Transform bridge)
         {
             var renderers = bridge.GetComponentsInChildren<Renderer>(true);
@@ -204,8 +287,10 @@ namespace Bob.EditorTools
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.80f, 0.90f, 0.98f);
             cam.aspect = 1600f / 900f;
-            // the shot camera is new, so it needs its own written sky; Fit() runs after the FOV/aspect above are set
+            // The shot camera is new, so it needs its own written sky and the same grade the play camera carries.
             go.AddComponent<BobSkyBackdrop>().Fit();
+            go.AddComponent<BobPostGrade>();
+            QualitySettings.shadowDistance = 45f;
 
             // A screen-space camera canvas follows its own camera: point it at the shot camera for this render.
             Camera hudWas = null;

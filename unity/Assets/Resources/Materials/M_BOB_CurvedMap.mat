@@ -31,13 +31,19 @@ Material:
     m_Floats:
     - _CurvatureScale: 1
     - _DirtAmount: 0
+    - _Mottle: 0.06
     - _OutlinePixels: 1.5
     - _RampLow: 0.45
     - _RampMid: 0.78
     - _RampSoft: 0.08
     - _Rim: 0.18
+    - _Sheen: 0.06
+    - _Shininess: 24
+    - _Strata: 0.14
+    - _StrataScale: 2.2
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _CliffShade: {r: 0.55, g: 0.48, b: 0.58, a: 1}
     - _DirtColor: {r: 0.42, g: 0.34, b: 0.36, a: 1}
     - _GroundColor: {r: 0.56, g: 0.525, b: 0.75, a: 1}
     - _OutlineColor: {r: 0.29, g: 0.18, b: 0.133, a: 1}
