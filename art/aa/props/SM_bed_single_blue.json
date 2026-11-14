@@ -1,0 +1,33 @@
+{
+ "name": "bed_single_blue",
+ "class": "room",
+ "tris_in": 4458,
+ "tris_out": 4434,
+ "budget": 40000,
+ "height_m": 0.55,
+ "colours": {
+  "bubble_shirt": 1025,
+  "goggle_lens": 724,
+  "dirt_dark": 614,
+  "dirt": 470,
+  "navy": 346,
+  "bubble_hair": 216,
+  "wood": 214,
+  "white": 210,
+  "metal": 195,
+  "shoe": 148,
+  "trash": 85,
+  "outline": 35,
+  "mop": 30,
+  "cream": 27,
+  "trash_dark": 22,
+  "gold_dark": 22,
+  "spray_hair": 18,
+  "straw": 11,
+  "spray_shirt": 8,
+  "slime_light": 8,
+  "sweep_hair": 4,
+  "sweep_shirt": 1,
+  "metal_dark": 1
+ }
+}

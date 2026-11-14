@@ -1,0 +1,27 @@
+{
+ "name": "brush_scrub_wood",
+ "class": "prop_hand",
+ "tris_in": 4870,
+ "tris_out": 1500,
+ "budget": 1500,
+ "height_m": 0.15,
+ "colours": {
+  "metal": 268,
+  "wood": 262,
+  "metal_dark": 173,
+  "trash": 144,
+  "shoe": 144,
+  "white": 124,
+  "mop": 113,
+  "sweep_shirt": 86,
+  "dirt": 51,
+  "bubble_hair": 51,
+  "straw": 34,
+  "gold_dark": 18,
+  "outline": 16,
+  "navy": 9,
+  "spray_pink": 3,
+  "dirt_dark": 3,
+  "fang": 1
+ }
+}

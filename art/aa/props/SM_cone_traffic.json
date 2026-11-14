@@ -1,0 +1,23 @@
+{
+ "name": "cone_traffic",
+ "class": "prop_m",
+ "tris_in": 4815,
+ "tris_out": 799,
+ "budget": 800,
+ "height_m": 0.5,
+ "colours": {
+  "sweep_shirt": 364,
+  "dirt": 156,
+  "wood": 87,
+  "dirt_dark": 53,
+  "goggle_lens": 51,
+  "metal": 30,
+  "white": 24,
+  "mop": 16,
+  "cream": 7,
+  "gold_dark": 3,
+  "straw": 3,
+  "bubble_hair": 3,
+  "fang": 2
+ }
+}

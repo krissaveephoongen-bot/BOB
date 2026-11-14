@@ -1,0 +1,27 @@
+{
+ "name": "stall_awning",
+ "class": "room",
+ "tris_in": 1912044,
+ "tris_out": 20000,
+ "budget": 40000,
+ "height_m": 2.0,
+ "colours": {
+  "cream": 4707,
+  "sweep_band": 4130,
+  "outline": 2414,
+  "metal": 1963,
+  "spray_hair": 1622,
+  "wood": 1060,
+  "shoe": 711,
+  "bubble_hair": 640,
+  "dirt_dark": 535,
+  "metal_dark": 531,
+  "sweep_hair": 508,
+  "mop": 459,
+  "dirt": 383,
+  "trash_dark": 167,
+  "spray_pink": 90,
+  "fang": 78,
+  "white": 2
+ }
+}

@@ -1,0 +1,17 @@
+{
+ "name": "ac_wall_teal",
+ "class": "prop_m",
+ "tris_in": 1929542,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.45,
+ "colours": {
+  "metal_dark": 349,
+  "metal": 202,
+  "trash_dark": 134,
+  "trash": 40,
+  "goggle_lens": 32,
+  "mop": 30,
+  "spray_hair": 13
+ }
+}

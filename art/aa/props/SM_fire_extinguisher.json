@@ -1,0 +1,27 @@
+{
+ "name": "fire_extinguisher",
+ "class": "prop_m",
+ "tris_in": 1967834,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.6,
+ "colours": {
+  "sweep_band": 196,
+  "spray_hair": 185,
+  "dirt": 142,
+  "navy": 46,
+  "trash_dark": 42,
+  "metal_dark": 40,
+  "mop": 40,
+  "metal": 36,
+  "bubble_shirt": 14,
+  "wood": 14,
+  "cream": 13,
+  "outline": 9,
+  "shoe": 9,
+  "bubble_hair": 6,
+  "dirt_dark": 6,
+  "trash": 1,
+  "sweep_hair": 1
+ }
+}

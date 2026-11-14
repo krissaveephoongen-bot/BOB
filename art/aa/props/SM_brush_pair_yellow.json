@@ -1,0 +1,27 @@
+{
+ "name": "brush_pair_yellow",
+ "class": "prop_hand",
+ "tris_in": 1954128,
+ "tris_out": 1500,
+ "budget": 1500,
+ "height_m": 0.18,
+ "colours": {
+  "trash_dark": 520,
+  "spray_hair": 243,
+  "gold": 224,
+  "navy": 173,
+  "metal_dark": 68,
+  "gold_dark": 47,
+  "shoe": 44,
+  "metal": 39,
+  "straw": 35,
+  "dirt": 27,
+  "sponge": 25,
+  "outline": 20,
+  "dirt_dark": 15,
+  "bubble_shirt": 10,
+  "sweep_hair": 6,
+  "trash": 2,
+  "wood": 2
+ }
+}

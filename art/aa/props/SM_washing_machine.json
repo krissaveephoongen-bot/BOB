@@ -1,0 +1,26 @@
+{
+ "name": "washing_machine",
+ "class": "room",
+ "tris_in": 1922602,
+ "tris_out": 19999,
+ "budget": 40000,
+ "height_m": 0.85,
+ "colours": {
+  "mop": 6622,
+  "metal": 4609,
+  "trash_dark": 4281,
+  "metal_dark": 1317,
+  "trash": 1301,
+  "spray_hair": 1231,
+  "white": 254,
+  "fang": 162,
+  "navy": 142,
+  "shoe": 26,
+  "spray_pink": 19,
+  "cream": 16,
+  "outline": 12,
+  "wood": 3,
+  "sweep_band": 2,
+  "bubble_hair": 2
+ }
+}

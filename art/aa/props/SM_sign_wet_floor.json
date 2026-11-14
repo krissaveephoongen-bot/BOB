@@ -1,0 +1,19 @@
+{
+ "name": "sign_wet_floor",
+ "class": "prop_m",
+ "tris_in": 4398,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.6,
+ "colours": {
+  "gold_dark": 464,
+  "gold": 121,
+  "spray_hair": 118,
+  "straw": 47,
+  "sponge": 17,
+  "dirt": 16,
+  "sweep_hair": 6,
+  "dirt_dark": 6,
+  "outline": 5
+ }
+}

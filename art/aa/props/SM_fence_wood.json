@@ -1,0 +1,16 @@
+{
+ "name": "fence_wood",
+ "class": "room",
+ "tris_in": 1900234,
+ "tris_out": 20000,
+ "budget": 40000,
+ "height_m": 1.0,
+ "colours": {
+  "wood": 14196,
+  "dirt": 4891,
+  "dirt_dark": 746,
+  "cream": 138,
+  "gold_dark": 26,
+  "bubble_hair": 3
+ }
+}

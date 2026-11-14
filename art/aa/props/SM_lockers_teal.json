@@ -1,0 +1,21 @@
+{
+ "name": "lockers_teal",
+ "class": "room",
+ "tris_in": 1974993,
+ "tris_out": 20000,
+ "budget": 40000,
+ "height_m": 1.8,
+ "colours": {
+  "goggle_lens": 5846,
+  "trash": 4767,
+  "trash_dark": 4552,
+  "metal_dark": 3177,
+  "metal": 808,
+  "white": 261,
+  "spray_hair": 251,
+  "mop": 173,
+  "navy": 162,
+  "shoe": 2,
+  "bubble_shirt": 1
+ }
+}

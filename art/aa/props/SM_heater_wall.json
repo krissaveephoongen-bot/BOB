@@ -1,0 +1,18 @@
+{
+ "name": "heater_wall",
+ "class": "prop_m",
+ "tris_in": 1968716,
+ "tris_out": 799,
+ "budget": 800,
+ "height_m": 0.3,
+ "colours": {
+  "metal_dark": 348,
+  "trash_dark": 326,
+  "metal": 87,
+  "spray_hair": 16,
+  "mop": 14,
+  "trash": 5,
+  "shoe": 2,
+  "wood": 1
+ }
+}

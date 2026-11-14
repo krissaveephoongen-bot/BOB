@@ -1,0 +1,18 @@
+{
+ "name": "stanchion",
+ "class": "prop_m",
+ "tris_in": 1967077,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 1.0,
+ "colours": {
+  "metal_dark": 392,
+  "spray_hair": 186,
+  "shoe": 72,
+  "metal": 61,
+  "trash_dark": 56,
+  "outline": 31,
+  "trash": 1,
+  "mop": 1
+ }
+}

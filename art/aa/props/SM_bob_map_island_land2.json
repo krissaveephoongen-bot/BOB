@@ -1,0 +1,14 @@
+{
+ "name": "bob_map_island_land2",
+ "class": "map",
+ "tris_in": 52416,
+ "tris_out": 8000,
+ "budget": 8000,
+ "height_m": 6.0,
+ "colours": {
+  "grass_dark": 2404,
+  "metal_dark": 2095,
+  "dirt": 1808,
+  "grass": 1693
+ }
+}

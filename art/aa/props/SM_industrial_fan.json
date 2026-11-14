@@ -1,0 +1,16 @@
+{
+ "name": "industrial_fan",
+ "class": "prop_m",
+ "tris_in": 1973057,
+ "tris_out": 799,
+ "budget": 800,
+ "height_m": 0.6,
+ "colours": {
+  "metal_dark": 257,
+  "spray_hair": 169,
+  "trash_dark": 160,
+  "metal": 113,
+  "mop": 96,
+  "trash": 4
+ }
+}

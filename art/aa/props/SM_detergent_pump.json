@@ -1,0 +1,19 @@
+{
+ "name": "detergent_pump",
+ "class": "prop_hand",
+ "tris_in": 1986744,
+ "tris_out": 1500,
+ "budget": 1500,
+ "height_m": 0.32,
+ "colours": {
+  "press_shirt": 1002,
+  "mop": 253,
+  "metal": 98,
+  "metal_dark": 51,
+  "spray_hair": 47,
+  "shoe": 18,
+  "trash_dark": 15,
+  "outline": 13,
+  "white": 3
+ }
+}

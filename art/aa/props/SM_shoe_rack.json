@@ -1,0 +1,31 @@
+{
+ "name": "shoe_rack",
+ "class": "prop_m",
+ "tris_in": 1947244,
+ "tris_out": 799,
+ "budget": 800,
+ "height_m": 0.55,
+ "colours": {
+  "spray_pink": 131,
+  "wood": 128,
+  "bubble_hair": 92,
+  "slime_light": 68,
+  "goggle_strap": 63,
+  "goggle_lens": 58,
+  "bubble_shirt": 53,
+  "sweep_band": 45,
+  "shoe": 35,
+  "spray_shirt": 27,
+  "navy": 22,
+  "metal": 22,
+  "metal_dark": 18,
+  "slime": 14,
+  "trash": 5,
+  "dirt": 4,
+  "outline": 4,
+  "dirt_dark": 3,
+  "boss": 3,
+  "white": 3,
+  "gold_dark": 1
+ }
+}

@@ -1,0 +1,21 @@
+{
+ "name": "bin_recycle_blue",
+ "class": "prop_m",
+ "tris_in": 4318,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 1.0,
+ "colours": {
+  "navy": 398,
+  "bubble_shirt": 166,
+  "fang": 62,
+  "mop": 58,
+  "trash": 41,
+  "goggle_lens": 30,
+  "white": 22,
+  "metal": 10,
+  "spray_hair": 5,
+  "trash_dark": 5,
+  "cream": 3
+ }
+}

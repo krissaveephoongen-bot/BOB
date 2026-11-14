@@ -1,0 +1,13 @@
+{
+ "name": "bob_map_river_channel",
+ "class": "map",
+ "tris_in": 51638,
+ "tris_out": 8000,
+ "budget": 8000,
+ "height_m": 0.35,
+ "colours": {
+  "water_dark": 4762,
+  "water": 1887,
+  "goggle_lens": 1351
+ }
+}

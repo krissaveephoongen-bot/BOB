@@ -1,0 +1,25 @@
+{
+ "name": "enemy_slime_green",
+ "class": "char",
+ "tris_in": 4958,
+ "tris_out": 4946,
+ "budget": 6000,
+ "height_m": 0.75,
+ "colours": {
+  "press_shirt": 2779,
+  "trash_dark": 1374,
+  "metal_dark": 198,
+  "white": 147,
+  "spray_hair": 110,
+  "metal": 85,
+  "shoe": 63,
+  "bubble_hair": 53,
+  "wood": 37,
+  "sponge": 32,
+  "cream": 31,
+  "trash": 17,
+  "sweep_hair": 13,
+  "mop": 4,
+  "outline": 3
+ }
+}

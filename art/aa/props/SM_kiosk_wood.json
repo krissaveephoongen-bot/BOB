@@ -1,0 +1,31 @@
+{
+ "name": "kiosk_wood",
+ "class": "room",
+ "tris_in": 1917144,
+ "tris_out": 20000,
+ "budget": 40000,
+ "height_m": 1.5,
+ "colours": {
+  "dirt": 5071,
+  "press_shirt": 3007,
+  "trash_dark": 2989,
+  "dirt_dark": 1878,
+  "wood": 1670,
+  "gold_dark": 975,
+  "metal_dark": 869,
+  "sweep_band": 793,
+  "trash": 578,
+  "shoe": 457,
+  "sweep_shirt": 403,
+  "metal": 323,
+  "spray_pink": 225,
+  "bubble_hair": 189,
+  "outline": 167,
+  "gold": 143,
+  "sponge": 105,
+  "sweep_hair": 83,
+  "straw": 53,
+  "spray_hair": 21,
+  "navy": 1
+ }
+}

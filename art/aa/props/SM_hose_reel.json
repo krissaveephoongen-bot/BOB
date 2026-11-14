@@ -1,0 +1,22 @@
+{
+ "name": "hose_reel",
+ "class": "prop_m",
+ "tris_in": 1903268,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.45,
+ "colours": {
+  "goggle_strap": 487,
+  "gold": 136,
+  "sponge": 78,
+  "spray_shirt": 41,
+  "bubble_shirt": 19,
+  "sweep_shirt": 16,
+  "straw": 12,
+  "bubble_hair": 5,
+  "cream": 2,
+  "shoe": 2,
+  "metal": 1,
+  "mop": 1
+ }
+}

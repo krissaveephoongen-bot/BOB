@@ -1,0 +1,26 @@
+{
+ "name": "door_metal",
+ "class": "room",
+ "tris_in": 1955446,
+ "tris_out": 20000,
+ "budget": 40000,
+ "height_m": 2.0,
+ "colours": {
+  "trash": 6326,
+  "trash_dark": 5504,
+  "metal_dark": 2520,
+  "metal": 2166,
+  "spray_hair": 1352,
+  "wood": 946,
+  "bubble_hair": 307,
+  "outline": 221,
+  "shoe": 194,
+  "mop": 176,
+  "cream": 156,
+  "dirt_dark": 90,
+  "sweep_hair": 24,
+  "navy": 10,
+  "white": 7,
+  "fang": 1
+ }
+}

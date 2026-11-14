@@ -1,0 +1,31 @@
+{
+ "name": "shelf_wall_books",
+ "class": "prop_m",
+ "tris_in": 1885578,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.7,
+ "colours": {
+  "wood": 286,
+  "press_shirt": 112,
+  "bubble_hair": 98,
+  "dirt_dark": 81,
+  "navy": 50,
+  "gold_dark": 47,
+  "shoe": 34,
+  "cream": 21,
+  "goggle_lens": 16,
+  "dirt": 10,
+  "sponge": 9,
+  "outline": 6,
+  "metal": 6,
+  "trash": 5,
+  "bubble_shirt": 5,
+  "straw": 4,
+  "metal_dark": 3,
+  "sweep_hair": 3,
+  "spray_shirt": 2,
+  "trash_dark": 1,
+  "mop": 1
+ }
+}

@@ -1,0 +1,23 @@
+{
+ "name": "dish_rack_blue",
+ "class": "prop_m",
+ "tris_in": 1847879,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.35,
+ "colours": {
+  "navy": 205,
+  "wood": 138,
+  "bubble_shirt": 126,
+  "goggle_lens": 88,
+  "metal_dark": 57,
+  "trash": 55,
+  "metal": 37,
+  "cream": 28,
+  "mop": 22,
+  "trash_dark": 21,
+  "shoe": 16,
+  "bubble_hair": 6,
+  "white": 1
+ }
+}

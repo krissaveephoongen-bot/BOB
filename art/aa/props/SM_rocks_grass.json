@@ -1,0 +1,20 @@
+{
+ "name": "rocks_grass",
+ "class": "prop_m",
+ "tris_in": 1976489,
+ "tris_out": 799,
+ "budget": 800,
+ "height_m": 0.5,
+ "colours": {
+  "trash_dark": 337,
+  "press_shirt": 160,
+  "metal_dark": 133,
+  "spray_hair": 114,
+  "shoe": 18,
+  "sponge": 15,
+  "sweep_hair": 12,
+  "metal": 6,
+  "outline": 2,
+  "trash": 2
+ }
+}

@@ -1,0 +1,16 @@
+{
+ "name": "gas_cylinder_red_b",
+ "class": "prop_m",
+ "tris_in": 1928882,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.6,
+ "colours": {
+  "sweep_band": 419,
+  "spray_hair": 197,
+  "trash_dark": 170,
+  "navy": 10,
+  "metal_dark": 3,
+  "dirt": 1
+ }
+}

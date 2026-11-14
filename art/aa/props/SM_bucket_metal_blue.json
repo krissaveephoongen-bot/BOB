@@ -1,0 +1,23 @@
+{
+ "name": "bucket_metal_blue",
+ "class": "prop_m",
+ "tris_in": 1986964,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.4,
+ "colours": {
+  "navy": 376,
+  "goggle_lens": 160,
+  "bubble_shirt": 143,
+  "outline": 22,
+  "wood": 21,
+  "trash_dark": 17,
+  "metal_dark": 16,
+  "spray_hair": 16,
+  "shoe": 12,
+  "trash": 12,
+  "dirt_dark": 3,
+  "bubble_hair": 1,
+  "dirt": 1
+ }
+}

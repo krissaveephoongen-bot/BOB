@@ -1,0 +1,13 @@
+{
+ "name": "bob_map_cliff_waterfall",
+ "class": "map",
+ "tris_in": 57117,
+ "tris_out": 7999,
+ "budget": 8000,
+ "height_m": 5.0,
+ "colours": {
+  "metal": 4166,
+  "stone": 2222,
+  "metal_dark": 1611
+ }
+}

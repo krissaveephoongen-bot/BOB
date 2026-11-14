@@ -1,0 +1,31 @@
+{
+ "name": "spray_bottle_label",
+ "class": "prop_hand",
+ "tris_in": 4842,
+ "tris_out": 1498,
+ "budget": 1500,
+ "height_m": 0.3,
+ "colours": {
+  "navy": 461,
+  "bubble_shirt": 256,
+  "trash_dark": 192,
+  "spray_hair": 134,
+  "goggle_lens": 89,
+  "trash": 80,
+  "straw": 57,
+  "white": 57,
+  "cream": 45,
+  "outline": 34,
+  "metal_dark": 25,
+  "metal": 17,
+  "wood": 10,
+  "shoe": 9,
+  "mop": 9,
+  "sponge": 6,
+  "gold_dark": 6,
+  "bubble_hair": 5,
+  "dirt_dark": 4,
+  "sweep_hair": 1,
+  "fang": 1
+ }
+}

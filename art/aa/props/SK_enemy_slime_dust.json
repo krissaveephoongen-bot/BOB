@@ -1,0 +1,17 @@
+{
+ "name": "enemy_slime_dust",
+ "class": "char",
+ "tris_in": 1946860,
+ "tris_out": 6000,
+ "budget": 6000,
+ "height_m": 0.9,
+ "colours": {
+  "metal_dark": 3766,
+  "trash_dark": 1698,
+  "metal": 382,
+  "trash": 63,
+  "mop": 39,
+  "white": 28,
+  "spray_hair": 24
+ }
+}

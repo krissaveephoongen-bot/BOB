@@ -1,0 +1,16 @@
+{
+ "name": "cctv_camera",
+ "class": "prop_m",
+ "tris_in": 1821959,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.28,
+ "colours": {
+  "metal_dark": 300,
+  "metal": 212,
+  "trash_dark": 170,
+  "spray_hair": 91,
+  "mop": 25,
+  "shoe": 2
+ }
+}

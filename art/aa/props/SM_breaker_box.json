@@ -1,0 +1,17 @@
+{
+ "name": "breaker_box",
+ "class": "prop_m",
+ "tris_in": 1976170,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.45,
+ "colours": {
+  "metal_dark": 343,
+  "trash_dark": 178,
+  "spray_hair": 108,
+  "metal": 94,
+  "shoe": 49,
+  "outline": 23,
+  "mop": 5
+ }
+}

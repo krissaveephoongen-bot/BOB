@@ -1,0 +1,21 @@
+{
+ "name": "sack_coffee",
+ "class": "prop_m",
+ "tris_in": 1964610,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.45,
+ "colours": {
+  "sweep_hair": 146,
+  "outline": 131,
+  "wood": 110,
+  "dirt": 97,
+  "dirt_dark": 97,
+  "gold_dark": 84,
+  "spray_hair": 82,
+  "bubble_hair": 26,
+  "cream": 16,
+  "straw": 10,
+  "shoe": 1
+ }
+}

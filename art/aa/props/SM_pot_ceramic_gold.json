@@ -1,0 +1,17 @@
+{
+ "name": "pot_ceramic_gold",
+ "class": "prop_m",
+ "tris_in": 1919158,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.7,
+ "colours": {
+  "gold_dark": 268,
+  "dirt": 215,
+  "dirt_dark": 177,
+  "straw": 94,
+  "wood": 42,
+  "sweep_hair": 3,
+  "sponge": 1
+ }
+}

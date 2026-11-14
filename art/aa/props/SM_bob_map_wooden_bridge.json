@@ -1,0 +1,12 @@
+{
+ "name": "bob_map_wooden_bridge",
+ "class": "map",
+ "tris_in": 53657,
+ "tris_out": 7999,
+ "budget": 8000,
+ "height_m": 1.2,
+ "colours": {
+  "wood": 6252,
+  "shoe": 1747
+ }
+}

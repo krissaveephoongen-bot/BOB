@@ -1,0 +1,16 @@
+{
+ "name": "pot_blue",
+ "class": "prop_m",
+ "tris_in": 1973100,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.28,
+ "colours": {
+  "navy": 371,
+  "trash": 318,
+  "metal": 89,
+  "metal_dark": 12,
+  "trash_dark": 9,
+  "mop": 1
+ }
+}

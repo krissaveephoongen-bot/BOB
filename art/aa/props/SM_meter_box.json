@@ -1,0 +1,27 @@
+{
+ "name": "meter_box",
+ "class": "prop_m",
+ "tris_in": 1962299,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.5,
+ "colours": {
+  "metal_dark": 251,
+  "spray_hair": 242,
+  "wood": 71,
+  "trash_dark": 65,
+  "metal": 38,
+  "cream": 29,
+  "white": 27,
+  "mop": 23,
+  "press_shirt": 13,
+  "fang": 9,
+  "shoe": 8,
+  "outline": 6,
+  "spray_pink": 6,
+  "sponge": 4,
+  "dirt": 4,
+  "bubble_hair": 3,
+  "gold_dark": 1
+ }
+}

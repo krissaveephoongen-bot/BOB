@@ -1,0 +1,21 @@
+{
+ "name": "sofa_2seat_orange",
+ "class": "room",
+ "tris_in": 4811,
+ "tris_out": 4773,
+ "budget": 40000,
+ "height_m": 0.8,
+ "colours": {
+  "sweep_shirt": 1699,
+  "wood": 1043,
+  "dirt": 836,
+  "straw": 577,
+  "dirt_dark": 438,
+  "sweep_band": 125,
+  "bubble_hair": 16,
+  "sweep_hair": 15,
+  "outline": 11,
+  "sponge": 10,
+  "gold_dark": 3
+ }
+}

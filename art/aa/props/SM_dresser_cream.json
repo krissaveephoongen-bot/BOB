@@ -1,0 +1,20 @@
+{
+ "name": "dresser_cream",
+ "class": "room",
+ "tris_in": 1907656,
+ "tris_out": 20000,
+ "budget": 40000,
+ "height_m": 1.0,
+ "colours": {
+  "gold_dark": 4725,
+  "straw": 4028,
+  "dirt": 3276,
+  "sweep_shirt": 2436,
+  "cream": 2012,
+  "sponge": 1915,
+  "dirt_dark": 899,
+  "wood": 693,
+  "sweep_hair": 14,
+  "bubble_hair": 2
+ }
+}
