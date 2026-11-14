@@ -94,7 +94,18 @@ namespace Bob.EditorTools
             if (hero != null && farSpot != null) CheckNav("PureRace", hero.transform.position, farSpot.transform.position);
             manager.SetMode(mode);
 
-            Render(suffix);
+            var hud = Object.FindAnyObjectByType<BobTaskRaceHud>();
+            if (hud != null)
+            {
+                // the saved scene carries the authored canvas; rebuild from a fresh round so the render is honest
+                if (round != null) round.StartRound(round.ConfiguredSeed);
+                hud.Build(Camera.main);
+                Debug.Log($"[TaskRaceVerify] HUD: {hud.RowCount} task row(s), canvas {hud.UiCanvas.renderMode}, " +
+                          $"the round bar reads {round?.DoneWeight}/{round?.TotalWeight} weight");
+            }
+            else Debug.LogWarning("[TaskRaceVerify] no BobTaskRaceHud in the scene: the task list is not drawn.");
+
+            Render(suffix, hud);
             Debug.Log($"[TaskRaceVerify] {scenePath} done.");
         }
 
@@ -164,7 +175,7 @@ namespace Bob.EditorTools
             return $"{t.name}:size({b.size.x:0.0},{b.size.y:0.0},{b.size.z:0.0})top{b.max.y:0.00}";
         }
 
-        static void Render(string suffix)
+        static void Render(string suffix, BobTaskRaceHud hud = null)
         {
             Shot($"Logs/taskrace{suffix}-preview.png", new Vector3(0f, 10.5f, -15f), new Vector3(0f, 0.4f, 0.5f), 42f);
             Shot($"Logs/taskrace{suffix}-wide.png", new Vector3(0f, 16f, -26f), new Vector3(0f, 0.5f, 0f), 50f);
@@ -175,9 +186,12 @@ namespace Bob.EditorTools
             if (hero != null)
                 Shot($"Logs/taskrace{suffix}-play.png", hero.transform.position + new Vector3(0f, 8.5f, -7.5f),
                     hero.transform.position + new Vector3(0f, 0.6f, 0f), 40f);
+            if (hero != null && hud != null)
+                Shot($"Logs/taskrace{suffix}-hud.png", hero.transform.position + new Vector3(0f, 8.5f, -7.5f),
+                    hero.transform.position + new Vector3(0f, 0.6f, 0f), 40f, hud);
         }
 
-        static void Shot(string file, Vector3 eye, Vector3 look, float fov)
+        static void Shot(string file, Vector3 eye, Vector3 look, float fov, BobTaskRaceHud hud = null)
         {
             var main = Camera.main;
             var go = new GameObject("VerifyCam", typeof(Camera));
@@ -188,11 +202,21 @@ namespace Bob.EditorTools
             cam.transform.LookAt(look);
             cam.fieldOfView = fov;
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.72f, 0.88f, 0.98f);
+            cam.backgroundColor = new Color(0.80f, 0.90f, 0.98f);
+            cam.aspect = 1600f / 900f;
+            // the shot camera is new, so it needs its own written sky; Fit() runs after the FOV/aspect above are set
+            go.AddComponent<BobSkyBackdrop>().Fit();
+
+            // A screen-space camera canvas follows its own camera: point it at the shot camera for this render.
+            Camera hudWas = null;
+            if (hud != null && hud.UiCanvas != null) { hudWas = hud.UiCanvas.worldCamera; hud.UiCanvas.worldCamera = cam; }
 
             var rt = new RenderTexture(1600, 900, 24, RenderTextureFormat.ARGB32) { antiAliasing = 2 };
             cam.targetTexture = rt;
             cam.Render();
+
+            if (hud != null && hud.UiCanvas != null) hud.UiCanvas.worldCamera = hudWas;
+
             RenderTexture.active = rt;
             var tex = new Texture2D(1600, 900, TextureFormat.RGB24, false);
             tex.ReadPixels(new Rect(0, 0, 1600, 900), 0, 0);

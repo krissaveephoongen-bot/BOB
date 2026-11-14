@@ -56,6 +56,19 @@ namespace Bob.TaskRace
         public static MinigameSpec Cart => All[3]; // T04: in every round, docs 16 section 2.2
     }
 
+    /// <summary>One line of the team task list (docs 16 section 2): the planned task and where it sits right now.</summary>
+    public sealed class TaskEntry
+    {
+        internal TaskEntry(MinigameSpec spec) { Spec = spec; }
+
+        public MinigameSpec Spec { get; }
+        /// <summary>The station hosting this task right now; null while it waits in the queue or after it is done.</summary>
+        public TaskSpot Spot { get; internal set; }
+        public bool Done { get; internal set; }
+        /// <summary>A player has the S28 card open on this task (TASK_LOCK of docs 16 section 2.1).</summary>
+        public bool Locked => Spot != null && Spot.IsOpen;
+    }
+
     [DisallowMultipleComponent]
     public class TaskRaceRound : MonoBehaviour
     {
@@ -91,6 +104,11 @@ namespace Bob.TaskRace
         /// <summary>One line for the HUD / log, e.g. "6 tasks (long 2 / common 0 / short 4) · weight 9 · cards 54 s at D1 · workload 63 s".</summary>
         public string Summary { get; private set; } = "";
 
+        /// <summary>The round list in plan order (T04 first). The HUD reads Spot / Done for each row.</summary>
+        public IReadOnlyList<TaskEntry> Tasks => tasks;
+        /// <summary>Bumps when a row changes: new round, a task moves to a station, a lock opens or closes, a task is done.</summary>
+        public int Version { get; private set; }
+
         public event Action<TaskRaceRound> RoundWon;
 
         sealed class Side
@@ -101,6 +119,8 @@ namespace Bob.TaskRace
         }
 
         readonly List<MinigameSpec> plan = new List<MinigameSpec>();
+        readonly List<TaskEntry> tasks = new List<TaskEntry>();
+        readonly Dictionary<string, TaskEntry> entryOf = new Dictionary<string, TaskEntry>();
         readonly Dictionary<TaskSpot, MinigameSpec> assigned = new Dictionary<TaskSpot, MinigameSpec>();
         readonly Dictionary<TaskSpot, Side> sideOf = new Dictionary<TaskSpot, Side>();
         readonly List<TaskSpot> subscribed = new List<TaskSpot>();
@@ -114,13 +134,19 @@ namespace Bob.TaskRace
         {
             spot.Closed -= HandleClosed;
             spot.Closed += HandleClosed;
+            spot.Opened -= HandleOpened;
+            spot.Opened += HandleOpened;
             if (!subscribed.Contains(spot)) subscribed.Add(spot);
         }
 
         void UnsubscribeAll()
         {
             foreach (var spot in subscribed)
-                if (spot != null) spot.Closed -= HandleClosed;
+            {
+                if (spot == null) continue;
+                spot.Closed -= HandleClosed;
+                spot.Opened -= HandleOpened;
+            }
             subscribed.Clear();
         }
 
@@ -156,6 +182,15 @@ namespace Bob.TaskRace
             TaskCount = plan.Count;
             TotalWeight = plan.Sum(g => g.Weight);
 
+            tasks.Clear();
+            entryOf.Clear();
+            foreach (var spec in plan)
+            {
+                var entry = new TaskEntry(spec);
+                tasks.Add(entry);
+                entryOf[spec.Id] = entry;
+            }
+
             foreach (var side in new[] { sideA, sideB })
             {
                 side.done = 0;
@@ -171,6 +206,7 @@ namespace Bob.TaskRace
             float walk = TaskCount * MeanSpotDistance(sideA.Spots) / WalkSpeed;
             EstimatedSeconds = EstimatedCardSeconds + walk;
             Summary = Describe(plan, difficulty) + $" · workload {EstimatedSeconds:0} s";
+            Version++;
 
             Debug.Log($"[TaskRaceRound] seed {CurrentSeed} · players {players} · difficulty {difficulty} · {Summary}");
             foreach (var spot in sideA.Spots)
@@ -298,6 +334,8 @@ namespace Bob.TaskRace
             spot.Configure(spot.SpotId, spec.Value.Name, spot.Category, ScaleSeconds(spec.Value, difficulty));
             spot.SetTaskActive(true);
             assigned[spot] = spec.Value;
+            if (entryOf.TryGetValue(spec.Value.Id, out var entry)) entry.Spot = spot;
+            Version++;
         }
 
         /// <summary>Next list entry this station can host: its own category first, then an Everyone task, then any.</summary>
@@ -312,8 +350,11 @@ namespace Bob.TaskRace
             return spec;
         }
 
+        void HandleOpened(TaskSpot spot) => Version++;
+
         void HandleClosed(TaskSpot spot, bool completed)
         {
+            Version++; // the TASK_LOCK is gone even when the card was closed early
             if (!completed) return;
             if (!assigned.TryGetValue(spot, out var spec)) return;
             if (!sideOf.TryGetValue(spot, out var side)) return;
@@ -321,6 +362,7 @@ namespace Bob.TaskRace
             side.done++;
             side.doneWeight += spec.Weight;
             assigned.Remove(spot);
+            if (entryOf.TryGetValue(spec.Id, out var entry)) { entry.Done = true; entry.Spot = null; }
             AssignTo(spot, side);
 
             if (!wonNotified && Won)

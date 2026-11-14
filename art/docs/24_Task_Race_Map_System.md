@@ -1,6 +1,6 @@
 # 24 · Task Race Map System: เกาะคู่โค้งแบบมินิเดียรามา
 
-เวอร์ชัน 0.4 · 14 พ.ย. 2026 · สถานะ: แผนที่จริง import แล้ว (5 ชิ้น ≤ 8k tri), ซีนสามโหมด `TaskRace.unity` (solo, 6 จุด) / `TaskRace_Duo.unity` (1v1, 8 จุด) / `TaskRace_Team.unity` (2v2/3v3, 12 จุด) สร้างด้วยคำสั่งเดียวต่อโหมด และตรวจผ่านทั้งสองกติกาทุกซีน · รอบนี้เพิ่ม **ผู้อำนวยการรอบ** (`TaskRaceRound`): สุ่มรายการงานตาม doc 16 จาก seed, เติมงานให้สถานี และวัดปริมาณงานต่อโหมด (ข้อ 14)
+เวอร์ชัน 0.6 · 14 พ.ย. 2026 · สถานะ: แผนที่จริง import แล้ว (5 ชิ้น ≤ 8k tri), ซีนสามโหมด `TaskRace.unity` (solo, 6 จุด) / `TaskRace_Duo.unity` (1v1, 8 จุด) / `TaskRace_Team.unity` (2v2/3v3, 12 จุด) สร้างด้วยคำสั่งเดียวต่อโหมด และตรวจผ่านทั้งสองกติกาทุกซีน · เพิ่ม **ผู้อำนวยการรอบ** (`TaskRaceRound`): สุ่มรายการงานตาม doc 16 จาก seed, เติมงานให้สถานี และวัดปริมาณงานต่อโหมด (ข้อ 14) · เพิ่ม **HUD ใบงาน + แถบน้ำหนัก** (`BobTaskRaceHud`) ที่ผูกกับรอบจริงแล้ว (ข้อ 10) · เพิ่ม **แสง เงา และบรรยากาศ** รอบที่ 2 (ข้อ 3.1): shader รับเงาจริง + shadow caster โค้งตามโลก, ambient อ่านจาก `RenderSettings`, sheen, ฟุ้ง (fog) และท้องฟ้าไล่สีที่ติดกล้อง
 
 > ระบบแผนที่สำหรับรอบ Task Race (doc 16) แบบเกาะลอยคู่ที่แลดูเป็นลูกโลกใบเล็ก โดยใช้พร็อพ Tripo ที่ clean แล้ว
 > ทำงานร่วมกับการ์ดมินิเกม S28/วง F29 เดิม และรองรับสองกติกาบนแผนที่เดียวกัน
@@ -26,12 +26,15 @@ worldPos.y -= _BobCurvature * _CurvatureScale * dot(d, d)      // d = worldPos.x
 | ไฟล์ | หน้าที่ |
 | --- | --- |
 | `unity/Assets/Resources/Shaders/BobCurvedWorld.hlsl` | ฟังก์ชัน `BobCurvePosition` / `BobCurveNormal` ใช้ร่วมทุกวัสดุ |
-| `unity/Assets/Resources/Shaders/BobCurvedWorld.shader` | `BOB/CurvedWorld`: outline pass (inverted hull, หนาคงที่ตามพิกเซล) + ForwardBase toon lit (ramp 0.45/0.78, rim, ambient ฟ้า/ม่วง, dirt) เท่าสูตร `BOB/ToonLit` |
+| `unity/Assets/Resources/Shaders/BobCurvedWorld.shader` | `BOB/CurvedWorld`: outline pass (inverted hull, หนาคงที่ตามพิกเซล) + ForwardBase toon lit (ramp 0.45/0.78, **รับเงาจริง**, ambient trilight จากฉาก, sheen, rim, mottle, fog, dirt) + **ShadowCaster pass ที่ดัด vertex ตามความโค้ง** (ข้อ 3.1) |
+| `unity/Assets/Shaders/BobToonLit.shader` | `BOB/ToonLit` (ฮีโร่/พร็อพไม่โค้ง): สูตรเดียวกับ `BOB/CurvedWorld` แต่ไม่มี curvature — รับเงา, sheen, ambient จากฉาก, fog; shadow caster ใช้ FallBack `Diffuse` |
 | `unity/Assets/Scripts/TaskRace/BobCurvedWorldController.cs` | `BobCurvedWorld` (static: global, `Drop`, `Curve`, `CreateMaterial`) + `BobCurvedWorldController` (blend ค่าความโค้ง, context menu 0 / 0.010 / 0.018 / 0.026) |
 | `unity/Assets/Scripts/TaskRace/BobTaskRaceCamera.cs` | กล้องตามฮีโร่แบบ SmoothDamp + โฟกัสการ์ด S28 |
 | `unity/Assets/Scripts/TaskRace/TaskSpot.cs` | จุดงาน: วงแหวน F29, ป้ายพรีวิว, NEAR, TASK_LOCK, เก็บ progress 10 วิ, event ให้ HUD |
 | `unity/Assets/Scripts/TaskRace/TaskRaceModeManager.cs` | สลับ PureRace / BridgeRaid, กลุ่ม barrier/bridge, NavMeshObstacle/NavMeshLink, **สลับ NavMesh ที่ bake ไว้ต่อโหมด** (`ApplyNavMesh`), ปิดการ์ดเมื่อจอยเอียง > 70% |
-| `unity/Assets/Scripts/TaskRace/TaskRaceRound.cs` | ผู้อำนวยการรอบ: คลังมินิเกม 15 รายการ (T01–T15), สุ่มรายการงานแบบมี seed ตามสูตร doc 16 ข้อ 2.2, แจกงานให้สถานีตามหมวด + เติมงานใหม่เมื่อทำเสร็จ, ประมาณปริมาณงาน — ดูข้อ 14 |
+| `unity/Assets/Scripts/TaskRace/TaskRaceRound.cs` | ผู้อำนวยการรอบ: คลังมินิเกม 15 รายการ (T01–T15), สุ่มรายการงานแบบมี seed ตามสูตร doc 16 ข้อ 2.2, แจกงานให้สถานีตามหมวด + เติมงานใหม่เมื่อทำเสร็จ, ประมาณปริมาณงาน, เปิดรายการพร้อมสถานะให้ HUD (`Tasks`, `Version`) — ดูข้อ 14 |
+| `unity/Assets/Scripts/TaskRace/BobTaskRaceHud.cs` | HUD ของรอบ (ข้อ 10): การ์ด **ใบงาน** ตาม `TaskRaceRound.Tasks` (✓ เสร็จ / ⋯ ผู้ถือ TASK_LOCK / รอคิว), **แถบน้ำหนัก** + %, "ทีมฟ้า N/M" และปุ่มหลัก `ทำงาน: <ชื่อ>` ที่เปิด/ปลด TASK_LOCK — สร้างด้วย `BobUi` ใน canvas 1920×1080 match height |
+| `unity/Assets/Scripts/TaskRace/BobSkyBackdrop.cs` | ท้องฟ้าไล่สีแบบวาด (pale blue ล่าง → zenith น้ำเงินเข้ม, cloud puffs) เป็น quad unlit ติดกล้องที่ความลึก 70 u ปรับขนาดตาม FOV/aspect ทุก `LateUpdate`; `HideAndDontSave`, ไม่แคสต์เงา (ข้อ 3.1) |
 | `unity/Assets/Scripts/Editor/BobMapAssemblerEditor.cs` | หน้าต่าง `Tools > BOB > Task Race Map Assembler`: ประกอบแผนที่, clone Team A → Team B, สลับโหมด, validate |
 | `unity/Assets/Scripts/Editor/TaskRaceSceneBuilder.cs` | `Tools > BOB > Build Task Race Scene (solo / duo / team)` — สร้างซีนครบทั้งฉาก (กล้อง/แสง/ฮีโร่/แผนที่/สถานี/โหมด), ติด `NavMeshModifier` (ข้อ 6.1), bake NavMesh สองชุดต่อซีน แล้วเพิ่มเข้า Build Settings ตามลำดับ solo → duo → team; ขนาดและจำนวนสถานีดูข้อ 13 |
 | `unity/Assets/Scenes/NavMesh/{TaskRace,_Duo,_Team}_{PureRace,BridgeRaid}.asset` | NavMesh ที่ bake ไว้ล่วงหน้าต่อซีนต่อโหมด (สร้างใหม่ทุกครั้งที่ build ซีน) — `TaskRaceModeManager` สลับให้ตอนเปลี่ยนโหมด |
@@ -46,7 +49,31 @@ Namespace ของทั้งหมดคือ `Bob.TaskRace` (assembler อ�
 - แต่ละ material มี `_CurvatureScale` (0–3) เผื่อต้องการให้พื้นน้ำหรือฉากหลังโค้งมาก/น้อยกว่าพื้นเดิน
 - ค่าเริ่มต้น `0.018` (Ever-Planet look ที่กล้องสูง 8.5 u), `RuntimeInitializeOnLoadMethod` รีเซ็ตให้ทุกเพลย์
 - Outline pass ใช้ `n.xy` ใน view space แล้วบวกใน clip space ตาม `_ScreenParams` — เส้นคงที่ 2.5 px โดยประมาณ
-- `FallBack "Diffuse"` เพื่อให้ shadow caster ยังแบน (เงาไม่โค้งตาม ซึ่งมองไม่เห็นในมุมกล้องนี้)
+- ShadowCaster pass ของ `BOB/CurvedWorld` ใช้สูตรเดียวกับ `UnityClipSpaceShadowCasterPos` (normal offset จาก `unity_LightShadowBias.z`) แต่ทำบนตำแหน่งที่ **ดัดความโค้งแล้ว** — เงาที่ทอดจึงตรงกับ silhouette ที่เห็น ไม่ลอยอยู่บนระนาบแบน (ก่อนหน้านี้ใช้ FallBack `Diffuse` ซึ่งแบน)
+
+### 3.1 แสง เงา และบรรยากาศ (รอบที่ 2, 14 พ.ย. 2026)
+
+เป้าหมาย: ให้ฉาก ตัวละคร และพร็อพมีน้ำหนักแสงเงาแบบดิโอราม่าพาสเทล (Cheesecake Rush) ไม่แบนเป็นสีพิมพ์
+
+| องค์ประกอบ | ค่า | หมายเหตุ |
+| --- | --- | --- |
+| Ambient | `AmbientMode.Trilight` · sky `(0.56,0.70,0.94)` · equator `(0.82,0.80,0.82)` · ground `(0.42,0.36,0.50)` · intensity 1 | shader อ่าน `unity_AmbientSky/Equator/Ground` โดยตรง (ไม่ใช้สีคงที่ใน material แล้ว) — แก้ที่ `RenderSettings` ที่เดียวพอ |
+| ดวงอาทิตย์ | directional · `(1,0.96,0.88)` · intensity **0.85** · rotation `(46,75,0)` | มาจากหลังซ้ายและเบี้ยวออกจากแกนกล้องมาก เงาจึงทอดข้างวัตถุ (ไม่ซ่อนอยู่หลังวัตถุจากมุมกล้องต่ำ) |
+| เงา | Soft · strength 0.85 · bias 0.02 · normal bias 0.2 · near plane 0.2 | QualitySettings Ultra (distance 150, 4 cascade) ใช้ตอนเรนเดอร์ตรวจ |
+| Fog | Linear · สี `(0.80,0.89,0.98)` · 25 → 90 u | ดึงเกาะฝั่งไกลเข้าหาท้องฟ้าเล็กน้อย |
+| ท้องฟ้า | `BobSkyBackdrop` (quad 70 u ติดกล้อง) | ไม่มี skybox; clear colour เป็น backup `(0.80,0.90,0.98)` |
+
+ใน shader (ทั้ง `BOB/CurvedWorld` และ `BOB/ToonLit`):
+
+- **รับเงา**: `AutoLight.cginc` + `SHADOW_COORDS` / `TRANSFER_SHADOW_WPOS` (ใช้ตำแหน่งโลกที่ดัดโค้งแล้ว) / `SHADOW_ATTENUATION`
+- **เงานุ่มแบบพาสเทล**: `_ShadowTint` (ค่าเริ่มต้น `(0.55,0.58,0.78)`) เป็นสัดส่วนแสงหลักที่เหลือในเงา → เงาไม่ดำ สีโทนเย็น
+- **แสงรวม**: `lit = ambient * lerp(0.55, 0.18, t) + _LightColor0 * t * lerp(_ShadowTint, 1, shadow)` โดย `t` คือ ramp 3 ขั้นเดิม
+- **Sheen**: Blinn-Phong แคบ (`_Shininess` 24–32, `_Sheen` 0.06–0.10) ถูกคูณด้วย `t` และ `shadow` — เงาสะท้อนเล็ก ๆ บนขอบพร็อพ ไม่ทำให้ดูพลาสติก
+- **Mottle**: `_Mottle` (±3.5% ตาม world XZ, เฉพาะผิวที่หันขึ้น) กันพื้นหญ้าแบนเป็นสีเดียว
+- **Fog**: `#pragma multi_compile_fog` + `UNITY_APPLY_FOG` รวมถึง outline pass
+
+`TaskRaceSceneBuilder` ยังเปิด **cast/receive shadow ให้ทุก renderer ของแผนที่และฮีโร่** (`EnableShadows`) เพราะ prefab ที่ import มาปิดไว้ (`m_CastShadows: 0`) ตามลุคห้องเช่าเดิม — ถ้าไม่เปิด เงาจะไม่เกิดเลยแม้ shader จะรับเงาได้
+
 
 ปรับความโค้งสด ๆ: เลือก `TaskRaceMap/Systems` → คลิกขวา `BobCurvedWorldController` → `Curvature: ...`
 หรือเรียก `BobCurvedWorld.SetGlobal(v)` / `controller.SetCurvature(v)` (มี blend ตาม `blendSpeed`)
@@ -179,27 +206,37 @@ if (!ok && message != null) Toast(message);       // "มายด์กำล�
 10. **โหมด** — เลือก `PureRace` หรือ `BridgeRaid` ในหน้าต่าง (หรือใน Inspector ของ `TaskRaceMap/Systems`)
 11. **วัสดุโค้ง** — เปิด `Swap map materials to BOB/CurvedWorld` ก่อน Build หรือใช้ `M_BOB_CurvedMap.mat` ที่ตั้งไว้แล้ว (อย่าใช้ flat `_Color` เพราะจะไม่ตรงกับสี palette ของชิ้นอื่น)
 12. **NavMesh** — ทำอัตโนมัติในขั้น 1: `TaskRaceSceneBuilder` ติด `NavMeshModifier`, bake สองชุด (PureRace/BridgeRaid) ลง `Assets/Scenes/NavMesh/` แล้วผูกให้ manager (ข้อ 6.1) ถ้าแก้แผนที่ด้วยหน้าต่าง assembler เอง ให้รัน build ซีนซ้ำเพื่อ bake ใหม่
-13. **เชื่อม HUD** — ให้ HUD/เกมสมัคร event ของ `TaskSpot` (ดูข้อ 10) แล้วผูก `manager.joystickInput` กับค่าจอยจริง
+13. **HUD** — `TaskRaceSceneBuilder` สร้าง `TaskRaceHUD` และ `Bind(round)` ให้แล้ว (ข้อ 10) ถ้าประกอบแผนที่เองด้วยหน้าต่าง assembler ให้เพิ่ม `BobTaskRaceHud` เองแล้ว `Bind` กับ `TaskRaceRound` และผูก `manager.joystickInput` กับค่าจอยจริง
 14. กด **Validate map** และเล่นทดสอบทั้งสองโหมด
 
 ## 10. การเชื่อมกับ HUD / เกม
 
-```csharp
-void OnEnable()
-{
-    TaskSpot.AnyOpened += s => OpenMinigameCard(s);        // เปิดการ์ด S28 ของ task
-    TaskSpot.AnyClosed += s => CloseMinigameCard(s);
-    TaskRaceModeManager.ModeChanged += m => RefreshModeBadge(m);
-}
+### 10.1 `BobTaskRaceHud` (ผูกกับรอบแล้ว)
 
-// ทุกเฟรม: ปุ่มหลัก
-var near = TaskSpot.ActiveNear;
-mainButton.gameObject.SetActive(near != null && !near.IsOpen && !near.Done);
-if (near != null) mainLabel.text = "ทำงาน: " + near.TaskName;
+`TaskRaceSceneBuilder` วาง `TaskRaceHUD` ไว้ที่ root ของซีน (ไม่ผูกกับ `TaskRaceMap` เพราะ canvas ไม่ควรอยู่ใต้ transform ของแผนที่)
+และเรียก `hud.Bind(round)` + `hud.Build(cam)` ตอนสร้างซีน — ฉากในเอดิเตอร์จึงแสดง HUD จริง ไม่ต้องกด Play
+
+| ส่วน | ที่มา | ลักษณะ |
+| --- | --- | --- |
+| หัวการ์ด | `round.DoneCount` / `TaskCount` | `ใบงาน · ทีมฟ้า 3/6` (ตัวเลข = จำนวนงานเสร็จ ไม่ใช่น้ำหนัก ตาม doc 16 ข้อ 2.2) |
+| แถบน้ำหนัก | `round.DoneWeight` / `TotalWeight` | เติมด้วย `MoveTowards` 0.75/วิ ไม่กระโดด, สี primary → success, มี `%` ข้างแถบ |
+| แถวรายการ | `round.Tasks` (ลำดับตามแผน, T04 แรก) | วงกลมหมวด + ชื่องาน + `×น้ำหนัก`; `✓` = เสร็จ, `⋯ <ชื่อผู้ถือล็อก> · ชื่องาน` = มีคนเปิดการ์ด, `รอคิว` = งานยังไม่ถึงสถานี |
+| ปุ่มหลัก | `TaskSpot.ActiveNear` | `ทำงาน: <ชื่อ>` → เรียก `TryOpen` (ได้ TASK_LOCK); ระหว่างเปิด = `กำลังทำ: <ชื่อ>` กดซ้ำ = `Close(false)` (progress คง 10 วิ); โดนบล็อก = toast แดงจาก `Blocked` |
+| ท้ายการ์ด | `round.Summary` | บรรทัดเดียวกับ log: จำนวนงาน, น้ำหนัก, `cards`, `workload` |
+
+- HUD อ่าน `round.Version` ทุกเฟรม — ผู้อำนวยการรอบ bump ค่านี้เมื่อมีงานใหม่ขึ้นสถานี, มีคนล็อก/ปลดล็อก, หรือมีงานเสร็จ จึงสร้างแถวใหม่เฉพาะตอนเปลี่ยน (แถบกับ % อัปเดตทุกเฟรม)
+- Canvas เป็น `ScreenSpaceCamera` ที่ผูกกับ `Camera.main` (ไม่ใช่ Overlay) เพื่อให้ `TaskRaceVerify` สลับกล้องชั่วคราวแล้วถ่ายภาพ `-hud.png` ได้ — Overlay จะไม่ถูกวาดลง RenderTexture
+- ยังไม่ผูกกับ `TaskRaceModeManager.joystickInput`/`ModeChanged` (badge โหมด) — ดูข้อ 11
+
+### 10.2 สัญญาที่เหลือให้เกม layer
+
+```csharp
+TaskSpot.AnyOpened += s => OpenMinigameCard(s);        // การ์ด S28 ของ task
+TaskSpot.AnyClosed += s => CloseMinigameCard(s);
 
 // ส่ง progress จากการ์ดกลับเข้าจุดงาน
 spot.AddProgress(delta);          // 0..1
-spot.Close(completed: true);      // จบงาน
+spot.Close(completed: true);      // จบงาน → รอบนับน้ำหนักและเติมงานถัดไปให้สถานี
 ```
 
 `TaskRaceModeManager.joystickInput` เป็น `Func<Vector2>` — ตั้งเป็น `() => joystick.Value` เพื่อให้กฎ "จอย > 70% ปิดการ์ด" ทำงาน
@@ -211,8 +248,8 @@ spot.Close(completed: true);      // จบงาน
 - หน้าตัดของเกาะ B สูงกว่าเกาะ A มาก (12.6 vs 4.8 u จากโมเดล) — พื้นเล่นเท่ากันที่ y = 0 แต่ฐานหินล่างต่างกัน
 - เกาะ B (`land2`) มีต้นไม้ใหญ่ในตัวโมเดลที่ยื่นมาทับขอบตะวันออกของ `Field` ในโหมด duo/team — ไม่มี collider (เดินทะลุได้) แต่บังพื้นที่ตากว้าง ถ้าต้องการสนามโล่งต้องเปลี่ยนเกาะ B เป็น prefab เดียวกับ A หรือตัดเนินไม้ออกจาก mesh
 - ตัวละคร rig ใหม่ 3 ตัว (`bob_hero_sweep/spray/press` ใน Rig) มี skin แต่ **ไม่มี animation clip** และไม่มี rig ของ bubble — ฮีโร่ในซีนใช้ `SK_hero_sweep` แบบนิ่ง ยังไม่มีแอนิเมชันเดิน
-- HUD/กติกายังไม่ได้ผูกกับ event เหล่านี้ในซีนจริง (ข้อ 10 เป็นสัญญาที่ต้องต่อ) — รวมถึง **รายการงาน/แถบน้ำหนัก** ของ `TaskRaceRound` ที่ยังไม่ถูกวาดบนจอ
-- `TaskRaceRound` ยังไม่มีคู่แข่ง/คราบฉุกเฉิน T16 และยังไม่รับ seed จาก server — ตอนนี้ทั้งสองเกาะใช้ seed เดียวกันในเครื่องเดียว (ข้อ 14)
+- **การ์ดมินิเกม S28 ยังไม่มี** — ปุ่มหลักของ HUD จึงทำได้แค่เปิด/ปลด TASK_LOCK (`TryOpen` / `Close(false)`); งานจะนับเป็นเสร็จเมื่อเกม layer เรียก `spot.Close(completed: true)` หลังจบมินิเกม (ข้อ 10.2)
+- `TaskRaceRound` ยังไม่มีคู่แข่ง/คราบฉุกเฉิน T16 และยังไม่รับ seed จาก server — ตอนนี้ทั้งสองเกาะใช้ seed เดียวกันในเครื่องเดียว (ข้อ 14) จึงไม่มีแถบคู่แข่งบน HUD
 - ยังไม่มี server contract ของ Task Race map (`TASK_BEGIN`/`TASK_LOCK` ตาม doc 16) — TASK_LOCK รอบนี้เป็นฝั่ง client
 
 ## 12. การตรวจสอบ
@@ -257,6 +294,19 @@ nav PureRace: hero -> Team B spot · path=True status=PathPartial ...           
 แล้วได้ภาพ
 `Logs/taskrace{-duo,-team}-play.png` (มุมกล้องจริงของฮีโร่), `...-preview.png` (มุมกลาง), `...-wide.png` (ภาพรวมสองเกาะ)
 
+**แสง เงา และท้องฟ้า (ข้อ 3.1)** — build log ต้องมี `cast/receive shadows on for N renderer(s) under TaskRaceMap`
+และอีกบรรทัดสำหรับ `Player` (solo ≈ 86 + 2, duo ≈ 68 + 2, team ≈ 122 + 2) — ถ้าไม่มี เงาจะไม่เกิดแม้ shader รับเงาได้
+ในภาพ `-preview.png` / `-wide.png` ต้องเห็นเงาของฮีโร่ ลูกบาศก์เคาน์เตอร์ และพุ่มไม้ทอดไปทางขวาของวัตถุบนพื้นหญ้า
+และเห็นฟ้าตั้งแต่ pale blue ด้านล่างถึงน้ำเงินเข้มด้านบนพร้อม cloud puffs (ไม่มีแถบพื้นหลังแบนสีเดียว และไม่มีขอบ quad ตรงกลางภาพ)
+ถ้าเห็นเงาแต่แบนเป็นวงกลมเทา: ยังใช้ FallBack shadow caster ของวัตถุที่ import มา (ปิด `m_CastShadows`) — เรียก `EnableShadows` ใน builder อีกครั้ง
+ถ้าเงาเป็นเส้นหยัก/จุด (shadow acne) บนพื้นหญ้า: เพิ่ม `shadowNormalBias` ของดวงอาทิตย์ (ปัจจุบัน 0.2)
+
+**HUD (ข้อ 10)** — verify log ต้องมี `[TaskRaceVerify] HUD: N task row(s), canvas ScreenSpaceCamera` (N = 6 / 7 / 9 ตามโหมด)
+และได้ภาพ `Logs/taskrace{-duo,-team}-hud.png` ที่เห็นการ์ดใบงานมุมซ้ายบน: ชื่อ `ใบงาน · ทีมฟ้า 0/N`, แถว `T04 จัดรถเข็นตามสูตร ×2` มาก่อนเสมอ,
+แถวที่สถานียังไม่หยิบมาจะขึ้นว่า `รอคิว`, แถบน้ำหนัก 0% (verify เริ่มรอบใหม่จาก seed ที่ตั้งไว้ จึงยังไม่มีงานเสร็จ)
+ถ้า N = 0 หรือการ์ดว่าง: `TaskRaceRound` ไม่ได้เริ่มรอบ (autoStart ปิด หรือ StartRound ล้มเหลว) หรือ `hud.Bind(round)` ไม่ได้ถูกเรียกตอน build ซีน
+ถ้าการ์ดทับกัน/สูงผิด: layout ในเอดิเตอร์ยังไม่ rebuild — `Build()` เรียก `Canvas.ForceUpdateCanvases` + `LayoutRebuilder` ให้แล้ว; ถ้าแก้ layout เองให้เรียกซ้ำ
+
 เช็กลิสต์ในเกม:
 
 - เปลี่ยน `curvature` 0 → 0.018 → 0.026 แล้วพื้น/กล้อง/ป้าย/วงแหวนโค้งพร้อมกันโดยไม่มี collider เพี้ยน
@@ -292,7 +342,7 @@ nav PureRace: hero -> Team B spot · path=True status=PathPartial ...           
 - ทางเลือกประหยัด: ใช้ 15/20 ทั้ง Duo และ Team แล้วเพิ่มสถานีเป็น 6 จุด (เฟรมกล้องเท่ากันทุกโหมด แต่จุดงานจะแน่นขึ้นเป็น ~3.5 u ระหว่างเคาน์เตอร์)
 - ทุกซีนถูกเพิ่มเข้า Build Settings อัตโนมัติ (ต่อจาก `TaskRace.unity`) — index 0 ยังเป็นซีนเกมเดิม ไม่เปลี่ยน
 - **จุดเกิดฮีโร่ = จุดในครึ่งใต้ของสนามที่ห่างสถานีมากที่สุด** (`ChooseSpawn`, สแกนกริด 0.5 u) เพราะจุดเดิม `z = -0.2 × islandSize` ไปทับสถานี S6 ของโหมด team (ห่างแค่ 0.75 u ทำให้เริ่มเกมในวง NEAR) — log รายงาน `hero spawn (x,z), nearest station d=...`
-- ตรวจทั้งสามซีน: `TaskRaceVerify.Run` / `RunDuo` / `RunTeam` → `Logs/taskrace{,-duo,-team}-{play,preview,wide}.png`
+- ตรวจทั้งสามซีน: `TaskRaceVerify.Run` / `RunDuo` / `RunTeam` → `Logs/taskrace{,-duo,-team}-{play,preview,wide,hud}.png`
 
 ## 14. ปริมาณงานต่อโหมด + กลไกการสุ่มมินิเกม
 
@@ -326,8 +376,8 @@ nav PureRace: hero -> Team B spot · path=True status=PathPartial ...           
 - แต่ละสถานีหยิบงานแรกในรายการที่ **หมวดตรงกับตัวเอง** ก่อน → ถ้าไม่มี หยิบงาน Everyone → ถ้ายังไม่มีหยิบตัวแรกที่เหลือ
 - ทำเสร็จแล้วสถานี **เติมงานถัดไปของฝั่งตัวเองทันที** (`Assigned → ResetTask → Configure → SetTaskActive(true)`) จึงใช้ 3 สถานีรับ 6 งาน (solo) และ 6 สถานีรับ 9 งาน (team) ได้
 - งานในรายการหมด → `SetTaskActive(false)`: วงแหวน/ป้ายหาย กดเปิดไม่ได้ (`TryOpen` คืน `false` + ข้อความ `จุดนี้ไม่มีงานแล้ว`)
-- ทั้งสองเกาะได้รายการเดียวกันและเติมพร้อมกัน → การแข่งยังยุติธรรม; `DoneCount` / `DoneWeight` ของฝั่ง A คือตัวเลขบน HUD (ยังไม่ผูก UI)
-- ทำครบทุกงาน → `RoundWon` (log `won: 9/9 tasks, weight 15/15`)
+- ทั้งสองเกาะได้รายการเดียวกันและเติมพร้อมกัน → การแข่งยังยุติธรรม; `DoneCount` / `DoneWeight` ของฝั่ง A คือตัวเลขบน HUD (`ใบงาน · ทีมฟ้า N/M`) และแถบน้ำหนัก (`BobTaskRaceHud`, ข้อ 10)
+- ครบทุกงาน → `RoundWon` (log `won: 9/9 tasks, weight 15/15`)
 
 ### 14.4 ค่าใน Inspector
 

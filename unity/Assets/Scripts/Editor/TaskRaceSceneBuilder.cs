@@ -71,27 +71,44 @@ namespace Bob.EditorTools
             Directory.CreateDirectory("Assets/Scenes");
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
+            // The trilight ambient is what BOB/CurvedWorld and BOB/ToonLit read, so this one block lights the map, the
+            // props and the heroes. Warm sky above, a pale horizon, a violet bounce under the grass.
             RenderSettings.skybox = null;
             RenderSettings.ambientMode = AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.68f, 0.82f, 0.96f);
-            RenderSettings.ambientEquatorColor = new Color(0.82f, 0.86f, 0.9f);
-            RenderSettings.ambientGroundColor = new Color(0.45f, 0.40f, 0.55f);
+            RenderSettings.ambientSkyColor = new Color(0.56f, 0.70f, 0.94f);
+            RenderSettings.ambientEquatorColor = new Color(0.82f, 0.80f, 0.82f);
+            RenderSettings.ambientGroundColor = new Color(0.42f, 0.36f, 0.50f);
+            RenderSettings.ambientIntensity = 1f;
 
+            // A little fog pulls the far islands into the sky and stops the curved horizon from ending on a hard line.
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogColor = new Color(0.80f, 0.89f, 0.98f);
+            RenderSettings.fogStartDistance = 25f;
+            RenderSettings.fogEndDistance = 90f;
+
+            // The key light: behind-left and well off the camera axis, so a cast shadow lands beside each counter,
+            // prop and hero instead of hiding behind it from the low front-on play camera.
             var sunGo = new GameObject("Sun", typeof(Light));
             var sun = sunGo.GetComponent<Light>();
             sun.type = LightType.Directional;
             sun.color = new Color(1f, 0.96f, 0.88f);
-            sun.intensity = 1.15f;
+            sun.intensity = 0.85f;
             sun.shadows = LightShadows.Soft;
-            sunGo.transform.rotation = Quaternion.Euler(48f, -35f, 0f);
+            sun.shadowStrength = 0.85f;
+            sun.shadowBias = 0.02f;
+            sun.shadowNormalBias = 0.2f;
+            sun.shadowNearPlane = 0.2f;
+            sunGo.transform.rotation = Quaternion.Euler(46f, 75f, 0f);
 
             var camGo = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener)) { tag = "MainCamera" };
             var cam = camGo.GetComponent<Camera>();
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.72f, 0.88f, 0.98f);
+            cam.backgroundColor = new Color(0.80f, 0.90f, 0.98f);
             cam.nearClipPlane = 0.1f;
             cam.farClipPlane = 400f;
             camGo.transform.position = new Vector3(-islandGap * 0.5f, 9f, -7f);
+            camGo.AddComponent<BobSkyBackdrop>();
 
             var hero = BuildHero(ChooseSpawn(-islandGap * 0.5f, islandSize, stations));
 
@@ -110,6 +127,10 @@ namespace Bob.EditorTools
             float k = islandSize / 12f;
             foreach (var spec in stations) AddStation(propsA, spec, k, mat);
             assembler.CloneTeamA();
+            // The prop/character prefabs ship with shadows off (the rental room's painted look), so a Task Race scene
+            // has to switch them back on or no cast shadow ever reaches the grass.
+            EnableShadows(map);
+            EnableShadows(hero);
 
             var rig = camGo.GetComponent<BobTaskRaceCamera>();
             if (rig != null) rig.SetTarget(hero.transform, true);
@@ -122,6 +143,13 @@ namespace Bob.EditorTools
                 var round = systems.gameObject.AddComponent<TaskRaceRound>();
                 round.ConfigureRound(players, 1, 1975);
                 round.StartRound(1975);
+
+                // The HUD of docs 24 section 10: task list, weight bar and the main context button. Built here so the
+                // scene carries it and the verify renders show the list.
+                var hudGo = new GameObject("TaskRaceHUD");
+                var hud = hudGo.AddComponent<BobTaskRaceHud>();
+                hud.Bind(round);
+                hud.Build(cam);
             }
             else Debug.LogWarning("[TaskRaceScene] Systems object missing: no TaskRaceRound; stations keep their fixed tasks.");
 
@@ -144,6 +172,18 @@ namespace Bob.EditorTools
             Debug.Log($"[TaskRaceScene] {scenePath} built: {spots.Length} task spot(s), island {islandSize} u, gap {islandGap} u, " +
                       $"map prefabs {(assembler.islandPrefab != null ? "real" : "placeholder")}, added to Build Settings.");
             Selection.activeGameObject = map;
+        }
+
+        /// <summary>Turn cast/receive shadows back on for everything under `root`.</summary>
+        static void EnableShadows(GameObject root)
+        {
+            var renderers = root.GetComponentsInChildren<Renderer>(true);
+            foreach (var r in renderers)
+            {
+                r.shadowCastingMode = ShadowCastingMode.On;
+                r.receiveShadows = true;
+            }
+            Debug.Log($"[TaskRaceScene] cast/receive shadows on for {renderers.Length} renderer(s) under {root.name}.");
         }
 
         /// <summary>Only the Field slabs and the bridge decks may enter the NavMesh; hedges, cliffs and decor may not.</summary>
