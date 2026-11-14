@@ -224,9 +224,11 @@ Title and lobby screens now sit on the GDD-themed Leonardo room pictures (`Sprit
 
 ## Android APK (prototype v1)
 
-Build: `Unity.exe -batchmode -quit -projectPath unity -executeMethod Bob.EditorTools.BobAndroidBuild.BuildApk` (or menu **Bob > Android > Build APK**). Output `Builds/BOB-prototype-v1.apk` (git-ignored; debug-signed, ARM64, IL2CPP, landscape, package `com.bob.battleofthebrooms`, min API 24).
+Build: `Unity.exe -batchmode -quit -projectPath unity -executeMethod Bob.EditorTools.BobAndroidBuild.BuildApk` (or menu **Bob > Android > Build APK**). Output `Builds/BOB-prototype-v1.apk` (git-ignored; debug-signed, ARM64, IL2CPP, landscape, package `com.bob.battleofthebrooms`, min API 26).
 
 Install: copy the APK to the phone and open it (allow "install unknown apps"), or `adb install -r BOB-prototype-v1.apk`.
+
+**Firebase App Distribution (project `bob-preprod`)**: `bash distribute-android.sh` bumps `AndroidBundleVersionCode`, builds and uploads in one go (`FIREBASE_GROUPS=<group> ...` releases to testers straight away, `--no-bump` rebuilds at the current code). One-time: `npm i -g firebase-tools && firebase login`, and create the tester group in the Firebase console. The packaged app is `1:438462393037:android:76c94b4645660e52e69784` for package `com.bob.battleofthebrooms`; `unity/Assets/google-services.json` holds the same client (keep it out of public forks, and restrict the key in Google Cloud Console to this package name + the release keystore's SHA-1). Firebase rejects a repeated version code, which is why the bump is part of the script and not a manual step.
 Server: the game plays offline without a server. For online, start Docker + `start-server.ps1` on the PC, put the phone on the same Wi-Fi, allow port 7350 in Windows Firewall, then in the game open Settings and enter the PC's LAN IP (`ipconfig`, e.g. 192.168.x.x).
 
 Each round now sits on a GDD-themed room picture (round 1 rental room, round 2 condo, round 3 coffee shop; kitchen is ready for round 4). The pause button has a 144u touch area (`BobHitArea`).
