@@ -2564,36 +2564,36 @@
   },
   {
    "path": "Sprites/UI/Menu/menu_equip_broom",
-   "w": 305,
+   "w": 217,
    "h": 384,
    "frames": 1,
    "group": "ui"
   },
   {
    "path": "Sprites/UI/Menu/menu_equip_mop",
-   "w": 245,
+   "w": 159,
    "h": 384,
    "frames": 1,
    "group": "ui"
   },
   {
    "path": "Sprites/UI/Menu/menu_equip_sponge",
-   "w": 322,
+   "w": 348,
    "h": 384,
    "frames": 1,
    "group": "ui"
   },
   {
    "path": "Sprites/UI/Menu/menu_equip_spray",
-   "w": 190,
-   "h": 384,
+   "w": 165,
+   "h": 336,
    "frames": 1,
    "group": "ui"
   },
   {
    "path": "Sprites/UI/Menu/menu_equip_hat",
    "w": 384,
-   "h": 342,
+   "h": 275,
    "frames": 1,
    "group": "ui"
   },

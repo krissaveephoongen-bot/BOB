@@ -8,6 +8,7 @@
 // The three modes share every rule; only the map size and the number of stations differ (docs 24 section 13).
 using System.IO;
 using System.Linq;
+using Bob.Game;
 using Bob.TaskRace;
 using Unity.AI.Navigation;
 using UnityEditor;
@@ -177,6 +178,8 @@ namespace Bob.EditorTools
                 var hudGo = new GameObject("TaskRaceHUD");
                 var hud = hudGo.AddComponent<BobTaskRaceHud>();
                 hud.Bind(round);
+                // No BobGame in this scene to set the static, so the row icons need the library handed over here.
+                hud.BindArt(AssetDatabase.LoadAssetAtPath<BobArtLibrary>("Assets/Art/BobArtLibrary.asset"));
                 hud.Build(cam);
             }
             else Debug.LogWarning("[TaskRaceScene] Systems object missing: no TaskRaceRound; stations keep their fixed tasks.");

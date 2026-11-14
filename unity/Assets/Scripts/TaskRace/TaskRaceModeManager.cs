@@ -131,6 +131,7 @@ namespace Bob.TaskRace
             team == TeamId.TeamB ? teamBPoints : team == TeamId.TeamA ? teamAPoints : 0;
 
         public int LocalPoints => PointsOf(localTeam);
+        public int RivalPoints => PointsOf(OtherTeam);
 
         void Awake()
         {

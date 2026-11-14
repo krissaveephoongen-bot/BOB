@@ -34,6 +34,10 @@ namespace Bob.TaskRace
         [Tooltip("Display name in the TASK_LOCK toast (docs 16 section 2.1).")]
         [SerializeField] string playerName = "ฉัน";
 
+        [Header("Art")]
+        [Tooltip("Row category icons; the scene builder wires Assets/Art/BobArtLibrary.asset.")]
+        [SerializeField] BobArtLibrary art;
+
         [Header("Layout in canvas units, 1920x1080 match height (docs 11)")]
         [SerializeField] float cardWidth = 560f;
         [SerializeField] float rowHeight = 54f;
@@ -58,7 +62,7 @@ namespace Bob.TaskRace
         const float PadL = 18f, PadR = 18f, PadT = 14f, PadB = 14f;
         const float HeadH = 56f, BarH = 26f, BlockGap = 10f;
         const float FooterH = 104f;
-        const float DiscW = 24f, StatusW = 96f, WeightW = 56f, ColGap = 8f;
+        const float DiscW = 40f, StatusW = 96f, WeightW = 56f, ColGap = 8f;
 
         Canvas canvas;
         RectTransform page, card, fill, rowsRoot, footer;
@@ -67,12 +71,14 @@ namespace Bob.TaskRace
         TMP_Text mainLabel;
 
         RectTransform topBar, timeFill;
-        TMP_Text timerText, pointsText, modeText, rivalText;
+        TMP_Text timerText, pointsText, rivalText, teamPctText, modeText;
 
         Image cardDim, cardPanel, cardTrack;
         RectTransform cardFill;
-        TMP_Text cardTitle, cardPercent, cardStep, cardHint, cardClock;
+        TMP_Text cardTitle, cardPercent, cardStep, cardHint, cardClock, cardChip;
+        RectTransform cardChipRoot;
         Button cardClose;
+        float cardChipUntil;
         BobMinigameHost mini;
         bool cardInteractive;
 
@@ -113,9 +119,13 @@ namespace Bob.TaskRace
         /// <summary>Scene builder / verify: point the HUD at a round without relying on Awake.</summary>
         public void Bind(TaskRaceRound value) => round = value;
 
+        /// <summary>Scene builder: the art library behind the row icons (the Task Race scene has no BobGame to set it).</summary>
+        public void BindArt(BobArtLibrary value) { art = value; if (art != null) BobUi.Art = art; }
+
         /// <summary>Build (or rebuild) the canvas. Safe to call in the editor so the scene carries the HUD.</summary>
         public void Build(Camera cam = null)
         {
+            if (art != null) BobUi.Art = art;
             if (round == null) round = FindAnyObjectByType<TaskRaceRound>();
             if (manager == null) manager = FindAnyObjectByType<TaskRaceModeManager>();
             Hook();
@@ -237,9 +247,11 @@ namespace Bob.TaskRace
             }
             card = fill = rowsRoot = footer = topBar = timeFill = debugBar = debugToggle = null;
             mainButton = null; mainLabel = null;
-            timerText = pointsText = modeText = rivalText = null;
+            timerText = pointsText = rivalText = teamPctText = modeText = null;
             cardDim = cardPanel = cardTrack = null; cardFill = null;
-            cardTitle = cardPercent = cardStep = cardHint = cardClock = null; cardClose = null;
+            cardTitle = cardPercent = cardStep = cardHint = cardClock = cardChip = null; cardClose = null;
+            cardChipRoot = null;
+            cardChipUntil = 0f;
             mini = null; cardInteractive = false;
             touch = null; resultRoot = null; hasShownResult = false;
             debugModeLabel = null;
@@ -325,19 +337,33 @@ namespace Bob.TaskRace
 
             var tasks = round.Tasks;
             RowCount = tasks.Count;
-            for (int i = 0; i < tasks.Count; i++) BuildRow(tasks[i], i);
+            int nextIndex = -1;
+            for (int i = 0; i < tasks.Count; i++) if (!tasks[i].Done) { nextIndex = i; break; } // highlight the next job
+            for (int i = 0; i < tasks.Count; i++) BuildRow(tasks[i], i, i == nextIndex);
             FitCard(tasks.Count);
         }
 
-        void BuildRow(TaskEntry entry, int index)
+        void BuildRow(TaskEntry entry, int index, bool next)
         {
             var row = BobUi.Rect("Task_" + entry.Spec.Id, rowsRoot);
             BobUi.Pin(row, new Vector2(0f, 1f), new Vector2(0f, 1f),
                 new Vector2(0f, -index * (rowHeight + rowGap)), new Vector2(ContentW, rowHeight));
 
-            var disc = BobUi.Disc(row, TaskSpot.CategoryColour(entry.Spec.Category), DiscW);
-            BobUi.Pin((RectTransform)disc.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
-                Vector2.zero, new Vector2(DiscW, DiscW));
+            if (next) // the eye lands on the one job to do next
+            {
+                var hi = BobUi.Panel(row, new Color(T.accent.r, T.accent.g, T.accent.b, 0.16f), null, "Next");
+                BobUi.Stretch((RectTransform)hi.transform);
+                hi.raycastTarget = false;
+                var stripe = BobUi.Panel(row, T.accent, null, "NextStripe");
+                BobUi.Pin((RectTransform)stripe.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
+                    Vector2.zero, new Vector2(6f, rowHeight));
+                stripe.raycastTarget = false;
+            }
+
+            // category icon instead of a bare colour dot (clear of the 6 px "next" stripe)
+            var icon = BobUi.Img(row, CategoryIcon(entry.Spec.Category), 28, TaskSpot.CategoryColour(entry.Spec.Category));
+            BobUi.Pin(icon.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
+                new Vector2(9f, 0f), new Vector2(28f, 28f));
 
             float nameW = ContentW - DiscW - ColGap - StatusW - ColGap - WeightW - ColGap;
             var name = BobUi.Label(row, NameText(entry), 32, NameColour(entry));
@@ -368,8 +394,17 @@ namespace Bob.TaskRace
                 new Vector2(PadL, -footerTop), new Vector2(ContentW, FooterH));
         }
 
+        static string CategoryIcon(TaskCategory c) => c switch
+        {
+            TaskCategory.Sweep => "icon_skill_sweep",
+            TaskCategory.Wash => "icon_skill_bubble",
+            TaskCategory.Scrub => "icon_skill_press",
+            TaskCategory.Spray => "icon_skill_spray",
+            _ => "icon_ability",
+        };
+
         string NameText(TaskEntry entry) =>
-            entry.Done ? $"<color=#{Hex(T.success)}>✓</color> {entry.Spec.Name}"
+            entry.Done ? $"<color=#{Hex(T.success)}>✓</color> <s>{entry.Spec.Name}</s>"
             : entry.Locked ? $"<color=#{Hex(T.accent)}>⋯</color> {entry.Spec.Name}"
             : entry.Spec.Name;
 
@@ -403,28 +438,35 @@ namespace Bob.TaskRace
         void BuildTopBar()
         {
             topBar = (RectTransform)BobUi.Panel(page, T.surface, null, "TopBar").transform;
-            BobUi.Pin(topBar, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0f, -cardInset.y), new Vector2(700f, 96f));
+            // Clear of the task card on the left: drawn at the screen centre the two cream panels overlapped and
+            // the seam read as a rendering slip.
+            BobUi.Pin(topBar, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(cardWidth + cardInset.x + 12f, -cardInset.y), new Vector2(940f, 124f));
 
-            timerText = BobUi.Label(topBar, "เวลา 02:00", 40, T.ink, TextAnchor.MiddleLeft, FontStyle.Bold);
+            // the clock is the loudest thing on screen (S28/HUD: "see it in half a second")
+            timerText = BobUi.Label(topBar, "เวลา 02:00", 48, T.ink, TextAnchor.MiddleLeft, FontStyle.Bold);
             BobUi.Pin(timerText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f),
-                new Vector2(PadL, -8f), new Vector2(300f, 48f));
+                new Vector2(PadL, -8f), new Vector2(330f, 54f));
 
-            modeText = BobUi.Label(topBar, "Bridge Raid", 20, T.inkMuted, TextAnchor.MiddleLeft);
+            modeText = BobUi.Label(topBar, "Bridge Raid", 22, T.inkMuted, TextAnchor.MiddleLeft);
             BobUi.Pin(modeText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f),
-                new Vector2(PadL + 2f, -56f), new Vector2(470f, 26f));
+                new Vector2(PadL + 2f, -64f), new Vector2(470f, 26f));
 
-            pointsText = BobUi.Label(topBar, "เรา 0 · คู่แข่ง 0", 30, T.ink, TextAnchor.MiddleRight, FontStyle.Bold);
+            pointsText = BobUi.Label(topBar, "คะแนนทีม 0", 30, T.ink, TextAnchor.MiddleRight, FontStyle.Bold);
             BobUi.Pin(pointsText.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f),
-                new Vector2(-PadR, -8f), new Vector2(380f, 48f));
+                new Vector2(-PadR, -8f), new Vector2(330f, 40f));
 
-            rivalText = BobUi.Label(topBar, "", 22, T.inkMuted, TextAnchor.MiddleRight);
+            rivalText = BobUi.Label(topBar, "คู่แข่ง 0", 24, T.inkMuted, TextAnchor.MiddleRight);
             BobUi.Pin(rivalText.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f),
-                new Vector2(-PadR, -56f), new Vector2(300f, 26f));
+                new Vector2(-PadR, -50f), new Vector2(380f, 26f));
+
+            teamPctText = BobUi.Label(topBar, "ทีมเรา 0%", 22, T.inkMuted, TextAnchor.MiddleRight, FontStyle.Bold);
+            BobUi.Pin(teamPctText.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f),
+                new Vector2(-PadR, -78f), new Vector2(310f, 26f));
 
             var track = BobUi.Panel(topBar, T.surfaceCream, null, "ClockTrack");
             BobUi.Pin((RectTransform)track.transform, new Vector2(0f, 0f), new Vector2(0f, 0f),
-                new Vector2(PadL, 6f), new Vector2(700f - PadL - PadR, 8f));
+                new Vector2(PadL, 8f), new Vector2(940f - PadL - PadR, 8f));
             timeFill = BobUi.Rect("ClockFill", track.transform);
             timeFill.anchorMin = new Vector2(0f, 0f);
             timeFill.anchorMax = new Vector2(1f, 1f);
@@ -440,9 +482,10 @@ namespace Bob.TaskRace
             if (manager == null)
             {
                 timerText.text = "เวลา 02:00";
-                pointsText.text = "เรา 0 · คู่แข่ง 0";
-                modeText.text = "";
-                rivalText.text = "";
+                pointsText.text = "คะแนนทีม 0";
+                if (rivalText != null) rivalText.text = "คู่แข่ง 0";
+                if (teamPctText != null) teamPctText.text = "ทีมเรา 0%";
+                modeText.text = "ไม่มี TaskRaceModeManager";
                 return;
             }
 
@@ -451,9 +494,16 @@ namespace Bob.TaskRace
             timerText.text = $"เวลา {secs / 60:00}:{secs % 60:00}";
             timerText.color = r <= 10f ? T.danger : manager.BridgeRaid && r <= manager.warningAtRemaining ? T.warn : T.ink;
 
-            pointsText.text = $"เรา {manager.LocalPoints} · คู่แข่ง {manager.PointsOf(manager.OtherTeam)}";
-            if (round != null)
-                rivalText.text = $"คู่แข่งเสร็จ {round.DoneCountOf(manager.OtherTeam)}/{round.TaskCount}";
+            pointsText.text = "คะแนนทีม " + manager.LocalPoints;
+            if (rivalText != null)
+                rivalText.text = round != null
+                    ? $"คู่แข่ง {manager.RivalPoints} · เสร็จ {round.DoneCountOf(manager.OtherTeam)}/{round.TaskCount}"
+                    : "คู่แข่ง " + manager.RivalPoints;
+            if (teamPctText != null)
+            {
+                float p = round != null && round.TotalWeight > 0 ? round.DoneWeight / (float)round.TotalWeight : 0f;
+                teamPctText.text = "ทีมเรา " + Mathf.RoundToInt(p * 100f) + "%";
+            }
             if (footerText != null) footerText.text = AdviceLine();
             if (debugModeLabel != null) debugModeLabel.text = manager.BridgeRaid ? "โหมด: Raid" : "โหมด: Pure";
 
@@ -623,6 +673,19 @@ namespace Bob.TaskRace
             BobUi.Pin(cardPercent.rectTransform, new Vector2(1f, 0f), new Vector2(1f, 0f),
                 new Vector2(-40f, 102f), new Vector2(180f, 40f));
 
+            // One-time, two-second chip: how to close the card (docs 16: teach in the doing). It sits on the
+            // instruction line at the foot of the play area, never on the play area itself, and is its own
+            // container because a uGUI child draws over its parent's text (the plate used to bury the label).
+            cardChipRoot = BobUi.Rect("CardChip", panel);
+            BobUi.Pin(cardChipRoot, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(0f, 100f), new Vector2(508f, 48f));
+            var chipBg = BobUi.Panel(cardChipRoot, T.ink, null, "ChipBg");
+            BobUi.Stretch((RectTransform)chipBg.transform);
+            chipBg.raycastTarget = false;
+            cardChip = BobUi.Label(cardChipRoot, "ลากจอยเพื่อปิดการ์ด", 26, T.surface, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Stretch((RectTransform)cardChip.transform, 12f, 0f, 12f, 0f);
+            cardChipRoot.gameObject.SetActive(false);
+
             HideCard();
         }
 
@@ -635,6 +698,12 @@ namespace Bob.TaskRace
             cardElapsed = 0f;
             cardInteractive = !sabotage && mini != null &&
                               mini.Begin(spot, spot.TaskId, round != null ? round.Difficulty : 1);
+
+            if (cardChipRoot != null)
+            {
+                cardChipUntil = Time.unscaledTime + 2f;
+                cardChipRoot.gameObject.SetActive(true);
+            }
 
             if (cardInteractive)
             {
@@ -678,6 +747,8 @@ namespace Bob.TaskRace
 
             cardElapsed += dt;
             UpdateCardClock();
+            if (cardChipRoot != null && cardChipRoot.gameObject.activeSelf && Time.unscaledTime >= cardChipUntil)
+                cardChipRoot.gameObject.SetActive(false);
 
             if (cardInteractive)
             {
@@ -734,6 +805,7 @@ namespace Bob.TaskRace
             cardSabotage = false;
             cardInteractive = false;
             if (mini != null) mini.Cancel();
+            if (cardChipRoot != null) cardChipRoot.gameObject.SetActive(false);
             if (cardDim != null) cardDim.gameObject.SetActive(false);
             if (cardPanel != null) cardPanel.gameObject.SetActive(false);
         }
