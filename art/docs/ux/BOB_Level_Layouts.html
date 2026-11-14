@@ -84,7 +84,7 @@ body.on-heat .heat{display:inline} body.on-route .route{display:inline} body.on-
   </section>
 
   <section id="sim"><h2>ตรวจผังและจำลองการเดิน</h2>
-    <p class="lead">กติกาตรวจ 10 ข้อในเอกสาร 19 ข้อ 6 · จำลอง "ทีมเล่นดีที่สุด" (ทุกคนเลือกงานที่ถึงเร็วที่สุด ไม่ลังเล ไม่พลาด) ด้วยชุด MVP และจำนวนงานตามสเปก 16 ข้อ 2.2 ผลจึงเป็น <b>ขอบล่าง</b> ของเวลาจริง</p>
+    <p class="lead">กติกาตรวจ 10 ข้อในเอกสาร 19 ข้อ 6 · จำลอง "ทีมเล่นดีที่สุด" (ทุกคนเลือกงานที่ถึงเร็วที่สุด ไม่ลังเล ไม่พลาด) ด้วยชุด MVP และจำนวนงาน/ความยากตามขนาดทีมในสเปก 16 ข้อ 2.2 (ฉบับ 14 พ.ย. 2026) ผลจึงเป็น <b>ขอบล่าง</b> ของเวลาจริง</p>
     <div class="tblwrap"><table id="tbl-check"><thead><tr><th>ห้อง</th><th>ผลตรวจ</th><th>จุดงาน</th><th>ระยะจุดใกล้สุด</th><th>T04 ชั้นวาง→รถ</th><th>จุดเกิด: ต่างกันสูงสุด (รถ/ชั้นวาง/เฉลี่ย)</th><th>เดินเฉลี่ยระหว่างจุด</th></tr></thead><tbody></tbody></table></div>
     <div class="tblwrap"><table id="tbl-sim"><thead><tr><th>ห้อง</th><th>คน</th><th>ขั้นงาน</th><th>จบเฉลี่ย (วิ)</th><th>p90</th><th>เวลาเดิน %</th><th>เดิน/ครั้ง (ช่อง)</th><th>ไกลสุด</th></tr></thead><tbody></tbody></table></div>
     <p class="meta" id="sim-note"></p>
@@ -284,7 +284,13 @@ function analyse(room){
 function rng(seed){let s=seed>>>0||1;return ()=>{s^=s<<13;s>>>=0;s^=s>>17;s^=s<<5;s>>>=0;return s/4294967296;};}
 const WORK={T01:5,T02:4,T03:8,T05:6.5,T09a:4,T09b:3,T13:3.5,T04a:6,T04b:8,T16:6,T10:6,T08:5,T11:4,T06:3.5,T07:10,T07b:1,T14:4,T15:10};
 const OPEN=0.6;          // tap button + card open/close per step
-const COUNTS={1:{common:0,long:['T04','T09'],short:4},2:{common:1,long:['T04','T09'],short:4},3:{common:1,long:['T04','T09'],short:6},4:{common:1,long:['T04','T09','T09'],short:7}};
+// Spec 16 §2.2 as first written (13 Nov 2026): perfect 2-4 player teams finished in ~35-47 s.
+const COUNTS_V1={1:{common:0,long:['T04','T09'],short:4},2:{common:1,long:['T04','T09'],short:4},3:{common:1,long:['T04','T09'],short:6},4:{common:1,long:['T04','T09','T09'],short:7}};
+// Team-size difficulty (Krits chose "raise difficulty", 14 Nov 2026): work = minigame time multiplier for the D step
+// over the chapter's base (D+1 = x1.35, D+2 = x1.8, from the D1/D2/D3 parameter steps in spec 16), short count adds
+// about one reuse per station. Perfect team lands at 63-75 s for every size.
+const COUNTS={1:{common:0,long:['T04','T09'],short:4,dUp:0,work:1},2:{common:1,long:['T04','T09'],short:6,dUp:1,work:1.35},
+              3:{common:1,long:['T04','T09'],short:9,dUp:2,work:1.8},4:{common:1,long:['T04','T09','T09'],short:12,dUp:2,work:1.8}};
 const SHORT_POOL=[['T01','floor'],['T02','table'],['T02','wall'],['T03','wall'],['T05','bin']];
 function buildRound(A,n,r,counts){
   const CN=(counts||COUNTS)[n];
@@ -306,6 +312,7 @@ function buildRound(A,n,r,counts){
 }
 function simulate(A,n,seed,counts){
   const r=rng(seed*7919+n), steps=buildRound(A,n,r,counts);
+  const WM=((counts||COUNTS)[n].work||1), W=k=>k==='T16'?WORK[k]:WORK[k]*WM; // work: difficulty multiplier for this team size (T16 emergencies stay as they are)
   const em=[40,75,100].slice(0,2+(seed%2)).map((at,i)=>({t:900+i,k:'T16',at:A.pts.filter(p=>p.role==='E')[(seed+i)%3],seq:0,emAt:at}));
   const all=steps.concat(em);
   const pl=A.room.spawns.slice(0,n).map((s,i)=>({x:s[0],y:s[1],at:{x:s[0],y:s[1],id:'P'+(i+1)},free:0,walk:0,legs:[]}));
@@ -327,14 +334,14 @@ function simulate(A,n,seed,counts){
         ...all.filter(s=>s.wait&&!done.has(s)).map(s=>{const pr=all.find(q=>q.t===s.t&&q.seq===s.seq-1);return done.has(pr)?doneAt[pr.t+':'+pr.seq]+s.wait:Infinity;})].filter(v=>v>now);
       p.free=nexts.length?Math.min(...nexts):now+1; continue; }
     const em=cands.filter(s=>s.k==='T16'); if(em.length) cands=em;
-    let best=null,bc=Infinity; for(const s of cands){const c=dist(p.at,s.at)/RULE.SPEED+WORK[s.k]; if(c<bc){bc=c;best=s;}}
+    let best=null,bc=Infinity; for(const s of cands){const c=dist(p.at,s.at)/RULE.SPEED+W(s.k); if(c<bc){bc=c;best=s;}}
     taken.add(best);
     const d1=dist(p.at,best.at); p.walk+=d1/RULE.SPEED; p.legs.push(d1);
-    let fin=now+d1/RULE.SPEED+OPEN+WORK[best.k];
+    let fin=now+d1/RULE.SPEED+OPEN+W(best.k);
     if(best.k==='T13'){ // nearest other player who is free soonest joins at B
       const others=pl.slice(1); let q=null,qc=Infinity; for(const o of others){const c=Math.max(o.free,now)+dist(o.at,best.pair)/RULE.SPEED; if(c<qc){qc=c;q=o;}}
       const d2=dist(q.at,best.pair); q.walk+=d2/RULE.SPEED; q.legs.push(d2);
-      const start=Math.max(now+d1/RULE.SPEED, qc)+OPEN; fin=start+WORK.T13; q.free=fin; q.at=best.pair;}
+      const start=Math.max(now+d1/RULE.SPEED, qc)+OPEN; fin=start+W('T13'); q.free=fin; q.at=best.pair;}
     p.free=fin; p.at=best.at; done.add(best); if(best.k!=='T16')regDone++; doneAt[best.t+':'+best.seq]=fin; tNow=Math.max(tNow,fin);
   }
   const legs=pl.flatMap(q=>q.legs);
@@ -345,7 +352,7 @@ function simStats(A,n,runs=300,counts){
   const m=k=>res.reduce((a,r)=>a+r[k],0)/res.length; const sorted=res.map(r=>r.finish).sort((a,b)=>a-b);
   return {n, finish:m('finish'), p90:sorted[Math.floor(res.length*.9)], walkShare:m('walkShare'), meanLeg:m('meanLeg'), maxLeg:Math.max(...res.map(r=>r.maxLeg)), steps:m('steps'), reused:m('reused'), em:m('em')};
 }
-return {RULE, ROOMS, TYPE_TASKS, COUNTS, analyse, simStats, zoneOf, WORK};
+return {RULE, ROOMS, TYPE_TASKS, COUNTS, COUNTS_V1, analyse, simStats, zoneOf, WORK};
 })();
 if(typeof module!=='undefined') module.exports=BOBL;
 </script>
@@ -563,7 +570,7 @@ const tb=document.querySelector('#tbl-sim tbody'); const RUNS=120; let html='';
 results.forEach(A=>{[1,2,3,4].forEach(n=>{const st=simStats(A,n,RUNS);
   html+=`<tr><td>${n===1?A.room.code+' '+esc(A.room.name):''}</td><td class="num">${n}</td><td class="num">${st.steps.toFixed(1)}</td><td class="num">${st.finish.toFixed(1)}</td><td class="num">${st.p90.toFixed(1)}</td><td class="num">${(st.walkShare*100).toFixed(0)}%</td><td class="num">${st.meanLeg.toFixed(1)}</td><td class="num">${st.maxLeg.toFixed(1)}</td></tr>`;});});
 tb.innerHTML=html;
-document.getElementById('sim-note').textContent=`จำลอง ${RUNS} seed ต่อแถว · เวลาทำงานต่อขั้นใช้ค่ากลางของ "เวลาเป้า" ในสเปก 16 + 0.6 วิ เปิด/ปิดการ์ด · คราบฉุกเฉินวิ 40/75/100 นับเฉพาะที่โผล่ก่อนจบ · ผลชี้ว่าผังคุมเวลาเดินได้ (15–27%) แต่จำนวนงานตามสเปก 16 ข้อ 2.2 ทำให้ทีม 3–4 คนจบเร็วกว่าเป้า 90–100 วิ มาก ดูข้อเสนอในเอกสาร 19 ข้อ 9`;
+document.getElementById('sim-note').textContent=`จำลอง ${RUNS} seed ต่อแถว · เวลาทำงานต่อขั้นใช้ค่ากลางของ "เวลาเป้า" ในสเปก 16 + 0.6 วิ เปิด/ปิดการ์ด · คราบฉุกเฉินวิ 40/75/100 นับเฉพาะที่โผล่ก่อนจบ · ใช้ตาราง 2.2 ฉบับปรับความยากตามขนาดทีม (14 พ.ย. 2026: 2 คน D+1, 3–4 คน D+2 + short เพิ่ม) ทีมเล่นดีที่สุดจบ 63–75 วิทุกขนาดทีม ฉบับแรกทีม 2–4 คนจบ 34–47 วิ ดูเอกสาร 19 ข้อ 9`;
 
 /* ---------- toggles ---------- */
 const map={'t-ids':'on-ids','t-zones':'on-zones','t-ban':'on-ban','t-near':'on-near','t-route':'on-route','t-heat':'on-heat'};
