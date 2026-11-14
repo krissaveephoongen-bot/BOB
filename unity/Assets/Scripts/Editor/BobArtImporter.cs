@@ -199,11 +199,14 @@ namespace Bob.Art.EditorTools
         {
             var clips = AssetDatabase.FindAssets("t:AudioClip", new[] { "Assets/Audio/SFX" })
                 .Select(g => AssetDatabase.LoadAssetAtPath<AudioClip>(AssetDatabase.GUIDToAssetPath(g))).Where(c => c != null).ToArray();
-            var music = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Music/music_placeholder_loop.wav");
+            var music = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Music/game_the_fun_run.mp3")
+                ?? AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Music/music_placeholder_loop.wav");
+            var tracks = AssetDatabase.FindAssets("t:AudioClip", new[] { "Assets/Audio/Music" })
+                .Select(g => AssetDatabase.LoadAssetAtPath<AudioClip>(AssetDatabase.GUIDToAssetPath(g))).Where(c => c != null).ToArray();
             var go = new GameObject("BobAudio");
             var sfx = go.AddComponent<Bob.Art.BobSfx>();
             sfx.clips = clips;
-            sfx.music = music;
+            sfx.music = music; sfx.tracks = tracks;
             var path = BobArtImporter.ArtRoot + "BobAudio.prefab";
             PrefabUtility.SaveAsPrefabAsset(go, path);
             UnityEngine.Object.DestroyImmediate(go);

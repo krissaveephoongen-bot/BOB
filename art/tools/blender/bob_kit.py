@@ -50,6 +50,9 @@ PALETTE = [
     ("iron_shirt", "#F2C230"), ("iron_handle", "#3D6FD0"),
     ("duster_shirt", "#E5484D"),
     ("vac_shirt", "#9CCB3B"), ("vac_hair", "#C06A30"),
+    # map pieces (Task Race, docs 24): append only, existing cells must not move
+    ("grass", "#7FB94A"), ("grass_dark", "#5E9138"), ("stone", "#B8B0A4"),
+    ("water", "#4FA8D8"), ("water_dark", "#2E7BAE"),
 ]
 PAL_INDEX = {n: i for i, (n, _) in enumerate(PALETTE)}
 GRID = 16  # 16x16 cells on a 256 texture (16 px per cell)

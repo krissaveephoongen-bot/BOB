@@ -1,0 +1,20 @@
+{
+ "name": "trash_bag_black",
+ "class": "prop_m",
+ "tris_in": 4652,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.5,
+ "colours": {
+  "spray_hair": 377,
+  "trash_dark": 196,
+  "metal_dark": 75,
+  "outline": 46,
+  "shoe": 43,
+  "trash": 29,
+  "metal": 24,
+  "goggle_lens": 6,
+  "sweep_hair": 3,
+  "bubble_hair": 1
+ }
+}

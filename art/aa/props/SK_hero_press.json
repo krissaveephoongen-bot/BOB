@@ -1,0 +1,31 @@
+{
+ "name": "hero_press",
+ "class": "char",
+ "tris_in": 4982,
+ "tris_out": 4966,
+ "budget": 6000,
+ "height_m": 1.15,
+ "colours": {
+  "spray_hair": 1869,
+  "dirt_dark": 607,
+  "dirt": 607,
+  "sweep_band": 386,
+  "wood": 311,
+  "outline": 279,
+  "sweep_shirt": 197,
+  "cream": 193,
+  "sweep_hair": 164,
+  "shoe": 91,
+  "fang": 73,
+  "spray_pink": 72,
+  "trash_dark": 58,
+  "white": 20,
+  "bubble_hair": 13,
+  "mop": 12,
+  "navy": 6,
+  "metal_dark": 3,
+  "metal": 2,
+  "gold_dark": 2,
+  "straw": 1
+ }
+}

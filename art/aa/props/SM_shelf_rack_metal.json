@@ -1,0 +1,17 @@
+{
+ "name": "shelf_rack_metal",
+ "class": "room",
+ "tris_in": 1846461,
+ "tris_out": 19999,
+ "budget": 40000,
+ "height_m": 1.3,
+ "colours": {
+  "metal": 6301,
+  "metal_dark": 5311,
+  "mop": 2383,
+  "white": 2330,
+  "trash_dark": 2198,
+  "spray_hair": 1474,
+  "trash": 2
+ }
+}

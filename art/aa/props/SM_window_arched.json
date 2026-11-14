@@ -1,0 +1,25 @@
+{
+ "name": "window_arched",
+ "class": "room",
+ "tris_in": 1905830,
+ "tris_out": 20000,
+ "budget": 40000,
+ "height_m": 1.3,
+ "colours": {
+  "wood": 10463,
+  "bubble_hair": 2090,
+  "metal": 2005,
+  "cream": 1203,
+  "dirt_dark": 1131,
+  "dirt": 1007,
+  "metal_dark": 467,
+  "trash": 436,
+  "outline": 426,
+  "sweep_hair": 400,
+  "shoe": 251,
+  "goggle_lens": 98,
+  "gold_dark": 11,
+  "spray_hair": 11,
+  "trash_dark": 1
+ }
+}

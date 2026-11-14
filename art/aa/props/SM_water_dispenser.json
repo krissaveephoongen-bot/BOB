@@ -1,0 +1,20 @@
+{
+ "name": "water_dispenser",
+ "class": "room",
+ "tris_in": 1984656,
+ "tris_out": 19999,
+ "budget": 40000,
+ "height_m": 1.0,
+ "colours": {
+  "bubble_shirt": 8086,
+  "white": 3327,
+  "metal": 2905,
+  "goggle_strap": 1777,
+  "goggle_lens": 1573,
+  "spray_shirt": 1029,
+  "trash": 669,
+  "boss": 514,
+  "navy": 87,
+  "mop": 32
+ }
+}

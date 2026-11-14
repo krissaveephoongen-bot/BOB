@@ -1,0 +1,24 @@
+{
+ "name": "crate_oranges",
+ "class": "prop_m",
+ "tris_in": 1962776,
+ "tris_out": 799,
+ "budget": 800,
+ "height_m": 0.4,
+ "colours": {
+  "dirt": 186,
+  "sweep_shirt": 108,
+  "dirt_dark": 104,
+  "wood": 88,
+  "gold_dark": 86,
+  "bubble_hair": 69,
+  "press_shirt": 63,
+  "sweep_band": 30,
+  "sweep_hair": 26,
+  "shoe": 15,
+  "sponge": 10,
+  "straw": 6,
+  "spray_hair": 5,
+  "cream": 3
+ }
+}

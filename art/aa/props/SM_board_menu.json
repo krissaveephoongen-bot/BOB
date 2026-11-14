@@ -1,0 +1,23 @@
+{
+ "name": "board_menu",
+ "class": "prop_m",
+ "tris_in": 1923708,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.8,
+ "colours": {
+  "wood": 230,
+  "trash_dark": 163,
+  "gold_dark": 121,
+  "dirt": 92,
+  "dirt_dark": 47,
+  "cream": 41,
+  "spray_hair": 30,
+  "straw": 25,
+  "bubble_hair": 15,
+  "sweep_hair": 13,
+  "shoe": 11,
+  "outline": 6,
+  "metal_dark": 6
+ }
+}

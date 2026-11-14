@@ -1,0 +1,27 @@
+{
+ "name": "espresso_machine",
+ "class": "prop_m",
+ "tris_in": 1979925,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.5,
+ "colours": {
+  "spray_hair": 141,
+  "sweep_band": 112,
+  "metal_dark": 100,
+  "shoe": 88,
+  "outline": 88,
+  "metal": 85,
+  "cream": 65,
+  "trash_dark": 37,
+  "mop": 25,
+  "wood": 18,
+  "dirt": 10,
+  "sweep_hair": 9,
+  "bubble_hair": 9,
+  "fang": 5,
+  "dirt_dark": 4,
+  "spray_pink": 3,
+  "white": 1
+ }
+}

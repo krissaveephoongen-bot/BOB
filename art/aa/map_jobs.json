@@ -1,0 +1,56 @@
+[
+ {
+  "src": "C:/Users/Jakgrits/OneDrive - Appworks Co., Ltd/Pictures/BOB/Rig/floating island 3d model.glb",
+  "name": "bob_map_island_land",
+  "class": "map",
+  "prefix": "SM_",
+  "height": 4.5,
+  "predecimate": 0,
+  "tint": "terrain"
+ },
+ {
+  "src": "C:/Users/Jakgrits/OneDrive - Appworks Co., Ltd/Pictures/BOB/Rig/floating island 3d model2.glb",
+  "name": "bob_map_island_land2",
+  "class": "map",
+  "prefix": "SM_",
+  "height": 6.0,
+  "predecimate": 0,
+  "tint": "terrain"
+ },
+ {
+  "src": "C:/Users/Jakgrits/OneDrive - Appworks Co., Ltd/Pictures/BOB/Rig/stylized river water 3d model.glb",
+  "name": "bob_map_river_channel",
+  "class": "map",
+  "prefix": "SM_",
+  "height": 0.35,
+  "predecimate": 0,
+  "tint": "water"
+ },
+ {
+  "src": "C:/Users/Jakgrits/OneDrive - Appworks Co., Ltd/Pictures/BOB/Rig/wooden footbridge 3d model.glb",
+  "name": "bob_map_wooden_bridge",
+  "class": "map",
+  "prefix": "SM_",
+  "height": 1.2,
+  "predecimate": 0,
+  "tint": "wood"
+ },
+ {
+  "src": "C:/Users/Jakgrits/OneDrive - Appworks Co., Ltd/Pictures/BOB/Rig/waterfall diorama 3d model.glb",
+  "name": "bob_map_cliff_waterfall",
+  "class": "map",
+  "prefix": "SM_",
+  "height": 5.0,
+  "predecimate": 0,
+  "tint": "rock"
+ },
+ {
+  "src": "C:/Users/Jakgrits/OneDrive - Appworks Co., Ltd/Pictures/BOB/Rig/circular cobblestone plaza 3d model.glb",
+  "name": "bob_map_plaza",
+  "class": "map",
+  "prefix": "SM_",
+  "height": 0.5,
+  "predecimate": 0,
+  "tint": "stone"
+ }
+]

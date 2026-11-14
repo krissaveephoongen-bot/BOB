@@ -1,0 +1,31 @@
+{
+ "name": "parking_block",
+ "class": "prop_m",
+ "tris_in": 1998016,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.25,
+ "colours": {
+  "spray_hair": 377,
+  "gold_dark": 171,
+  "gold": 87,
+  "straw": 29,
+  "wood": 26,
+  "trash_dark": 25,
+  "dirt": 16,
+  "navy": 15,
+  "bubble_hair": 11,
+  "metal_dark": 7,
+  "outline": 6,
+  "boss": 6,
+  "shoe": 5,
+  "slime_light": 4,
+  "trash": 4,
+  "spray_pink": 3,
+  "sweep_hair": 2,
+  "sponge": 2,
+  "metal": 2,
+  "dirt_dark": 1,
+  "cream": 1
+ }
+}

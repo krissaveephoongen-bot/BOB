@@ -1,0 +1,25 @@
+{
+ "name": "sink_cabinet",
+ "class": "room",
+ "tris_in": 1890994,
+ "tris_out": 20000,
+ "budget": 40000,
+ "height_m": 0.85,
+ "colours": {
+  "metal_dark": 5422,
+  "metal": 4835,
+  "dirt_dark": 3247,
+  "wood": 1510,
+  "dirt": 1204,
+  "shoe": 1196,
+  "bubble_hair": 756,
+  "mop": 713,
+  "outline": 433,
+  "trash_dark": 335,
+  "cream": 150,
+  "spray_hair": 94,
+  "sweep_hair": 69,
+  "trash": 29,
+  "fang": 7
+ }
+}

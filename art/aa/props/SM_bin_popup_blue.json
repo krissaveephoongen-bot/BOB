@@ -1,0 +1,24 @@
+{
+ "name": "bin_popup_blue",
+ "class": "prop_m",
+ "tris_in": 4720,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.5,
+ "colours": {
+  "navy": 465,
+  "trash_dark": 84,
+  "bubble_shirt": 74,
+  "metal": 50,
+  "spray_hair": 39,
+  "trash": 35,
+  "white": 31,
+  "goggle_lens": 6,
+  "metal_dark": 4,
+  "bubble_hair": 3,
+  "outline": 3,
+  "shoe": 2,
+  "mop": 2,
+  "sweep_band": 2
+ }
+}

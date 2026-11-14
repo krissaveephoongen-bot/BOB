@@ -1,0 +1,27 @@
+{
+ "name": "hose_coil",
+ "class": "prop_hand",
+ "tris_in": 1983636,
+ "tris_out": 1500,
+ "budget": 1500,
+ "height_m": 0.25,
+ "colours": {
+  "spray_shirt": 479,
+  "bubble_shirt": 381,
+  "goggle_strap": 252,
+  "navy": 235,
+  "gold": 49,
+  "gold_dark": 32,
+  "sponge": 18,
+  "sweep_shirt": 15,
+  "straw": 12,
+  "metal_dark": 7,
+  "trash": 5,
+  "wood": 4,
+  "dirt_dark": 4,
+  "trash_dark": 3,
+  "shoe": 2,
+  "bubble_hair": 1,
+  "dirt": 1
+ }
+}

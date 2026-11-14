@@ -1,0 +1,15 @@
+{
+ "name": "bush_green",
+ "class": "prop_m",
+ "tris_in": 1895150,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.6,
+ "colours": {
+  "press_shirt": 455,
+  "sponge": 186,
+  "sweep_hair": 88,
+  "shoe": 55,
+  "outline": 16
+ }
+}

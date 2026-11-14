@@ -1,0 +1,28 @@
+{
+ "name": "chalkboard_easel",
+ "class": "prop_m",
+ "tris_in": 1945972,
+ "tris_out": 799,
+ "budget": 800,
+ "height_m": 1.2,
+ "colours": {
+  "wood": 252,
+  "dirt": 200,
+  "gold_dark": 83,
+  "press_shirt": 62,
+  "metal_dark": 61,
+  "dirt_dark": 35,
+  "sweep_hair": 18,
+  "shoe": 18,
+  "mop": 15,
+  "metal": 14,
+  "spray_hair": 13,
+  "trash_dark": 12,
+  "bubble_hair": 8,
+  "white": 3,
+  "cream": 2,
+  "straw": 1,
+  "fang": 1,
+  "outline": 1
+ }
+}

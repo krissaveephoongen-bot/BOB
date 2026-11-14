@@ -1,0 +1,22 @@
+{
+ "name": "gloves_pair",
+ "class": "prop_hand",
+ "tris_in": 1859603,
+ "tris_out": 1499,
+ "budget": 1500,
+ "height_m": 0.28,
+ "colours": {
+  "gold_dark": 656,
+  "dirt_dark": 160,
+  "straw": 149,
+  "dirt": 133,
+  "gold": 113,
+  "bubble_hair": 98,
+  "sweep_hair": 68,
+  "wood": 52,
+  "sponge": 36,
+  "outline": 19,
+  "shoe": 13,
+  "spray_hair": 2
+ }
+}

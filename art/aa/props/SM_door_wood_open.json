@@ -1,0 +1,25 @@
+{
+ "name": "door_wood_open",
+ "class": "room",
+ "tris_in": 1997514,
+ "tris_out": 20000,
+ "budget": 40000,
+ "height_m": 2.0,
+ "colours": {
+  "cream": 4633,
+  "wood": 3216,
+  "bubble_hair": 2800,
+  "dirt": 2056,
+  "mop": 1551,
+  "fang": 1536,
+  "dirt_dark": 1061,
+  "sponge": 933,
+  "metal": 779,
+  "gold_dark": 573,
+  "metal_dark": 384,
+  "straw": 283,
+  "shoe": 164,
+  "sweep_hair": 22,
+  "white": 9
+ }
+}

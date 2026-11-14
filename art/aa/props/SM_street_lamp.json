@@ -1,0 +1,24 @@
+{
+ "name": "street_lamp",
+ "class": "room",
+ "tris_in": 1954568,
+ "tris_out": 20000,
+ "budget": 40000,
+ "height_m": 2.6,
+ "colours": {
+  "spray_hair": 9159,
+  "sponge": 4510,
+  "dirt_dark": 2671,
+  "outline": 1379,
+  "sweep_hair": 1147,
+  "dirt": 734,
+  "gold_dark": 214,
+  "trash_dark": 65,
+  "shoe": 51,
+  "straw": 44,
+  "wood": 11,
+  "gold": 10,
+  "metal_dark": 3,
+  "bubble_hair": 2
+ }
+}

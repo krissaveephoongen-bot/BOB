@@ -1,0 +1,28 @@
+{
+ "name": "kitchen_unit_upper",
+ "class": "room",
+ "tris_in": 1819126,
+ "tris_out": 19996,
+ "budget": 40000,
+ "height_m": 0.9,
+ "colours": {
+  "cream": 4709,
+  "trash_dark": 2921,
+  "wood": 2821,
+  "metal_dark": 2339,
+  "spray_hair": 1965,
+  "outline": 1259,
+  "bubble_hair": 992,
+  "shoe": 968,
+  "metal": 941,
+  "dirt_dark": 586,
+  "mop": 241,
+  "sweep_hair": 170,
+  "dirt": 37,
+  "fang": 21,
+  "white": 21,
+  "gold_dark": 3,
+  "trash": 1,
+  "straw": 1
+ }
+}

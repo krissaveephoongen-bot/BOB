@@ -1,0 +1,29 @@
+{
+ "name": "clock_alarm",
+ "class": "prop_s",
+ "tris_in": 1881474,
+ "tris_out": 300,
+ "budget": 300,
+ "height_m": 0.3,
+ "colours": {
+  "gold": 81,
+  "gold_dark": 44,
+  "sponge": 25,
+  "mop": 21,
+  "metal_dark": 20,
+  "trash_dark": 19,
+  "straw": 16,
+  "shoe": 16,
+  "metal": 13,
+  "spray_hair": 11,
+  "dirt_dark": 7,
+  "dirt": 6,
+  "bubble_hair": 6,
+  "outline": 5,
+  "white": 3,
+  "fang": 3,
+  "sweep_hair": 2,
+  "sweep_shirt": 1,
+  "wood": 1
+ }
+}

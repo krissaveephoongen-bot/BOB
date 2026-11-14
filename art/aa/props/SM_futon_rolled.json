@@ -1,0 +1,21 @@
+{
+ "name": "futon_rolled",
+ "class": "room",
+ "tris_in": 4786,
+ "tris_out": 4782,
+ "budget": 40000,
+ "height_m": 0.3,
+ "colours": {
+  "bubble_shirt": 1615,
+  "goggle_lens": 989,
+  "navy": 873,
+  "goggle_strap": 546,
+  "white": 487,
+  "spray_shirt": 85,
+  "metal": 73,
+  "mop": 61,
+  "trash": 48,
+  "metal_dark": 3,
+  "boss": 2
+ }
+}

@@ -1,0 +1,21 @@
+{
+ "name": "sofa_3seat_tan",
+ "class": "room",
+ "tris_in": 1913108,
+ "tris_out": 19999,
+ "budget": 40000,
+ "height_m": 0.85,
+ "colours": {
+  "wood": 6786,
+  "gold_dark": 5522,
+  "dirt": 2414,
+  "straw": 2118,
+  "dirt_dark": 1286,
+  "spray_hair": 996,
+  "sweep_hair": 428,
+  "outline": 257,
+  "cream": 163,
+  "bubble_hair": 24,
+  "sweep_shirt": 5
+ }
+}

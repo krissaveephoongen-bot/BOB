@@ -1,0 +1,23 @@
+{
+ "name": "radiator_red",
+ "class": "prop_m",
+ "tris_in": 1902526,
+ "tris_out": 799,
+ "budget": 800,
+ "height_m": 0.6,
+ "colours": {
+  "sweep_band": 338,
+  "metal": 193,
+  "metal_dark": 87,
+  "mop": 52,
+  "dirt": 48,
+  "trash_dark": 33,
+  "shoe": 24,
+  "bubble_hair": 7,
+  "wood": 7,
+  "dirt_dark": 5,
+  "outline": 2,
+  "spray_hair": 2,
+  "sweep_hair": 1
+ }
+}

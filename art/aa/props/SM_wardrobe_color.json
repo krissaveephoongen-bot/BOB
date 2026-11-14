@@ -1,0 +1,31 @@
+{
+ "name": "wardrobe_color",
+ "class": "room",
+ "tris_in": 1925114,
+ "tris_out": 20000,
+ "budget": 40000,
+ "height_m": 1.7,
+ "colours": {
+  "wood": 11033,
+  "sponge": 1437,
+  "bubble_hair": 1412,
+  "spray_pink": 1382,
+  "dirt": 1139,
+  "sweep_shirt": 913,
+  "gold_dark": 858,
+  "press_shirt": 677,
+  "trash": 299,
+  "metal_dark": 292,
+  "metal": 179,
+  "dirt_dark": 126,
+  "goggle_lens": 100,
+  "straw": 42,
+  "shoe": 31,
+  "mop": 29,
+  "cream": 19,
+  "sweep_band": 12,
+  "navy": 10,
+  "trash_dark": 9,
+  "sweep_hair": 1
+ }
+}

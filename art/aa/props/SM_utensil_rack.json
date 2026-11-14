@@ -1,0 +1,15 @@
+{
+ "name": "utensil_rack",
+ "class": "prop_m",
+ "tris_in": 1939825,
+ "tris_out": 799,
+ "budget": 800,
+ "height_m": 0.6,
+ "colours": {
+  "trash_dark": 284,
+  "trash": 267,
+  "metal_dark": 153,
+  "spray_hair": 56,
+  "metal": 39
+ }
+}

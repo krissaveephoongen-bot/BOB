@@ -178,7 +178,7 @@ PlayerSettings:
     tvOS: 0
   overrideDefaultApplicationIdentifier: 1
   AndroidBundleVersionCode: 1
-  AndroidMinSdkVersion: 24
+  AndroidMinSdkVersion: 26
   AndroidTargetSdkVersion: 0
   AndroidPreferredInstallLocation: 1
   AndroidPreferredDataLocation: 1
@@ -723,11 +723,11 @@ PlayerSettings:
   activeInputHandler: 0
   windowsGamepadBackendHint: 0
   enableDirectStorage: 0
-  cloudProjectId: 
+  cloudProjectId: b48ee5f1-49d8-423b-872b-ba907bd41bf6
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
-  projectName: 
-  organizationId: 
+  projectName: unity
+  organizationId: unity_a6b31d71c5793d78b857
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0
   hmiLoadingImage: {fileID: 0}

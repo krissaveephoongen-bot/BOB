@@ -1,0 +1,20 @@
+{
+ "name": "toilet_paper",
+ "class": "prop_s",
+ "tris_in": 4844,
+ "tris_out": 300,
+ "budget": 300,
+ "height_m": 0.13,
+ "colours": {
+  "metal_dark": 60,
+  "trash_dark": 59,
+  "spray_hair": 53,
+  "cream": 44,
+  "mop": 41,
+  "metal": 27,
+  "outline": 6,
+  "shoe": 5,
+  "fang": 3,
+  "trash": 2
+ }
+}

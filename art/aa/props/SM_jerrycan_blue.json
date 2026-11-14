@@ -1,0 +1,20 @@
+{
+ "name": "jerrycan_blue",
+ "class": "prop_m",
+ "tris_in": 1923376,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.45,
+ "colours": {
+  "bubble_shirt": 266,
+  "goggle_strap": 239,
+  "boss": 101,
+  "spray_shirt": 79,
+  "white": 40,
+  "goggle_lens": 28,
+  "navy": 21,
+  "metal": 17,
+  "mop": 7,
+  "trash_dark": 2
+ }
+}

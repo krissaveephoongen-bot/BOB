@@ -1,0 +1,17 @@
+{
+ "name": "griddle_stove",
+ "class": "prop_m",
+ "tris_in": 1967969,
+ "tris_out": 799,
+ "budget": 800,
+ "height_m": 0.5,
+ "colours": {
+  "trash_dark": 291,
+  "metal_dark": 241,
+  "spray_hair": 134,
+  "metal": 125,
+  "mop": 6,
+  "gold_dark": 1,
+  "straw": 1
+ }
+}

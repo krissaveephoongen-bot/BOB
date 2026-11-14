@@ -1,0 +1,32 @@
+{
+ "name": "window_curtain",
+ "class": "room",
+ "tris_in": 1933872,
+ "tris_out": 19999,
+ "budget": 40000,
+ "height_m": 1.4,
+ "colours": {
+  "goggle_lens": 7009,
+  "wood": 3363,
+  "bubble_shirt": 2362,
+  "cream": 1130,
+  "navy": 973,
+  "gold_dark": 882,
+  "bubble_hair": 776,
+  "trash": 652,
+  "dirt": 585,
+  "spray_pink": 575,
+  "sweep_shirt": 499,
+  "straw": 361,
+  "dirt_dark": 247,
+  "metal": 217,
+  "trash_dark": 109,
+  "metal_dark": 107,
+  "mop": 53,
+  "shoe": 43,
+  "outline": 34,
+  "sweep_hair": 9,
+  "spray_hair": 7,
+  "fang": 6
+ }
+}

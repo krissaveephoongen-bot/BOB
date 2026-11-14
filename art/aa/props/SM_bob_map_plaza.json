@@ -1,0 +1,13 @@
+{
+ "name": "bob_map_plaza",
+ "class": "map",
+ "tris_in": 55684,
+ "tris_out": 6172,
+ "budget": 8000,
+ "height_m": 0.5,
+ "colours": {
+  "stone": 3146,
+  "metal": 2621,
+  "metal_dark": 405
+ }
+}

@@ -1,0 +1,297 @@
+// Battle of the Brooms: the 3D set around the play floor (cafeteria first, as in the target picture): tiled floor, a teal play mat,
+// long tables with plates, benches, a back wall with shelves, station signs. Everything uses the toon material and outline from
+// Modular/BobToon.cs, so the 3D heroes that come later sit in the same world. World axes: x right, y up, z = room depth.
+using Bob.Art;
+using Bob.Modular;
+using Bob.Rules;
+using TMPro;
+using UnityEngine;
+
+namespace Bob.Game
+{
+    public partial class BobGame
+    {
+        static readonly Color CreamWall = new Color(0.94f, 0.89f, 0.78f), TableTop = new Color(1f, 0.89f, 0.55f), TableSide = new Color(0.96f, 0.72f, 0.36f),
+            Plate = new Color(0.98f, 0.97f, 0.95f), PlateMat = new Color(0.96f, 0.56f, 0.45f);
+
+        // The room is a diorama (BobGame.Diorama.cs): a wooden deck inset in a grass island on a pedestal, framed by
+        // FitCamera3D so the set reads as one display piece.
+
+        Transform setRoot;
+        readonly System.Collections.Generic.List<TextMeshPro> signs = new System.Collections.Generic.List<TextMeshPro>();
+
+        void Quad(string name, Vector3 centre, Vector2 size, Color c, Texture tex = null, Vector2? tiling = null)
+        {
+            var q = GameObject.CreatePrimitive(PrimitiveType.Quad); q.name = name; q.transform.SetParent(setRoot, false);
+            var col = q.GetComponent<Collider>(); if (col != null) Destroy(col);
+            q.transform.position = centre; q.transform.rotation = Quaternion.Euler(90, 0, 0); q.transform.localScale = new Vector3(size.x, size.y, 1);
+            var m = BobToon.Toon(c, tex); if (tex != null && tiling.HasValue) m.mainTextureScale = tiling.Value;
+            q.GetComponent<MeshRenderer>().sharedMaterial = m;
+        }
+
+        void Table(Vector3 centre, Vector3 size)
+        {
+            // top, side apron, four legs, and plates on top
+            BobToon.Shape(PrimitiveType.Cube, setRoot, "Table", centre + new Vector3(0, 0.62f, 0), new Vector3(size.x, 0.1f, size.z), TableTop, true, 2.5f);
+            BobToon.Shape(PrimitiveType.Cube, setRoot, "Apron", centre + new Vector3(0, 0.5f, 0), new Vector3(size.x * 0.94f, 0.14f, size.z * 0.94f), TableSide, false);
+            foreach (var sx in new[] { -1, 1 }) foreach (var sz in new[] { -1, 1 })
+                    BobToon.Shape(PrimitiveType.Cube, setRoot, "Leg", centre + new Vector3(sx * (size.x / 2 - 0.08f), 0.28f, sz * (size.z / 2 - 0.12f)), new Vector3(0.1f, 0.56f, 0.1f), TableSide, false);
+            bool alongZ = size.z > size.x; int n = Mathf.Max(2, Mathf.FloorToInt((alongZ ? size.z : size.x) / 1.0f));
+            for (int i = 0; i < n; i++)
+            {
+                float t = (i + 0.5f) / n - 0.5f; var off = alongZ ? new Vector3(0, 0.7f, t * (size.z - 0.5f)) : new Vector3(t * (size.x - 0.5f), 0.7f, 0);
+                BobToon.Shape(PrimitiveType.Cylinder, setRoot, "Mat", centre + off - new Vector3(0, 0.04f, 0), new Vector3(0.46f, 0.012f, 0.46f), PlateMat, false);
+                BobToon.Shape(PrimitiveType.Cylinder, setRoot, "Plate", centre + off, new Vector3(0.34f, 0.018f, 0.34f), Plate, false);
+                BobToon.Shape(PrimitiveType.Sphere, setRoot, "Food", centre + off + new Vector3(0.16f, 0.06f, 0), new Vector3(0.12f, 0.1f, 0.12f), new Color(1f, 0.85f, 0.35f), false);
+            }
+        }
+
+        void Bench(Vector3 centre, Vector3 size)
+        {
+            BobToon.Shape(PrimitiveType.Cube, setRoot, "Bench", centre + new Vector3(0, 0.3f, 0), new Vector3(size.x, 0.1f, size.z), new Color(0.98f, 0.8f, 0.45f), true, 2f);
+            foreach (var s in new[] { -1, 1 }) BobToon.Shape(PrimitiveType.Cube, setRoot, "BenchLeg", centre + new Vector3(0, 0.14f, s * (size.z / 2 - 0.2f)), new Vector3(size.x * 0.9f, 0.28f, 0.08f), TableSide, false);
+        }
+
+        /// <summary>Everything outside the 8 x 5 play floor. The floor tiles of the play area itself are the teal mat.</summary>
+        void BuildSet()
+        {
+            setRoot = new GameObject("Set").transform;
+            // light: Art Bible 21 section 6.1 (warm key from upper left, blue-violet ambient, no hard black)
+            var lightGo = new GameObject("Key"); lightGo.transform.SetParent(setRoot, false);
+            var sun = lightGo.AddComponent<Light>(); sun.type = LightType.Directional; sun.intensity = 1.0f; sun.color = new Color(1f, 0.957f, 0.878f);
+            sun.shadows = LightShadows.None; lightGo.transform.rotation = Quaternion.Euler(50, -30, 0);
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = new Color(0.867f, 0.922f, 0.98f); RenderSettings.ambientEquatorColor = new Color(0.75f, 0.74f, 0.86f); RenderSettings.ambientGroundColor = new Color(0.56f, 0.525f, 0.75f);
+            RenderSettings.ambientLight = new Color(0.7f, 0.72f, 0.8f);
+
+            // diorama island, deck and pedestal; the play area is a checker floor with a cream border and gold inlay
+            BuildDiorama();
+            Quad("MatBorder", new Vector3(RoomW / 2, 0f, RoomH / 2), new Vector2(RoomW + 0.6f, RoomH + 0.6f), new Color(0.97f, 0.93f, 0.84f));
+            Quad("PlayMat", new Vector3(RoomW / 2, 0.004f, RoomH / 2), new Vector2(RoomW, RoomH), Color.white, CheckerTex(), new Vector2(7f, 4f));
+            foreach (var sx in new[] { 0.12f, RoomW - 0.12f }) Quad("Lane", new Vector3(sx, 0.008f, RoomH / 2), new Vector2(0.06f, RoomH - 0.4f), new Color(1f, 0.88f, 0.35f));
+
+            // back wall with shelves and a counter, low side walls
+            BobToon.Shape(PrimitiveType.Cube, setRoot, "BackWall", new Vector3(RoomW / 2, 1.2f, RoomH + 1.5f), new Vector3(RoomW + 4f, 2.4f, 0.3f), CreamWall, true, 2.5f);
+            BobToon.Shape(PrimitiveType.Cube, setRoot, "BackTrim", new Vector3(RoomW / 2, 0.3f, RoomH + 1.32f), new Vector3(RoomW + 4f, 0.6f, 0.1f), new Color(0.62f, 0.82f, 0.78f), false);
+            Upright("Wallpaper", new Vector3(RoomW / 2, 1.53f, RoomH + 1.31f), new Vector2(RoomW + 4f, 1.78f), WallTex(), new Vector2(6f, 1f));
+            BobToon.Shape(PrimitiveType.Cube, setRoot, "ChairRail", new Vector3(RoomW / 2, 0.63f, RoomH + 1.30f), new Vector3(RoomW + 4f, 0.07f, 0.05f), new Color(0.62f, 0.82f, 0.78f), false);
+
+            BuildRentalRoom();
+            DressDioramaRim();
+            BuildTaskPoints();
+            BuildSigns();
+        }
+
+        /// <summary>Cleaned Tripo prop from Resources/Props (menu Bob > Art > Build Prop Prefabs). Returns null when the art
+        /// pack is not imported so the caller keeps its scripted placeholder. Yaw 270 turns a model's front to the camera.</summary>
+        Transform TryProp(string name, Vector3 pos, float yaw = 270f, float scale = 1f)
+        {
+            var prefab = Resources.Load<GameObject>("Props/SM_" + name);
+            if (prefab == null) return null;
+            var go = Instantiate(prefab, setRoot);
+            go.name = "SM_" + name;
+            // the prefab root carries the FBX importer's upright rotation (X 270) and unit-scale compensation (100);
+            // writing either instead of composing it lays the model on its back or shrinks it 100x
+            go.transform.localPosition = pos;
+            go.transform.localRotation = Quaternion.Euler(0, yaw, 0) * prefab.transform.localRotation;
+            go.transform.localScale = prefab.transform.localScale * scale;
+            return go.transform;
+        }
+
+        /// <summary>Rental room (GDD chapter 1, Art Bible D1): sofa, bed, fallen futon, kitchenette, TV and window around the play floor.
+        /// Tripo models (doc 23) replace the scripted placeholders when the art pack is imported; heights come from the clean pass.</summary>
+        void BuildRentalRoom()
+        {
+            var sofa = new Color(0.88f, 0.48f, 0.35f); var wood = TableSide; var white = new Color(0.97f, 0.96f, 0.93f);
+            // window, wall unit and clock on the back wall
+            if (TryProp("window_arched", new Vector3(RoomW / 2, 0.85f, RoomH + 1.26f)) == null)
+            {
+                BobToon.Shape(PrimitiveType.Cube, setRoot, "WindowFrame", new Vector3(RoomW / 2, 1.5f, RoomH + 1.32f), new Vector3(2.2f, 1.2f, 0.08f), white, true, 2f);
+                BobToon.Shape(PrimitiveType.Cube, setRoot, "WindowGlass", new Vector3(RoomW / 2, 1.5f, RoomH + 1.27f), new Vector3(2.0f, 1.0f, 0.04f), new Color(0.62f, 0.82f, 0.96f), false);
+            }
+            TryProp("ac_wall_teal", new Vector3(11.9f, 1.45f, RoomH + 1.28f));
+            TryProp("clock_alarm", new Vector3(9.5f, 1.78f, RoomH + 1.29f));
+            // sofa (left, inside the play floor) and single bed (right)
+            if (TryProp("sofa_3seat_tan", new Vector3(SofaRect.center.x, 0f, SofaRect.center.y)) == null)
+            { float sx = SofaRect.center.x, sz = SofaRect.center.y;
+              BobToon.Shape(PrimitiveType.Cube, setRoot, "SofaSeat", new Vector3(sx, 0.3f, sz), new Vector3(2.0f, 0.5f, 0.9f), sofa, true, 2.5f);
+              BobToon.Shape(PrimitiveType.Cube, setRoot, "SofaBack", new Vector3(sx, 0.7f, sz + 0.4f), new Vector3(2.0f, 0.7f, 0.2f), sofa * 0.9f, true, 2.5f);
+              foreach (var s in new[] { -1, 1 }) BobToon.Shape(PrimitiveType.Cube, setRoot, "SofaArm", new Vector3(sx + s * 0.9f, 0.5f, sz), new Vector3(0.2f, 0.6f, 0.9f), sofa * 0.95f, true, 2.5f); }
+            if (TryProp("bed_single_blue", new Vector3(RoomW + 1.9f, 0f, 3.4f)) == null)
+            {
+                BobToon.Shape(PrimitiveType.Cube, setRoot, "BedFrame", new Vector3(RoomW + 1.9f, 0.2f, 3.4f), new Vector3(1.1f, 0.3f, 2.2f), wood, true, 2.5f);
+                BobToon.Shape(PrimitiveType.Cube, setRoot, "BedMattress", new Vector3(RoomW + 1.9f, 0.42f, 3.4f), new Vector3(1.0f, 0.18f, 2.1f), new Color(0.6f, 0.78f, 0.95f), true, 2.5f);
+                BobToon.Shape(PrimitiveType.Cube, setRoot, "Pillow", new Vector3(RoomW + 1.9f, 0.58f, 4.2f), new Vector3(0.7f, 0.14f, 0.4f), white, false);
+            }
+            // fallen futon on the floor next to the bed
+            if (TryProp("futon_rolled", new Vector3(RoomW + 0.9f, 0f, 1.0f)) == null)
+                BobToon.Shape(PrimitiveType.Cube, setRoot, "Futon", new Vector3(RoomW + 1.9f, 0.08f, 1.0f), new Vector3(1.0f, 0.14f, 1.8f), new Color(0.95f, 0.72f, 0.78f), true, 2f);
+            // kitchenette along the lower left: modular 0.6 m units (the counter height is fixed by the station rules)
+            for (int i = 0; i < 4; i++)
+                BobToon.Shape(PrimitiveType.Cube, setRoot, i == 1 ? "Sink" : i == 2 ? "Stove" : "Cabinet", new Vector3(-2.0f + i * 0.6f, 0.45f, -1.4f), new Vector3(0.58f, 0.9f, 0.6f), i == 2 ? new Color(0.45f, 0.5f, 0.58f) : new Color(0.78f, 0.86f, 0.95f), true, 2.2f);
+            BobToon.Shape(PrimitiveType.Cube, setRoot, "KitchenTop", new Vector3(-1.4f, 0.93f, -1.4f), new Vector3(2.4f, 0.06f, 0.64f), new Color(0.62f, 0.45f, 0.45f), false);
+            // low table + TV unit at the front right
+            BobToon.Shape(PrimitiveType.Cube, setRoot, "TVUnit", new Vector3(RoomW + 1.6f, 0.3f, -1.4f), new Vector3(1.6f, 0.6f, 0.6f), wood, true, 2.2f);
+            if (TryProp("tv_flat", new Vector3(RoomW + 1.6f, 0.63f, -1.4f)) == null)
+                BobToon.Shape(PrimitiveType.Cube, setRoot, "TV", new Vector3(RoomW + 1.6f, 0.95f, -1.4f), new Vector3(1.1f, 0.65f, 0.08f), new Color(0.2f, 0.22f, 0.3f), true, 2f);
+            if (TryProp("table_low_wood", new Vector3(RoomW / 2, 0f, -1.6f)) == null)
+                BobToon.Shape(PrimitiveType.Cube, setRoot, "Table", new Vector3(RoomW / 2, 0.22f, -1.6f), new Vector3(2.0f, 0.44f, 0.9f), TableTop, true, 2.5f);
+            // counter-top pieces from the cleaned pack
+            TryProp("pot_on_burner", new Vector3(-0.8f, 0.96f, -1.4f));
+            TryProp("espresso_machine", new Vector3(-2.1f, 0.96f, -1.42f));
+            TryProp("utensil_rack", new Vector3(0.0f, 0.96f, -1.42f));
+            TryProp("pot_ceramic_gold", new Vector3(7.9f, 0.36f, -1.6f));
+            // station furniture: shelf (S3), bins (S9), lockers (S5), little cafe corner in front
+            TryProp("shelf_rack_metal", new Vector3(7.0f, 0f, RoomH - 1.2f));
+            TryProp("bin_trash_grey", new Vector3(10.75f, 0f, RoomH - 4.45f));
+            TryProp("bin_recycle_blue", new Vector3(11.75f, 0f, RoomH - 4.45f));
+            TryProp("lockers_teal", new Vector3(11.6f, 0f, RoomH + 0.4f));
+            TryProp("table_round_cafe", new Vector3(0.9f, 0f, -1.3f));
+            TryProp("stool_red", new Vector3(1.8f, 0f, -1.3f));
+            TryProp("chair_bentwood", new Vector3(0.0f, 0f, -1.3f), 300f);
+            // wall and corner decor
+            TryProp("plant_pot", new Vector3(0.4f, 0f, RoomH - 0.4f));
+            TryProp("basket_clothes", new Vector3(RoomW + 1.9f, 0f, 1.9f));
+            TryProp("washing_machine", new Vector3(15.2f, 0f, 7.6f));
+            TryProp("water_dispenser", new Vector3(14.6f, 0f, 8.55f));
+            TryProp("shoe_rack", new Vector3(-0.95f, 0f, 3.0f), 180f);
+            TryProp("fire_extinguisher", new Vector3(-0.95f, 0f, 7.9f));
+            TryProp("chalkboard_easel", new Vector3(-1.45f, 0f, 5.4f), 330f);
+            TryProp("sign_wet_floor", new Vector3(5.4f, 0f, -0.7f));
+            TryProp("cone_traffic", new Vector3(12.9f, 0f, -0.6f));
+            TryProp("bucket_blue", new Vector3(12.4f, 0f, RoomH - 1.05f));
+            TryProp("radiator_red", new Vector3(4.6f, 0f, RoomH + 1.24f));
+            TryProp("ac_wall_teal", new Vector3(10.2f, 1.95f, RoomH + 1.24f));
+            TryProp("cctv_camera", new Vector3(0.55f, 2.35f, RoomH + 1.24f));
+            TryProp("clock_alarm", new Vector3(12.6f, 1.95f, RoomH + 1.24f));
+            TryProp("bush_green", new Vector3(-1.6f, 0f, 6.5f));
+            TryProp("rocks_grass", new Vector3(13.6f, 0f, RoomH + 1.1f));
+        }
+
+        // Level layout doc 19, L1 rental room: the 11 task points (S1-S11), emergency points E1-E3 and the 4 spawns. Doc y runs from the back wall, world z from the front.
+        // The prototype rules still use 4 stations (BobGame.World.cs StationRects = S1, S5, S8, S9); the other points are marked on the floor and open nothing until the task-race rules (docs 16 / 19) are built.
+        static readonly (string id, float x, float y, string type, string label)[] L1Points =
+        {
+            ("S1", 3.0f, 1.2f, "glass", "หน้าต่าง"), ("S2", 5.0f, 1.2f, "wall", "ผนังโปสเตอร์"), ("S3", 7.0f, 1.2f, "shelf", "ชั้นวางชิ้นส่วน"), ("S4", 9.0f, 1.2f, "wall", "ผนังทีวี"),
+            ("S5", 11.05f, 1.2f, "cabinet", "ตู้น้ำยา"), ("S6", 5.0f, 3.2f, "floor", "พื้น"), ("S7", 9.0f, 3.2f, "floor", "พื้น"), ("S8", 3.25f, 4.45f, "table", "โต๊ะ"),
+            ("S9", 10.75f, 4.45f, "bin", "ถังขยะ"), ("S10", 3.0f, 6.9f, "table", "โต๊ะ"), ("S11", 11.0f, 6.9f, "table", "โต๊ะ"),
+        };
+        static readonly (string id, float x, float y)[] L1Emergency = { ("E1", 7.0f, 3.0f), ("E2", 5.5f, 7.25f), ("E3", 8.5f, 7.25f) };
+
+        void BuildTaskPoints()
+        {
+            var taskRoot = new GameObject("TaskPoints").transform; taskRoot.SetParent(setRoot, false);
+            foreach (var p in L1Points)
+            {
+                var c = p.type == "floor" ? new Color(0.91f, 0.77f, 0.42f) : p.type == "table" ? new Color(0.96f, 0.64f, 0.38f) : p.type == "bin" ? new Color(0.49f, 0.53f, 0.61f) : p.type == "shelf" ? new Color(0.98f, 0.62f, 0.2f) : new Color(0.54f, 0.69f, 0.49f);
+                float z = RoomH - p.y; Marker(taskRoot, p.id, p.label, new Vector3(p.x, 0.012f, z), 0.55f, c);
+            }
+            foreach (var e in L1Emergency) Marker(taskRoot, e.id, "ฉุกเฉิน", new Vector3(e.x, 0.012f, RoomH - e.y), 0.4f, new Color(0.93f, 0.28f, 0.38f));
+        }
+
+        void Marker(Transform parent, string id, string label, Vector3 at, float r, Color c)
+        {
+            var d = BobToon.Shape(PrimitiveType.Cylinder, parent, "Pt_" + id, at, new Vector3(r * 2, 0.006f, r * 2), new Color(c.r, c.g, c.b), false);
+            var go = new GameObject("PtLabel_" + id); go.transform.SetParent(parent, false); go.transform.position = at + new Vector3(0, 0.05f, 0);
+            var tm = go.AddComponent<TextMeshPro>(); if (BobUi.HeadingTmp != null) tm.font = BobUi.HeadingTmp;
+            tm.text = id; tm.fontSize = 2.4f; tm.alignment = TextAlignmentOptions.Center; tm.color = Color.white; tm.outlineColor = BobToon.LineColor; tm.outlineWidth = 0.3f; tm.textWrappingMode = TextWrappingModes.NoWrap;
+            signs.Add(tm);
+        }
+
+        void BuildSigns()
+        {
+            var cols = new[] { new Color(1f, 0.62f, 0.2f), new Color(0.35f, 0.65f, 0.95f), new Color(0.93f, 0.28f, 0.38f), new Color(0.58f, 0.46f, 0.88f) };
+            for (int i = 0; i < 4; i++)
+            {
+                var r = StationRects[i];
+                var plank = BobToon.Shape(PrimitiveType.Cube, setRoot, "SignBoard_" + StationIds[i], new Vector3(r.center.x, 1.55f, r.yMin - 0.05f), new Vector3(1.5f, 0.38f, 0.06f), cols[i], true, 2f);
+                plank.transform.rotation = Quaternion.Euler(CamPitch - 90f + 90f - 90f, 0, 0);
+                var go = new GameObject("SignText_" + StationIds[i]); go.transform.SetParent(setRoot, false);
+                go.transform.position = new Vector3(r.center.x, 1.55f, r.yMin - 0.12f);
+                var t = go.AddComponent<TextMeshPro>();
+                if (BobUi.HeadingTmp != null) t.font = BobUi.HeadingTmp;
+                t.text = StationNames[i]; t.fontSize = 2.2f; t.alignment = TextAlignmentOptions.Center; t.color = Color.white; t.textWrappingMode = TextWrappingModes.NoWrap;
+                t.outlineColor = BobToon.LineColor; t.outlineWidth = 0.25f;
+                signs.Add(t);
+            }
+        }
+
+        // ---------------------------------------------------------------- 3D hero model (Art Bible 21 D2): used when Resources/Heroes/SK_<id> exists
+
+        GameObject heroModel; Animator heroAnim; float heroYaw;
+
+        /// <summary>Swap the hero sprite for a 3D model from the art pipeline (Tripo / Blender kit). Falls back to the sprite when none is imported.</summary>
+        void TryHeroModel()
+        {
+            if (heroModel != null) { Destroy(heroModel); heroModel = null; heroAnim = null; }
+            if (!World3D || playerSr == null) return;
+            var prefab = Resources.Load<GameObject>("Heroes/SK_" + charId); Debug.Log("Bob: hero model " + charId + " -> " + (prefab != null ? "3D prefab" : "sprite"));
+            playerSr.enabled = prefab == null;
+            if (prefab == null) return;
+            heroModel = Instantiate(prefab); heroModel.name = "Hero3D";
+            // scale to the hero height of the 2D sprite so the room stays in proportion (Art Bible: hero 1.15 u in a 14 x 8 room, ours is 8 x 5)
+            var rs = heroModel.GetComponentsInChildren<Renderer>(); var b = rs.Length > 0 ? rs[0].bounds : new Bounds(Vector3.zero, Vector3.one);
+            foreach (var r in rs) b.Encapsulate(r.bounds);
+            float k = HeroH / Mathf.Max(0.01f, b.size.y); heroModel.transform.localScale *= k;
+            foreach (var r in rs)
+            {
+                var mats = r.sharedMaterials;
+                for (int i = 0; i < mats.Length; i++)
+                {
+                    var src = mats[i]; Texture tex = src != null && src.HasProperty("_MainTex") ? src.mainTexture : null;
+                    var col = src != null && src.HasProperty("_Color") ? src.color : Color.white;
+                    mats[i] = BobToon.Toon(col, tex);
+                }
+                r.sharedMaterials = mats;
+                if (r is MeshRenderer || r is SkinnedMeshRenderer) BobToon.Outline(r.gameObject, 2.5f);
+            }
+            heroAnim = heroModel.GetComponentInChildren<Animator>();
+        }
+
+        // rules enemy -> kit model (placeholder mapping until each has its own model)
+        static string EnemyKit(string id) => id == "stain" || id == "rust" ? "dirt" : id == "dust" ? "trash" : "slime";
+
+        /// <summary>3D enemy from Resources/Heroes/SK_<kit>; hides the sprite when found.</summary>
+        void TryEnemyModel(string id, Transform holder, Vector2 at, SpriteRenderer sr)
+        {
+            var prefab = Resources.Load<GameObject>("Heroes/SK_" + EnemyKit(id)); if (prefab == null) return;
+            sr.enabled = false;
+            var m = Instantiate(prefab, holder); m.name = "Enemy3D";
+            var rs = m.GetComponentsInChildren<Renderer>(); var b = rs[0].bounds; foreach (var r in rs) b.Encapsulate(r.bounds);
+            m.transform.localScale *= HeroH / Mathf.Max(0.01f, b.size.y);
+            var tint = Color.Lerp(Color.white, BobUi.Hex(BobMatch.Enemy(id).Color), 0.35f);
+            foreach (var r in rs)
+            {
+                var mats = r.sharedMaterials;
+                for (int i = 0; i < mats.Length; i++) mats[i] = BobToon.Toon(tint, mats[i] != null ? mats[i].mainTexture : null);
+                r.sharedMaterials = mats; BobToon.Outline(r.gameObject, 2.5f);
+            }
+            m.transform.position = new Vector3(at.x, 0, at.y); m.transform.rotation = Quaternion.Euler(0, 180, 0);
+        }
+
+        void TickHeroModel(float dt)
+        {
+            if (heroModel == null) return;
+            float bounce = lastMove != Vector2.zero ? Mathf.Abs(Mathf.Sin(Time.time * 14f)) * 0.05f : 0f;
+            heroModel.transform.position = new Vector3(pos.x, bounce, pos.y);
+            if (lastMove.sqrMagnitude > 0.00001f) heroYaw = Mathf.LerpAngle(heroYaw, Mathf.Atan2(lastMove.x, lastMove.y) * Mathf.Rad2Deg, 1 - Mathf.Exp(-14f * dt));
+            heroModel.transform.rotation = Quaternion.Euler(0, heroYaw, 0);
+            if (heroAnim != null)
+            {
+                if (HasParam(heroAnim, "Speed")) heroAnim.SetFloat("Speed", player.Velocity.magnitude);
+                if (HasParam(heroAnim, "Carry")) heroAnim.SetBool("Carry", hand.Count > 0);
+            }
+        }
+
+        static bool HasParam(Animator a, string n) { foreach (var p in a.parameters) if (p.name == n) return true; return false; }
+
+        /// <summary>Signs and their boards always face the camera.</summary>
+        void FaceSigns()
+        {
+            if (cam == null) return;
+            foreach (var s in signs) if (s != null) s.transform.rotation = cam.transform.rotation;
+            if (setRoot == null) return;
+            foreach (Transform c in setRoot) if (c.name.StartsWith("SignBoard_")) c.rotation = cam.transform.rotation;
+        }
+    }
+}

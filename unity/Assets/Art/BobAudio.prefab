@@ -83,7 +83,12 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 1f194e4859c4b344cb0c991f05d3a55a, type: 3}
   - {fileID: 8300000, guid: bb3b52a644fc94648935a9545fef9f83, type: 3}
   - {fileID: 8300000, guid: 0915a209bc339b44eb54c125ce72df11, type: 3}
-  music: {fileID: 8300000, guid: c26c3117ed8655d48ba8e932699ba5e6, type: 3}
+  music: {fileID: 8300000, guid: 784daa8cc62bc2e418383ba0e964f8f3, type: 3}
+  tracks:
+  - {fileID: 8300000, guid: 784daa8cc62bc2e418383ba0e964f8f3, type: 3}
+  - {fileID: 8300000, guid: d824db2e050de8147b41abaaa24e94f3, type: 3}
+  - {fileID: 8300000, guid: 8d2c672809ebe6e4da19bbfb87f37a54, type: 3}
+  - {fileID: 8300000, guid: 7c28207df7c7b754e99c21dac05ca8db, type: 3}
   sfxVolume: 0.9
   musicVolume: 0.45
   pitchJitter: 0.06

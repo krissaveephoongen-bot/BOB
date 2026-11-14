@@ -1,0 +1,24 @@
+{
+ "name": "plant_pot",
+ "class": "prop_m",
+ "tris_in": 1940839,
+ "tris_out": 799,
+ "budget": 800,
+ "height_m": 0.8,
+ "colours": {
+  "press_shirt": 289,
+  "sweep_hair": 128,
+  "spray_hair": 125,
+  "shoe": 102,
+  "sponge": 55,
+  "mop": 43,
+  "metal": 31,
+  "white": 7,
+  "dirt_dark": 6,
+  "bubble_hair": 4,
+  "outline": 4,
+  "metal_dark": 3,
+  "wood": 1,
+  "gold_dark": 1
+ }
+}

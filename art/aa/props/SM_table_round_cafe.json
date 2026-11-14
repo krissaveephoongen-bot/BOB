@@ -1,0 +1,23 @@
+{
+ "name": "table_round_cafe",
+ "class": "room",
+ "tris_in": 1969058,
+ "tris_out": 19999,
+ "budget": 40000,
+ "height_m": 0.65,
+ "colours": {
+  "straw": 10535,
+  "metal_dark": 3827,
+  "gold_dark": 2483,
+  "metal": 1076,
+  "dirt": 749,
+  "trash_dark": 464,
+  "wood": 443,
+  "sponge": 214,
+  "spray_hair": 98,
+  "bubble_hair": 45,
+  "shoe": 32,
+  "sweep_shirt": 29,
+  "outline": 4
+ }
+}

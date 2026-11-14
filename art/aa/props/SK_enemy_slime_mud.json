@@ -1,0 +1,29 @@
+{
+ "name": "enemy_slime_mud",
+ "class": "char",
+ "tris_in": 4751,
+ "tris_out": 4741,
+ "budget": 6000,
+ "height_m": 0.8,
+ "colours": {
+  "outline": 1242,
+  "sweep_hair": 925,
+  "dirt": 658,
+  "wood": 630,
+  "dirt_dark": 562,
+  "spray_hair": 339,
+  "cream": 79,
+  "shoe": 69,
+  "white": 63,
+  "bubble_hair": 47,
+  "sweep_band": 43,
+  "gold_dark": 40,
+  "sweep_shirt": 21,
+  "mop": 9,
+  "fang": 4,
+  "straw": 4,
+  "trash_dark": 2,
+  "metal": 2,
+  "metal_dark": 2
+ }
+}

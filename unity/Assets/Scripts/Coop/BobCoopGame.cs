@@ -13,6 +13,7 @@ using Bob.Art;
 using Bob.Game;
 using Bob.Net;
 using Bob.Rules;
+using TMPro;
 using UnityEngine;
 
 namespace Bob.Coop

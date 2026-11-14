@@ -1,0 +1,21 @@
+{
+ "name": "bin_trash_grey",
+ "class": "prop_m",
+ "tris_in": 4640,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 1.0,
+ "colours": {
+  "spray_hair": 304,
+  "trash_dark": 108,
+  "metal_dark": 97,
+  "metal": 89,
+  "trash": 60,
+  "goggle_lens": 41,
+  "mop": 33,
+  "shoe": 23,
+  "outline": 21,
+  "cream": 13,
+  "white": 11
+ }
+}

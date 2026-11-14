@@ -193,9 +193,9 @@ UI, ไอคอน, หน้าเมนู, ภาพการ์ดโหม
 
 | ของ | ชื่อ |
 | --- | --- |
-| palette | `T_BOB_Palette.png` (แผ่นเดียวทั้งเกม, ช่องตาม `PALETTE` ใน `bob_kit.py`) |
-| material ร่วม | `M_BOB_Toon`, `M_BOB_Face_<id>`, `M_BOB_Floor_<room>` |
-| โมเดลจากสคริปต์ | `SK_<id>.fbx` (ตัวละคร/ศัตรู), `SM_<id>.fbx` (พร็อพ) |
+| palette | `T_BOB_Palette.png` (แผ่นเดียวทั้งเกม, ช่องตาม `PALETTE` ใน `bob_kit.py`; 14 พ.ย. 2026 เพิ่ม `grass`, `grass_dark`, `stone`, `water`, `water_dark` ต่อท้ายสำหรับแผนที่ Task Race — ห้ามสลับช่องเดิม) |
+| material ร่วม | `M_BOB_Toon`, `M_BOB_Face_<id>`, `M_BOB_Floor_<room>`, `M_BOB_CurvedMap` (BOB/CurvedWorld + palette), `M_BOB_Station` |
+| โมเดลจากสคริปต์ | `SK_<id>.fbx` (ตัวละคร/ศัตรู), `SM_<id>.fbx` (พร็อพ), `SM_bob_map_<id>.fbx` (ชิ้นแผนที่ Task Race) |
 | ไฟล์ดิบจาก AI | `art/aa/raw/<id>_<tool>_<yyyymmdd>.glb` (ไม่เข้า Unity) |
 | รายงาน | `kit_report.json`, `SM_<id>.json` |
 | ที่มาไฟล์ | ทุกชิ้นสาย B/C มีแถวใน `art/licenses/README.md` (เครื่องมือ, แผน, วันที่, ภาพตั้งต้น) |

@@ -1,0 +1,33 @@
+{
+ "name": "pipes_valve",
+ "class": "room",
+ "tris_in": 1992129,
+ "tris_out": 20000,
+ "budget": 40000,
+ "height_m": 1.0,
+ "colours": {
+  "trash": 5628,
+  "sweep_band": 2857,
+  "goggle_lens": 1720,
+  "trash_dark": 1650,
+  "dirt": 1383,
+  "spray_hair": 1371,
+  "wood": 932,
+  "sweep_shirt": 888,
+  "navy": 800,
+  "dirt_dark": 741,
+  "outline": 392,
+  "metal": 374,
+  "gold_dark": 370,
+  "straw": 217,
+  "bubble_hair": 200,
+  "metal_dark": 172,
+  "sponge": 115,
+  "sweep_hair": 89,
+  "shoe": 61,
+  "spray_pink": 17,
+  "cream": 14,
+  "mop": 8,
+  "white": 1
+ }
+}

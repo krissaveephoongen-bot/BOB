@@ -1,0 +1,29 @@
+{
+ "name": "polisher_head_yellow",
+ "class": "prop_m",
+ "tris_in": 1978658,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.2,
+ "colours": {
+  "spray_hair": 327,
+  "gold": 100,
+  "trash_dark": 72,
+  "goggle_strap": 60,
+  "gold_dark": 57,
+  "boss": 32,
+  "outline": 31,
+  "straw": 26,
+  "dirt": 24,
+  "sponge": 15,
+  "shoe": 15,
+  "spray_shirt": 13,
+  "sweep_hair": 10,
+  "metal_dark": 8,
+  "navy": 3,
+  "bubble_hair": 3,
+  "wood": 2,
+  "trash": 1,
+  "cream": 1
+ }
+}

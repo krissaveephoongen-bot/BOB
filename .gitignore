@@ -19,6 +19,8 @@ unity-check/bin/
 unity-check/obj/
 # OS / tools
 node_modules/
+__pycache__/
+*.pyc
 .DS_Store
 Thumbs.db
 unity/.vscode/

@@ -1,0 +1,24 @@
+{
+ "name": "enemy_slime_purple",
+ "class": "char",
+ "tris_in": 4778,
+ "tris_out": 4766,
+ "budget": 6000,
+ "height_m": 0.75,
+ "colours": {
+  "navy": 2166,
+  "boss": 858,
+  "slime": 780,
+  "goggle_strap": 280,
+  "spray_hair": 252,
+  "spray_shirt": 231,
+  "slime_light": 98,
+  "white": 37,
+  "spray_pink": 26,
+  "trash_dark": 23,
+  "metal": 10,
+  "metal_dark": 3,
+  "trash": 1,
+  "mop": 1
+ }
+}

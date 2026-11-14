@@ -1,0 +1,15 @@
+{
+ "name": "tv_flat",
+ "class": "prop_m",
+ "tris_in": 1894659,
+ "tris_out": 800,
+ "budget": 800,
+ "height_m": 0.6,
+ "colours": {
+  "trash_dark": 333,
+  "spray_hair": 273,
+  "metal_dark": 85,
+  "outline": 64,
+  "shoe": 45
+ }
+}

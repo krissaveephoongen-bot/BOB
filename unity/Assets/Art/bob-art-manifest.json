@@ -2512,6 +2512,139 @@
    "h": 720,
    "frames": 1,
    "group": "env"
+  },
+  {
+   "path": "Sprites/UI/Menu/menu_settings",
+   "w": 383,
+   "h": 384,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/Menu/menu_shop",
+   "w": 383,
+   "h": 384,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/Menu/menu_home",
+   "w": 381,
+   "h": 384,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/Menu/menu_close",
+   "w": 384,
+   "h": 382,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/Menu/menu_sound",
+   "w": 384,
+   "h": 383,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/Menu/menu_coin_stack",
+   "w": 294,
+   "h": 384,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/Menu/menu_gem_pile",
+   "w": 384,
+   "h": 267,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/Menu/menu_equip_broom",
+   "w": 305,
+   "h": 384,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/Menu/menu_equip_mop",
+   "w": 245,
+   "h": 384,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/Menu/menu_equip_sponge",
+   "w": 322,
+   "h": 384,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/Menu/menu_equip_spray",
+   "w": 190,
+   "h": 384,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/Menu/menu_equip_hat",
+   "w": 384,
+   "h": 342,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/Menu/menu_popup_win",
+   "w": 383,
+   "h": 384,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/Menu/menu_popup_confirm",
+   "w": 384,
+   "h": 311,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/Menu/menu_ribbon",
+   "w": 384,
+   "h": 341,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/Menu/menu_logo",
+   "w": 382,
+   "h": 384,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/Menu/menu_btn_play",
+   "w": 384,
+   "h": 331,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/Menu/menu_btn_round",
+   "w": 384,
+   "h": 383,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/Menu/menu_portrait_frame",
+   "w": 384,
+   "h": 380,
+   "frames": 1,
+   "group": "ui"
   }
  ]
 }

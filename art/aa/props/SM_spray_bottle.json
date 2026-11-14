@@ -1,0 +1,23 @@
+{
+ "name": "spray_bottle",
+ "class": "prop_hand",
+ "tris_in": 1997188,
+ "tris_out": 1499,
+ "budget": 1500,
+ "height_m": 0.3,
+ "colours": {
+  "bubble_shirt": 393,
+  "metal": 326,
+  "mop": 145,
+  "metal_dark": 144,
+  "white": 109,
+  "spray_hair": 96,
+  "spray_shirt": 85,
+  "trash_dark": 83,
+  "goggle_strap": 81,
+  "trash": 13,
+  "navy": 13,
+  "goggle_lens": 9,
+  "boss": 2
+ }
+}

@@ -1,0 +1,23 @@
+{
+ "name": "chair_bentwood",
+ "class": "room",
+ "tris_in": 1993835,
+ "tris_out": 19999,
+ "budget": 40000,
+ "height_m": 0.85,
+ "colours": {
+  "dirt": 7224,
+  "dirt_dark": 6772,
+  "wood": 3950,
+  "gold_dark": 827,
+  "sweep_hair": 751,
+  "bubble_hair": 246,
+  "outline": 112,
+  "cream": 41,
+  "metal_dark": 23,
+  "shoe": 15,
+  "metal": 14,
+  "sweep_shirt": 14,
+  "spray_hair": 10
+ }
+}

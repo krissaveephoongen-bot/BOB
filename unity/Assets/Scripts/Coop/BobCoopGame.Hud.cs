@@ -7,6 +7,7 @@ using Bob.Game;
 using Bob.Net;
 using Bob.Rules;
 using Bob.UI;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -17,7 +18,7 @@ namespace Bob.Coop
     public partial class BobCoopGame
     {
         RectTransform hudRoot, safe, page, ctxPanel, handRow, toastRt, pageBg;
-        Text timerText, toastText, pauseTime;
+        TMP_Text timerText, toastText, pauseTime;
         enum Ov { None, Pause, Confirm }
         Ov ov = Ov.None;
         float toastUntil;
@@ -120,9 +121,9 @@ namespace Bob.Coop
         {
             var bg = BobUi.Panel(parent, BobUi.Surface, "ui_panel", "Field");
             BobUi.Size(bg, 144, 144, 1);
-            var text = BobUi.Label(bg.transform, value, T.body, T.ink); BobUi.Stretch(text.rectTransform, 24, 8, 24, 8);
+            var text = BobUi.LabelLegacy(bg.transform, value, T.body, T.ink); BobUi.Stretch(text.rectTransform, 24, 8, 24, 8);
             text.supportRichText = false;
-            var ph = BobUi.Label(bg.transform, placeholder, T.body, T.inkMuted); BobUi.Stretch(ph.rectTransform, 24, 8, 24, 8);
+            var ph = BobUi.LabelLegacy(bg.transform, placeholder, T.body, T.inkMuted); BobUi.Stretch(ph.rectTransform, 24, 8, 24, 8);
             var input = bg.gameObject.AddComponent<InputField>();
             input.textComponent = text; input.placeholder = ph; input.text = value; input.targetGraphic = bg;
             return input;
@@ -164,7 +165,7 @@ namespace Bob.Coop
                 var id = c.Id;
                 var b = Btn(heroes.transform, c.Name, id == charId ? BobUi.Sun : BobUi.Surface, () => { PickChar(id); RenderHud(); }, 160, -1, T.caption);
                 b.interactable = !MeReady;
-                var hl = b.GetComponentInChildren<Text>(); hl.alignment = TextAnchor.MiddleLeft; BobUi.Stretch(hl.rectTransform, 112, 4, 8, 4);
+                var hl = b.GetComponentInChildren<TMP_Text>(); hl.alignment = TextAlignmentOptions.Left; BobUi.Stretch(hl.rectTransform, 112, 4, 8, 4);
                 var face = BobUi.Img(b.transform, id + "_portrait", 100, T.Hero(id));
                 BobUi.Pin(face.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(10, 0), new Vector2(100, 100));
             }
@@ -312,7 +313,7 @@ namespace Bob.Coop
                     int k = i; var id = hand[i];
                     var verb = spot == Spot.Cart ? "วางบนรถ" : spot == Spot.Table ? "พักบนโต๊ะ" : mate != null ? "ส่งให้ " + Short(mate.name) : "ถืออยู่";
                     var b = Btn(handRow, PartName(id) + "\n" + verb, spot == Spot.Cart ? BobUi.Sun : BobUi.Surface, () => UseHand(k), 190, 340, T.caption);
-                    var hl = b.GetComponentInChildren<Text>(); hl.alignment = TextAnchor.MiddleLeft; BobUi.Stretch(hl.rectTransform, 104, 6, 10, 6);
+                    var hl = b.GetComponentInChildren<TMP_Text>(); hl.alignment = TextAlignmentOptions.Left; BobUi.Stretch(hl.rectTransform, 104, 6, 10, 6);
                     var icon = BobUi.Img(b.transform, "part_" + id, 80); icon.transform.SetAsFirstSibling();
                     BobUi.Pin(icon.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(14, 0), new Vector2(80, 80));
                 }

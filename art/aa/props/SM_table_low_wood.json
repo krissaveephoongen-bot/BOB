@@ -1,0 +1,18 @@
+{
+ "name": "table_low_wood",
+ "class": "room",
+ "tris_in": 1974158,
+ "tris_out": 19999,
+ "budget": 40000,
+ "height_m": 0.35,
+ "colours": {
+  "dirt": 9394,
+  "gold_dark": 4448,
+  "dirt_dark": 3934,
+  "straw": 1720,
+  "wood": 373,
+  "sweep_hair": 128,
+  "outline": 1,
+  "bubble_hair": 1
+ }
+}

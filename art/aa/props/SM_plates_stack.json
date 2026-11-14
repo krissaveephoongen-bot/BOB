@@ -1,0 +1,16 @@
+{
+ "name": "plates_stack",
+ "class": "prop_hand",
+ "tris_in": 1940550,
+ "tris_out": 1499,
+ "budget": 1500,
+ "height_m": 0.14,
+ "colours": {
+  "metal": 500,
+  "metal_dark": 339,
+  "shoe": 297,
+  "mop": 214,
+  "outline": 126,
+  "spray_hair": 23
+ }
+}

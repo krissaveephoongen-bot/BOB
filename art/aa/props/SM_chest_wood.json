@@ -1,0 +1,22 @@
+{
+ "name": "chest_wood",
+ "class": "room",
+ "tris_in": 1893160,
+ "tris_out": 20000,
+ "budget": 40000,
+ "height_m": 0.55,
+ "colours": {
+  "dirt_dark": 5106,
+  "wood": 4282,
+  "bubble_hair": 3547,
+  "shoe": 1971,
+  "sweep_hair": 1856,
+  "cream": 1728,
+  "outline": 951,
+  "dirt": 296,
+  "spray_hair": 224,
+  "metal": 36,
+  "metal_dark": 2,
+  "trash_dark": 1
+ }
+}

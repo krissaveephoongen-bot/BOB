@@ -1,0 +1,26 @@
+{
+ "name": "sign_stand_wood",
+ "class": "prop_m",
+ "tris_in": 1889870,
+ "tris_out": 799,
+ "budget": 800,
+ "height_m": 1.2,
+ "colours": {
+  "wood": 208,
+  "dirt": 205,
+  "gold_dark": 116,
+  "dirt_dark": 86,
+  "bubble_hair": 55,
+  "outline": 30,
+  "cream": 21,
+  "sweep_hair": 18,
+  "spray_hair": 17,
+  "trash_dark": 14,
+  "straw": 11,
+  "metal_dark": 9,
+  "shoe": 5,
+  "trash": 2,
+  "sponge": 1,
+  "metal": 1
+ }
+}
