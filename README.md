@@ -3,6 +3,8 @@
 GDD: https://claude.ai/artifact/VsJEEyQDx4HwvrjZk2MEAu
 Playable prototype: https://claude.ai/artifact/M9orSH3LFGbYboRm7QAkHn
 
+> **หลาย branch ทำงานพร้อมกัน:** กระดานจองงาน/สถานะอยู่ที่ [COORDINATION.md](COORDINATION.md) — จองงานก่อนลงมือ, แจ้งก่อนแก้ไฟล์ hot, และต่อคิว rebuild ซีนทีละคน
+
 ## What is here
 
 | Folder | What | State |
