@@ -12,6 +12,10 @@ namespace Bob.Rules
     public static class BobChapters
     {
         public const string PrefKey = "bob.chapter";
+        /// <summary>PlayerPrefs key of a chapter's best star count (A3): "bob.story.stars.&lt;order&gt;".</summary>
+        public const string StarsPrefix = "bob.story.stars.";
+        /// <summary>XP per level: the lobby's level gate and the match's next-chapter check share this one number.</summary>
+        public const int XpPerLevel = 200;
         const string ResourcePath = "Chapters";
 
         static ChapterDefinition[] all;
@@ -71,6 +75,57 @@ namespace Bob.Rules
 
         /// <summary>Best-score band of a chapter (1 = chapters 1-2, 2 = 3-4, 3 = 5-6), matching the 4.6 bands.</summary>
         public static int Band(ChapterDefinition chapter) => chapter == null ? 1 : chapter.Band;
+
+        /// <summary>Player level of an XP total; the lobby and the TaskRace scene both gate chapters with it.</summary>
+        public static int LevelFromXp(int xp) => 1 + Mathf.Max(0, xp) / XpPerLevel;
+
+        /// <summary>Best 0-3 star count this chapter has earned on this device.</summary>
+        public static int Stars(ChapterDefinition chapter) => chapter == null ? 0 : Stars(chapter.Order);
+
+        public static int Stars(int order)
+        {
+            try { return Mathf.Clamp(PlayerPrefs.GetInt(StarsPrefix + Mathf.Max(1, order), 0), 0, 3); }
+            catch (Exception) { return 0; }
+        }
+
+        /// <summary>Keep the better of the stored and the earned star count; returns what is now stored.</summary>
+        public static int SaveStars(int order, int stars)
+        {
+            int chapter = Mathf.Max(1, order);
+            int best = Mathf.Max(Stars(chapter), Mathf.Clamp(stars, 0, 3));
+            try
+            {
+                PlayerPrefs.SetInt(StarsPrefix + chapter, best);
+                PlayerPrefs.Save();
+            }
+            catch (Exception) { }
+            return best;
+        }
+
+        /// <summary>Stars collected across the ladder, for the lobby's chapter summary.</summary>
+        public static int TotalStars
+        {
+            get
+            {
+                Ensure();
+                int sum = 0;
+                foreach (var c in all) sum += Stars(c.Order);
+                return sum;
+            }
+        }
+
+        /// <summary>
+        /// The chapter after this one on the ladder, or null at the top. A3 reads it for "บทถัดไป", so the last
+        /// chapter of the story has to be answered with null rather than chapter 1.
+        /// </summary>
+        public static ChapterDefinition Next(ChapterDefinition chapter)
+        {
+            Ensure();
+            if (chapter == null) return null;
+            for (int i = 0; i < all.Length; i++)
+                if (all[i].Order == chapter.Order) return i + 1 < all.Length ? all[i + 1] : null;
+            return null;
+        }
 
         /// <summary>Ladder problems for the editor menu (empty = the six chapters are ordered and unlock in order).</summary>
         public static List<string> Validate()

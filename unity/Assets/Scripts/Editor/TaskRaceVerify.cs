@@ -134,6 +134,7 @@ namespace Bob.EditorTools
             Render(suffix, hud);
             RenderS28(suffix, hud, spots, hero);
             RenderResult(suffix, hud, manager, hero);
+            RenderChapter(suffix, hud, manager, hero);
             RenderPause(suffix, hud, manager, hero);
             Debug.Log($"[TaskRaceVerify] {scenePath} done.");
         }
@@ -147,6 +148,28 @@ namespace Bob.EditorTools
             var eye = hero != null ? hero.transform.position + new Vector3(0f, 6.2f, -5.2f) : new Vector3(0f, 10.5f, -15f);
             var look = hero != null ? hero.transform.position + new Vector3(0f, 0.72f, 0f) : new Vector3(0f, 0.4f, 0.5f);
             Shot($"Logs/taskrace{suffix}-result.png", eye, look, 40f, hud);
+            hud.DebugCloseResult();
+            manager.DebugResetMatch();
+        }
+
+        /// <summary>
+        /// Shoot the A3 chapter card: stars off a composed 2-0 series (one win by the challenge margin), the three star
+        /// asks, and the next chapter with its level gate. Rewards stay unpaid, so the stars are never written here.
+        /// </summary>
+        static void RenderChapter(string suffix, BobTaskRaceHud hud, TaskRaceModeManager manager, GameObject hero)
+        {
+            if (hud == null || manager == null) return;
+            var series = manager.DebugComposeSeries(6, 3, 6, 4);
+            hud.DebugShowResult();
+            var chapter = BobChapters.Saved;
+            var next = BobChapters.Next(chapter);
+            int level = BobChapters.LevelFromXp(BobTaskRaceProfile.Xp);
+            Debug.Log($"[TaskRaceVerify] chapter card: chapter {chapter.Order} \"{chapter.Title}\" · series {series.Score} " +
+                      $"· stars {series.Stars}/3 · next {(next != null ? $"#{next.Order} \"{next.Title}\" LV {next.UnlockLevel}" : "none (end of story)")} " +
+                      $"· player LV {level}");
+            var eye = hero != null ? hero.transform.position + new Vector3(0f, 6.2f, -5.2f) : new Vector3(0f, 10.5f, -15f);
+            var look = hero != null ? hero.transform.position + new Vector3(0f, 0.72f, 0f) : new Vector3(0f, 0.4f, 0.5f);
+            Shot($"Logs/taskrace{suffix}-chapter.png", eye, look, 40f, hud);
             hud.DebugCloseResult();
             manager.DebugResetMatch();
         }

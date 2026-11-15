@@ -17,6 +17,7 @@
 // Layout is placed by hand instead of layout groups: the card is authored in the editor (no layout pass runs
 // outside play mode), and fixed row heights keep a wrapped Thai name from sliding into the next row.
 using Bob.Game;
+using Bob.Rules;
 using Bob.UI;
 using TMPro;
 using UnityEngine;
@@ -900,7 +901,10 @@ namespace Bob.TaskRace
 
         // ---------------------------------------------------------------- match result (S27)
 
-        /// <summary>Score, the two task counts and the paid reward, with play-again and back-to-lobby.</summary>
+        /// <summary>
+        /// Score, the two task counts and the paid reward, with play-again and back-to-lobby. A story chapter is
+        /// decided by a whole series, so a closed one gets the chapter card of A3 instead (stars + next chapter).
+        /// </summary>
         void ShowResult(MatchResult r)
         {
             HideCard();
@@ -914,6 +918,17 @@ namespace Bob.TaskRace
             var p = (RectTransform)panel.transform;
             BobUi.Pin(p, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1080f, 760f));
 
+            var series = manager != null ? manager.Series : null;
+            if (series != null && series.Over) BuildChapterCard(p, r, series);
+            else BuildMatchCard(p, r);
+
+            shownResult = r;
+            hasShownResult = true;
+        }
+
+        /// <summary>A PvP round or the P3 overlay without a decided series: one round's score and reward.</summary>
+        void BuildMatchCard(RectTransform p, MatchResult r)
+        {
             string heading = r.Won ? "ชนะ!" : r.Draw ? "เสมอ" : "แพ้";
             var colour = r.Won ? T.success : r.Draw ? T.ink : T.danger;
             var title = BobUi.Label(p, heading, 96, colour, TextAnchor.MiddleCenter, FontStyle.Bold);
@@ -935,16 +950,7 @@ namespace Bob.TaskRace
             BobUi.Pin(tasks.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0f, -252f), new Vector2(1000f, 60f));
 
-            var reward = BobUi.Panel(p, T.surfaceCream, null, "Reward");
-            BobUi.Pin((RectTransform)reward.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0f, -326f), new Vector2(960f, 160f));
-            var line = BobUi.Label(reward.transform, $"+{r.Coins} เหรียญ     +{r.Xp} XP", 52, T.ink,
-                TextAnchor.MiddleCenter, FontStyle.Bold);
-            BobUi.Stretch(line.rectTransform, 20f, 66f, 20f, 0f);
-            var best = BobUi.Label(reward.transform,
-                r.NewBest ? $"สถิติใหม่! {r.BestPoints} แต้ม" : $"สถิติสูงสุด {r.BestPoints} แต้ม",
-                28, r.NewBest ? T.accent : T.inkMuted, TextAnchor.MiddleCenter);
-            BobUi.Stretch(best.rectTransform, 20f, 14f, 20f, 90f);
+            RewardBlock(p, r, -326f);
 
             var again = BobUi.Button(p, "เล่นอีกครั้ง", T.primary, RestartFromResult, T.buttonLg, T.ink);
             BobUi.Pin((RectTransform)again.transform, new Vector2(1f, 0f), new Vector2(1f, 0f),
@@ -952,9 +958,124 @@ namespace Bob.TaskRace
             var home = BobUi.Button(p, "กลับเมนู", T.surfaceCream, BackToLobby, T.buttonLg, T.ink);
             BobUi.Pin((RectTransform)home.transform, new Vector2(0f, 0f), new Vector2(0f, 0f),
                 new Vector2(40f, 40f), new Vector2(480f, 160f));
+        }
 
-            shownResult = r;
-            hasShownResult = true;
+        // ---------------------------------------------------------------- chapter result (A3)
+
+        /// <summary>
+        /// The end of a story chapter: the series score, 0-3 stars with the three things each star asks for, the
+        /// reward, and "บทถัดไป" for the ladder. The last chapter shows the end-of-story line in that slot instead,
+        /// and a still-locked next chapter says the level it wants — the card never ends on a dead button either way.
+        /// </summary>
+        void BuildChapterCard(RectTransform p, MatchResult r, StorySeries s)
+        {
+            // 80 taller than the match card: the next-chapter line needs its own band above the buttons, or it
+            // lands inside the reward panel.
+            p.sizeDelta = new Vector2(1080f, 840f);
+
+            var chapter = BobChapters.Saved;
+            var next = BobChapters.Next(chapter);
+            int level = BobChapters.LevelFromXp(BobTaskRaceProfile.Xp);
+            bool nextOpen = next != null && BobChapters.Unlocked(next, level);
+            bool won = s.LocalTookSeries;
+
+            string heading = won ? "ผ่านบท!" : s.LocalWins == s.RivalWins ? "เสมอบท" : "ยังไม่ผ่าน";
+            var colour = won ? T.success : s.LocalWins == s.RivalWins ? T.ink : T.danger;
+            var title = BobUi.Label(p, heading, 92, colour, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Pin(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -12f), new Vector2(1000f, 104f));
+
+            var name = BobUi.Label(p, $"บท {chapter.Order} · {chapter.Title}", 34, T.inkMuted, TextAnchor.MiddleCenter);
+            BobUi.Pin(name.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -120f), new Vector2(1000f, 40f));
+
+            var score = BobUi.Label(p, $"ชนะ {s.LocalWins} – {s.RivalWins}", 64, T.ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Pin(score.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -166f), new Vector2(900f, 72f));
+
+            StarIcons(p, s.Stars);
+
+            string Halo(bool on) => on ? $"<color=#{ColorUtility.ToHtmlStringRGB(T.success)}>✓</color>"
+                                       : $"<color=#{ColorUtility.ToHtmlStringRGB(T.inkMuted)}>✕</color>";
+            var asks = BobUi.Label(p,
+                $"{Halo(won)} ชนะบท      {Halo(s.CleanSweep)} ไม่เสียรอบ      {Halo(s.ChallengeOffered)} ชนะขาด ≥ 3 งาน",
+                26, T.inkMuted, TextAnchor.MiddleCenter);
+            BobUi.Pin(asks.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -352f), new Vector2(1020f, 40f));
+
+            RewardBlock(p, r, -400f);
+
+            var note = BobUi.Label(p, NextNote(next, nextOpen, level), 24,
+                next == null || nextOpen ? T.inkMuted : T.danger, TextAnchor.MiddleCenter);
+            BobUi.Pin(note.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -600f), new Vector2(1020f, 36f));
+
+            var home = BobUi.Button(p, "กลับเมนู", T.surfaceCream, BackToLobby, 36, T.ink);
+            BobUi.Pin((RectTransform)home.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(next != null ? -324f : -170f, 36f), new Vector2(next != null ? 300f : 340f, 132f));
+
+            var again = BobUi.Button(p, "เล่นอีกครั้ง", T.surfaceCream, RestartFromResult, 36, T.ink);
+            BobUi.Pin((RectTransform)again.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(next != null ? 0f : 170f, 36f), new Vector2(next != null ? 300f : 340f, 132f));
+
+            if (next == null) return; // chapter 6: the end-of-story line already sits above the two buttons
+            var onward = BobUi.Button(p, "บทถัดไป", nextOpen ? T.primary : T.surfaceCream,
+                nextOpen ? (UnityAction)(() => GoToNextChapter(next)) : null, 36, nextOpen ? T.ink : T.inkMuted);
+            BobUi.Pin((RectTransform)onward.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(324f, 36f), new Vector2(300f, 132f));
+            onward.interactable = nextOpen;
+        }
+
+        /// <summary>The line above the chapter buttons: the next chapter's level gate, or the end of the story.</summary>
+        static string NextNote(ChapterDefinition next, bool open, int level)
+        {
+            if (next == null) return "จบเนื้อเรื่องหลักแล้ว · เล่นซ้ำเพื่อเก็บดาวให้ครบ";
+            if (open) return $"{next.Title} · LV {next.UnlockLevel}";
+            return $"บทถัดไปปลดที่ LV {next.UnlockLevel} · คุณ LV {level} — เล่นซ้ำเพื่อเก็บ XP";
+        }
+
+        /// <summary>
+        /// Three stars off the art library, filled for the ones this chapter earned. The Thai fonts carry no ★ glyph,
+        /// so a text row would draw three empty boxes; icon_star / icon_star_empty are the real sprites.
+        /// </summary>
+        void StarIcons(RectTransform p, int stars)
+        {
+            const float size = 96f, gap = 18f;
+            float x = -(size + gap);
+            for (int i = 0; i < 3; i++)
+            {
+                var star = BobUi.Img(p, i < stars ? "icon_star" : "icon_star_empty", size);
+                BobUi.Pin(star.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f),
+                    new Vector2(x, -294f), new Vector2(size, size));
+                x += size + gap;
+            }
+        }
+
+        /// <summary>Coins, XP and the best score; the chapter card and the match card share this block.</summary>
+        void RewardBlock(RectTransform p, MatchResult r, float top)
+        {
+            var reward = BobUi.Panel(p, T.surfaceCream, null, "Reward");
+            BobUi.Pin((RectTransform)reward.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, top), new Vector2(960f, 148f));
+            var line = BobUi.Label(reward.transform, $"+{r.Coins} เหรียญ     +{r.Xp} XP", 50, T.ink,
+                TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Stretch(line.rectTransform, 20f, 62f, 20f, 0f);
+            var best = BobUi.Label(reward.transform,
+                r.NewBest ? $"สถิติใหม่! {r.BestPoints} แต้ม" : $"สถิติสูงสุด {r.BestPoints} แต้ม",
+                28, r.NewBest ? T.accent : T.inkMuted, TextAnchor.MiddleCenter);
+            BobUi.Stretch(best.rectTransform, 20f, 12f, 20f, 84f);
+        }
+
+        /// <summary>Save the pick and reload the match scene, which applies the chapter's D and clock in Awake.</summary>
+        void GoToNextChapter(ChapterDefinition next)
+        {
+            int level = BobChapters.LevelFromXp(BobTaskRaceProfile.Xp);
+            if (!BobChapters.Unlocked(next, level)) return;
+            BobChapters.Select(next, level);
+            HideResult();
+            HideCard();
+            if (Application.CanStreamedLevelBeLoaded("TaskRace")) SceneManager.LoadScene("TaskRace");
+            else Debug.LogWarning("[TaskRace] the TaskRace scene is not in Build Settings: cannot open the next chapter.");
         }
 
         void HideResult()

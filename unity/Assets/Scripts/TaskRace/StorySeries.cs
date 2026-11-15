@@ -59,6 +59,15 @@ namespace Bob.TaskRace
         public bool Over => LastRound.HasValue &&
                             (LocalWins >= winsToTake || RivalWins >= winsToTake || LastRound.Value.Number >= Rounds);
         public bool LocalTookSeries => LocalWins > RivalWins;
+        /// <summary>Won without dropping a round: the "never lost a round" star of the chapter card (A3).</summary>
+        public bool CleanSweep => LocalWins > 0 && RivalWins == 0;
+        /// <summary>
+        /// 0-3 stars for a closed chapter (A3, docs 11 S27): one for taking the chapter, one for never losing a
+        /// round, one for winning a round by the challenge margin. A lost or drawn chapter earns none, so the stars
+        /// say how the chapter was won without ever being the condition for winning it. A series still in play has
+        /// none: leading 1-0 is not a closed chapter.
+        /// </summary>
+        public int Stars => !Over || !LocalTookSeries ? 0 : 1 + (CleanSweep ? 1 : 0) + (ChallengeOffered ? 1 : 0);
         public string Score => $"{LocalWins}-{RivalWins}";
 
         public void Reset()

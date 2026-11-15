@@ -27,7 +27,7 @@ namespace Bob.Game
         float heroTimer; bool heroTimerOn; TMP_Text heroTimerText;
         Image pendingShopRoot;
 
-        int Level => 1 + xp / 200;
+        int Level => BobChapters.LevelFromXp(xp);
         static readonly string[] HomeBackdrops = { "lobby_rental_room", "lobby_condo", "lobby_coffee_shop", "lobby_kitchen" };
 
         sealed class ModeInfo { public string Id, Name, Players, Length, Lock; public Color Color; }
@@ -279,6 +279,16 @@ namespace Bob.Game
                 var thumb = BobUi.Img(card.transform, chapter.Backdrop, 140);
                 BobUi.Pin(thumb.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -14), new Vector2(cw - 28, 140));
                 if (!unlocked) thumb.color = new Color(1, 1, 1, 0.35f);
+
+                // A3: the chapter's best star count sits on the picture, bottom-right, so it never reflows the card.
+                // Sprites, not ★: neither Thai font has the glyph.
+                int best = BobChapters.Stars(chapter.Order);
+                for (int s = 0; s < 3; s++)
+                {
+                    var star = BobUi.Img(card.transform, s < best ? "icon_star" : "icon_star_empty", 28);
+                    BobUi.Pin(star.rectTransform, new Vector2(1, 1), new Vector2(1, 1),
+                        new Vector2(-16f - (2 - s) * 32f, -112f), new Vector2(28, 28));
+                }
 
                 var badge = BobUi.Disc(card.transform, unlocked ? BobUi.Sun : BobUi.Muted, 70, "Badge");
                 BobUi.Pin((RectTransform)badge.transform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(18, -18), new Vector2(70, 70));

@@ -432,6 +432,16 @@ namespace Bob.TaskRace
             RemainingSeconds = 0f;
             LastResult = BobTaskRaceProfile.Record(won, draw, teamAPoints, teamBPoints, tasksA, tasksB, total,
                 localPool, mine, record);
+
+            // A3: a decided story chapter earns 0-3 stars, written before MatchEnded so the card reads the new best.
+            if (record && series != null && series.Over)
+            {
+                var chapter = Bob.Rules.BobChapters.Saved;
+                int best = Bob.Rules.BobChapters.SaveStars(chapter.Order, series.Stars);
+                if (Application.isPlaying)
+                    Debug.Log($"[TaskRace] chapter {chapter.Order} closed {series.Score}: {series.Stars}/3 stars (best {best}).");
+            }
+
             MatchEnded?.Invoke(LastResult.Value);
             if (Application.isPlaying)
                 Debug.Log($"[TaskRace] match end: {LastResult.Value}");
@@ -867,6 +877,18 @@ namespace Bob.TaskRace
         }
 
         public void DebugResetMatch() => RestartMatch();
+
+        /// <summary>
+        /// Verify: put a closed series on the manager as task pairs per round, so the A3 chapter card can be composed
+        /// outside Play mode (the real series only exists once BeginMatch has run).
+        /// </summary>
+        public StorySeries DebugComposeSeries(params int[] tasksPerRound)
+        {
+            series = new StorySeries(storyRoundSeconds, seriesWinsToTake);
+            for (int i = 0; i + 1 < tasksPerRound.Length; i += 2)
+                series.Register(tasksPerRound[i], tasksPerRound[i + 1], 0, 0);
+            return series;
+        }
 
         /// <summary>Debug: play another stage (1-6) without leaving the scene. The pick is not saved to the profile.</summary>
         public void DebugApplyStage(int order)
