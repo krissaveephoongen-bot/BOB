@@ -2396,8 +2396,8 @@
   },
   {
    "path": "Sprites/UI/CharacterSelect/card_sweep",
-   "w": 256,
-   "h": 328,
+   "w": 1024,
+   "h": 1536,
    "frames": 1,
    "group": "ui",
    "owner": "sweep"
@@ -2412,8 +2412,8 @@
   },
   {
    "path": "Sprites/UI/CharacterSelect/card_bubble",
-   "w": 256,
-   "h": 328,
+   "w": 1024,
+   "h": 1536,
    "frames": 1,
    "group": "ui",
    "owner": "bubble"
@@ -2428,8 +2428,8 @@
   },
   {
    "path": "Sprites/UI/CharacterSelect/card_spray",
-   "w": 256,
-   "h": 328,
+   "w": 1024,
+   "h": 1536,
    "frames": 1,
    "group": "ui",
    "owner": "spray"
@@ -2444,46 +2444,11 @@
   },
   {
    "path": "Sprites/UI/CharacterSelect/card_press",
-   "w": 256,
-   "h": 328,
+   "w": 1024,
+   "h": 1536,
    "frames": 1,
    "group": "ui",
    "owner": "press"
-  },
-  {
-   "path": "Sprites/UI/StageSelect/stage_school",
-   "w": 384,
-   "h": 304,
-   "frames": 1,
-   "group": "ui"
-  },
-  {
-   "path": "Sprites/UI/StageSelect/stage_classroom",
-   "w": 384,
-   "h": 304,
-   "frames": 1,
-   "group": "ui"
-  },
-  {
-   "path": "Sprites/UI/StageSelect/stage_cafeteria",
-   "w": 384,
-   "h": 304,
-   "frames": 1,
-   "group": "ui"
-  },
-  {
-   "path": "Sprites/UI/StageSelect/stage_playground",
-   "w": 384,
-   "h": 304,
-   "frames": 1,
-   "group": "ui"
-  },
-  {
-   "path": "Sprites/UI/StageSelect/stage_boiler",
-   "w": 384,
-   "h": 304,
-   "frames": 1,
-   "group": "ui"
   },
   {
    "path": "Sprites/Environments/Lobby/lobby_rental_room",
@@ -2643,6 +2608,13 @@
    "path": "Sprites/UI/Menu/menu_portrait_frame",
    "w": 384,
    "h": 380,
+   "frames": 1,
+   "group": "ui"
+  },
+  {
+   "path": "Sprites/UI/StageSelect/stage_card",
+   "w": 1536,
+   "h": 1024,
    "frames": 1,
    "group": "ui"
   }

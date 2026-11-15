@@ -1519,31 +1519,6 @@ MonoBehaviour:
     - {fileID: 21300000, guid: 66e0eb4f0a84fc84aaa2a404ca25cc03, type: 3}
     fps: 10
     loop: 1
-  - name: stage_school
-    frames:
-    - {fileID: 21300000, guid: 7ce1eac262f1d534c8de08b41a5f1f2e, type: 3}
-    fps: 10
-    loop: 1
-  - name: stage_classroom
-    frames:
-    - {fileID: 21300000, guid: a37e5369e2eb0584985c090bdcd15023, type: 3}
-    fps: 10
-    loop: 1
-  - name: stage_cafeteria
-    frames:
-    - {fileID: 21300000, guid: 682de405e3d167f48be92b5ea270a3bf, type: 3}
-    fps: 10
-    loop: 1
-  - name: stage_playground
-    frames:
-    - {fileID: 21300000, guid: 96db0f02c60376b42bd47c2a837f0aae, type: 3}
-    fps: 10
-    loop: 1
-  - name: stage_boiler
-    frames:
-    - {fileID: 21300000, guid: 49e1fd6e9e5c302409769752b4a2533e, type: 3}
-    fps: 10
-    loop: 1
   - name: lobby_rental_room
     frames:
     - {fileID: 21300000, guid: 3f9c5438604ac6e49babaa93324b57d3, type: 3}
@@ -1657,5 +1632,10 @@ MonoBehaviour:
   - name: menu_portrait_frame
     frames:
     - {fileID: 21300000, guid: 33b6a334f42879f44a373c7742c1e880, type: 3}
+    fps: 10
+    loop: 1
+  - name: stage_card
+    frames:
+    - {fileID: 21300000, guid: 5aa2e735a4508d34b832a2c0b915e4fa, type: 3}
     fps: 10
     loop: 1

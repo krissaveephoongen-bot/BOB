@@ -12,9 +12,9 @@ rendered at SCALE (2x -> 256 px frames).
 """
 import json, math, os
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # repo root (this file: art/tools/)
 ART = os.path.join(ROOT, "unity", "Assets", "Art")
-SRC = os.path.join(ROOT, "source", "svg")  # kept outside Assets so Unity does not import the SVGs
+SRC = os.path.join(ROOT, "art", "source", "svg")  # kept outside Assets so Unity does not import the SVGs
 SCALE = 2
 
 INK = "#2B2D42"; SURFACE = "#FFFDF5"; SUN = "#FFD166"; TEAL = "#1FA6A0"; ROSE = "#EF476F"
@@ -53,7 +53,7 @@ S = f'stroke="{INK}" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="
 def write_svg(rel, w, h, body):
     path = os.path.join(SRC, rel + ".svg")
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w") as fh:
+    with open(path, "w", encoding="utf-8") as fh:
         fh.write(f'<svg xmlns="http://www.w3.org/2000/svg" width="{w*SCALE}" height="{h*SCALE}" viewBox="0 0 {w} {h}">{body}</svg>')
 
 def sprite(rel, w, h, body, **meta):
@@ -1104,26 +1104,19 @@ def make_ui_concept():
     sprite("Sprites/UI/ui_panel_blue", 96, 96, f'<rect x="3" y="3" width="90" height="90" rx="18" fill="#EAF3FD" {S}/><rect x="3" y="3" width="90" height="22" rx="12" fill="{NAVY}" {S}/>', group="ui", border=[26 * SCALE, 20 * SCALE, 20 * SCALE, 20 * SCALE])
     for name, body in (("icon_heart", item_icon("heart")), ("icon_coin", item_icon("coin")), ("icon_gem", item_icon("gem"))):
         sprite(f"Sprites/UI/{name}", 96, 96, body, group="ui")
-    # per-hero: skill icon, character-select card
-    bg = {"sweep": "#FFC94A", "bubble": "#B79CF0", "spray": "#5BA8F5", "press": "#6BD39A"}  # card colours as in the concept Character Select row
+    # per-hero: skill icon
     for cid in CHARS:
         sprite(f"Sprites/UI/Skills/icon_skill_{cid}", 96, 96, round_button(CHARS[cid]["col"], SKILL_ICON[cid](), 40), group="ui", owner=cid)
-        card = (f'<rect x="4" y="8" width="120" height="152" rx="16" fill="{INK}"/><rect x="4" y="4" width="120" height="152" rx="16" fill="{bg[cid]}" {S}/>'
-                f'<path d="M14,20 L60,14" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".6"/>'
-                f'<g transform="translate(-16,2) scale(1.25)">{character(cid, expr="happy")}</g>')
-        sprite(f"Sprites/UI/CharacterSelect/card_{cid}", 128, 164, card, group="ui", owner=cid)
-    # stage cards use the clean backdrops
-    for name in ("school", "classroom", "cafeteria", "playground", "boiler"):
-        W, H, o = backdrop(name)
-        card = (f'<clipPath id="c{name}"><rect x="8" y="8" width="176" height="104" rx="10"/></clipPath>'
-                f'<rect x="4" y="8" width="184" height="140" rx="14" fill="{INK}"/><rect x="4" y="4" width="184" height="140" rx="14" fill="#FEEECF" {S}/>'
-                f'<g clip-path="url(#c{name})"><g transform="translate(8,8) scale({f(176/W)},{f(104/H*1.0)})">{o}</g></g><rect x="8" y="8" width="176" height="104" rx="10" fill="none" stroke="{INK}" stroke-width="3"/>'
-                + "".join(f'<path d="{star(66+i*30, 128, 11, 5)}" fill="#E8DFC4" stroke="{INK}" stroke-width="2.5"/>' for i in range(3)))
-        sprite(f"Sprites/UI/StageSelect/stage_{name}", 192, 152, card, group="ui")
+    # B6 (16 Nov 2026): the character-select cards and the stage card are real illustrated art now (ImageGen, pastel
+    # diorama). They are not drawn here any more - the manifest rows stay so the Unity importer and the art library
+    # still find the PNGs, which live in Assets/Art/Sprites/UI/CharacterSelect and .../StageSelect.
+    for cid in CHARS:
+        manifest["sprites"].append({"path": f"Sprites/UI/CharacterSelect/card_{cid}", "w": 1024, "h": 1536, "frames": 1, "group": "ui", "owner": cid})
+    manifest["sprites"].append({"path": "Sprites/UI/StageSelect/stage_card", "w": 1536, "h": 1024, "frames": 1, "group": "ui"})
 
 if __name__ == "__main__":
     make_characters(); make_enemies(); make_parts(); make_props(); make_ui(); make_fx()
     make_world(); make_backdrops(); make_fx_concept(); make_ui_concept()
-    with open(os.path.join(ART, "bob-art-manifest.json"), "w") as fh:
+    with open(os.path.join(ART, "bob-art-manifest.json"), "w", encoding="utf-8") as fh:
         json.dump(manifest, fh, indent=1)
     print(len(manifest["sprites"]), "sprites/sheets written to", SRC)
