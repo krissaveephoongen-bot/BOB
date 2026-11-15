@@ -26,3 +26,7 @@ Thumbs.db
 unity/.vscode/
 Builds/
 unity/.utmp/
+
+# Firebase CLI debug output (can carry auth headers)
+firebase-debug.log
+.firebase/

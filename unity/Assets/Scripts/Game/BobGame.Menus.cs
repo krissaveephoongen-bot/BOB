@@ -183,14 +183,19 @@ namespace Bob.Game
             DockButton(dock, "menu_shop", "ร้านค้า", () => { Phase p = Phase.Shop; phase = p; Sfx("ui_confirm"); RenderAll(); }, false);
             DockButton(dock, "menu_home", "บ้าน", () => { Toast("เร็วๆ นี้: แต่งบ้านและห้องของฉัน"); Sfx("ui_tap"); }, true);
 
-            // Task Race is the only match (docs 24): the mode chip is a label, PLAY goes straight to the map. The
-            // chapter picker that replaces it is future work; the old seven-card mode grid is no longer reachable.
-            var mb = BobUi.Panel(S, BobUi.Hex("#FFF0C2"), "ui_panel", "ModeInfo");
+            // Task Race is the only match (docs 24): the chapter card opens the stage select (S13) and PLAY starts the
+            // chapter it shows. The old seven-card mode grid is no longer reachable.
+            var chapter = Chapters.Selected;
+            string chapLine = chapter != null ? $"บท {Chapters.NumberOf(chapter)} · {chapter.Title}" : "Task Race";
+            string chapSub = chapter != null ? $"{chapter.Band} · 2 นาที" : "2 นาที · แข่งกับคู่แข่ง";
+            var mb = BobUi.Button(S, "", BobUi.Hex("#FFF0C2"), () => { Sfx("ui_confirm"); phase = Phase.Stages; RenderAll(); }, 24);
             BobUi.Pin((RectTransform)mb.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-590, 40), new Vector2(300, 160));
-            BobUi.Pin(BobUi.Label(mb.transform, "Task Race", 40, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform,
-                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -18f), new Vector2(280f, 60f));
-            BobUi.Pin(BobUi.Label(mb.transform, "2 นาที · แข่งกับคู่แข่ง", 26, BobUi.Muted, TextAnchor.MiddleCenter).rectTransform,
-                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -84f), new Vector2(280f, 44f));
+            BobUi.Pin(BobUi.Label(mb.transform, chapLine, 28, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform,
+                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -18f), new Vector2(284f, 64f));
+            BobUi.Pin(BobUi.Label(mb.transform, chapSub, 22, BobUi.Muted, TextAnchor.MiddleCenter).rectTransform,
+                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -84f), new Vector2(284f, 34f));
+            BobUi.Pin(BobUi.Label(mb.transform, "เลือกบท", 22, BobUi.Teal, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform,
+                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 16f), new Vector2(284f, 34f));
             var play = BobUi.Button(S, "เล่น", BobUi.Sun, PressPlay, 76);
             BobUi.Pin((RectTransform)play.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-40, 30), new Vector2(520, 200));
             play.GetComponentInChildren<TMP_Text>().fontStyle = FontStyles.Bold;
@@ -216,6 +221,68 @@ namespace Bob.Game
                 Debug.LogWarning("[BobGame] TaskRace scene is not in Build Settings: no match to start.");
                 Toast("ยังไม่มีฉากแข่งขัน (TaskRace)");
             }
+        }
+
+        // ---------------------------------------------------------------- S13 stage select (docs 24 section 15.3 P0)
+
+        void StageSelect()
+        {
+            var chosen = Chapters.Selected;
+            ScreenBackdrop(chosen != null ? chosen.Backdrop : "lobby_rental_room");
+            TopBar(screenRoot, "เลือกบท", true);
+
+            var list = Chapters.All;
+            if (list.Count == 0)
+            {
+                BobUi.Label(screenRoot, "ยังไม่มีข้อมูลบท — รัน Bob > Data > Build Chapter Definitions", 34, BobUi.Surface, TextAnchor.MiddleCenter);
+                return;
+            }
+
+            float cw = CardW(list.Count, 14, 300);
+            var row = BobUi.Pin(BobUi.Rect("Chapters", screenRoot), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                new Vector2(0, -10), new Vector2(list.Count * cw + (list.Count - 1) * 14, 620));
+            var h = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+            h.spacing = 14; h.childControlWidth = h.childControlHeight = true; h.childForceExpandWidth = h.childForceExpandHeight = true;
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                var chapter = list[i];
+                bool open = Chapters.Unlocked(chapter, Level), sel = chapter == chosen;
+                var card = BobUi.Button(row, "", sel ? BobUi.Hex("#FFF0C2") : BobUi.Surface, () =>
+                {
+                    if (!Chapters.Unlocked(chapter, Level)) { Sfx("drop_invalid"); Toast($"บทนี้ปลดที่ระดับ {chapter.UnlockLevel}"); return; }
+                    Chapters.Select(chapter); Sfx("ui_tap"); RenderAll();
+                }, 24);
+                card.GetComponentInChildren<TMP_Text>().text = "";
+
+                var pic = BobUi.Img(card.transform, chapter.Backdrop, 146, open ? Color.white : new Color(0.62f, 0.62f, 0.66f));
+                BobUi.Pin(pic.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -14), new Vector2(cw - 24, 146));
+
+                var no = BobUi.Disc(card.transform, open ? BobUi.Sun : BobUi.Muted, 56, "No");
+                BobUi.Pin(no.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(14, -14), new Vector2(56, 56));
+                BobUi.Stretch(BobUi.Label(no.transform, (i + 1).ToString(), 30, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform);
+
+                var nm = BobUi.Label(card.transform, chapter.Title, 28, open ? BobUi.Ink : BobUi.Muted, TextAnchor.MiddleCenter, FontStyle.Bold);
+                BobUi.Pin(nm.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -172), new Vector2(cw - 20, 66));
+                var bd = BobUi.Label(card.transform, $"{chapter.Band} · ระดับ {chapter.UnlockLevel}+", 22, BobUi.Muted, TextAnchor.MiddleCenter);
+                BobUi.Pin(bd.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -238), new Vector2(cw - 20, 36));
+                var blurb = BobUi.Label(card.transform, chapter.Blurb, 20, BobUi.Muted, TextAnchor.UpperCenter);
+                BobUi.Pin(blurb.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -276), new Vector2(cw - 28, 150));
+                var st = BobUi.Label(card.transform, open ? (sel ? "เลือกอยู่" : "แตะเพื่อเลือก") : $"ล็อก · ระดับ {chapter.UnlockLevel}",
+                    24, open && sel ? BobUi.Good : BobUi.Muted, TextAnchor.MiddleCenter, FontStyle.Bold);
+                BobUi.Pin(st.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 22), new Vector2(cw - 20, 44));
+            }
+
+            var next = list.FirstOrDefault(c => c.UnlockLevel > Level);
+            var hint = BobUi.Label(screenRoot, next != null
+                ? $"ระดับ {Level} · บทที่ {Chapters.NumberOf(next)} ปลดที่ระดับ {next.UnlockLevel}"
+                : $"ระดับ {Level} · ปลดทุกบทแล้ว", 26, BobUi.Ink, TextAnchor.MiddleLeft, FontStyle.Bold);
+            BobUi.OutlineText(hint, BobUi.Surface, 0.35f);
+            BobUi.Pin(hint.rectTransform, new Vector2(0, 0), new Vector2(0, 0), new Vector2(40, 48), new Vector2(900, 50));
+
+            var play = BobUi.Button(screenRoot, "เล่นบทนี้", BobUi.Sun, PressPlay, 56);
+            BobUi.Pin((RectTransform)play.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-40, 30), new Vector2(420, 180));
+            play.GetComponentInChildren<TMP_Text>().fontStyle = FontStyles.Bold;
         }
 
         // ---------------------------------------------------------------- S11 mode select

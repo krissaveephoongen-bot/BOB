@@ -9,6 +9,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Bob.Game;
 using UnityEngine;
 
 namespace Bob.TaskRace
@@ -167,6 +168,10 @@ namespace Bob.TaskRace
 
         void Start()
         {
+            // P0 of docs 24 section 15.3: the chapter picked on S13 sets the band. The serialized value stays the
+            // fallback for the scene builder and for tests that configure a round without going through the lobby.
+            var chapter = Chapters.Selected;
+            if (chapter != null) difficulty = chapter.Difficulty;
             if (autoStart) StartRound(randomSeedEachPlay ? UnityEngine.Random.Range(1, 100000) : seed);
         }
 
@@ -225,7 +230,8 @@ namespace Bob.TaskRace
             Summary = Describe(plan, difficulty) + $" · workload {EstimatedSeconds:0} s";
             Version++;
 
-            Debug.Log($"[TaskRaceRound] seed {CurrentSeed} · players {players} · difficulty {difficulty} · {Summary}");
+            var chapter = Chapters.Selected;
+            Debug.Log($"[TaskRaceRound] seed {CurrentSeed} · chapter {chapter?.Title ?? "-"} · players {players} · difficulty {difficulty} · {Summary}");
             foreach (var spot in sideA.Spots)
                 Debug.Log($"[TaskRaceRound]   {spot.SpotId} {spot.Category}: " +
                           (assigned.TryGetValue(spot, out var g) ? $"{g.Id} {g.Name} ({g.Seconds * (1f + DifficultyStep * (difficulty - 1)):0.#}s)" : "idle"));

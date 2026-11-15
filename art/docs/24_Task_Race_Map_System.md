@@ -599,3 +599,12 @@ result overlay: open=True draw 0:0 points · tasks 0/6 vs 0/6 · reward 45 coins
 | P4 | รถเข็น: เดิน–หยิบ–ถือ 2 ชิ้น–ซ้อนชั้น–ส่งต่อ | ไม่มี | โหมดแยก "Cart Rush" หรือภารกิจที่ 2 ของบท 2 — ต้องมีฉากห้องจริงก่อน จึงควรทำหลัง P1 |
 
 **ข้อสรุป:** ระบบที่ขาดไม่ใช่ตัวมินิเกม แต่เป็น "ชั้นบท" (chapter data + stage select + scene skin) ที่ห่อรอบเดิมอยู่ — ถ้าทำ P0+P1 ก่อน จะได้ภาพรวมเกม 6 บทตาม GDD โดยไม่ต้องแก้กฎการแข่ง และเก็บ P2–P4 ไว้เป็นกลไกของบทนั้น ๆ
+
+### 15.4 P0 ที่ทำแล้ว (15 พ.ย. 2026)
+
+- **`ChapterDefinition`** (ScriptableObject, `Game/ChapterDefinition.cs`): `id`, `title`, `blurb`, `unlockLevel`, `difficulty` (D1–D3), `backdrop` — 6 asset อยู่ใน `Assets/Resources/Chapters` สร้าง/อัปเดตด้วยเมนู **Bob > Data > Build Chapter Definitions** (`Editor/BobChapterBuilder.cs`) ตามตาราง §15.1: ระดับ 1 / 6 / 13 / 21 / 31 / 41 และ band D1 (บท 1–2), D2 (3–4), D3 (5–6)
+- **`Chapters`** (static loader): โหลด asset เรียงตาม `unlockLevel`, จำบทที่เลือกใน PlayerPrefs `bob.chapter`, `Unlocked(chapter, level)` เทียบกับ `Level = 1 + xp/200` ของล็อบบี้
+- **S13 เลือกบท** (`BobGame.Menus.cs > StageSelect`, `Phase.Stages`): การ์ด 6 ใบแนวนอน (ภาพฉาก + หมายเลขบท + ชื่อ + band + คำอธิบาย) ล็อกจนถึงระดับปลดล็อก, แถบล่างบอกระดับผู้เล่นและบทถัดไปที่ปลดได้, ปุ่ม `เล่นบทนี้` → `PressPlay` โหลดซีน `TaskRace`; ปุ่ม back / Android back กลับ Home
+- **Home:** ชิป Task Race เดิมเปลี่ยนเป็นการ์ดบท (`บท N · ชื่อ`, band, `เลือกบท ▸`) แตะเพื่อเข้า S13 — ปุ่ม `เล่น` ยังเริ่มรอบที่เลือก
+- **`TaskRaceRound.Start`:** อ่านบทที่เลือกแล้วตั้ง `difficulty` ก่อน `StartRound`; ค่า serialized ยังเป็น fallback ให้ scene builder/tests ที่ตั้งรอบเอง (builder ยัง `ConfigureRound(players, 1, 1975)`), log ตอนเริ่มรอบมีชื่อบท
+- **ยังไม่ทำ (P1/P2):** skin ชั้นบนเกาะ, `ruleCards`, ดาว 0–3 และแผนที่หมุดแบบ S13 เต็มรูปแบบ (ภาพ `screen_stage_select` ยังไม่มีในโปรเจกต์) — หน้าเลือกบทตอนนี้ใช้การ์ดภาพล็อบบี้แทน

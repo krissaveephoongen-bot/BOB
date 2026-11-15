@@ -80,18 +80,26 @@ namespace Bob.EditorTools
             return lib;
         }
 
+        /// <summary>SessionState outlives a batch run, so every entry point clears the modes it does not want;
+        /// otherwise a leftover online/task flag silently changes what the next test does.</summary>
+        static void ClearModes()
+        {
+            SessionState.SetBool(BobGame.OnlineKey, false);
+            SessionState.SetBool("bob.taskbot", false);
+        }
+
         [MenuItem("Bob/Run Game Test")]
-        public static void RunTestFromMenu() { SessionState.SetBool(ExitKey, false); BeginTest(); }
+        public static void RunTestFromMenu() { ClearModes(); SessionState.SetBool(ExitKey, false); BeginTest(); }
 
-        public static void RunTaskTest() { SessionState.SetBool(ExitKey, true); SessionState.SetBool("bob.taskbot", true); BeginTest(); }
+        public static void RunTaskTest() { ClearModes(); SessionState.SetBool(ExitKey, true); SessionState.SetBool("bob.taskbot", true); BeginTest(); }
 
-        public static void RunTest() { SessionState.SetBool(ExitKey, true); BeginTest(); }
+        public static void RunTest() { ClearModes(); SessionState.SetBool(ExitKey, true); BeginTest(); }
 
         // Online: start the bots first (cd server && node mp-host.js 2 ../unity/Logs/bob-mp-match.txt), then run this.
         [MenuItem("Bob/Run Online Test")]
-        public static void RunOnlineTestFromMenu() { SessionState.SetBool(ExitKey, false); SessionState.SetBool(BobGame.OnlineKey, true); BeginTest(); }
+        public static void RunOnlineTestFromMenu() { ClearModes(); SessionState.SetBool(ExitKey, false); SessionState.SetBool(BobGame.OnlineKey, true); BeginTest(); }
 
-        public static void RunOnlineTest() { SessionState.SetBool(ExitKey, true); SessionState.SetBool(BobGame.OnlineKey, true); BeginTest(); }
+        public static void RunOnlineTest() { ClearModes(); SessionState.SetBool(ExitKey, true); SessionState.SetBool(BobGame.OnlineKey, true); BeginTest(); }
 
         static void BeginTest()
         {
