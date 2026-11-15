@@ -26,7 +26,7 @@ _(รอ owner เติมกฎจริง — ด้านล่างเป
 
 | Branch | Session | ขอบเขตงาน | สถานะ | อัปเดตล่าสุด |
 | --- | --- | --- | --- | --- |
-| `main` (push แล้วถึง `76a1266`) | Claude (session นี้) | **A: S13 เลือกด่าน + `ChapterDefinition`** (P0 ของ doc 24 §15.3) — ฝั่งล็อบบี้ ไม่แตะ HUD/ซีน Task Race | 🟡 กำลังทำ A | 15 พ.ย. 2026 |
+| `main` (local, ถึง `8f17881`) | Claude (session นี้) | **P3: `StorySeries` 3 รอบ best-of-3 เฉพาะโหมดเนื้อเรื่อง** (doc 24 §15.3 P3) — `TaskRaceModeManager` เพิ่ม API, ไฟล์ใหม่ `TaskRace/StorySeries.cs` + ป้ายบอกรอบ; ไม่แตะ layout HUD/ซีน | 🟡 กำลังทำ P3 | 15 พ.ย. 2026 |
 | _TBD (branch ของอีก session)_ | session ขนาน | **4.3** กล้อง/จุดงาน · **4.5** ghost hand onboarding · **4.6** specialty/ability/preview | 🟡 กำลังทำ | 15 พ.ย. 2026 |
 | `origin/main` | remote | merge แล้วถึง `8655d11` ไหม? — ยังไม่ push จากฝั่งเรา | — | 15 พ.ย. 2026 |
 
@@ -42,7 +42,8 @@ _(รอ owner เติมกฎจริง — ด้านล่างเป
 | 4.5 | ghost hand onboarding (สอนด้วยการทำ) | อีก session | TBD | 🟡 กำลังทำ | `TaskRace/BobTaskRaceHud.cs`, `TaskRace/BobTaskRaceTouch.cs`, `docs/11_UX_UI_Spec.md` | 15 พ.ย. — HUD ถูกใช้ร่วม: ดูข้อ 4 |
 | 4.6 | specialty / ability / preview | อีก session | TBD | 🟡 กำลังทำ | `TaskRace/BobTaskRaceHero.cs`, ปุ่ม ability ใน HUD, ตารางฮีโร่ `Rules/BobMatch.cs`, อาจมี opcode ใหม่ใน `server/` | 15 พ.ย. — ถ้าจะแตะ `server/` ให้ประกาศก่อน (ฝั่งเรามีงาน server รออยู่) |
 | — | merge + HUD layout/icons | ฝั่งเรา | `main` local | ✅ `8655d11` | `TaskRace/BobTaskRaceHud.cs`, `TaskRace/TaskRaceModeManager.cs`, `Game/BobGame.Tasks.cs`, `Editor/TaskRaceSceneBuilder.cs`, `Scenes/TaskRace*.unity` | 15 พ.ย. — verify ครบ solo/duo/team, ยังไม่ push |
-| — | งานถัดไปฝั่งเรา | **ยังไม่จอง** — เสนอไว้ที่หัวข้อ 6 | — | ⏳ | — | รอ owner เคาะ |
+| A | S13 เลือกด่าน + `ChapterDefinition` (P0 doc 24 §15.3) | ฝั่งเรา | `main` | ✅ `8f17881` | `Game/ChapterDefinition.cs`, `Editor/BobChapterBuilder.cs`, `Resources/Chapters/*`, `Game/BobGame.Menus.cs`, `Scenes/Game.unity` (ไม่ต้อง rebuild), `TaskRace/TaskRaceRound.cs` | 15 พ.ย. — verify ด้วย `BobGameScene.RunTest`: `GAME TEST PASSED`, ไม่มี `error CS`, รูป `Logs/bob-game-m3-home.png` + `m4b-stages.png` |
+| P3 | **`StorySeries` 3 รอบ best-of-3** เฉพาะโหมดเนื้อเรื่อง: รอบละ 100 วิ, ชนะ 2 ใน 3, แพ้ติด 2 ให้เวลา +15 วิ รอบถัดไป, ชนะขาด ≥3 งานเสนอด่านท้าทาย (PvP คง 120 วิ รอบเดียว) | ฝั่งเรา | `main` | 🟡 กำลังทำ | `TaskRace/TaskRaceModeManager.cs` (เพิ่ม API/ฟิลด์ใหม่ ไม่เปลี่ยนพฤติกรรมเดิม), ไฟล์ใหม่ `TaskRace/StorySeries.cs`, `TaskRace/BobSeriesBanner.cs`; **ไม่แตะ** `BobTaskRaceHud.cs` และไม่ rebuild ซีน | 15 พ.ย. — ถ้าจำเป็นต้องเติม pips ใน HUD จะประกาศในหัวข้อ 3 อีกครั้งก่อนแก้ |
 
 ---
 
@@ -95,7 +96,7 @@ APK (เฉพาะเมื่อ owner สั่ง): `Bob.EditorTools.BobAnd
 
 | ลำดับ | งาน | ทำไมไม่ชน | ไฟล์/โซน | ความเสี่ยง |
 | --- | --- | --- | --- | --- |
-| A | **S13 เลือกด่าน + `ChapterDefinition`** (P0 ของ doc 24 §15.3): SO บท/ระดับปลดล็อก/ค่า D เริ่มต้น + การ์ดใน Home ส่งค่าเข้าจอ Task Race | อยู่ฝั่งล็อบบี้ (`Game.unity`, `BobGame.Menus.cs`) ไม่แตะซีน Task Race หรือ HUD | `Game/`, `Editor/` ใหม่, `Scenes/Game.unity` | **ต่ำ** — แนะนำ |
+| A | ~~**S13 เลือกด่าน + `ChapterDefinition`**~~ ✅ `8f17881` — เสร็จ 15 พ.ย. 2026 | — | — | — |
 | B | **server contract** `TASK_BEGIN`/`TASK_LOCK` + seed (Unity client สร้างไฟล์ใหม่) | อยู่ใน `server/` + ไฟล์ client ใหม่ ไม่แตะ HUD/ซีน | `server/`, `Net/` หรือ `TaskRace/ใหม่` | **กลาง** — ถ้า 4.6 เพิ่ม opcode ability ต้องประสานก่อน |
 | C | **เสียงมินิเกม** (tick/สำเร็จ/พลาด ต่อ mechanic) | เพิ่ม asset + ตัวฟังเหตุการณ์ ไม่รื้อ mechanic | `unity/Assets/Audio/`, `TaskRace/BobMinigameSfx.cs` (+ hook เล็กใน host) | **กลาง** — host/HUD ใช้ร่วมกับ 4.5/4.6 |
 | D | **T16 คราบฉุกเฉิน** | ต้องแก้ `TaskSpot`/`TaskRaceRound` + จุดงาน = โซน 4.3 | `TaskRace/`, `Scenes/TaskRace*.unity` | **สูง** — ควรทำหลัง 4.3 merge |
@@ -107,6 +108,8 @@ APK (เฉพาะเมื่อ owner สั่ง): `Bob.EditorTools.BobAnd
 
 ## 7. บันทึกสถานะ (log)
 
+- **2026-11-15 · ฝั่งเรา — A เสร็จ (`8f17881`)**: `ChapterDefinition` 6 บท (ช01–ช06, ปลดที่ระดับ 1/6/13/21/31/41, แบนด์ D1/D1/D2/D2/D3/D3) + `Chapters` loader (`bob.chapter`) + จอ S13 (`Phase.Stages`) + การ์ดบทใน Home + `TaskRaceRound.Start` ใช้แบนด์ของบท (builder serialized ยังเป็น fallback). verify: `unity/Logs/game-test-stages.log` → `GAME TEST PASSED`, ไม่มี `error CS`; รูป `bob-game-m3-home.png`, `bob-game-m4b-stages.png`. แก้ที่เจอจากรูป: `▸` เป็นกล่อง (font ไม่มี glyph) เอาออก, ข้อความระดับด้านล่างเปลี่ยนเป็น Ink + outline ให้อ่านออกบนฉากหลังสว่าง. ยังไม่ push
+- **2026-11-15 · ฝั่งเรา — เริ่ม P3**: รอบเนื้อเรื่อง 3 รอบ best-of-3 (รอบละ 100 วิ), แพ้ติด 2 → +15 วิ, ชนะขาด ≥3 งาน → เสนอด่านท้าทาย. ทำใน `TaskRaceModeManager` แบบเพิ่ม API (`storySeries`, `LastRound`, event `RoundEnded`) โดย `EndMatch` เดิมยังเป็นการจบแมตช์/ใช้โดย `DebugShowResult` ของ verify; PvP ปิดสวิตช์นี้แล้วได้พฤติกรรมเดิม 120 วิ
 - **2026-11-15 · ฝั่งเรา**: merge `origin/main` (commit `110024a` จาก session ขนาน) เข้าไลน์ P0 → merge commit `8655d11` (local, ยังไม่ push). แก้ที่เจอหลัง merge: คืน `MiniPointer`/`IsHero`/`miniDrags` ใน `BobGame.Tasks.cs` (branch เดิมคอมไพล์ไม่ผ่าน), แถบบน 124 px ชิดขวาการ์ด, แยกบรรทัด `คู่แข่ง` / `ทีมเรา %`, ผูก `BobArtLibrary` ให้ไอคอนแถวงาน, chip ปิดการ์ดย้ายมาบนบรรทัดคำใบ้. verify ครบ solo/duo/team (log `verify5-*.log`) — ยังไม่สร้าง APK ใหม่
 - **2026-11-15 · อีก session**: เริ่ม 4.3 / 4.5 / 4.6 (ประกาศจาก owner) — ยังไม่มีรายละเอียดไฟล์/commit ในกระดานนี้
 
