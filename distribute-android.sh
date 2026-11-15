@@ -2,6 +2,7 @@
 # Build the APK and upload it to Firebase App Distribution (project bob-preprod).
 #   bash distribute-android.sh              # bump AndroidBundleVersionCode, build, upload
 #   bash distribute-android.sh --no-bump    # rebuild + upload at the current versionCode
+#   bash distribute-android.sh --upload-only # upload the APK already in Builds/ (e.g. after a login fix)
 #   FIREBASE_GROUPS=internal-testers bash distribute-android.sh   # also release to a tester group
 #
 # One-time: npm i -g firebase-tools && firebase login
@@ -17,6 +18,8 @@ APP_ID="${FIREBASE_APP_ID:-1:438462393037:android:76c94b4645660e52e69784}"
 GROUPS="${FIREBASE_GROUPS:-}"
 BUMP=1
 [ "${1:-}" = "--no-bump" ] && BUMP=0
+UPLOAD_ONLY=0
+[ "${1:-}" = "--upload-only" ] && UPLOAD_ONLY=1
 
 say() { printf '\n== %s\n' "$*"; }
 die() { printf '\n!! %s\n' "$*" >&2; exit 1; }
@@ -24,29 +27,35 @@ die() { printf '\n!! %s\n' "$*" >&2; exit 1; }
 [ -f "$UNITY" ] || die "Unity not found at $UNITY (set UNITY=/path/to/Unity.exe)"
 [ -f "$PS" ] || die "missing $PS"
 
-# An open Editor holds the project; a batch build would fail half-way and leave the Editor on Android.
-if [ -f "$PROJECT/Temp/UnityLockfile" ]; then
-  die "Unity has the project open - close the Editor first (Temp/UnityLockfile exists)"
-fi
-
-if [ "$BUMP" = 1 ]; then
-  CODE="$(grep -m1 '^  AndroidBundleVersionCode:' "$PS" | tr -dc '0-9')"
-  [ -n "$CODE" ] || die "AndroidBundleVersionCode not found in $PS"
-  NEXT=$((CODE + 1))
-  # Replace the digits only, so the file keeps its CRLF line endings.
-  sed -i "s/^  AndroidBundleVersionCode: [0-9]*/  AndroidBundleVersionCode: $NEXT/" "$PS"
-  say "versionCode $CODE -> $NEXT"
-else
+if [ "$UPLOAD_ONLY" = 1 ]; then
   NEXT="$(grep -m1 '^  AndroidBundleVersionCode:' "$PS" | tr -dc '0-9')"
-  say "versionCode kept at $NEXT"
-fi
+  [ -f "$APK" ] || die "nothing to upload: $APK is missing (run without --upload-only)"
+  say "uploading the existing APK at versionCode $NEXT"
+else
+  # An open Editor holds the project; a batch build would fail half-way and leave the Editor on Android.
+  if [ -f "$PROJECT/Temp/UnityLockfile" ]; then
+    die "Unity has the project open - close the Editor first (Temp/UnityLockfile exists)"
+  fi
 
-say "building $APK"
-"$UNITY" -batchmode -quit -projectPath "$PROJECT" \
-  -executeMethod Bob.EditorTools.BobAndroidBuild.BuildApk \
-  -logFile "$PROJECT/Logs/apk-build-$NEXT.log" \
-  || die "Unity exited non-zero - see unity/Logs/apk-build-$NEXT.log"
-[ -f "$APK" ] || die "build reported success but $APK is missing"
+  if [ "$BUMP" = 1 ]; then
+    CODE="$(grep -m1 '^  AndroidBundleVersionCode:' "$PS" | tr -dc '0-9')"
+    [ -n "$CODE" ] || die "AndroidBundleVersionCode not found in $PS"
+    NEXT=$((CODE + 1))
+    # Replace the digits only, so the file keeps its CRLF line endings.
+    sed -i "s/^  AndroidBundleVersionCode: [0-9]*/  AndroidBundleVersionCode: $NEXT/" "$PS"
+    say "versionCode $CODE -> $NEXT"
+  else
+    NEXT="$(grep -m1 '^  AndroidBundleVersionCode:' "$PS" | tr -dc '0-9')"
+    say "versionCode kept at $NEXT"
+  fi
+
+  say "building $APK"
+  "$UNITY" -batchmode -quit -projectPath "$PROJECT" \
+    -executeMethod Bob.EditorTools.BobAndroidBuild.BuildApk \
+    -logFile "$PROJECT/Logs/apk-build-$NEXT.log" \
+    || die "Unity exited non-zero - see unity/Logs/apk-build-$NEXT.log"
+  [ -f "$APK" ] || die "build reported success but $APK is missing"
+fi
 
 command -v firebase >/dev/null || die "firebase CLI missing: npm i -g firebase-tools && firebase login"
 
