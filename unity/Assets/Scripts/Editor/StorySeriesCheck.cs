@@ -75,6 +75,10 @@ namespace Bob.EditorTools
         static int step;
         static float stepAt;
         static MeshRenderer fieldOff, soilOff;
+        static Material islandMat;
+        static Color tintWas;
+        static GameObject teamARoot;
+        static readonly System.Collections.Generic.List<MeshRenderer> nullMats = new System.Collections.Generic.List<MeshRenderer>();
         static BobFieldDressing dressing;
         static BobCloudSea clouds;
         static bool fogWas;
@@ -178,6 +182,56 @@ namespace Bob.EditorTools
                 Debug.Log("[SeriesCheck] fog off shot");
                 Capture("1f-nofog");
                 RenderSettings.fog = fogWas;
+                // The slab's outline follows the island's top, so the last two guesses are the island mesh itself and
+                // anything still under TeamA: tint the island, then hide the whole team root.
+                var island = GameObject.Find("TaskRaceMap/TeamA/Island")?.GetComponent<MeshRenderer>();
+                if (island != null)
+                {
+                    islandMat = island.material;
+                    tintWas = islandMat.HasProperty("_Color") ? islandMat.GetColor("_Color") : Color.white;
+                    if (islandMat.HasProperty("_Color")) islandMat.SetColor("_Color", Color.cyan);
+                }
+                stepAt = Time.unscaledTime;
+                step = 51;
+            }
+            else if (step == 51 && Time.unscaledTime > stepAt + 0.3f)
+            {
+                Debug.Log($"[SeriesCheck] island tint: {(islandMat != null ? "yes" : "not found")}");
+                Capture("1g-island-tint");
+                if (islandMat != null && islandMat.HasProperty("_Color")) islandMat.SetColor("_Color", tintWas);
+                teamARoot = GameObject.Find("TaskRaceMap/TeamA");
+                if (teamARoot != null) teamARoot.SetActive(false);
+                stepAt = Time.unscaledTime;
+                step = 52;
+            }
+            else if (step == 52 && Time.unscaledTime > stepAt + 0.3f)
+            {
+                Debug.Log($"[SeriesCheck] TeamA off: {(teamARoot != null ? "yes" : "not found")}");
+                Capture("1h-teamA-off");
+                if (teamARoot != null) teamARoot.SetActive(true);
+                // Unity draws a renderer whose material slot is empty as the magenta error surface: hide every such
+                // renderer in one go and log it, so the owner of the slab is either gone from the shot or named here.
+                nullMats.Clear();
+                foreach (var mr in Object.FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None))
+                {
+                    if (mr == null || !mr.enabled) continue;
+                    var mats = mr.sharedMaterials;
+                    bool broken = mats.Length == 0;
+                    foreach (var m in mats) if (m == null) broken = true;
+                    if (!broken) continue;
+                    nullMats.Add(mr);
+                    Debug.Log($"[SeriesCheck] empty material: \"{PathOf(mr.transform)}\" bounds {mr.bounds.size.ToString("0.0")} " +
+                              $"centre {mr.bounds.center.ToString("0.0")} slots {mats.Length}");
+                    mr.enabled = false;
+                }
+                stepAt = Time.unscaledTime;
+                step = 53;
+            }
+            else if (step == 53 && Time.unscaledTime > stepAt + 0.3f)
+            {
+                Debug.Log($"[SeriesCheck] empty-material renderers off: {nullMats.Count}");
+                Capture("1i-nullmat-off");
+                foreach (var mr in nullMats) if (mr != null) mr.enabled = true;
                 stepAt = Time.unscaledTime;
                 step = 6;
             }
@@ -244,6 +298,50 @@ namespace Bob.EditorTools
 
         static bool finalOk;
 
+        /// <summary>Compare the island/field meshes and materials of the solo scene with the duo scene: the solo plate
+        /// renders magenta in play while the duo one renders green, so their palette wiring has to differ somewhere.</summary>
+        [MenuItem("Bob/Dump Map Materials")]
+        public static void DumpMapMaterials()
+        {
+            foreach (var scene in new[] { TaskRaceSceneBuilder.ScenePath, "Assets/Scenes/TaskRace_Duo.unity" })
+            {
+                EditorSceneManager.OpenScene(scene);
+                Debug.Log($"[MapDump] scene {scene}");
+                foreach (var path in new[] { "TaskRaceMap/TeamA/Island", "TaskRaceMap/TeamA/Field", "TaskRaceMap/TeamA/Field_Soil" })
+                {
+                    var go = GameObject.Find(path);
+                    var mr = go != null ? go.GetComponent<MeshRenderer>() : null;
+                    var mf = go != null ? go.GetComponent<MeshFilter>() : null;
+                    var mat = mr != null ? mr.sharedMaterial : null;
+                    var tex = mat != null ? mat.mainTexture : null;
+                    var mesh = mf != null ? mf.sharedMesh : null;
+                    var uv = mesh != null && mesh.uv.Length > 0 ? mesh.uv : null;
+                    string uvRange = "none";
+                    if (uv != null)
+                    {
+                        var min = uv[0]; var max = uv[0];
+                        foreach (var t in uv) { min = Vector2.Min(min, t); max = Vector2.Max(max, t); }
+                        uvRange = $"{min.ToString("0.000")}..{max.ToString("0.000")} of {uv.Length}";
+                    }
+                    Debug.Log($"[MapDump] {path}: renderer {mr != null} mesh {(mesh != null ? mesh.name : "null")} " +
+                              $"uv {uvRange} material {(mat != null ? AssetDatabase.GetAssetPath(mat) : "null")} " +
+                              $"tex {(tex != null ? AssetDatabase.GetAssetPath(tex) + " " + tex.width + "x" + tex.height : "null")} " +
+                              $"colour {(mat != null && mat.HasProperty("_Color") ? mat.GetColor("_Color").ToString() : "n/a")} " +
+                              $"shader {(mat != null && mat.shader != null ? mat.shader.name : "null")} " +
+                              $"instance {mr != null && mr.sharedMaterial != null}");
+                }
+            }
+            EditorApplication.Exit(0);
+        }
+
+
+        static string PathOf(Transform t)
+        {
+            var path = t.name;
+            for (var p = t.parent; p != null; p = p.parent) path = p.name + "/" + path;
+            return path;
+        }
+
         /// <summary>Name the shaders the map asks for and any renderer that will draw the magenta error material, so a
         /// missing shader in play mode is a log line instead of a purple slab in the screenshot.</summary>
         static void LogRenderState()
@@ -298,20 +396,54 @@ namespace Bob.EditorTools
                               $"colour {(mat != null && mat.HasProperty("_Color") ? mat.GetColor("_Color").ToString() : "n/a")}");
                 }
             }
-            var teamA = GameObject.Find("TaskRaceMap/TeamA");
-            if (teamA != null)
+            // Ambient in full plus the palette texel the plate actually asks for, TeamA next to TeamB: a flat magenta
+            // fill has to come from the sampled swatch, the vertex colour or the lighting, and only one team shows it.
+            Debug.Log($"[SeriesCheck] ambient sky {RenderSettings.ambientSkyColor} equator {RenderSettings.ambientEquatorColor} " +
+                      $"ground {RenderSettings.ambientGroundColor} sun {(RenderSettings.sun != null ? RenderSettings.sun.color + " " + RenderSettings.sun.intensity : "none")}");
+            foreach (var team in new[] { "TeamA", "TeamB" })
             {
-                var dumped = 0;
-                foreach (var mr in teamA.GetComponentsInChildren<MeshRenderer>(true))
+                foreach (var part in new[] { "Island", "Field", "Field_Soil" })
                 {
-                    if (dumped >= 40) break;
-                    dumped++;
-                    var mats = mr.sharedMaterials;
-                    var names = string.Join(",", System.Array.ConvertAll(mats, m => m == null ? "null" :
-                        m.name + ":" + (m.shader != null ? m.shader.name : "no-shader") + ":" +
-                        (m.mainTexture != null ? m.mainTexture.name : "no-tex")));
-                    Debug.Log($"[SeriesCheck] TeamA renderer \"{mr.name}\" bounds {mr.bounds.size.ToString("0.0")} mats [{names}]");
+                    var partGo = GameObject.Find($"TaskRaceMap/{team}/{part}");
+                    var partMr = partGo != null ? partGo.GetComponent<MeshRenderer>() : null;
+                    var partMf = partGo != null ? partGo.GetComponent<MeshFilter>() : null;
+                    var partMat = partMr != null ? partMr.sharedMaterial : null;
+                    var partTex = partMat != null ? partMat.mainTexture as Texture2D : null;
+                    var partMesh = partMf != null ? partMf.sharedMesh : null;
+                    string swatch = "n/a";
+                    if (partTex != null && partMesh != null && partMesh.uv.Length > 0)
+                    {
+                        var uv = partMesh.uv[0];
+                        swatch = partTex.isReadable ? partTex.GetPixelBilinear(uv.x, uv.y).ToString() : $"unreadable {uv}";
+                    }
+                    Debug.Log($"[SeriesCheck] {team}/{part}: slots {(partMr != null ? partMr.sharedMaterials.Length : 0)} " +
+                              $"tex {(partTex != null ? partTex.name : "null")} swatch {swatch} " +
+                              $"colours {(partMesh != null ? partMesh.colors.Length : 0)} " +
+                              $"instance {(partMr != null && partMr.sharedMaterial != null ? partMr.sharedMaterial.name : "null")}");
                 }
+            }
+
+            // The slab covers the whole walkable top, so its renderer must be one of the largest flat things in the
+            // scene, wherever it hangs: dump every wide, low renderer with its path, not just the ones under TeamA.
+            var wide = new System.Collections.Generic.List<MeshRenderer>();
+            foreach (var mr in Object.FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None))
+            {
+                if (mr == null || !mr.enabled) continue;
+                var b = mr.bounds;
+                if (b.size.y > 2.5f) continue;
+                if (b.size.x * b.size.z < 4f) continue;
+                wide.Add(mr);
+            }
+            wide.Sort((a, b) => (b.bounds.size.x * b.bounds.size.z).CompareTo(a.bounds.size.x * a.bounds.size.z));
+            foreach (var mr in wide)
+            {
+                var b = mr.bounds;
+                var mats = mr.sharedMaterials;
+                var names = string.Join(",", System.Array.ConvertAll(mats, m => m == null ? "null" :
+                    m.name + ":" + (m.shader != null ? m.shader.name : "no-shader") + ":" +
+                    (m.mainTexture != null ? m.mainTexture.name : "no-tex")));
+                Debug.Log($"[SeriesCheck] flat \"{PathOf(mr.transform)}\" size {b.size.ToString("0.0")} " +
+                          $"centre {b.center.ToString("0.0")} layer {mr.gameObject.layer} mats [{names}]");
             }
 
             int errorShader = 0;

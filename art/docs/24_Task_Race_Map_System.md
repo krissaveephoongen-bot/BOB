@@ -604,12 +604,14 @@ result overlay: open=True draw 0:0 points · tasks 0/6 vs 0/6 · reward 45 coins
 
 ### 15.4 P0 ที่ทำแล้ว (15 พ.ย. 2026)
 
-- **`ChapterDefinition`** (ScriptableObject, `Game/ChapterDefinition.cs`): `id`, `title`, `blurb`, `unlockLevel`, `difficulty` (D1–D3), `backdrop` — 6 asset อยู่ใน `Assets/Resources/Chapters` สร้าง/อัปเดตด้วยเมนู **Bob > Data > Build Chapter Definitions** (`Editor/BobChapterBuilder.cs`) ตามตาราง §15.1: ระดับ 1 / 6 / 13 / 21 / 31 / 41 และ band D1 (บท 1–2), D2 (3–4), D3 (5–6)
-- **`Chapters`** (static loader): โหลด asset เรียงตาม `unlockLevel`, จำบทที่เลือกใน PlayerPrefs `bob.chapter`, `Unlocked(chapter, level)` เทียบกับ `Level = 1 + xp/200` ของล็อบบี้
-- **S13 เลือกบท** (`BobGame.Menus.cs > StageSelect`, `Phase.Stages`): การ์ด 6 ใบแนวนอน (ภาพฉาก + หมายเลขบท + ชื่อ + band + คำอธิบาย) ล็อกจนถึงระดับปลดล็อก, แถบล่างบอกระดับผู้เล่นและบทถัดไปที่ปลดได้, ปุ่ม `เล่นบทนี้` → `PressPlay` โหลดซีน `TaskRace`; ปุ่ม back / Android back กลับ Home
-- **Home:** ชิป Task Race เดิมเปลี่ยนเป็นการ์ดบท (`บท N · ชื่อ`, band, `เลือกบท`) แตะเพื่อเข้า S13 — ปุ่ม `เล่น` ยังเริ่มรอบที่เลือก
-- **`TaskRaceRound.Start`:** อ่านบทที่เลือกแล้วตั้ง `difficulty` ก่อน `StartRound`; ค่า serialized ยังเป็น fallback ให้ scene builder/tests ที่ตั้งรอบเอง (builder ยัง `ConfigureRound(players, 1, 1975)`), log ตอนเริ่มรอบมีชื่อบท
-- **ยังไม่ทำ (P1/P2):** skin ชั้นบนเกาะ, `ruleCards`, ดาว 0–3 และแผนที่หมุดแบบ S13 เต็มรูปแบบ (ภาพ `screen_stage_select` ยังไม่มีในโปรเจกต์) — หน้าเลือกบทตอนนี้ใช้การ์ดภาพล็อบบี้แทน
+> หลัง merge `c769fa8` (15 พ.ย. 2026) เหลือ implementation เดียว: ชุดของ session ขนาน (`Rules/…`). ชุดแรกของฝั่งเรา (`Game/ChapterDefinition.cs` + `Chapters` loader + `BobChapterBuilder` + `ch0*.asset`) ถูกถอดออกทั้งชุดเพื่อไม่ให้มีสองระบบอ่าน `bob.chapter` คนละแบบ
+
+- **`ChapterDefinition`** (ScriptableObject, `Rules/ChapterDefinition.cs`): `order`, `title`, `place`, `unlockLevel`, `difficulty` D1–D3, `roundTime`, `backdrop`, `blurb`, `ruleCards` — 6 asset อยู่ใน `Assets/Resources/Chapters/Chapter1_RentalRoom … Chapter6_Market` ตามตาราง §15.1: LV 1 / 6 / 13 / 21 / 31 / 41, band D1 (บท 1–2) / D2 (3–4) / D3 (5–6), นาฬิกา 120 วิ (ยกเว้นโหมดเนื้อเรื่องที่ P3 ใช้ 100 วิต่อรอบ); เมนูตรวจบันได **Bob > Chapters > Check Ladder** (`Editor/BobChapterCheck.cs`)
+- **`BobChapters`** (static loader): โหลดจาก `Resources/Chapters` เรียงตาม `order`, เก็บบทที่เลือกใน PlayerPrefs `bob.chapter` และคุม `bob.band` ให้คะแนนดีสุดเดิมตามบท, `Unlocked` / `Selected(level)` / `LastUnlocked` / `Validate()`; `Level = 1 + xp/200` ของล็อบบี้
+- **S13 เลือกบท** (`BobGame.Menus.cs > ChapterSelect`, `Phase.Chapters`): การ์ด 6 ใบ 3×2 (ภาพฉาก + หมายเลขบท + ชื่อ + สถานที่ + `LV/D` + ดีสุด + การ์ดกติกา) ล็อกจนถึงระดับปลดล็อกพร้อมม่านมืด, ปุ่ม `เริ่มด่านนี้` → `PressPlay` โหลดซีน `TaskRace`; ปุ่ม back / Android back กลับ Home
+- **Home:** ชิป Task Race เดิมเป็นการ์ดบท (ภาพ + `บท N` + ชื่อ + `D · เวลา · ดีสุด`) แตะเพื่อเข้า S13 — ปุ่ม `เล่น` ยังเริ่มบทที่เลือก
+- **`TaskRaceModeManager.ApplyChapter()`** ใน `Awake`: ตั้ง `matchDuration = chapter.RoundTime` และ `ConfigureRound(players, chapter.Difficulty, seed)` **ก่อน** `TaskRaceRound.Start` วาดรายการ; ตัว `TaskRaceRound` ไม่ได้อ่านบทเองแล้ว (สูตรสุ่มยังอยู่ที่ `BobTaskRaceRules`)
+- **ยังไม่ทำ (P1/P2):** skin ชั้นบนเกาะ, การบังคับใช้ `ruleCards`, ดาว 0–3 และแผนที่หมุดแบบ S13 เต็มรูปแบบ — หน้าเลือกบทตอนนี้ใช้การ์ดภาพล็อบบี้แทน
 
 ### 15.5 P3 ที่ทำแล้ว (15 พ.ย. 2026)
 
@@ -623,4 +625,5 @@ result overlay: open=True draw 0:0 points · tasks 0/6 vs 0/6 · reward 45 coins
   - `DebugFinishRound()` จบรอบด้วยคะแนนจริงของรอบนั้น (ใช้โดย check)
 - **`BobSeriesBanner`** (`TaskRace/BobSeriesBanner.cs`) — canvas แยก `sortingOrder 40` ไม่แตะ layout ของ `BobTaskRaceHud`: การ์ดกลางจอ 760×380 ตอนปิดรอบ (หัวข้อสีตามผล, ป้าย `ด่านท้าทายปลดแล้ว!` เมื่อ `ChallengeOffered`, `เรา X - Y คู่แข่ง`, นับถอยหลังรอบถัดไป) + แถบล่างกลางจอ `รอบ N/3 · เรา X - Y คู่แข่ง` ตลอดซีรีส์; ผูก `MatchStarted` / `RoundEnded` / `MatchEnded`
 - **ตรวจ:** เมนู **Bob > Run Story Series Check** (`Editor/StorySeriesCheck.cs`) — โหมดแก้ไขตรวจกฎรวมเส้นทางเสมอ, เข้า Play แล้วจบ 3 รอบจริงด้วย `DebugFinishRound` นับรอบ 1→2→3, ถ่าย `Logs/series-1-start … 5-result.png` (มีชุด toggle Field / Soil / Dressing / CloudSea / fog สำหรับไล่ปัญหาเรื่องภาพ) ปิดท้าย `[SeriesCheck] SERIES CHECK PASSED`; ผลรันล่าสุด: rules PASSED, chapter end last round 3, overlay ผลเปิด
-- **ยังไม่ทำ:** หน้าจอด่านท้าทายปลายทาง (ตอนนี้แค่ป้ายแจ้ง), ดาว 0–3 ต่อบท, การบันทึกผลรายรอบลง `BobTaskRaceProfile` (ยังบันทึกเป็นแมตช์เดียว), สถิติแพ้ติดต่อบท (ตอนนี้นับรวมทุกบท)
+- **ยังไม่ทำ:** หน้าจอด่านท้าทายปลายทาง (ตอนนี้แค่ป้ายแจ้ง), ดาว 0–3 ต่อบท, การบันทึกผลรายรอบลง `BobTaskRaceProfile` (ยังบันทึกเป็นแมตช์เดียว), สถิติแพ้ติดต่อบท (ตอนนี้นับรวมทุกบท), ข้อความบนการ์ด S13 ที่ยังพิมพ์ 120 วิ (ที่จริงโหมดเนื้อเรื่องใช้ 100 วิ × 3 รอบ — `ChapterDefinition.roundTime` มีผลกับ PvP เท่านั้น)
+- **ค้าง (ภาพ):** ในซีน solo ระหว่างเล่นซีรีส์ พื้นเกือบทั้งเกาะถูกวาดเป็นแผ่นม่วง `#A600A6` ในกล้องเล่น (ช็อต preview/wide และ duo/team ปกติ) — ปิด Field / Field_Soil / dressing / cloud sea / fog แล้วไม่หาย, raycast ชน `Field` material ปกติ (UV ชี้ texel เขียว/น้ำตาลถูกต้อง), tint `Island` เป็น cyan แล้วพื้นเปลี่ยนสีตาม, ซ่อน `TeamA` ทั้งรากแล้วเห็นเกาะเขียวของอีกฝั่ง → ยังไม่สรุปเจ้าของแผ่น; probe อยู่ใน `StorySeriesCheck` (`empty material` sweep, ambient/texel dump ต่อ TeamA–TeamB, เมนู `Bob/Dump Map Materials`) — ต้องปิดก่อนสร้าง APK
