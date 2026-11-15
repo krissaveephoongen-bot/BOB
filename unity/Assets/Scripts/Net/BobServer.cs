@@ -49,6 +49,13 @@ namespace Bob.Net
         /// <summary>Creates a private server-authoritative 'bob_coop' match. Reply: {"match_id":"..."}. seed 0 = random room.</summary>
         public Task<string> CreateMatchRpcAsync(int seed = 0) => Rpc("bob_create_match", seed > 0 ? $"{{\"seed\":{seed}}}" : "{}");
 
+        /// <summary>
+        /// A Task Race room (docs 16): the same 'bob_coop' match with mode = taskrace, so match.js deals the seeded
+        /// list and validates opcodes 16-18. difficulty is the chapter band 1-3. seed 0 = random.
+        /// </summary>
+        public Task<string> CreateTaskRaceMatchAsync(int seed = 0, int difficulty = 1) =>
+            Rpc("bob_create_match", $"{{\"mode\":\"taskrace\",\"difficulty\":{difficulty}" + (seed > 0 ? $",\"seed\":{seed}" : "") + "}");
+
         public Task<IMatch> JoinMatchAsync(string matchId) => socket.JoinMatchAsync(matchId);
 
         /// <summary>Opens the realtime socket unless it is already open.</summary>

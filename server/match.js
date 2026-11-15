@@ -7,7 +7,13 @@
 //                            7 PUSH {on}  8 PASS {i, to?}  9 TABLE {put:i} or {take:k}  14 ABILITY {swap?:i} or {i} (once per player per round)
 // Opcodes, server -> client: 10 STATE (full snapshot)  11 POS {time,p:[{id,x,y}],c:[{x,y}]} every tick  12 RESULT (round result)  13 ERROR {t}  15 PEEK {total, pass, stats} (Spray's preview, sender only)
 // Each team has its own clock (t.time) so Press can stop it; POS.tt carries both. s.time = the longer one, for old clients.
-var OP = { MOVE: 1, PICK: 2, PLACE: 3, LIFT: 4, READY: 5, SUBMIT: 6, PUSH: 7, PASS: 8, TABLE: 9, STATE: 10, POS: 11, RESULT: 12, ERROR: 13, ABILITY: 14, PEEK: 15 };
+// Task Race (docs 16 section 8, params.mode = 'taskrace') on the same match:
+//   client -> server: 16 TASK_BEGIN {task, step, spot}  17 TASK_DONE {task, step, ms, sample}  18 TASK_CANCEL {task}
+//   server -> client: 19 PROGRESS {team:{done,total,pct,dw,tw}, rival:{pct,done,total}, done:[ids]}  20 EMERGENCY {id,enemy,spot,at,graceSec}  21 TASK_LOCK {task,by,step,free}
+//   The list itself is seeded (taskPlan in the shared rules); the server rejects any step the list does not allow,
+//   any step that comes back faster than TaskMinMs, and any step somebody else holds.
+var OP = { MOVE: 1, PICK: 2, PLACE: 3, LIFT: 4, READY: 5, SUBMIT: 6, PUSH: 7, PASS: 8, TABLE: 9, STATE: 10, POS: 11, RESULT: 12, ERROR: 13, ABILITY: 14, PEEK: 15,
+  TASK_BEGIN: 16, TASK_DONE: 17, TASK_CANCEL: 18, PROGRESS: 19, EMERGENCY: 20, TASK_LOCK: 21 };
 var MP_FREEZE = 8; // Press: seconds the team's clock stops
 var MP_TICK = 10, MP_MAX = 4, MP_HAND = 2, MP_TEST_SEC = 8, MP_SPEED = 2.3 * 1.25; // world units / s, with lag slack
 var MP_PUSH_SPEED = 0.8, MP_PASS_NEAR = 1.0, MP_TABLE_MAX = 4, MP_RADIUS = 0.16;
@@ -50,7 +56,12 @@ function mpSnapshot(s) {
   var players = Object.keys(s.players).sort().map(function (k) { var p = s.players[k];
     return { id: k, name: p.name, team: p.team, char: p.char, ready: p.ready, online: !!p.presence, x: p.x, y: p.y, hand: p.hand, vote: !!p.vote, ab: !!p.abUsed, abUsed: !!p.abUsed }; }); // ab and abUsed: same flag (Coop scene / Game scene)
   // cx, cy: the team's cart; pusher: user id pushing it ('' = nobody); table: parts parked on the team's table.
+  // Task Race: tasks/race ride along so a late joiner or a reconnect sees the list and its locks without a new opcode.
   return { phase: s.phase, seed: s.seed, round: s.round, time: s.time, room: s.room, players: players,
+    mode: s.mode, difficulty: s.difficulty, winner: s.winner, race: s.phase === 'race' || s.phase === 'result' ? s.teams.map(trSummary) : null,
+    tasks: s.phase === 'race' ? s.teams.map(function (t) { return t.entries.map(function (e) {
+      var l = t.locks[e.id];
+      return { id: e.id, step: e.step, done: e.done, by: l ? l.by : '', at: l ? l.step : 0 }; }); }) : null,
     teams: s.teams.map(function (t) { return { stack: t.stack, budget: t.budget, wins: t.wins, submitted: t.submitted,
       cx: t.cx, cy: t.cy, pusher: t.pusher || '', table: t.table,
       time: t.time, freeze: t.freeze, shield: !!t.shield }; }) };
@@ -81,12 +92,73 @@ function mpScoreRound(d, s, logger, nk) {
   logEvent(nk, logger, null, s.label, 'round_result', { round: s.round, seed: s.seed, winner: winner, totals: [a.score.total, b.score.total], mode: 'mp' });
 }
 
+/* ---- Task Race on the same match (docs 16 section 8) ---- */
+// The plan is seeded, so the server can check every step against the list the phones drew (taskPlan in the shared rules).
+var TR_TIME = TASK_ROUND_TIME, TR_GRACE = TASK_EMERGENCY_GRACE;
+
+function trEntry(t, id) { for (var i = 0; i < t.entries.length; i++) if (t.entries[i].id === id) return t.entries[i]; return null; }
+function trDone(t) { return t.entries.filter(function (e) { return e.done; }).map(function (e) { return e.id; }); }
+function trWeight(t) {
+  var s = 0;
+  for (var i = 0; i < t.entries.length; i++) { var e = t.entries[i]; s += e.w * Math.max(0, Math.min(e.st, e.step)) / e.st; }
+  return s;
+}
+function trTotal(t) { var s = 0; for (var i = 0; i < t.entries.length; i++) s += t.entries[i].w; return s; }
+// Weight-based progress of docs 16 section 2.1: a 3-step card is worth a third of its weight per step.
+function trPct(t) { var tw = trTotal(t); return tw <= 0 ? 0 : Math.round(1000 * trWeight(t) / tw) / 10; }
+function trSummary(t) { return { done: trDone(t).length, total: t.entries.length, pct: trPct(t), dw: trWeight(t), tw: trTotal(t) }; }
+function trMembers(s, team) {
+  var out = [];
+  Object.keys(s.players).sort().forEach(function (k) { var p = s.players[k]; if (p.team === team && p.presence) out.push(p.presence); });
+  return out;
+}
+// PROGRESS is per team: your own numbers plus the rival's percentage (docs 16 section 8).
+function trProgress(d, s) {
+  s.teams.forEach(function (t, i) {
+    var to = trMembers(s, i); if (!to.length) return;
+    var o = trSummary(s.teams[1 - i]), me = trSummary(t);
+    mpSend(d, OP.PROGRESS, { team: me, rival: { pct: o.pct, done: o.done, total: o.total }, done: trDone(t) }, to);
+  });
+}
+function trStartRace(s) {
+  s.phase = 'race'; s.time = s.raceTime = TR_TIME;
+  var size = 1; // the biggest side decides the composition (docs 16 section 2.2); both teams race the same list
+  s.teams.forEach(function (t, i) {
+    var n = 0; Object.keys(s.players).forEach(function (k) { if (s.players[k].team === i) n++; });
+    if (n > size) size = n;
+  });
+  s.teams.forEach(function (t) {
+    var plan = taskPlan(s.seed, size, s.difficulty, s.cats);
+    t.entries = plan.map(function (g) { return { id: g.id, w: g.w, st: g.st, step: 0, done: false }; });
+    t.locks = {};
+  });
+  s.emergencies = taskEmergencyTimes(s.seed).map(function (at, i) {
+    return { id: TASK_EMERGENCY, enemy: taskEmergencyEnemy(s.seed + i), spot: 'S' + (1 + i), at: at, graceSec: TR_GRACE, sent: false };
+  });
+  s.time = s.raceTime;
+}
+function trScoreRace(d, s, logger, nk) {
+  var sums = s.teams.map(trSummary);
+  var winner = sums[0].dw !== sums[1].dw ? (sums[0].dw > sums[1].dw ? 0 : 1) : (sums[0].done !== sums[1].done ? (sums[0].done > sums[1].done ? 0 : 1) : -1);
+  s.phase = 'result'; s.testLeft = 30; s.winner = winner;
+  mpSend(d, OP.RESULT, { mode: 'taskrace', round: 1, seed: s.seed, winner: winner, teams: sums,
+    wins: [winner === 0 ? 1 : 0, winner === 1 ? 1 : 0], over: true });
+  logEvent(nk, logger, null, s.label, 'round_result', { seed: s.seed, winner: winner, mode: 'tr',
+    pct: [sums[0].pct, sums[1].pct], done: [sums[0].done, sums[1].done] });
+}
+
 function matchInit(ctx, logger, nk, params) {
   var seed = parseInt(params && params.seed, 10) || (1 + Math.floor(Math.random() * 8388607));
+  var mode = params && params.mode === 'taskrace' ? 'taskrace' : 'cart';
   var s = { seed: seed, round: 0, phase: 'lobby', time: ROUND_TIME, room: null, players: {}, label: 'mp' + seed, testLeft: 0,
-    teams: [0, 1].map(function () { return { stack: [], budget: ROUND_BUDGET, carry: 0, wins: 0, submitted: false,
-      cx: CART_START[0], cy: CART_START[1], pusher: null, table: [], time: ROUND_TIME, freeze: 0, shield: false }; }) };
-  return { state: s, tickRate: MP_TICK, label: JSON.stringify({ mode: 'bob_coop', open: true }) };
+    mode: mode, difficulty: Math.max(1, Math.min(3, parseInt(params && params.difficulty, 10) || 1)),
+    cats: params && params.cats ? String(params.cats).split(',') : TASK_CATS, raceTime: TR_TIME,
+    emergencies: [], winner: -1,
+    teams: [0, 1].map(function (t) { return { stack: [], budget: ROUND_BUDGET, carry: 0, wins: 0, submitted: false,
+      cx: CART_START[0], cy: CART_START[1], pusher: null, table: [], time: ROUND_TIME, freeze: 0, shield: false,
+      entries: [], locks: {} }; }) };
+  if (mode === 'taskrace') s.time = TR_TIME;
+  return { state: s, tickRate: MP_TICK, label: JSON.stringify({ mode: 'bob_coop', open: true, race: mode }) };
 }
 function matchJoinAttempt(ctx, logger, nk, d, tick, s, presence, metadata) {
   if (s.phase !== 'lobby' && !s.players[presence.userId]) return { state: s, accept: false, rejectMessage: 'match already started' };
@@ -243,6 +315,56 @@ function matchLoop(ctx, logger, nk, d, tick, s, messages) {
           if (votes * 2 >= mates) { t.submitted = true; t.pusher = null; t.submitTime = Math.max(0, Math.min(1, t.time / ROUND_TIME)); }
         }
         break;
+      // ---------------------------------------------------------------- Task Race (docs 16 section 8)
+      case OP.TASK_BEGIN: {
+        // A step starts: the list says which step is next, and only one player may hold a card at a time.
+        if (s.phase !== 'race') break;
+        var be = trEntry(t, q.task);
+        if (!be) { err = 'งานนี้ไม่อยู่ในรายการของรอบ'; break; }
+        if (be.done) { err = 'งานนี้ทำเสร็จแล้ว'; break; }
+        var held = t.locks[be.id];
+        if (held && held.by !== m.sender.userId) { err = 'เพื่อนกำลังทำงานนี้อยู่'; break; }
+        var want = be.step + 1;
+        if ((q.step | 0) !== want) { err = 'ต้องทำขั้น ' + want + ' ก่อน'; break; }
+        t.locks[be.id] = { by: m.sender.userId, step: want, at: Date.now() };
+        mpSend(d, OP.TASK_LOCK, { task: be.id, by: m.sender.userId, step: want, free: false }, trMembers(s, p.team));
+        dirty = true;
+        break;
+      }
+      case OP.TASK_DONE: {
+        // The clock is the server's: a step that comes back faster than TaskMinMs is refused, whatever the phone says.
+        if (s.phase !== 'race') break;
+        var de = trEntry(t, q.task);
+        var lock = de ? t.locks[de.id] : null;
+        if (!de) { err = 'งานนี้ไม่อยู่ในรายการของรอบ'; break; }
+        if (de.done) { err = 'งานนี้ทำเสร็จแล้ว'; break; }
+        if (!lock || lock.by !== m.sender.userId) { err = 'ยังไม่ได้เริ่มงานนี้'; break; }
+        if ((q.step | 0) !== lock.step) { err = 'ขั้นไม่ตรงกับที่เริ่มไว้'; break; }
+        var tookMs = Date.now() - lock.at, minMs = taskMinMs(de.id, lock.step);
+        if (tookMs + 150 < minMs) { err = 'เร็วเกินไปสำหรับขั้นนี้'; break; }
+        delete t.locks[de.id];
+        de.step = lock.step;
+        if (de.step >= de.st) de.done = true;
+        mpSend(d, OP.TASK_LOCK, { task: de.id, by: '', step: de.step, free: true }, trMembers(s, p.team));
+        trProgress(d, s);
+        logEvent(nk, logger, m.sender.userId, s.label, 'task_done', { task: de.id, step: de.step, ms: tookMs,
+          char: p.char, mode: 'tr', sample: q.sample || null });
+        dirty = true;
+        break;
+      }
+      case OP.TASK_CANCEL: {
+        // Walk away and the card unlocks; the steps already finished stay (docs 16: progress is kept 10 s, then only
+        // the server's own list matters, so nothing is thrown away here).
+        if (s.phase !== 'race') break;
+        var ce = trEntry(t, q.task);
+        if (!ce) { err = 'งานนี้ไม่อยู่ในรายการของรอบ'; break; }
+        var cl = t.locks[ce.id];
+        if (!cl || cl.by !== m.sender.userId) break;
+        delete t.locks[ce.id];
+        mpSend(d, OP.TASK_LOCK, { task: ce.id, by: '', step: ce.step, free: true }, trMembers(s, p.team));
+        dirty = true;
+        break;
+      }
     }
     if (err) mpSend(d, OP.ERROR, { t: err }, [m.sender]);
   });
@@ -252,9 +374,12 @@ function matchLoop(ctx, logger, nk, d, tick, s, messages) {
     var teams = [0, 0], ready = true;
     ids.forEach(function (k) { teams[s.players[k].team]++; if (!s.players[k].ready) ready = false; });
     if (ready && ids.length >= 2 && teams[0] && teams[1]) {
-      s.label = 'mp' + s.seed + '_' + tick; mpStartRound(s); dirty = true;
-      d.matchLabelUpdate(JSON.stringify({ mode: 'bob_coop', open: false }));
-      logEvent(nk, logger, null, s.label, 'match_start', { seed: s.seed, players: ids.length, mode: 'mp' });
+      s.label = 'mp' + s.seed + '_' + tick;
+      if (s.mode === 'taskrace') { trStartRace(s); trProgress(d, s); } else mpStartRound(s);
+      dirty = true;
+      d.matchLabelUpdate(JSON.stringify({ mode: 'bob_coop', open: false, race: s.mode }));
+      logEvent(nk, logger, null, s.label, 'match_start', { seed: s.seed, players: ids.length, mode: s.mode === 'taskrace' ? 'tr' : 'mp',
+        difficulty: s.difficulty, tasks: s.mode === 'taskrace' ? s.teams[0].entries.length : 0 });
     }
   } else if (s.phase === 'build') {
     s.teams.forEach(function (t) {
@@ -266,6 +391,20 @@ function matchLoop(ctx, logger, nk, d, tick, s, messages) {
     if (s.teams[0].submitted && s.teams[1].submitted) { mpScoreRound(d, s, logger, nk); dirty = true; }
     mpSend(d, OP.POS, { time: s.time, tt: [+s.teams[0].time.toFixed(2), +s.teams[1].time.toFixed(2)], p: ids.map(function (k) { return { id: k, x: +s.players[k].x.toFixed(2), y: +s.players[k].y.toFixed(2) }; }),
       c: s.teams.map(function (t) { return { x: +t.cx.toFixed(2), y: +t.cy.toFixed(2) }; }) });
+  } else if (s.phase === 'race') {
+    // One clock for both islands (docs 16 section 2): no per-team freeze in Task Race.
+    s.time = Math.max(0, s.time - dt);
+    s.teams.forEach(function (t) { t.time = s.time; });
+    var elapsed = TR_TIME - s.time, allDone = true;
+    s.emergencies.forEach(function (e) {
+      if (e.sent || elapsed < e.at) return;
+      e.sent = true;
+      mpSend(d, OP.EMERGENCY, e);
+      logEvent(nk, logger, null, s.label, 'emergency_spawn', { enemy: e.enemy, spot: e.spot, at: e.at, mode: 'tr' });
+    });
+    s.teams.forEach(function (t) { if (trDone(t).length < t.entries.length) allDone = false; });
+    if (allDone || s.time <= 0) { trScoreRace(d, s, logger, nk); dirty = true; }
+    mpSend(d, OP.POS, { time: s.time, tt: [+s.time.toFixed(2), +s.time.toFixed(2)], p: [], c: [] });
   } else if (s.phase === 'test') {
     s.testLeft -= dt; if (s.testLeft <= 0) { mpStartRound(s); dirty = true; }
   } else if (s.phase === 'result') {
@@ -280,8 +419,9 @@ function matchSignal(ctx, logger, nk, d, tick, s, data) { return { state: s, dat
 
 // Matchmaker found 2-4 players: start one authoritative match for them.
 function mpMatchmakerMatched(ctx, logger, nk, matches) { return nk.matchCreate('bob_coop', {}); }
-// Private room: payload {"seed":123} (optional). Returns {"match_id":"..."}; share it, others join by id.
+// Private room: payload {"seed":123,"mode":"taskrace","difficulty":1} (all optional). Returns {"match_id":"..."}.
 function rpcCreateMatch(ctx, logger, nk, payload) {
   var q = JSON.parse(payload || '{}');
-  return JSON.stringify({ match_id: nk.matchCreate('bob_coop', { seed: String(q.seed || '') }) });
+  return JSON.stringify({ match_id: nk.matchCreate('bob_coop', { seed: String(q.seed || ''),
+    mode: q.mode === 'taskrace' ? 'taskrace' : 'cart', difficulty: String(q.difficulty || 1) }) });
 }

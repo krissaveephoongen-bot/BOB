@@ -274,6 +274,80 @@ function makeRound(round,seed){
   return {round,enemies:['stain'],spec:{need:{clean:6},notes:[]},offer:['cloth','sponge','brush','soap','vinegar','soda','hot','scrub']};
 }
 
+/* ============ TASK RACE: the seeded task list (docs 16 section 2.2) ============ */
+// One table for the browser prototype, the Nakama match (modules/index.js) and the C# mirror
+// (unity/Assets/Scripts/Rules/BobTaskRaceRules.cs): the server checks every TASK_BEGIN against this list.
+// id, n name, c category, s span, w weight, st steps, ms minimum server ms per step (0 = position-only check).
+const TASK_MINIGAMES=[
+  {id:'T01',n:'กวาดตามทาง',c:'sweep',s:'short',w:1,st:1,ms:[1500]},
+  {id:'T02',n:'ถูคราบวน',c:'wash',s:'short',w:1,st:1,ms:[1800]},
+  {id:'T03',n:'ฉีดให้ตรงจุด',c:'spray',s:'short',w:1,st:1,ms:[2500]},
+  {id:'T04',n:'จัดรถเข็นตามสูตร',c:'everyone',s:'long',w:2,st:2,ms:[1500,600]},
+  {id:'T05',n:'แยกขยะ',c:'sweep',s:'short',w:1,st:1,ms:[2500]},
+  {id:'T06',n:'บิดผ้าถู',c:'scrub',s:'short',w:1,st:1,ms:[1500]},
+  {id:'T07',n:'ล้างจานกองสูง',c:'wash',s:'long',w:3,st:3,ms:[2500,1500,0]},
+  {id:'T08',n:'เช็ดกระจก',c:'wash',s:'short',w:1,st:1,ms:[1800]},
+  {id:'T09',n:'แช่คราบรอ',c:'everyone',s:'long',w:2,st:2,ms:[2000,0]},
+  {id:'T10',n:'ไล่ฝุ่นใต้โต๊ะ',c:'sweep',s:'short',w:1,st:1,ms:[2500]},
+  {id:'T11',n:'เติมน้ำยาตามระดับ',c:'spray',s:'short',w:1,st:1,ms:[1200]},
+  {id:'T12',n:'จัดโต๊ะเก้าอี้',c:'everyone',s:'common',w:2,st:1,ms:[0]},
+  {id:'T13',n:'ยกของหนักสองคน',c:'everyone',s:'common',w:4,st:1,ms:[2000]},
+  {id:'T14',n:'ล้างพื้นทั้งแถว',c:'scrub',s:'long',w:3,st:3,ms:[1500,1500,1500]},
+  {id:'T15',n:'จำลำดับเครื่องซักผ้า',c:'everyone',s:'short',w:1,st:1,ms:[3000]}
+];
+const TASK_CATS=['sweep','wash','scrub','spray'];
+const TASK_CART='T04', TASK_EMERGENCY='T16';
+const TASK_ROUND_TIME=120, TASK_EMERGENCY_GRACE=25, TASK_RESUME_SEC=10;
+
+function taskById(id){for(let i=0;i<TASK_MINIGAMES.length;i++) if(TASK_MINIGAMES[i].id===id) return TASK_MINIGAMES[i]; return null}
+function taskMinMs(id,step){
+  const g=taskById(id); if(!g) return 0;
+  const i=Math.max(0,Math.min(g.ms.length-1,(step|0)-1));
+  return g.ms[i];
+}
+// docs 16 section 2.2: per team, per round. D2/D3 stretch the cards, so a 3-4 player list sheds one short per step.
+function taskComposition(players,difficulty){
+  let common,longs,shorts;
+  if(players<=1){common=0;longs=2;shorts=4}
+  else if(players===2){common=1;longs=2;shorts=4}
+  else if(players===3){common=1;longs=2;shorts=6}
+  else {common=1;longs=3;shorts=7}
+  if(players>=3) shorts-=Math.max(0,Math.min(2,(difficulty|0)-1));
+  return {common:common,longs:longs,shorts:shorts};
+}
+// The seeded list: the cart first, then long / common / short, then a top-up. Same result on the phone and the server.
+function taskPlan(seed,players,difficulty,cats){
+  const cmp=taskComposition(players,difficulty), total=cmp.common+cmp.longs+cmp.shorts;
+  const have=cats&&cats.length?cats:TASK_CATS, rng=mulberry((seed|0)^0x5bd1e995);
+  const pool=TASK_MINIGAMES.filter(g=>g.c==='everyone'||have.indexOf(g.c)>=0);
+  const list=[taskById(TASK_CART)];
+  add(cmp.longs-1,g=>g.s==='long'&&g.id!==TASK_CART);
+  add(cmp.common,g=>g.s==='common');
+  add(cmp.shorts,g=>g.s==='short');
+  add(total-list.length,g=>true);
+  add(total-list.length,g=>true,TASK_MINIGAMES);
+  return list;
+  function add(count,keep,source){
+    const out=(source||pool).filter(g=>keep(g)&&!list.some(x=>x.id===g.id));
+    for(let i=out.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));const t=out[i];out[i]=out[j];out[j]=t}
+    for(let i=0;i<out.length&&count>0;i++){list.push(out[i]);count--}
+  }
+}
+function taskTotalWeight(plan){let s=0;for(let i=0;i<plan.length;i++) s+=plan[i].w;return s}
+// Weight-based progress of docs 16 section 2.1: a finished step of a 3-step card is worth w/3.
+function taskWeightDone(plan,steps){let s=0;for(let i=0;i<plan.length;i++){const g=plan[i];s+=g.w*Math.max(0,Math.min(g.st,steps[i]|0))/g.st}return s}
+// The moments the emergency stain spawns: 2-3 times in a round, the same for both teams.
+function taskEmergencyTimes(seed){
+  const r=mulberry((seed|0)^0x9e3779b9), n=2+(r()<0.5?0:1), out=[];
+  const base=[40,75,100];
+  for(let i=0;i<n;i++) out.push(base[i]);
+  return out;
+}
+function taskEmergencyEnemy(seed){
+  const r=mulberry((seed|0)^0x85ebca6b), ids=Object.keys(ENEMIES);
+  return ids[Math.floor(r()*ids.length)%ids.length];
+}
+
 /* ============ STATE ============ */
 const $=id=>document.getElementById(id);
 const S={phase:'title',char:'sweep',seed:(Date.now()%1e6)|0,round:0,R:null,stack:[],hand:[],time:ROUND_TIME,budget:ROUND_BUDGET,
