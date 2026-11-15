@@ -128,8 +128,9 @@ namespace Bob.Game
                 Sfx("ui_confirm"); phase = Phase.Title; RenderAll();
             }, 44);
             BobUi.Size(guest, 144, 160); guest.GetComponentInChildren<TMP_Text>().fontStyle = FontStyles.Bold;
-            var g = BobUi.Button(panel, "เข้าด้วย Google (เร็วๆ นี้)", BobUi.Surface, null, 30, BobUi.Muted); BobUi.Size(g, 144, 144); g.interactable = false;
-            var a = BobUi.Button(panel, "เข้าด้วย Apple (เร็วๆ นี้)", BobUi.Surface, null, 30, BobUi.Muted); BobUi.Size(a, 144, 144); a.interactable = false;
+            // A4: the Google and Apple sign-ins were dead grey buttons; no account system exists yet, so they are gone
+            // until one does. Guest is the only way in and it really does reach Home.
+            BobUi.Label(panel, "บัญชีจริง (Google / Apple) จะมาในเวอร์ชันถัดไป", 24, BobUi.Muted, TextAnchor.MiddleCenter);
             BobUi.Label(panel, "นโยบายความเป็นส่วนตัว · ข้อตกลง", 24, BobUi.Muted, TextAnchor.MiddleCenter);
         }
 
@@ -200,11 +201,11 @@ namespace Bob.Game
             var hs = BobUi.Label(S, "แตะตัวละครเพื่อเปลี่ยน · ถนัด" + SpecialtyName(charId) + " +25% · " + Hero.Ability, 24, BobUi.Surface, TextAnchor.MiddleCenter); BobUi.OutlineText(hs, BobUi.Ink, 0.25f);
             BobUi.Pin(hs.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -280), new Vector2(1000, 44));
 
-            // dock (bottom left): only buttons that have real icons and a working screen
-            var dock = BobUi.Pin(BobUi.Rect("Dock", S), Vector2.zero, Vector2.zero, new Vector2(30, 30), new Vector2(2 * 190, 190));
+            // Dock (bottom left): only buttons that open a screen that works. A4 removed "บ้าน", which only raised a
+            // "เร็วๆ นี้" toast, so the dock is one square again (the layout group keeps the single child at 190).
+            var dock = BobUi.Pin(BobUi.Rect("Dock", S), Vector2.zero, Vector2.zero, new Vector2(30, 30), new Vector2(190, 190));
             var dh = dock.gameObject.AddComponent<HorizontalLayoutGroup>(); dh.spacing = 14; dh.childControlWidth = dh.childControlHeight = true;
-            DockButton(dock, "menu_shop", "ร้านค้า", () => { Phase p = Phase.Shop; phase = p; Sfx("ui_confirm"); RenderAll(); }, false);
-            DockButton(dock, "menu_home", "บ้าน", () => { Toast("เร็วๆ นี้: แต่งบ้านและห้องของฉัน"); Sfx("ui_tap"); }, true);
+            DockButton(dock, "menu_shop", "ร้านค้า", () => { Phase p = Phase.Shop; phase = p; Sfx("ui_confirm"); RenderAll(); });
 
             // Task Race is the only match (docs 24): the chip above PLAY is the chapter the player picked in S13, tap
             // opens the stage select. It carries the values the TaskRace scene applies (difficulty + clock), so what
@@ -228,12 +229,12 @@ namespace Bob.Game
             StartCoroutine(Breathe(play.transform));
         }
 
-        void DockButton(Transform dock, string icon, string label, Action onClick, bool dim)
+        /// <summary>One square dock button: the icon sits over the label in the bottom thumb zone. Only screens that work get one (A4).</summary>
+        void DockButton(Transform dock, string icon, string label, Action onClick)
         {
-            var b = BobUi.Button(dock, "", dim ? new Color(1, 0.99f, 0.95f, 0.7f) : BobUi.Surface, () => onClick(), 24);
+            var b = BobUi.Button(dock, "", BobUi.Surface, () => onClick(), 24);
             var t = b.GetComponentInChildren<TMP_Text>(); t.text = label; t.fontSize = 24; t.alignment = TextAlignmentOptions.Bottom; BobUi.Stretch(t.rectTransform, 4, 8, 4, 6);
             var ic = BobUi.Img(b.transform, icon, 100); BobUi.Pin(ic.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -16), new Vector2(100, 100));
-            if (dim) ic.color = new Color(1, 1, 1, 0.6f);
         }
 
         void PressPlay()

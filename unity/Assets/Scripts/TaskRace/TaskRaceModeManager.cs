@@ -79,6 +79,10 @@ namespace Bob.TaskRace
         /// <summary>Paid to the winning team when the stage closes (stage 6 = 200).</summary>
         public int StageBonus => stage != null ? stage.StageBonus : 0;
 
+        [Header("Countdown (A2, before the clock runs)")]
+        [Tooltip("3-2-1-ลุย! with the clock held at its start value. Off: the clock runs from the first frame.")]
+        [SerializeField] public bool countdownBeforeMatch = true;
+
         [Header("Team points (shared per team)")]
         [Tooltip("Awarded on every Dirty -> Clean completion, including a re-clean after a sabotage.")]
         [SerializeField, Min(0)] public int pointsPerTaskComplete = 100;
@@ -129,15 +133,22 @@ namespace Bob.TaskRace
         public event Action<MatchResult> MatchEnded;
         /// <summary>A story round closed and another one follows. Not raised on the round that ends the chapter.</summary>
         public event Action<SeriesRound> RoundEnded;
+        /// <summary>The 3-2-1-ลุย! countdown is over: the match clock is free to run.</summary>
+        public event Action CountdownFinished;
 
         readonly List<BobBridgeBarrier> barriers = new List<BobBridgeBarrier>();
         TaskRaceRound round;
         StorySeries series;
-        bool warned, opened, cancelArmed = true, roundEnding;
+        BobRaceCountdown countdown;
+        bool warned, opened, cancelArmed = true, roundEnding, countingDown;
 
         /// <summary>Seconds left on the match clock. The top HUD bar reads this.</summary>
         public float RemainingSeconds { get; private set; }
         public bool IsMatchOver => RemainingSeconds <= 0f;
+        /// <summary>A2: true while 3-2-1-ลุย! is on screen. The clock is held until it ends.</summary>
+        public bool IsCountingDown => countingDown;
+        /// <summary>Length of the countdown in seconds (2.7 s), for HUD/debug copy.</summary>
+        public static float CountdownSeconds => BobRaceCountdown.TotalSeconds;
         /// <summary>True once the gates have dropped: the only time sabotage is available.</summary>
         public bool AreBridgesOpen => opened;
         public bool BridgeRaid => mode == TaskRaceMode.TimedBridgeRaid;
@@ -281,7 +292,9 @@ namespace Bob.TaskRace
 
         void Update()
         {
-            if (Application.isPlaying && !Paused && !IsMatchOver && !roundEnding)
+            // A2 holds the clock for the 3-2-1-ลุย! countdown and A1 holds it behind the pause card, so no points are
+            // ever earned on time that has not started.
+            if (Application.isPlaying && !Paused && !IsMatchOver && !roundEnding && !countingDown)
             {
                 RemainingSeconds = Mathf.Max(0f, RemainingSeconds - Time.deltaTime);
                 TickClock();
@@ -349,6 +362,37 @@ namespace Bob.TaskRace
                 Debug.Log(series != null
                     ? $"[TaskRace] chapter start: round 1/{StorySeries.Rounds}, {RemainingSeconds:0} s each, {mode}, local team {localTeam}."
                     : $"[TaskRace] match start: {matchDuration:0} s, {mode}, local team {localTeam}.");
+            StartCountdown();
+        }
+
+        /// <summary>
+        /// A2: show 3-2-1-ลุย! and hold the clock until it ends. No-op outside Play mode, so the edit-mode verify shots
+        /// and the scene builder never grow a canvas object. The countdown re-runs for every story round and every reset.
+        /// </summary>
+        public void StartCountdown()
+        {
+            if (!Application.isPlaying || !countdownBeforeMatch) { countingDown = false; return; }
+            if (countdown == null) countdown = BobRaceCountdown.Attach(this);
+            countingDown = true;
+            countdown.Begin(EndCountdown);
+            Debug.Log($"[TaskRace] countdown: 3-2-1-{BobRaceCountdown.Steps[BobRaceCountdown.Steps.Length - 1]} over " +
+                      $"{BobRaceCountdown.TotalSeconds:0.##} s, clock held at {RemainingSeconds:0} s.");
+        }
+
+        /// <summary>Drop the countdown and release the clock (debug / the match ending underneath it).</summary>
+        public void SkipCountdown()
+        {
+            if (!countingDown) return;
+            countdown?.Cancel();
+            EndCountdown();
+        }
+
+        void EndCountdown()
+        {
+            if (!countingDown) return;
+            countingDown = false;
+            CountdownFinished?.Invoke();
+            Debug.Log("[TaskRace] countdown done: the clock runs.");
         }
 
         /// <summary>
@@ -361,6 +405,7 @@ namespace Bob.TaskRace
         {
             if (LastResult.HasValue) return;
             SetPaused(false); // the result overlay has to appear on a running scene
+            SkipCountdown(); // a match decided during the countdown must not keep it on screen
             if (round == null) round = FindAnyObjectByType<TaskRaceRound>();
 
             int total = round != null ? round.TaskCount : 0;
@@ -467,6 +512,7 @@ namespace Bob.TaskRace
             ToastRequested?.Invoke($"รอบ {series?.Round ?? 2}/{StorySeries.Rounds} · {seconds:0} วิ");
             if (Application.isPlaying)
                 Debug.Log($"[TaskRace] round {(series?.Round ?? 0)}/{StorySeries.Rounds} start: {seconds:0} s, series {series?.Score}.");
+            StartCountdown();
         }
 
         void TickClock()
