@@ -26,7 +26,7 @@ _(รอ owner เติมกฎจริง — ด้านล่างเป
 
 | Branch | Session | ขอบเขตงาน | สถานะ | อัปเดตล่าสุด |
 | --- | --- | --- | --- | --- |
-| `main` (local, **ยังไม่ push**) | Claude (session นี้) | merge `origin/main` เข้าไลน์ P0, จัด HUD, ผูก art library — commit `8655d11` | 🟢 ว่าง / พร้อมจองงานใหม่ | 15 พ.ย. 2026 |
+| `main` (push แล้วถึง `76a1266`) | Claude (session นี้) | **A: S13 เลือกด่าน + `ChapterDefinition`** (P0 ของ doc 24 §15.3) — ฝั่งล็อบบี้ ไม่แตะ HUD/ซีน Task Race | 🟡 กำลังทำ A | 15 พ.ย. 2026 |
 | _TBD (branch ของอีก session)_ | session ขนาน | **4.3** กล้อง/จุดงาน · **4.5** ghost hand onboarding · **4.6** specialty/ability/preview | 🟡 กำลังทำ | 15 พ.ย. 2026 |
 | `origin/main` | remote | merge แล้วถึง `8655d11` ไหม? — ยังไม่ push จากฝั่งเรา | — | 15 พ.ย. 2026 |
 
