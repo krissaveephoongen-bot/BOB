@@ -697,3 +697,16 @@ result overlay: open=True draw 0:0 points · tasks 0/6 vs 0/6 · reward 45 coins
 - ซ่อนความลับ: `firebase-key.json` และ `.env` อยู่ใน `.gitignore`; `.env.example` มีแต่ค่าไม่ลับ (`FIREBASE_APP_ID`, `FIREBASE_TESTER_GROUP`, `FIREBASE_KEY_PATH`); แอปอยู่ใน Firebase project **bob-preprod**
 - ยังไม่รันจริง: รอบนี้ไม่มี APK และไม่อัปโหลด (รอ owner สั่ง) — คำสั่งเดียวคือ `bash distribute-android.sh`
 
+### 15.8 A1 — หยุด/ออกกลางแมตช์ (15 พ.ย. 2026)
+
+ที่มา: ตารางหน้าจอ/ทางตันใน `art/docs/11` §3.2 — Task Race ไม่มีปุ่มออกกลางแมตช์และไม่มี Esc handler ผู้เล่นต้องปิดแอป
+
+- **`TaskRaceModeManager`**: `Paused` (get), `CanPause => !Paused && !CardOpen && !LastResult.HasValue`, `SetPaused(bool)` คืน false เมื่อถูกปฏิเสธ, `TogglePause()`; การหยุดใช้ `Time.timeScale = 0` เป็นตัวพา — ทุกกฎที่อ่าน `deltaTime` (นาฬิกา, บอท, ฮีโร่) หยุดพร้อมกันโดยไม่ต้องรู้จัก pause. `Update` ข้ามการอ่านจอยเมื่อ pause (กัน `CancelOpenSessions` ยิงตอนหยุด), `BeginMatch` / `EndMatch` / `OnDestroy` คืน `timeScale = 1` เสมอ (ฉาก Game ต้องไม่ถูกโหลดมาแบบแช่แข็ง)
+- **`BobTaskRaceHud`**: ปุ่ม `หยุด` 104 × 56u มุมขวาบน (`BuildPause`, `BobTaskRaceHud.cs:539`) + การ์ด 900 × 560u `หยุดเกม` / "นาฬิกาและคู่แข่งหยุดชั่วคราว" / `เล่นต่อ` (primary) / `ออกจากการแข่งขัน` → `ResumeMatch()` แล้ว `BackToLobby()` (`LoadScene("Game")`); Esc / Android back (`OnBackPressed`) = ปิดการ์ด S28 ก่อน (ผ่าน `TaskSpot.CancelOpenSessions`) → toggle pause; ปุ่มซ่อนเมื่อ `PauseOpen || CardOpen || ResultOpen || LastResult` (`RenderPause`)
+- **เหตุผลที่ pause ไม่ทับการ์ด S28/ผลแมตช์:** การ์ดมินิเกมเดินด้วย `Time.unscaledDeltaTime` (ตั้งใจ — ต้องเดินได้แม้เกมหน่วง) ถ้าหยุดกลางการ์ดได้จะเกิดการ์ดที่เดินต่อบนนาฬิกาที่หยุด; ผลแมตช์ก็ปลดล็อกปุ่มไปเองอยู่แล้ว
+- **ยังไม่ทำ:** แท็บ `ตั้งค่า` ในแผง (ตาม `11` S24), P01 ถามซ้ำก่อนออก, กรณีแมตช์ออนไลน์ "เวลาไม่หยุด" (ยังไม่มี caller ของ `BobOnline`)
+- **ตรวจ (2 ชั้น):**
+  - `TaskRaceVerify.RenderPause` (edit mode, log `Logs/verify-pause-solo.log`): `pause card: open=True paused=True timeScale=0.00 button visible=False` → ปิดแล้ว `timeScale=1.00`, ภาพ `Logs/taskrace-pause-2400x1080.png`
+  - `Editor/PauseCheck.cs` (เมนู **Bob > Run Pause Check**, รันโดยไม่ใส่ `-batchmode -quit`): Play จริง → `start` 94.07 วิ, pause 0.8 วิจริงแล้วนาฬิกา **94.07 เท่าเดิม**, resume แล้ว 93.56 วิ, เปิดสถานีถือ `TASK_LOCK` แล้ว `SetPaused(true)` ถูกปฏิเสธ (`timeScale 1.00`) → `[PauseCheck] PAUSE CHECK PASSED` (log `Logs/pausecheck-solo.log`, ภาพ `Logs/pausecheck-1-button.png`, `pausecheck-2-paused.png`)
+- **ไม่แตะ:** ฉาก `TaskRace*.unity` (ไม่ต้อง rebuild), `TaskSpot`, `BobTaskRaceHero`, `BobMinigameHost`
+

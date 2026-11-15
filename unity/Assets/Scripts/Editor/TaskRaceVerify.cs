@@ -134,6 +134,7 @@ namespace Bob.EditorTools
             Render(suffix, hud);
             RenderS28(suffix, hud, spots, hero);
             RenderResult(suffix, hud, manager, hero);
+            RenderPause(suffix, hud, manager, hero);
             Debug.Log($"[TaskRaceVerify] {scenePath} done.");
         }
 
@@ -148,6 +149,24 @@ namespace Bob.EditorTools
             Shot($"Logs/taskrace{suffix}-result.png", eye, look, 40f, hud);
             hud.DebugCloseResult();
             manager.DebugResetMatch();
+        }
+
+        /// <summary>Shoot the pause card (A1) and prove the freeze it asks the manager for: Time.timeScale 0, Paused on.
+        /// The clock standing still over real seconds needs Play mode — <see cref="PauseCheck"/> covers that.</summary>
+        static void RenderPause(string suffix, BobTaskRaceHud hud, TaskRaceModeManager manager, GameObject hero)
+        {
+            if (hud == null || manager == null) return;
+            bool open = hud.DebugShowPause();
+            bool frozen = manager.Paused && Mathf.Approximately(Time.timeScale, 0f);
+            Debug.Log($"[TaskRaceVerify] pause card: open={open} paused={manager.Paused} timeScale={Time.timeScale:0.00} " +
+                      $"button visible={hud.PauseButtonVisible} (the button hides behind the dim)");
+            var eye = hero != null ? hero.transform.position + new Vector3(0f, 6.2f, -5.2f) : new Vector3(0f, 10.5f, -15f);
+            var look = hero != null ? hero.transform.position + new Vector3(0f, 0.72f, 0f) : new Vector3(0f, 0.4f, 0.5f);
+            Shot($"Logs/taskrace{suffix}-pause.png", eye, look, 40f, hud);
+            hud.DebugClosePause();
+            Debug.Log($"[TaskRaceVerify] pause closed: open={hud.PauseOpen} paused={manager.Paused} " +
+                      $"timeScale={Time.timeScale:0.00} frozen-while-open={frozen}");
+            Time.timeScale = 1f; // an aborted resume must never leave the editor frozen
         }
 
         /// <summary>Open the S28 card on each kind of card task and shoot it: the play area, the step and the bar.</summary>

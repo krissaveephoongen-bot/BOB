@@ -146,6 +146,10 @@ namespace Bob.TaskRace
         public IReadOnlyList<BobBridgeBarrier> Barriers => barriers;
         /// <summary>A player holds a TASK_LOCK and the S28 card is up: the hero stands still.</summary>
         public bool CardOpen { get; private set; }
+        /// <summary>The match is held by the pause card: the clock, the bot and the hero all stand still.</summary>
+        public bool Paused { get; private set; }
+        /// <summary>Pause is refused while a card holds a TASK_LOCK or after the result is decided.</summary>
+        public bool CanPause => !Paused && !CardOpen && !LastResult.HasValue;
         /// <summary>Set once the match is decided; the HUD draws the result overlay from it.</summary>
         public MatchResult? LastResult { get; private set; }
         /// <summary>The chapter series while storySeries is on; null in a PvP match.</summary>
@@ -225,6 +229,8 @@ namespace Bob.TaskRace
 
         void OnDestroy()
         {
+            // Leaving the scene while paused must not hand a frozen Game scene to the lobby.
+            if (Paused) { Paused = false; Time.timeScale = 1f; }
             if (round != null) round.RoundWon -= OnRoundWon;
             if (cached == this) cached = null;
         }
@@ -275,7 +281,7 @@ namespace Bob.TaskRace
 
         void Update()
         {
-            if (Application.isPlaying && !IsMatchOver && !roundEnding)
+            if (Application.isPlaying && !Paused && !IsMatchOver && !roundEnding)
             {
                 RemainingSeconds = Mathf.Max(0f, RemainingSeconds - Time.deltaTime);
                 TickClock();
@@ -286,7 +292,7 @@ namespace Bob.TaskRace
                 }
             }
 
-            float tilt = ReadJoystick();
+            float tilt = Paused ? 0f : ReadJoystick();
             if (tilt > cancelThreshold && cancelArmed)
             {
                 cancelArmed = false;
@@ -295,11 +301,34 @@ namespace Bob.TaskRace
             else if (tilt < cancelThreshold * 0.4f) cancelArmed = true;
         }
 
+        // ---------------------------------------------------------------- pause
+
+        /// <summary>
+        /// Freeze or resume the whole match. Time.timeScale carries the freeze, so every rule that reads deltaTime —
+        /// the clock, the bot, the hero — holds still without each of them knowing about the pause. Refused while a
+        /// card owns a TASK_LOCK or after the result is decided, so a card can never tick on a frozen clock.
+        /// </summary>
+        public bool SetPaused(bool on)
+        {
+            if (on == Paused) return true;
+            if (on && !CanPause) return false;
+            Paused = on;
+            Time.timeScale = on ? 0f : 1f;
+            if (Application.isPlaying)
+                Debug.Log(on ? $"[TaskRace] paused at {RemainingSeconds:0.0} s: clock and both teams frozen."
+                             : $"[TaskRace] resumed with {RemainingSeconds:0.0} s left.");
+            return true;
+        }
+
+        public void TogglePause() => SetPaused(!Paused);
+
         // ---------------------------------------------------------------- match
 
         /// <summary>Restart the score and the clock: 120 s PvP, or round one of a three-round story chapter.</summary>
         public void BeginMatch()
         {
+            Paused = false;
+            Time.timeScale = 1f;
             teamAPoints = 0; teamBPoints = 0;
             roundEnding = false;
             series = storySeries ? new StorySeries(storyRoundSeconds, seriesWinsToTake) : null;
@@ -331,6 +360,7 @@ namespace Bob.TaskRace
         public void EndMatch(bool record = true, bool? seriesWon = null, bool? seriesDraw = null)
         {
             if (LastResult.HasValue) return;
+            SetPaused(false); // the result overlay has to appear on a running scene
             if (round == null) round = FindAnyObjectByType<TaskRaceRound>();
 
             int total = round != null ? round.TaskCount : 0;

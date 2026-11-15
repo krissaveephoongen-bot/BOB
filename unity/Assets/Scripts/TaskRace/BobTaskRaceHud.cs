@@ -87,6 +87,9 @@ namespace Bob.TaskRace
         MatchResult shownResult;
         bool hasShownResult;
 
+        Button pauseButton;
+        RectTransform pauseRoot;
+
         RectTransform debugBar, debugToggle;
         TMP_Text debugModeLabel;
 
@@ -106,6 +109,10 @@ namespace Bob.TaskRace
         public bool CardOpen => cardSpot != null;
         /// <summary>The result overlay (S27) is up.</summary>
         public bool ResultOpen => resultRoot != null;
+        /// <summary>The pause card is up: the manager holds the clock at zero.</summary>
+        public bool PauseOpen => pauseRoot != null && pauseRoot.gameObject.activeSelf;
+        /// <summary>Verify: the ⏸ button is drawn (it hides while a card, the result or the pause card is up).</summary>
+        public bool PauseButtonVisible => pauseButton != null && pauseButton.gameObject.activeSelf;
         public MatchResult ShownResult => shownResult;
         /// <summary>Verify: the two small lines under the play area.</summary>
         public string CardStep => cardStep != null ? cardStep.text : "";
@@ -145,6 +152,7 @@ namespace Bob.TaskRace
             if (buildTouchControls) BuildTouch(cam != null ? cam : canvas.worldCamera);
             BuildTaskList();
             BuildTopBar();
+            BuildPause();
             BuildMainButton();
             BuildMinigameCard();
             BuildToast();
@@ -193,6 +201,7 @@ namespace Bob.TaskRace
         void Update()
         {
             if (canvas == null) return;
+            if (Input.GetKeyDown(KeyCode.Escape)) OnBackPressed();
             if (round != null && round.Version != builtVersion)
             {
                 builtVersion = round.Version;
@@ -202,6 +211,7 @@ namespace Bob.TaskRace
             RenderTopBar();
             RenderMain();
             RenderCard();
+            RenderPause();
             if (manager != null)
             {
                 if (manager.LastResult.HasValue && !hasShownResult) ShowResult(manager.LastResult.Value);
@@ -254,6 +264,7 @@ namespace Bob.TaskRace
             cardChipUntil = 0f;
             mini = null; cardInteractive = false;
             touch = null; resultRoot = null; hasShownResult = false;
+            pauseButton = null; pauseRoot = null;
             debugModeLabel = null;
         }
 
@@ -521,6 +532,83 @@ namespace Bob.TaskRace
                 var img = timeFill.GetComponent<Image>();
                 if (img != null) img.color = r <= 10f ? T.danger : r <= manager.warningAtRemaining ? T.warn : T.primary;
             }
+        }
+
+        // ---------------------------------------------------------------- pause / exit
+
+        void BuildPause()
+        {
+            // The top-right corner is the one spot no island prop or task row reaches on a 20:9 phone.
+            pauseButton = BobUi.Button(page, "หยุด", T.surfaceCream, PauseMatch, 26, T.ink);
+            BobUi.Pin((RectTransform)pauseButton.transform, new Vector2(1f, 1f), new Vector2(1f, 1f),
+                new Vector2(-cardInset.x, -cardInset.y), new Vector2(104f, 56f));
+
+            pauseRoot = BobUi.Stretch(BobUi.Rect("Pause", page));
+            var dim = pauseRoot.gameObject.AddComponent<Image>();
+            dim.color = T.dim;
+            dim.raycastTarget = true;
+
+            var panel = BobUi.Panel(pauseRoot, T.surface, null, "PauseCard");
+            var p = (RectTransform)panel.transform;
+            BobUi.Pin(p, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900f, 560f));
+
+            var title = BobUi.Label(p, "หยุดเกม", 72, T.ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Pin(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -36f), new Vector2(820f, 96f));
+
+            var sub = BobUi.Label(p, "นาฬิกาและคู่แข่งหยุดชั่วคราว", 30, T.inkMuted, TextAnchor.MiddleCenter);
+            BobUi.Pin(sub.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -140f), new Vector2(820f, 48f));
+
+            var resume = BobUi.Button(p, "เล่นต่อ", T.primary, ResumeMatch, T.buttonLg, T.ink);
+            BobUi.Pin((RectTransform)resume.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(0f, 156f), new Vector2(760f, 140f));
+
+            var quit = BobUi.Button(p, "ออกจากการแข่งขัน", T.surfaceCream, QuitMatch, T.buttonLg, T.ink);
+            BobUi.Pin((RectTransform)quit.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(0f, 20f), new Vector2(760f, 120f));
+
+            pauseRoot.gameObject.SetActive(false);
+        }
+
+        /// <summary>Esc / Android back: the card closes first, then pause toggles; the result overlay keeps the key.</summary>
+        void OnBackPressed()
+        {
+            if (ResultOpen) return;
+            if (CardOpen) { TaskSpot.CancelOpenSessions(); HideCard(); return; }
+            if (PauseOpen) ResumeMatch();
+            else PauseMatch();
+        }
+
+        void PauseMatch()
+        {
+            if (manager == null || pauseRoot == null) return;
+            if (!manager.SetPaused(true)) return;
+            pauseRoot.gameObject.SetActive(true);
+            pauseRoot.SetAsLastSibling();
+            if (toast != null) toast.transform.SetAsLastSibling();
+            pauseButton.gameObject.SetActive(false);
+        }
+
+        void ResumeMatch()
+        {
+            if (pauseRoot != null) pauseRoot.gameObject.SetActive(false);
+            if (manager != null) manager.SetPaused(false);
+            RenderPause();
+        }
+
+        void QuitMatch()
+        {
+            ResumeMatch(); // the lobby must never open onto a frozen Time.timeScale
+            HideCard();
+            BackToLobby();
+        }
+
+        void RenderPause()
+        {
+            if (pauseButton == null) return;
+            bool show = !PauseOpen && !CardOpen && !ResultOpen && (manager == null || !manager.LastResult.HasValue);
+            if (pauseButton.gameObject.activeSelf != show) pauseButton.gameObject.SetActive(show);
         }
 
         // ---------------------------------------------------------------- context button
@@ -928,6 +1016,12 @@ namespace Bob.TaskRace
 
         /// <summary>Verify: drop the card without completing the task.</summary>
         public void DebugCloseCard() => HideCard();
+
+        /// <summary>Verify: open the pause card exactly as the ⏸ button does, so the clock really stops.</summary>
+        public bool DebugShowPause() { PauseMatch(); return PauseOpen; }
+
+        /// <summary>Verify: เล่นต่อ, the clock runs again.</summary>
+        public void DebugClosePause() => ResumeMatch();
 
         // ---------------------------------------------------------------- toast
 
