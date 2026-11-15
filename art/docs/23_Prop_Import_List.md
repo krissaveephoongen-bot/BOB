@@ -30,7 +30,7 @@
 | `floating island 3d model.glb` | `SM_bob_map_island_land` | 42,640 → 8,000 | เกาะ A |
 | `floating island 3d model2.glb` | `SM_bob_map_island_land2` | 52,416 → 8,000 | เกาะ B (ไม่ mirror กับ A; เลื่อน X) |
 | `stylized river water 3d model.glb` | `SM_bob_map_river_channel` | 51,638 → 8,000 | ช่องน้ำระหว่างเกาะ, top -0.15 |
-| `wooden footbridge 3d model.glb` | `SM_bob_map_wooden_bridge` | 53,657 → 7,999 | 2 ตัว (เหนือ/ใต้), กว้าง 2 u, top y = 0 |
+| `wooden footbridge 3d model.glb` | `SM_bob_map_wooden_bridge` | 53,657 → 7,999 | 1 ตัว (เกาะ 2 เกาะ = สะพาน 1 ช่วง; 15 พ.ย. 2026), กว้าง 2 u, top y = 0 |
 | `waterfall diorama 3d model.glb` | `SM_bob_map_cliff_waterfall` | 57,117 → 7,999 | ฉากหลังเหนือแม่น้ำ (z +9.2); ตัวโมเดลมีรางน้ำไม้ยื่นมาถึงน้ำ |
 | `circular cobblestone plaza 3d model.glb` | `SM_bob_map_plaza` | 55,684 → 6,172 | ยังไม่ผูก (ลานกลาง/เกาะที่สาม) |
 

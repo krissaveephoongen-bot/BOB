@@ -2,7 +2,7 @@
 // playable twin-island layout and switches it between the two modes:
 //
 //   Tools > BOB > Task Race Map Assembler
-//   1 · Build map         two islands, river, north/south bridges, waterfall cliff, flat walk colliders, mode groups
+//   1 · Build map         two islands, river, one bridge, waterfall cliff, flat walk colliders, mode groups
 //   2 · Clone Team A      duplicates every prop and TaskSpot to Team B with an exact +X translation (never mirrored)
 //                         and gives each cloned spot a unique id (S3_A -> S3_B)
 //   3 · Mode buttons      PureRace / TimedBridgeRaid, applied to the TaskRaceModeManager in the scene
@@ -211,7 +211,7 @@ namespace Bob.EditorTools
             {
                 FitAxisAligned(river, channel, islandDepth * 1.15f);
                 // A river that sits just under the walk plane reads as a glass sheet between the islands; drop it into
-                // the gorge so the bridges visibly span water.
+                // the gorge so the bridge visibly spans water.
                 AlignTop(river, -1.35f);
                 // The channel mesh is longer than the islands so it reaches past both banks; the southern overflow
                 // hung below the front cliff. Cut the sheet flush with the islands' south edge (docs 24 section 3.1).
@@ -242,29 +242,33 @@ namespace Bob.EditorTools
             // The red-white gates live in their own group: always active, because they are the barrier the TimedBridgeRaid
             // clock lowers at 60 s. RiverBarrier_Group (hedges) still belongs to PureRace only.
             var bridgeBarriers = Child(root, "BridgeBarrier_Group");
+            // One bridge for two islands: a span only earns its place between two shores, so n islands get n - 1 bridges
+            // (owner, 15 Nov). Two bridges here would need a third island to be honest about where they land.
+            // z is the lane in front of the E-counter row (its spine starts at island-local z 1.30): a deck centred on
+            // z = 0 would cut through the counters. The play camera looks +Z, so this is also the crossing the player
+            // sees ahead of the hero.
             float bridgeZ = islandDepth * 0.3f;
+            const string bridgeName = "Bridge";
             const float bridgeWidth = 1.7f; // a footbridge: wide enough for the walk collider, narrow enough to read as a plank (4.3: trimmed from 2 u)
             // The Field slab is an ellipse, so the bank at the bridge's z sits inboard of the island's widest line.
             // Measure that edge and let the deck land 1.2 u past it: the NavMesh erodes by the agent radius (0.5 u),
             // and a deck that stops short of the bank bakes as two islands with no path between them.
             float fieldHalfX = islandSize * FieldInset * 0.5f;
             float fieldHalfZ = islandDepth * FieldInset * 0.5f;
-            float bridgeTarget = 0f;
-            foreach (var (name, z) in new[] { ("Bridge_North", bridgeZ), ("Bridge_South", -bridgeZ) })
+            float bankEdgeX = fieldHalfX * Mathf.Sqrt(Mathf.Clamp01(1f - Mathf.Pow(bridgeZ / fieldHalfZ, 2f)));
+            float bridgeTarget = 2f * (half - bankEdgeX + 1.2f);
+            var span = SpawnPiece(bridgePrefab, bridgeName, bridges, new Vector3(0f, 0f, bridgeZ),
+                new Color(0.62f, 0.44f, 0.28f), new Vector3(bridgeTarget, 0.25f, 1.8f), bridgeYaw, bridgeTarget);
+            if (span != null)
             {
-                float bankEdgeX = fieldHalfX * Mathf.Sqrt(Mathf.Clamp01(1f - Mathf.Pow(z / fieldHalfZ, 2f)));
-                bridgeTarget = 2f * (half - bankEdgeX + 1.2f);
-                var b = SpawnPiece(bridgePrefab, name, bridges, new Vector3(0f, 0f, z),
-                    new Color(0.62f, 0.44f, 0.28f), new Vector3(bridgeTarget, 0.25f, 1.8f), bridgeYaw, bridgeTarget);
-                if (b == null) continue;
-                FaceLongAxisX(b);
-                FitAxisAligned(b, bridgeTarget, bridgeWidth);
-                AlignTop(b, 0f);
-                AddWalkable(b, 0f, 0.02f);
+                FaceLongAxisX(span);
+                FitAxisAligned(span, bridgeTarget, bridgeWidth);
+                AlignTop(span, 0f);
+                AddWalkable(span, 0f, 0.02f);
                 // The Tripo bridge reads as two cream planks from the play camera; the seeded deck replaces it.
-                HideRenderers(b);
-                AddBridgeDeck(bridgeDetail, name, z, bridgeTarget, bridgeWidth, channel);
-                AddBridgeGate(bridgeBarriers, name, z, bridgeWidth);
+                HideRenderers(span);
+                AddBridgeDeck(bridgeDetail, bridgeName, bridgeZ, bridgeTarget, bridgeWidth, channel);
+                AddBridgeGate(bridgeBarriers, bridgeName, bridgeZ, bridgeWidth);
             }
 
             // ---- systems

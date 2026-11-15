@@ -150,7 +150,7 @@ Namespace ของทั้งหมดคือ `Bob.TaskRace` (assembler อ�
 | ป้าย | `chalkboard_easel`, `sign_stand_wood` | ป้ายชอล์ก + ป้ายไม้ บอกบรรยากาศตลาด |
 | ธรรมชาติ | `rocks_grass` ×2 | ก้อนหินโผล่หญ้า เสริมงานของ dressing |
 
-- **ทุกชิ้นอยู่ในแถบกลางของเกาะ** (`|z| ≤ ~0.74` หลังหัก footprint ตัวเอง) — แผ่นสะพานเหนือ/ใต้คร่อมขอบสนามไว้แล้ว (ข้อ 5.4) ของเดิมที่วาง z ±0.3–0.5 จึงยื่นเข้าไปใน deck
+- **ทุกชิ้นอยู่ในแถบกลางของเกาะ** (`|z| ≤ ~0.74` หลังหัก footprint ตัวเอง) — แผ่นสะพานช่วงเดียว (z 1.88–3.52) คร่อมขอบสนามฝั่งเหนือไว้แล้ว (ข้อ 5.4) ของเดิมที่วาง z ±0.3–0.5 จึงยื่นเข้าไปใน deck
 - รั้ว `fence_wood` ถูกถอดออก เพราะความยาวของมันพาดเข้าแถบสะพานตะวันตกเสมอ
 - ขาด prefab ตัวใด log จะเตือน `decor prefab missing: SM_…` และข้ามชิ้นนั้น ไม่ทำให้ build ล้ม
 
@@ -161,11 +161,13 @@ Namespace ของทั้งหมดคือ `Bob.TaskRace` (assembler อ�
 
 ### 5.4 ทางเดินสะพานปลอดสิ่งกีดขวาง + ขอบน้ำ
 
-แผ่นสะพานวัดจากซีนจริง: `x[-5.78,5.78]` ที่ `z[1.74,3.66]` และ `z[-3.66,-1.74]` เทียบกับ `Field` ครึ่งลึก 3.6 u — deck คร่อมขอบสนามเหนือ/ใต้พอดี ของประดับจึงอยู่ได้เฉพาะแถบกลาง
+แผ่นสะพานวัดจากซีนจริง (15 พ.ย. 2026, **สะพานเดียว**): render `x[-6.03,6.03] z[1.85,3.55]`, collider `x[-5.78,5.78] z[1.88,3.52]` เทียบกับ `Field` ครึ่งลึก 3.6 u — deck คร่อมขอบสนามฝั่งเหนือพอดี ของประดับจึงอยู่ได้เฉพาะแถบกลาง (`|z| ≤ ~0.74`) ใต้สะพาน
 
-- `BobMapAssemblerEditor.ValidateClearance` ถูกเรียกจาก `TaskRaceSceneBuilder.BuildVariant` **หลัง** clone ฝั่ง B (ก่อน clone ยังไม่มีสถานี/ของประดับ) และ log `clearance decks: …` ตามด้วย `clearance: N prop(s) checked, 0 decor and 0 station overlap(s) on 2 deck(s)`
+- **กฎจำนวนสะพาน:** เกาะสองเกาะ = สะพาน **หนึ่ง** ช่วง — สะพานกินที่เฉพาะระหว่างสองฝั่ง ถ้าจะมีสองสะพานต้องมีเกาะที่สามมารองรับ (owner, 15 พ.ย. 2026) ของเดิมมี `Bridge_North` + `Bridge_South` ทั้งที่เกาะมีแค่สองใบ จึงเหลือช่วงเดียวที่ z = `islandDepth × 0.3` (solo 2.70 · duo 3.38 · team 4.05) — เป็นเลนที่ว่างจากแถว E-counter (spine เริ่มที่ z 1.30) และอยู่ฝั่งที่กล้องเล่นมองเห็น (+Z)
+
+- `BobMapAssemblerEditor.ValidateClearance` ถูกเรียกจาก `TaskRaceSceneBuilder.BuildVariant` **หลัง** clone ฝั่ง B (ก่อน clone ยังไม่มีสถานี/ของประดับ) และ log `clearance decks: …` ตามด้วย `clearance: N prop(s) checked, 0 decor and 0 station overlap(s) on 1 deck(s)`
 - กฎสามโซน: บน deck ต้องห่าง **1.5 u**, ข้าง deck **1.0 u** (สถานีผ่อนเป็น 0.2 u เพราะตัวเคาน์เตอร์คือเป้าหมายการเล่น), ทางลง/landing **1.5 u**; ตัวเลขนี้ทำให้ของประดับอยู่บนเกาะ 12 u ได้โดยไม่ต้องโล่งทั้งเกาะ
-- ค่าที่ผ่านแล้ว: solo `34`, duo `36`, team `40` ชิ้น — ต้องเป็น 0 overlap ทุกโหมด; ถ้ามีจะได้ warning `clearance: <ชื่อ> on <side> is X u <zone> (need Y) x[…] z[…]`
+- ค่าที่ผ่านแล้ว: solo / duo / team `12` ชิ้นตรวจแล้ว — ต้องเป็น 0 overlap ทุกโหมด; ถ้ามีจะได้ warning `clearance: <ชื่อ> on <side> is X u <zone> (need Y) x[…] z[…]`
 - **ขอบน้ำ:** `TrimRiverSouth` บีบ vertex ของ mesh แม่น้ำที่ไม่สูงกว่า `cutZ = -islandDepth × 0.5` ให้มาที่ `cutZ` — solo `-4.50` (500 vertex), duo `-5.63`, team `-6.75` น้ำจึงจบเสมอขอบผาหน้าตึก ไม่ยื่นเป็นแผ่นน้ำค้างใต้เกาะ
 
 ## 6. สองโหมดบนแผนที่เดียว
@@ -175,7 +177,7 @@ Namespace ของทั้งหมดคือ `Bob.TaskRace` (assembler อ�
 | | PureRace | TimedBridgeRaid (ค่าเริ่มต้นของซีน) |
 | --- | --- | --- |
 | `RiverBarrier_Group` | เปิด — ตลิ่ง + hedge มี collider + `NavMeshObstacle` (carve) | ปิด |
-| `Bridges_Group` | ปิด — เหลือแต่ walk collider ที่ไม่ทำงาน | เปิด — collider + `NavMeshLink` ของสะพานเหนือ/ใต้ |
+| `Bridges_Group` | ปิด — เหลือแต่ walk collider ที่ไม่ทำงาน | เปิด — collider + `NavMeshLink` ของสะพาน (ช่วงเดียว) |
 | `BridgeBarrier_Group` | **เปิด** — ประตูแดง-ครีมกลางสะพานปิดตลอดแมตช์ | **เปิด** — เขย่า 5 วิที่ 65 วิ, ทรุด 1.5 u ใน 0.6 วิที่ 60 วิ แล้วเปิดทาง |
 | `BridgeDetail_Group` | เปิด — แผ่นไม้/ราว/ตอม่อยังอยู่ในภาพ | เปิด |
 | กติกา | ต่างคนต่างอยู่เกาะตัวเอง — เห็นสะพานแต่ผ่านประตูไม่ได้ | 60 วิแรกแยกเกาะ, 60 วิหลังข้ามไปแย่ง `TASK_LOCK`/ป่วนสถานีฝั่งตรงข้ามได้ |
@@ -397,20 +399,20 @@ spot.Close(completed: true);      // จบงาน → รอบนับน�
   -logFile "C:/Users/Jakgrits/BOB-repo/unity/Logs/taskrace-verify-Run.log"
 ```
 
-ผลที่ต้องเห็น: `spots:` 6 id ไม่ซ้ำ (`S1_A..S3_B`; duo = 8, team = 12), `baked tasks:` ชื่อมินิเกมจริงบนทุกจุด, `round D1`–`round D3` (จำนวนงาน `players`, `mean station`, `workload` และรายการ T-id),
-`floor under spots: (x,z)y=0.00` ทุกจุด, `TimedBridgeRaid: ... barriers=2 links=2`, `PureRace: obstacles=4 (4 before) carving=4`, แล้วได้ภาพ
+ผลที่ต้องเห็น: `spots:` **12 id** (`S1_A..S6_B`, rig 6 สถานี × 2 ฝั่ง ทุกโหมด), `baked tasks:` ชื่อมินิเกมจริงบนทุกจุด, `round D1`–`round D3` (จำนวนงาน `players`, `mean station`, `workload` และรายการ T-id),
+`floor under spots: (x,z)y=0.00` ทุกจุด, `TimedBridgeRaid: ... barriers=1 links=1`, `PureRace: obstacles=3 (3 before) carving=3`, แล้วได้ภาพ
 
-**NavMesh + ประตูสะพาน (ข้อ 6.1)** — build log ต้องมี `navmesh geometry: 4 walkable collider(s), 2 ignored` และ
-`navmesh baked: PureRace ... (solo 24 / duo 28 / team 28 tri), TimedBridgeRaid ... (52 / 60 / 64 tri)` — ส่วนต่างคือแผ่นสะพาน (28 / 32 / 36 tri) และต้องไม่เป็น 0
+**NavMesh + ประตูสะพาน (ข้อ 6.1)** — build log ต้องมี `navmesh geometry: 3 walkable collider(s), 3 ignored` (Field 2 + deck 1) และ
+`navmesh baked: PureRace ... (solo 24 / duo 28 / team 28 tri), TimedBridgeRaid ... (40 / 44 / 46 tri)` — ส่วนต่างคือแผ่นสะพานช่วงเดียว (16 / 16 / 18 tri) และต้องไม่เป็น 0
 verify log ต้องได้ **สองสภาวะ** ของโหมดเดียวกัน (ประตูปิด carve deck / ประตูเปิดเชื่อม):
 
 ```
-navmesh TimedBridgeRaid gates shut: 52 tri, ...
-nav TimedBridgeRaid gates shut: ... status=PathPartial corners=2 length 7.6 u     <- ประตู carve ตัดกลางสะพาน
-navmesh TimedBridgeRaid gates open: 52 tri, ...
-nav TimedBridgeRaid gates open: ... status=PathComplete corners=5 length 13.9 u   <- ข้ามได้
-probe Bridge_North centre ...: on navmesh, off by 0.00 u                          <- แผ่นสะพานอยู่บน NavMesh
-deck Bridge_North: ... collider BoxCollider x[-5.78,5.78] y[-1.00,0.00] z[1.74,3.66]  <- ขนาดถูก (ยาว ~12, กว้าง ~1.9)
+navmesh TimedBridgeRaid gates shut: 40 tri, ...
+nav TimedBridgeRaid gates shut: ... status=PathPartial corners=4 length 9.0 u      <- ประตู carve ตัดกลางสะพาน
+navmesh TimedBridgeRaid gates open: 40 tri, ...
+nav TimedBridgeRaid gates open: ... status=PathComplete corners=5 length 21.0 u    <- ข้ามได้
+probe Bridge centre ...: on navmesh, off by 0.00 u                                 <- แผ่นสะพานอยู่บน NavMesh
+deck Bridge: ... collider BoxCollider x[-5.78,5.78] y[-1.00,0.00] z[1.88,3.52]     <- ขนาดถูก (ยาว ~12, กว้าง ~1.7)
 navmesh PureRace: 24 tri, ...
 nav PureRace: ... status=PathPartial ...                                          <- ข้ามไม่ได้ (ไม่มีสะพาน)
 ```
@@ -678,7 +680,7 @@ result overlay: open=True draw 0:0 points · tasks 0/6 vs 0/6 · reward 45 coins
 
 ### 15.7 เฟส 4–5 ของแผน twin-island (15 พ.ย. 2026)
 
-**เฟส 4 — บอท Team B + แผงดีบัก (`TaskRace/TaskRaceBotController.cs`, `Editor/BotCheck.cs`).** บอทอยู่ในซีน solo เท่านั้น (duo/team ยังใช้ `BobTaskRaceRival` แบบเดิม) และเดินด้วย waypoint ไม่ใช้ `NavMeshAgent`: แผนที่แบนและ clearance check การันตีเลนสะพานอยู่แล้ว waypoint ข้ามสะพานคือ `(sign(from.x)·5, 0, ±2.7) → (0,0,±2.7) → (−sign·5,0,±2.7) → เป้าหมาย` โดยเลือกฝั่งเหนือ/ใต้จากผลรวมระยะ z ถึง ±2.7
+**เฟส 4 — บอท Team B + แผงดีบัก (`TaskRace/TaskRaceBotController.cs`, `Editor/BotCheck.cs`).** บอทอยู่ในซีน solo เท่านั้น (duo/team ยังใช้ `BobTaskRaceRival` แบบเดิม) และเดินด้วย waypoint ไม่ใช้ `NavMeshAgent`: แผนที่แบนและ clearance check การันตีเลนสะพานอยู่แล้ว waypoint ข้ามสะพานคือ `(sign(from.x)·mouth, 0, z) → (0,0,z) → (−sign·mouth,0,z) → เป้าหมาย` โดย `z` คือตำแหน่งของ deck ใน `Bridges_Group` และ `mouth` คือ `|bounds.max.x|` ของ collider `Walkable` ของสะพานนั้น (เดิมฮาร์ดโค้ด `z = ±2.7` / `mouth = 5` ซึ่งถูกเฉพาะซีน solo ก่อนเหลือสะพานเดียว — 15 พ.ย. 2026 อ่านจากซีนแทน)
 
 - ค่าเริ่มต้น: `speed 3.0` (ฮีโร่ 3.2), `pace 1.12` (เวลางาน = ค่าประมาณ × 1.12), `headStart 4 วิ`, `retrySeconds 1`, `raidCooldown 14 วิ`, `sabotageHoldSeconds 2.75` (เท่าการ์ดผู้เล่น), `arriveRadius 0.55`
 - งาน: เลือกสถานี Dirty ของตัวเองที่ใกล้สุด → เดิน → ครบเวลา → `ForceComplete` (แต้ม Team B ออกตามค่าด่านผ่าน `TaskRaceRound`) → ถ้าพูลถึง `shieldItemCost` (150) และสถานียังไม่ติดเกราะ ซื้อเกราะ 30 วิทันที; เมื่อ `AreBridgesOpen` และพ้น cooldown จะเลือกสถานี Clean ของ Team A ที่ใกล้สุด (`!IsProtected`, `!SabotageUsed`) เดินข้ามสะพาน → `TrySabotage("คู่แข่ง")` → `CompleteSabotage`
@@ -727,3 +729,176 @@ result overlay: open=True draw 0:0 points · tasks 0/6 vs 0/6 · reward 45 coins
 - **ยังไม่ทำ:** รูปทีม/หีบ/ปุ่มดูโฆษณา ×2 ในหน้าจบบท (สเปก S27 เดิม), แอนิเมชันดาวร่วง/นับเหรียญ, หน้าแผนที่หมุดของ S13, ดาวรวมบน Home
 - **ไม่แตะ:** ฉาก `TaskRace*.unity` (ไม่ต้อง rebuild — การ์ดสร้างตอน runtime), `TaskSpot`, `BobTaskRaceHero`, `BobMinigameHost` / opcode ของ S28
 
+### 15.10 S28 3D prop stage — เวที 3D จริงในการ์ดมินิเกม (15 พ.ย. 2026)
+
+ที่มา: การ์ด S28 ยังวาดพื้นที่เล่นด้วยรูปทรง uGUI แบน (Disc/Panel) ทั้งที่คลังมี `SM_*` และ rig `SK_*` ครบ — owner สั่งชัดว่าให้ใช้ของที่ทำมา ("ผมทำ asset มาตั้งเยอะ คุณจะไม่ใช้เหรอ")
+
+- **ฉาก:** `TaskRace/BobMinigameStage.cs` (ใหม่) สร้างกล้อง orthographic → `RenderTexture` 1240 × 620 บน layer 31: วางที่ pitch 18°, สูง 4 หน่วยเหนือโต๊ะ, ถอยหลัง 1.31, ortho size 3.1, โฟกัสที่ root `(0,-400,0)`; การ์ดโชว์ RT ผ่าน RawImage ในกรอบเดิม — **rect เดิมทุกใบยังเป็น hitbox/ป้ายชื่อ**, กติกาและลำดับหน้าจอไม่เปลี่ยน
+- **คณิตวางของบนโต๊ะ:** `OnCounter(px)` แปลงพิกเซลของพื้นที่เล่น (1240 × 620) เป็นจุดบนระนาบโต๊ะที่ depth = (CamUp + y·cos 18°)/sin 18°; `At(px, depth)` = ตำแหน่งกล้อง + rotation × (px/100, depth) · 100 px = 1 หน่วย → พร็อพแถวหลังที่ยึด row R สูง H ต้องมี `R + H·100 ≤ 310` (ครึ่งความสูงพื้นที่เล่น) ไม่งั้นขอบบนถูกตัด — พลาดไปสองรอบกับถังของ T05
+- **โต๊ะ + เงา:** `BuildBackdrop` = slab 34 × 34 + ไม้ 12 แผ่นกว้าง 2.26 สลับเฉด เพื่อให้มีรอยต่อแนวลึก; ไฟหลัก 1 ดวง 0.85 (`LightShadows.Soft`, strength 0.65) — `BOB/ToonLit` มีเฉพาะ ForwardBase จึงรับ Directional ดวงเดียว (ดวงที่สองถูกเมินเงียบ ๆ) และค่าที่เกิน 1.0 จะ clip เป็นขาวจนลายไม้และเงาหาย; ทุกชิ้นมีเงาสัมผัสแบบ quad 64 × 64 alpha รัศมี (`Sprites/Default` + MaterialPropertyBlock `_Color`) สำรองเงาจริง
+- **ของบนเวที:** `Prop(resource,height,x,yaw,row)` วางพร็อพจริง (`SM_bin_*`, `SM_sink_cabinet`, `SM_washing_machine`, `SM_bed_single_blue`, `SM_window_arched`, `SM_brush_*`, `SM_bucket_blue`, `SM_spray_bottle`, `SM_detergent_pump`, …) เป็นฉากหลัง; ชิ้นที่ผู้เล่นแตะเป็น twin ของ rect: `AddBox` (แผ่น/ถัง), `AddDisc` (คราบ จาน ปุ่ม), `AddBlob` (ฝุ่น), `AddPane` (คราบเปียก), `AddProp` (พร็อพจริงเป็นชิ้นเกม เช่นขวดสเปรย์ T08), `AddSlime` (rig `SK_enemy_slime_green/mud/dust/dark`) · `Place(twin, px)` ขยับ twin ตาม rect และสเกลเงาตามขนาดตัว, `Kill`/`SetActive` เก็บเงาไปด้วย
+- **กับดักที่เจอและแก้:**
+  1. rig `SK_*` นำเข้า FBX ด้วย root scale ×100 — `localScale = s` ไปแทนที่ 100 ทำให้สไลม์เหลือ 2 px: ต้อง `localScale *= s` (พร็อพตั้ง `= 1` ก่อนวัดจึงไม่โดน)
+  2. `Bounds(go)` เป็น world bounds — การเซ็นเตอร์ต้องเทียบ `bounds.center - wrap.position` ไม่ใช่ `+= -bounds.center` (ไม่งั้นของลอยขึ้น 400 หน่วยพ้นกล้อง เหลือแต่เงา)
+  3. กล่อง/พร็อพต้องยึดฐานที่ **ขอบล่างของ rect** (`at - (0, h/2)`) ไม่ใช่กลาง rect ไม่งั้นป้ายชื่อไปโผล่ใต้ตัวของ
+  4. ไฟเกิน 1.0 บนโต๊ะสีครีมทำให้ทั้งพื้น clip เป็นขาว — ลด albedo โต๊ะ (0.90, 0.85, 0.74) และเหลือไฟหลักดวงเดียว
+- **ตรวจ:** `TaskRaceVerify.RenderS28` (edit mode) ถ่าย 9 การ์ดตามชนิดปฏิสัมพันธ์ — `T02` (ถู), `T01` (ลาก), `T05` (แยกขยะ), `T11` (เติม), `T15` (ลำดับ), `T06` (กดค้าง+หมุน), `T10` (แตะ), `T08` (หลายขั้น), `T03` (สไลม์) → `Logs/taskrace-s28-{id}.png` (1600 × 900); ทุกช็อตเรียก `BobMinigameStage.RenderForCapture()` ให้ camera เรนเดอร์ RT ก่อน แล้ว log `S28 card …: live=True cardOpen=True step=… hint=…` ครบทุกใบ (log `Logs/verify-s28s.log`)
+- **ยังไม่ทำ:** แถบเติมน้ำยา T11 และจอ/ปุ่ม T15 ยังเป็นแผง uGUI 2D ซ้อนบนเวที, hint/ป้ายชื่อ/แถบพลังยังเป็น uGUI (ตั้งใจ — 2D เป็น hitbox/ข้อความ), hold ring T06 ยังเป็นวงขาวจางบนจอ, ยังไม่มีฉากเฉพาะของ T04/T12/T13
+- **ไม่แตะ:** กติกา (`BobTaskRaceRules`), opcode 16–21 / `server/`, `TaskSpot`, ฉาก `TaskRace*.unity` (ไม่ rebuild), `BobTaskRaceHud` frame
+
+### 15.11 Feedback grammar — ตอบสนองแบบ Among Us (15 พ.ย. 2026)
+
+ที่มา: owner ส่ง concept art ของ Among Us แล้วสั่ง "อ่านรูปแบบ concept art, motion, movement … ปรับมินิเกมเราให้เทียบเท่าหรือใกล้เคียงแนวคิด" — ลิงก์ Instagram ดึงภาพไม่ได้ (คืนมาแต่ CSS/JSON ไม่มีภาพ) จึงยึดหลักที่เกมใช้จริงแทน: **หนึ่งงานหนึ่งกริยา, ทุกการแตะมีคำตอบในเฟรมเดียว, คำตอบจบใน < 0.3 วิ, ผิดแล้วย้อนกลับไม่ใช่กระโดดมั่ว**
+
+- **ไม่ลอกผิว sci-fi:** เกมเรายังเป็นพาสเทล diorama ตาม `bob-style-target` — ยืมเฉพาะไวยากรณ์การตอบสนอง ไม่เอากรอบเหล็ก/โทนเข้มของ Among Us
+- **วงแหวนแตะ (`Ring`):** `BobUi.Disc` ใต้ `fx` โผล่ที่จุดสัมผัส ขยาย 0.35 → 1.5 เท่าใน 0.30 วิ (ease-out) แล้วจาง — ทอง = โดน, เขียว = ถูก, แดง = ผิด, ขาว = ฝอยตอนถู
+- **ป๊อป/บี้หาย (`Pop` + `TickItem`):** ของที่ถูกเก็บไม่ `SetActive(false)` ทันทีอีกแล้ว — hitbox ตายทันทีแต่ร่างหด 0.18 วิ (`rect.localScale` = 0.45k + 0.55k²) และ twin 3D หดตามเพราะ `SyncTwin` อ่าน `rect.localScale.y`; `SyncTwin` ยังใช้ `rect.anchoredPosition` แทน `home` เพื่อให้ทั้งการบินและการสั่นเห็นบนเวที
+
+| งาน | ตอนนี้ |
+| --- | --- |
+| T01/T14 ลาก | ฝุ่นแต่ละจุดป๊อป + วงแหวนทองเมื่อนิ้วผ่าน |
+| T02/T07/T09 ถู | วงแหวนฝอยขาวทุก 0.14 วิใต้นิ้ว, คราบหดตาม hp, คราบหมดป๊อป |
+| T03 แตะสไลม์ | สไลม์บี้ + วงแหวน, ตำแหน่งตายทันที |
+| T05 แยกขยะ | ใบที่ถูกต้อง **บินเข้าถัง** 0.16 วิ + ถัง punch 1.18 เท่า + วงแหวนเขียว; ผิด **บินกลับช่องเดิม** (ไม่วาร์ปไปสุ่มจุดเหมือนเดิม) + สั่น 18 px 0.26 วิ + วงแหวนแดง + hint "ผิดถัง! ลองอีกที" |
+| T06/T09/T13 กดค้าง | punch ตอนกด, วงแหวนเขียวตอนครบขั้น |
+| T11 เติมน้ำยา | แถบเขียวกระพริบ (alpha .35 → .90) + วงแหวนเขียวตอนน้ำถึงแถบ, ล้น = วงแหวนแดงและรีเซ็ตสถานะแถบ |
+| T15 ลำดับ | ปุ่มที่ถูก punch + วงแหวนสีปุ่ม; ผิด = ปุ่มนั้นสั่น + วงแหวนแดง |
+| T10 ฝุ่น | ฝุ่นที่หมดอายุ **พัฟหาย** (วงแหวนขาว) ไม่กะพริบหายเงียบ |
+
+- **ค่าเวลา:** `PopTime .18 / RingTime .30 / PunchTime .20 / ShakeTime .26 / FlyTime .16` (const ใน `BobMinigameHost`) — เร็วกว่า `BobUiTheme.pop .22` เล็กน้อยเพื่อให้ทันการกดถี่
+- **จังหวะ:** `TickJuice` ถูกเรียกก่อนเช็ก `complete` เพื่อให้วงแหวน/ป๊อปลูกสุดท้ายเล่นจบแม้การ์ดไขแล้ว
+- **ตรวจ:** `TaskRaceVerify.RenderS28` เรียก `hud.DebugProbeCard()` **ก่อน** ถ่ายภาพ แล้วเดินเวลา 0.06 วิให้ดาวป๊อปโผล่ในภาพจริง จากนั้น log 3 จุดเวลา: `S28 fx <id>: rings=2 popping=1 … fx=6/6 → +0.06s … → +0.42s rings=0 popping=0` (log `Logs/verify-s28w.log`), ภาพชุดเดิม `Logs/taskrace-s28-*.png`
+- **ยังไม่ทำ:** SFX ต่อการกระทำ (งานมินิเกมยังไม่มี SFX ในคลัง), haptics, ParticleSystem จริง (ตอนนี้เป็น sprite 2D ที่ใช้ภาพ Leonardo — ดู §15.12), และแผงเฉพาะรายงานแบบ Among Us (ยังใช้เวที 3D + ป้ายร่วม)
+
+### 15.12 สไปรต์ VFX จาก Leonardo (15 พ.ย. 2026)
+
+owner สั่ง "api Leonardo ai … ดึง ภาพและวิดีโอมาใช้เป็นต้นแบบ และผสานใช้ในเกมส์" — session นี้ไม่มี `LEONARDO_API_KEY` จึงแยกเป็นสองทาง: **ของที่มีอยู่แล้วเข้าสู่เกมทันที** และ **ชุดสร้างใหม่พร้อมรันเมื่อมี key** (`art/docs/25_Minigame_Leonardo_Pack.md`)
+
+- **ของเดิม (`art/leonardo_raw/vfx/`):** `art/tools/raw_vfx_to_unity.py` ตัดพื้น navy ออกจาก JPG ด้วย flood fill จากขอบ (threshold 26, blur ขอบ 1.2 px) → crop → ย่อไม่เกิน 512 → `unity/Assets/Resources/Textures/Minigame/{fx_hitstar,fx_sparkle,fx_foam,fx_dust,fx_splash,fx_slimesplat}.png`
+- **โหลดแบบไม่พึ่ง import type:** โปรเจกต์เป็น 3D จึง import เป็น Texture ปกติ — `LoadSprite()` ทำ `Resources.Load<Texture2D>` + `Sprite.Create` เอง; ถ้าไฟล์หายจะ fallback เป็นวงแหวนแบนเดิม (ไม่ throw)
+- **`Fx(sprite, at, size, life, spin)`:** ใช้ machinery เดียวกับ `Ring` (`RingFx` + `TickItem` loop) แต่เพิ่ม `aspect` (ภาพไม่จัตุรัส) และ `spin` (หมุน 30–70° ระหว่าง bloom)
+- **จุดที่ใช้:** ชิ้นใหญ่ (`size ≥ 120`) ป๊อปด้วย `fx_hitstar`; สำเร็จขั้น hold/fill + แยกขยะถูกถัง = `fx_sparkle`; ฟองตอนถู = `fx_foam`; ฝุ่น T10 หมดอายุ = `fx_dust`; น้ำถึงแถบเขียว T11 = `fx_splash`; แตะสไลม์ T03 = `fx_slimesplat`; ของชิ้นเล็กยังใช้วงแหวนถูก ๆ เพื่อไม่ให้ฝุ่นหลายจุดกลายเป็นกำแพงประกาย
+- **หลักฐาน:** `Logs/verify-s28w.log` — 9 การ์ดขึ้น `fx=6/6` (โหลด sprite ครบ 6), `rings=2 popping=1` ที่ +0.06 วิ, `rings=0 popping=0` ที่ +0.42 วิ; ภาพ `Logs/taskrace-s28-t05.png` / `-t03.png` เห็นดาวป๊อปจริงบนการ์ด
+
+
+### 15.13 ชุดภาพอ้างอิง "เกาะพาสเทล" (15 พ.ย. 2026)
+
+owner เจนผ่านหน้าเว็บ Leonardo เอง (ไม่มี API credit) แล้วส่งมา 10 รูป — ซ้ำ 2 รูป จึงเหลือ 8 ไฟล์ที่ `art/reference/islands/` เป็น **skin/มูดอ้างอิงของแผนที่** ไม่ใช่ชุด prop มินิเกม (`art/docs/25`)
+
+| ไฟล์ | ฉาก | ใช้เป็น |
+| --- | --- | --- |
+| `island_twin_market_water.jpg` | เกาะคู่ + สะพานไม้ 2 ฝั่ง + น้ำตกคั่นกลาง + ป้ายร้าน | **เป้าหมายสกินหลัก** — ตรงกับเลย์เอาต์ TW2 (เกาะคู่ + สะพาน) ที่สุด |
+| `island_twin_dome.jpg` | เกาะคู่เล็ก + ห้องโดมชมพูตัดโชว์ + สะพาน | สี/รูปทรงห้องสองฝั่ง (Team A/B) |
+| `island_twin_detailed.jpg` | เกาะคู่ใหญ่ + ผิวน้ำแบน + ชั้นดิน | ระยะ/สเกลกล้องมุมสูง |
+| `island_twin_market.jpg` | เกาะคู่ + ตลาดเบจ/เขียว | ทางเลือกโทนอุ่นของบท 6 |
+| `island_room_bedroom.jpg` | เกาะเดี่ยว + ห้องนอน (หน้าต่าง+โต๊ะ+ชั้นหนังสือ) | การ์ดบท 1 / ฉากหลัง Home |
+| `island_arch_kitchen.jpg` | เกาะเดี่ยว + ผนังโค้ง + เคาน์เตอร์อ่างล้าง + พัดลม | การ์ดบท 2 |
+| `island_heart_wash.jpg` | เกาะรูปหัวใจ + เคาน์เตอร์ + เครื่องซักผ้า | การ์ดบท 3 |
+| `island_teardrop_kitchen.jpg` | เกาะหยดน้ำ + ผนังซุ้ม + อ่างล้าง + หน้าต่างโค้ง | การ์ดบท 4 |
+
+**พาเลตต์ที่วัดได้ (median cut 8 สี):** ฉากหลังครีม `#FBE6CC`–`#FCEBDB`, หญ้าโอลีฟ–ไลม์ `#A9A452`/`#AFAB68`, ดินทราย `#9D6E44`/`#A56F39`, น้ำฟ้าแบน `#75C1D9`, ฟอง `#A0DED0`, ไม้/ขอบผนัง `#D3C993`
+
+**ส่วนต่างจากซีนที่สร้างอยู่ (5 ข้อ):**
+1. ฉากหลังเป็น **กระดาษครีมแบน** ไม่มี gradient sky / cloud sea / fog
+2. เกาะตัดด้วย **ขอบหญ้าหนาห้อยเป็นปาก** + ดินทรายแถบเดียว (ไม่ใช่ rock strata หลายชั้น)
+3. น้ำเป็น **ระนาบแมตต์ฟ้าแบน** (ไม่ใช่ cloud sea) และน้ำตกเป็นริบบิ้นแบนมีฟองม้วนที่ปลาย
+4. ห้องเป็น **เปลือกซุ้ม/โดมตัดโชว์** เปิดหันเข้ากล้อง ผนังสีเดียว — ไม่ใช่กำแพง 135° + ชั้นวางทั้งชุดของ TW2
+5. สะพานเป็น **แผ่นไม้ล้วนไม่มีราว** และมี **เงาเบลอใต้เกาะ** วงใหญ่
+
+**ยังไม่ทำ:** สลับสกินจริง (ยังไม่มี material/แสงชุดใหม่), ไม่ได้ใช้เป็นการ์ด S13 จริง (การ์ดยังใช้ art id 4 ใบ `lobby_*` จาก `BobArtLibrary`), และไม่ได้ผูกกับ `StageConfig`
+
+### 15.14 ผลลองสกินรอบแรก — look-dev (15 พ.ย. 2026)
+
+owner เลือกทาง "ทำ look-dev สกินแผนที่ก่อนแตะกติกา" → ทำ pass ที่ **ไม่เซฟซีน** ตัวเดียว: `unity/Assets/Scripts/Editor/BobIslandSkinDev.cs` (`Bob > Render Island Skin (look-dev)`) เปิด `Scenes/TaskRace.unity`, เปลี่ยนสี/ปิดของในหน่วยความจำ, เรนเดอร์ 3 มุม (`Logs/skin-play.png` มุมเล่น, `-high.png` มุมสูง, `-wide.png` มุมกว้าง) แล้วจบโดยไม่ save — ของจริงในซีนยังเป็นสกินเดิมทั้งหมด
+
+| สิ่งที่เปลี่ยน | วิธี | ค่าที่ใช้ |
+| --- | --- | --- |
+| ฉากหลัง | ปิด `BobSkyBackdrop`, `BobCloudSea`, fog; ambient แบน | camera clear `#FBE6CC` |
+| หญ้า | slab `Field` + dressing mesh ทาสีใหม่ให้เป็นโอลีฟเดียว | slab `#A3AC58` (mottle .02), dressing `#A0A95C` (mottle .04) |
+| ดิน/โขดใต้เกาะ | `Field_Soil`/`Island` ทึบ | `#A56F39` / `#C08B5A` |
+| ผนัง 135° + `WallSeg*` + `Counter`/`CounterTop` | ทึบเป็นครีม | ผนัง `#F6E7CE`, หน้าเคาน์เตอร์ `#F7EBD6`, ตัวเคาน์เตอร์ `#D9BF98` |
+| หินน้ำตก (`SM_rocks_grass`) + `RiverChannel` | ทึบเป็นหินอ่อน | `#E4DEC8` / `#D6E5E1` |
+| น้ำ | Quad แบน `BOB/Unlit` ในร่องกลางเกาะ (ไม่ใช่ sea ทั้งฉาก) | `#75C1D9`, 6×8 u ที่ y −5.5 |
+| สะพาน | ปิด `BobBridgeBarrier`, `BobBridgeDressing.rails = false`, ทาสีแผ่นไม้ | `#D3C993` |
+
+**สิ่งที่ติด (แก้ไปแล้วในรอบเดียวกัน):**
+
+1. dressing/น้ำตก **ผูก parent ไม่ได้** — ถูกสร้างตอนรันเป็น object ลอยที่ `HideFlags.HideAndDontSave` → `FindObjectsByType` ไม่คืนมา ต้องใช้ `Resources.FindObjectsOfTypeAll<Renderer>()` + กรอง `EditorUtility.IsPersistent` (ของใน asset) ออก
+2. ชื่อ mesh จริงไม่ตรงกับที่เดา: ร่องน้ำคือ **`RiverChannel`**, หินน้ำตกคือ **`SM_rocks_grass`** — matching ต้องเก็บชื่อจาก log ไม่ใช่จากชื่อ object ที่ตั้งไว้
+3. dressing ใช้ **multiply tint** ไม่ได้: พาเลตต์หญ้าเป็นเขียวสด คุณด้วยสีโอลีฟแล้วออกมาเป็นฟางแห้งส้ม → ต้องทึบ (`_MainTex` ขาว 1×1 + `_Color`) ซึ่งยอมเสียดอกเดซี่/หินเล็กใน mesh เดียวกันไป
+4. น้ำแบบ sea ทั้งฉากทำให้ฉากหลังกลายเป็นน้ำ → ตัดเหลือร่องกว้าง 6 u ยาว 8 u กลางเกาะ
+
+**ที่ยังต่างจาก reference (เหลือไว้ให้ owner เคาะ):** เงาเบลอใต้เกาะยังไม่มี · ผิวน้ำเป็นสี่เหลี่ยมแข็ง ไม่มีขอบ/ฟองม้วน · ผนังหลังยังเป็นเปลือกหินหยัก ไม่ใช่ซุ้ม/โดมตัดโชว์ · แผ่นไม้สะพานขาวเกิน reference · prop เดิม (พุ่มเขียวสด, ถังฟ้า, ตะกร้า) ยังใช้พาเลตต์เก่าและตัดกับสกินใหม่
+
+**ไม่แตะ:** กติกา, `TaskSpot`, station layout, `TaskRaceModeManager`, opcode/server, และไม่ save `Scenes/TaskRace.unity` (เปลี่ยนในซีนมีแค่ field `rails` ของ `BobBridgeDressing` ซึ่ง default = true จึงไม่มีผลกับการเล่น)
+
+### 15.15 บรรยากาศมีชีวิต · ฟีดแบ็กจบงาน · วิดีโอเมนู (15 พ.ย. 2026)
+
+owner สั่ง 4 ข้อ: (1) แสงแดดอุ่นพาสเทล + bloom เบา, (2) ambient motion ของฉาก, (3) squash & stretch + ดาวทองตอนงานเสร็จ, (4) วิดีโอพื้นหลังเมนู + ช่องคลิปสอนในมินิเกม โดยคุมที่ **เบา/60fps/ไม่ over-engineer** ทุกอย่างสร้างจากโค้ดตอนรัน ไม่มี asset ใหม่ และไม่แตะ YAML ของซีน
+
+**ข้อกำหนดที่ถูก "แปลง" เพราะสแตกไม่รองรับ (ต้องบอกทุกครั้งที่สรุปงาน):**
+
+| ที่สั่งมา | สแตกจริง | ที่ทำแทน |
+| --- | --- | --- |
+| URP Post-Processing `Volume` (Bloom .35 / threshold 1.05, Color Adjustments +0.15 EV / +10 sat) | โปรเจกต์เป็น **built-in RP** — manifest มีแต่ `com.unity.ugui` ไม่มี URP และไม่มี post-processing package | ต่อ `BobPostGrade` (มีอยู่แล้ว) ด้วย exposure/saturation และเพิ่ม `Hidden/BOB/Bloom` = half-res bright pass + blur 2 pass (3 draw/เฟรม, ไม่มี compute, ไม่มีกล้องเพิ่ม) |
+| ลมบน "ต้นไม้ + ผ้าใบร้าน" | ซีนไม่มีต้นไม้และไม่มีผ้าใบลายทาง | ลมบนพุ่มไม้ 3 ระดับ (`SM_bush_green` ×3) + กระถาง (`SM_plant_pot`/`SM_pot_blue`/`SM_pot_ceramic_gold` ×4) + หญ้าทั้งเกาะ (ผ่าน shader) |
+| ไอร้อนจาก "station กาแฟ/สตีม" (บท 2, 3, 6) | ไม่มี station กาแฟในซีน | ไอขาวอบอุ่นวางบนทุก `TaskSpot` ที่ `Category == Wash` (S1 จาน, S5 แก้ว) — station ที่มีน้ำจริง |
+| ช่องคลิปสอนใน `UniversalMinigameModal` | ไม่มีคลาสนี้ในโปรเจกต์ | ช่องคลิปมุมบนซ้ายของการ์ด S28 (`BobMinigameHost` → `BobTutorialClip`) เฟดออกใน 4 วิ ไม่บังพื้นที่เล่น |
+| `transcode` / `codec = H264` บน `VideoClipImporter` | Unity 6 ย้ายไปอยู่บน `defaultTargetSettings` | `importer.defaultTargetSettings` → `enableTranscoding = true`, `codec = VideoCodec.H264`, 1280×720, `importAudio = false` |
+
+**ไฟล์ที่เพิ่ม/แก้**
+
+| ไฟล์ | ทำอะไร | ค่าหลัก |
+| --- | --- | --- |
+| `TaskRace/DioramaLightingRig.cs` (แก้) | แสงแดดอุ่น + ambient ไล่สี | sun `#FFF3DC` 1.12 · `ShadowStrength .45` · Soft · Trilight sky `(.98,.95,.88)` / equator `(1,.93,.84)` / ground `(.74,.64,.54)` · fog off · **save/restore ตอน OnDisable** กัน tint ค้างไป lobby |
+| `TaskRace/BobPostGrade.cs` + `Resources/Shaders/BobPostGrade.shader` + `BobBloom.shader` (ใหม่) | เกรด + bloom แทน URP volume | exposure `+0.03` · saturation `1.10` · bloom `0.35` · threshold `1.05` (HDR) / `0.98` (LDR) · blur 5-tap ×2 |
+| `TaskRace/DioramaAmbient.cs` (ใหม่) | builder ตัวเดียว: แสง, ลม, dust, steam, water, juice, grade | `TaskRaceModeManager.Awake` → `Ensure(gameObject)` |
+| `TaskRace/AmbientWindSway.cs` (แก้) | แกว่งด้วย `Time.unscaledTime` | พุ่ม 2.2°/0.95 · กระถาง 1.0°/1.35 · เฟสจาก world position |
+| `Resources/Shaders/BobDressing.shader` + `TaskRace/BobFieldDressing.cs` (แก้) | ลมหญ้าใน shader ตัวเดียว | **alpha ของ vertex = น้ำหนักลม** (โคน 0 ปลาย 1) + `_Wind` ผ่าน MaterialPropertyBlock |
+| `TaskRace/BobWaterFlow.cs` (ใหม่) | overlay น้ำไหล + ฝอยน้ำตก | river `0.35` u/s, falls `1.15` u/s · texture 32×64 procedural (Repeat) · mist 8/วิ |
+| `TaskRace/BobStationJuice.cs` (ใหม่) | ฟีดแบ็กจบงาน | `0.35s`: `1 → (1.15,.85,1.15) → (.95,1.08,.95) → 1` · sheen flash 0.45 วิ · sparkle 22 ตัว |
+| `TaskRace/BobAmbientFx.cs` (ใหม่) | dot texture + material + factory | 64×64 radial alpha สร้างตอนรัน · `Sprites/Default` (shader เดียวที่มี alpha ในโปรเจกต์) |
+| `Game/MenuBackgroundVideo.cs` · `Game/BobTutorialClip.cs` · `Editor/BobVideoImportSettings.cs` (ใหม่) | วิดีโอเมนู + ช่องสอน + import rule | RT 1280×720 zero-depth ใบเดียว · ไม่มีคลิป = ซ่อนช่อง ไม่มีเฟรมดำ |
+| `Editor/TaskRaceVerify.cs` (แก้) | สร้าง ambient pass ก่อนถ่าย + `Warm(4s)` ให้ particle มีตัวในเฟรมแรก | เรียก `Preview()` / `Warm()` / `PreviewTearDown()` |
+
+**ค่าที่ต้องจูนหน้างาน (วัดจริง ไม่ใช่ค่าจากสเปก)**
+
+- exposure `+0.15` ตามสเปกทำให้ภาพพาสเทลไหม้: วัดช็อตกว้างได้พิกเซลใกล้ขาว **59.5%** (ก่อน pass 0.1%) ฟ้าเปลี่ยนจากฟ้าอ่อนเป็นมินต์ขาว → ลดเหลือ `+0.03` ได้ `Lmean 0.853` / ใกล้ขาว `8.7%` (ก่อน pass `0.842` / `0.1%`) และช็อตเล่น `Lmean 0.561` เท่าเดิม (ก่อน 0.564) แต่ใกล้ขาวลดจาก 8.8% → 1.5%
+- threshold ใน LDR: buffer ARGB32 ไม่มีอะไรเกิน 1.0 → `1.05` ไม่มีวันทำงาน ต้องใช้ `0.98` (HDR ยังใช้ 1.05)
+- dust: 56–62 ตัวในกล้อง แต่ alpha ที่ได้จริงแค่ 64–167/255 และขนาด 0.1–0.24 u → เห็นเป็นจุดจางมาก ปรับสี `(1,.96,.82)` alpha .9, rate 6/วิ, max 110
+
+**วิดีโอ (วางไฟล์แล้วได้เลย ไม่ต้องแก้โค้ด)**
+
+1. วาง `.mp4` (หรือ mov/m4v/webm/avi) ที่ `unity/Assets/Video/`
+2. `BobVideoImportSettings` (AssetPostprocessor) ตั้ง import อัตโนมัติ: **ไม่มี audio track**, `sRGBClip`, transcode H264 1280×720
+3. `OnPostprocessAllAssets` ย้ายไฟล์ไป `Assets/Resources/Video/` ให้เอง (deferred `AssetDatabase.MoveAsset`; ถ้าปลายทางมีอยู่แล้วจะไม่ย้ายและ log เตือน) — เพราะ `Resources.Load` เป็นทางเดียวที่เมนูเข้าถึงคลิปได้โดยไม่มี serialized reference
+4. ชื่อที่เกมค้นหา: `Video/menu_loop` (พื้นหลัง S13) และ `Video/tutorial_<taskId>` (เช่น `tutorial_T02`)
+5. ไม่มีไฟล์ = `MenuBackgroundVideo.Available` เป็น false / ช่องสอนถูกซ่อน — ไม่มีเฟรมดำ ไม่มี error
+
+**กับดักที่เจอในรอบนี้ (แก้แล้ว)**
+
+1. `VideoClip` ต้อง `using UnityEngine.Video;` ไม่งั้น `error CS0246` ทั้ง editor assembly (รอบแรก compile ไม่ผ่านทั้งชุด)
+2. `velocityOverLifetime` ต้องตั้ง **ทั้ง 3 แกนเป็น curve mode เดียวกัน** ไม่งั้น Unity ขึ้น `Particle Velocity curves must all be in the same mode` และ `Simulate` ไม่เดิน — `new MinMaxCurve(x)` กับ `new MinMaxCurve(min,max)` คนละ mode
+3. **`FindObjectsByType` มองไม่เห็น object ที่ `HideFlags.HideAndDontSave`** (กับดักเดิม §15.14 ข้อ 1) — `BobFieldDressing`/`BobWaterfallDressing` ถูกสร้างเป็นแบบนั้น ทำให้ลมหญ้าและ overlay น้ำไม่เคยผูกเลย ต้องใช้ `Resources.FindObjectsOfTypeAll<T>()` + เช็ก `gameObject.scene.IsValid()` (helper `DioramaAmbient.Live<T>()`)
+4. กล่อง dust เคยคำนวณจาก min/max ของ `TaskSpot` แล้วมี station นอกเกาะดึงกล่องไปถึง x = −9.7 → ฝุ่นกระจายจนมองไม่เห็น เปลี่ยนไปใช้ bounds ของ `BobFieldDressing` (พื้นหญ้าจริงของสองเกาะ)
+5. `Transform` ของ station อยู่ที่ระดับพื้น → สเกล root squash ได้โดยไม่ลอย; palindrome scale คืนรูปด้วย smoothstep ต่อช่วง
+6. `Space.Prewarm` ใช้กับ particle ที่ `loop = false` ไม่ได้ (sparkle burst) ต้อง `prewarm = false` ชัด ๆ
+7. ต้อง `SetPropertyBlock(null)` คืนค่า `_Sheen` หลัง flash — ปลอดภัยเพราะสีพาเลตต์อบใน UV ของ mesh ไม่ได้ใช้ property block
+
+**หลักฐาน:** `Logs/ambient-final.log` — compile 0 error, `[DioramaAmbient] DustMotes: … live at …, Sprites/Default, tex=AmbientDot, alpha=…`, `WaterMist: …`, `Exiting … return code 0`; ภาพ `Logs/taskrace-play.png`, `-wide.png`, `-preview.png`, `-hud.png` เทียบกับชุดก่อน pass `Logs/taskrace-*-2400x1080.png` (12:02) และตัวเลข luminance ที่วัดด้วยสคริปต์ (ระบุในตารางข้างบน)
+
+**ยังไม่ทำ:** ไฟล์วิดีโอจริงยังไม่มีใน repo (ช่องและ import rule พร้อมแล้ว), ไม่มี SFX ต่อการกระทำ, dust/mist ยังเป็น dot กลม (ยังไม่ใช่ bokeh หลายชั้น), ผิวน้ำยังเป็น quad แบนไม่มีขอบฟอง (§15.13 ข้อค้างเดิม), เงาเบลอใต้เกาะยังไม่มี
+
+**ไม่แตะ:** กติกา (`BobTaskRaceRules`), ตรรกะ `TaskSpot`, layout `BobTaskRaceHud`, opcode 16–21 / `server/`, YAML ของ `TaskRace*.unity` (ไม่ rebuild), และไม่ commit/push
+
+### 15.16 สะพานเดียวสำหรับสองเกาะ (15 พ.ย. 2026)
+
+owner ดูภาพกว้างของแผนที่แล้วชี้ว่า **สองสะพานบนสองเกาะไม่สมเหตุสมผล — ถ้าจะมีสองสะพานต้องมีเกาะที่สาม** แผนที่เดิมมี `Bridge_North` (z +0.3·depth) กับ `Bridge_South` (z −0.3·depth) ทั้งที่เกาะมีแค่สองใบ
+
+- **แก้ที่ต้นทาง:** `BobMapAssemblerEditor.BuildMap` สร้าง deck เดียวชื่อ `Bridge` ที่ `z = +islandDepth × 0.3` (solo `2.70` · duo `3.38` · team `4.05`) พร้อม `Walkable` collider, `BridgeDetail_Group` deck และ `BridgeBarrier_Group` gate อย่างละชุด; เหตุผลที่เลือกเลนนี้ไม่ใช่ z = 0 คือแถว E-counter เริ่มที่ island-local z `1.30` — deck กลางจอจะพาดผ่านเคาน์เตอร์ และเลนนี้ยังเป็นฝั่ง +Z ที่กล้องเล่นมองเห็นข้างหน้าฮีโร่
+- **บอท:** `TaskRaceBotController.BuildRoute` เลิกฮาร์ดโค้ด `z = ±2.7 / mouth = 5` — อ่าน `z` จาก child ของ `manager.bridgesGroup` และ `mouth` จาก `|bounds.max.x|` ของ collider `Walkable` (ค่าเดิมถูกเฉพาะ solo ด้วยซ้ำ)
+- **ผลหลัง rebuild ทั้ง 3 ซีน** (`Logs/build-{Build,BuildDuo,BuildTeam}.log`, 0 error): `clearance decks: … z[1.88,3.52]` (duo `2.56–4.19`, team `3.23–4.87`), `12 prop(s) checked … on 1 deck(s)`, `navmesh geometry: 3 walkable collider(s), 3 ignored`, `navmesh baked: PureRace 24/28/28 tri, TimedBridgeRaid 40/44/46 tri (bridge decks add 16/16/18)`
+- **verify** (`Logs/onebridge.log`): `barriers=1 links=1`, `nav … gates shut status=PathPartial`, `gates open status=PathComplete corners=5 length 21.0 u`, `probe Bridge west/centre/east: on navmesh off by 0.03/0.00/0.03 u`, `deck Bridge: collider x[-5.78,5.78] z[1.88,3.52]`, `gameplay start: … barriers=1`; duo/team (`Logs/onebridge-{duo,team}.log`) ได้ `PathComplete 26.0 / 31.1 u` ที่ `z 3.38 / 4.05`, `probe … off by ≤0.05 u`, `player HUD: 7 / 9 task row(s)`
+- **บอทข้ามจริง** (`Logs/bot-onebridge.log`): `clean 1 on S2_B` → `bridges open … 1 gate(s) lowered` → `sabotage 1 on S1_A` → `BOT CHECK PASSED`
+- ภาพ: `Logs/taskrace-wide.png` (สะพานช่วงเดียวใต้ผาน้ำตก), `Logs/taskrace-play.png`, `-preview.png`, `-hud.png` · **ย้อนกลับได้:** ปรับ `bridgeZ` ใน assembler แล้วเรียก `Tools > BOB > Build Task Race Scene` ทั้งสามโหมด (จะ bake NavMesh ใหม่ให้เอง)
+- **ไม่แตะ:** กติกา/opcode/`server/`, layout ของ `TaskRaceHud`, สถานีและของประดับ (clearance ยังเป็น 0 overlap) · **ยังไม่ commit/push**

@@ -1135,6 +1135,10 @@ namespace Bob.TaskRace
         /// <summary>Verify: run the card for a moment without a device (the play area animates, nothing is clicked).</summary>
         public void DebugAdvanceCard(float seconds) => TickCard(Mathf.Max(0f, seconds));
 
+        /// <summary>Verify: fire one feedback ring and squash one item, then read what is animating.</summary>
+        public string DebugProbeCard() => mini != null ? mini.DebugFeedbackProbe() : "no-host";
+        public string DebugCardFx => mini != null ? mini.DebugFeedbackState : "no-host";
+
         /// <summary>Verify: drop the card without completing the task.</summary>
         public void DebugCloseCard() => HideCard();
 

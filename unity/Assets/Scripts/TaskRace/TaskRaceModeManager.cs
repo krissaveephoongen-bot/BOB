@@ -29,7 +29,7 @@ namespace Bob.TaskRace
         [Header("Map groups (built by Tools > BOB > Task Race Map Assembler)")]
         [Tooltip("River bank colliders, fence and hedge props with NavMeshObstacle (carve). Active in PureRace only.")]
         public GameObject riverBarrierGroup;
-        [Tooltip("North and south bridges with a NavMeshLink. Active in TimedBridgeRaid only.")]
+        [Tooltip("The single footbridge deck and its NavMeshLink. Active in TimedBridgeRaid only.")]
         public GameObject bridgesGroup;
         [Tooltip("The red-white gates. Always active: they block until the TimedBridgeRaid clock reaches 60 s.")]
         public GameObject bridgeBarrierGroup;
@@ -198,6 +198,7 @@ namespace Bob.TaskRace
             RemainingSeconds = matchDuration;
             if (cameraRig == null) cameraRig = FindFirstObjectByType<BobTaskRaceCamera>();
             CollectBarriers();
+            DioramaAmbient.Ensure(gameObject);
         }
 
         /// <summary>

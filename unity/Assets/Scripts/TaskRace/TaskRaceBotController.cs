@@ -184,14 +184,21 @@ namespace Bob.TaskRace
                 route.Add(to);
                 return;
             }
-            // Cross on the bridge whose deck line (z = +-2.7) is closest to both ends.
-            float north = Mathf.Abs(from.z - 2.7f) + Mathf.Abs(to.z - 2.7f);
-            float south = Mathf.Abs(from.z + 2.7f) + Mathf.Abs(to.z + 2.7f);
-            float z = north <= south ? 2.7f : -2.7f;
-            float mouth = Mathf.Sign(from.x) * 5.0f;
-            route.Add(new Vector3(mouth, 0f, z));
+            // Cross on the one deck: its z and the x where it lands are read off the scene's Bridges_Group, so the bot
+            // walks the same line the NavMesh baked (the old code hard-coded the solo map's z = +-2.7).
+            float z = 0f, mouth = 5f;
+            var deck = manager != null && manager.bridgesGroup != null && manager.bridgesGroup.transform.childCount > 0
+                ? manager.bridgesGroup.transform.GetChild(0) : null;
+            if (deck != null)
+            {
+                z = deck.position.z;
+                var walk = deck.Find("Walkable");
+                var col = walk != null ? walk.GetComponent<Collider>() : null;
+                if (col != null) mouth = Mathf.Abs(col.bounds.max.x);
+            }
+            route.Add(new Vector3(Mathf.Sign(from.x) * mouth, 0f, z));
             route.Add(new Vector3(0f, 0f, z));
-            route.Add(new Vector3(-mouth, 0f, z));
+            route.Add(new Vector3(-Mathf.Sign(from.x) * mouth, 0f, z));
             route.Add(to);
         }
 
