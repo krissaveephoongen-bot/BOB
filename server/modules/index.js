@@ -451,7 +451,9 @@ function createAnalyticsTables(nk) {
 //   client -> server: 16 TASK_BEGIN {task, step, spot}  17 TASK_DONE {task, step, ms, sample}  18 TASK_CANCEL {task}
 //   server -> client: 19 PROGRESS {team:{done,total,pct,dw,tw}, rival:{pct,done,total}, done:[ids]}  20 EMERGENCY {id,enemy,spot,at,graceSec}  21 TASK_LOCK {task,by,step,free}
 //   The list itself is seeded (taskPlan in the shared rules); the server rejects any step the list does not allow,
-//   any step that comes back faster than TaskMinMs, and any step somebody else holds.
+//   any step that comes back faster than TaskMinMs, and any step somebody else holds. `spot` has to be a station of
+//   the caller's own island (S<n>_A for team 0, S<n>_B for team 1) and one station carries one card at a time; the
+//   server still has no station coordinates (docs 24), so the distance check stays on the client.
 var OP = { MOVE: 1, PICK: 2, PLACE: 3, LIFT: 4, READY: 5, SUBMIT: 6, PUSH: 7, PASS: 8, TABLE: 9, STATE: 10, POS: 11, RESULT: 12, ERROR: 13, ABILITY: 14, PEEK: 15,
   TASK_BEGIN: 16, TASK_DONE: 17, TASK_CANCEL: 18, PROGRESS: 19, EMERGENCY: 20, TASK_LOCK: 21 };
 var MP_FREEZE = 8; // Press: seconds the team's clock stops
@@ -537,6 +539,16 @@ function mpScoreRound(d, s, logger, nk) {
 var TR_TIME = TASK_ROUND_TIME, TR_GRACE = TASK_EMERGENCY_GRACE;
 
 function trEntry(t, id) { for (var i = 0; i < t.entries.length; i++) if (t.entries[i].id === id) return t.entries[i]; return null; }
+// Station ids are S<n>_A on the left island and S<n>_B on the right (TaskSpot.SpotId in the Unity scene).
+function trSpotOwn(spot, team) {
+  var m = /^S[1-9][0-9]*_([AB])$/.exec(String(spot == null ? '' : spot));
+  return !!m && m[1] === (team === 0 ? 'A' : 'B');
+}
+// One station carries one open card; the lock itself remembers the spot, so DONE / CANCEL free it with no extra map.
+function trSpotBusy(t, spot, exceptId) {
+  for (var id in t.locks) if (id !== exceptId && t.locks[id].spot === spot) return id;
+  return null;
+}
 function trDone(t) { return t.entries.filter(function (e) { return e.done; }).map(function (e) { return e.id; }); }
 function trWeight(t) {
   var s = 0;
@@ -766,7 +778,9 @@ function matchLoop(ctx, logger, nk, d, tick, s, messages) {
         if (held && held.by !== m.sender.userId) { err = 'เพื่อนกำลังทำงานนี้อยู่'; break; }
         var want = be.step + 1;
         if ((q.step | 0) !== want) { err = 'ต้องทำขั้น ' + want + ' ก่อน'; break; }
-        t.locks[be.id] = { by: m.sender.userId, step: want, at: Date.now() };
+        if (!trSpotOwn(q.spot, p.team)) { err = 'จุดงานไม่ใช่ฝั่งของผู้เล่น'; break; }
+        if (trSpotBusy(t, q.spot, be.id)) { err = 'จุดงานนี้มีคนอื่นใช้อยู่'; break; }
+        t.locks[be.id] = { by: m.sender.userId, step: want, at: Date.now(), spot: q.spot };
         mpSend(d, OP.TASK_LOCK, { task: be.id, by: m.sender.userId, step: want, free: false }, trMembers(s, p.team));
         dirty = true;
         break;

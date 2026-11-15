@@ -87,18 +87,24 @@ const step1 = 1;
 box = tick(state, [msg(p0, OP.TASK_DONE, { task: 'T04', step: 1, ms: 9999 })]);
 check('done: without BEGIN is refused', errors(box).includes('ยังไม่ได้เริ่มงานนี้'), errors(box)[0]);
 
-box = tick(state, [msg(p0, OP.TASK_BEGIN, { task: 'T04', step: 2, spot: 'S1' })]);
+box = tick(state, [msg(p0, OP.TASK_BEGIN, { task: 'T04', step: 2, spot: 'S1_A' })]);
 check('begin: step 2 before step 1 is refused', errors(box).includes('ต้องทำขั้น 1 ก่อน'), errors(box)[0]);
 
 box = tick(state, [msg(p0, OP.TASK_BEGIN, { task: 'T99', step: 1 })]);
 check('begin: a card outside the round list is refused', errors(box).includes('งานนี้ไม่อยู่ในรายการของรอบ'), errors(box)[0]);
 
-box = tick(state, [msg(p0, OP.TASK_BEGIN, { task: 'T04', step: step1, spot: 'S1' })]);
+box = tick(state, [msg(p0, OP.TASK_BEGIN, { task: 'T04', step: step1, spot: 'S1_A' })]);
 const lock = last(box, OP.TASK_LOCK);
 check('begin: the step locks and the team is told', lock && lock.task === 'T04' && lock.by === 'u0' && lock.free === false, JSON.stringify(lock));
 
-box = tick(state, [msg(p1, OP.TASK_BEGIN, { task: 'T04', step: step1, spot: 'S1' })]);
+box = tick(state, [msg(p1, OP.TASK_BEGIN, { task: 'T04', step: step1, spot: 'S1_B' })]);
 check('begin: the other island can take the same card (separate copies)', errors(box).length === 0 && !!last(box, OP.TASK_LOCK), errors(box)[0]);
+
+box = tick(state, [msg(p0, OP.TASK_BEGIN, { task: 'T04', step: 1, spot: 'S2_B' })]);
+check('begin: a station of the rival island is refused', errors(box).includes('จุดงานไม่ใช่ฝั่งของผู้เล่น'), errors(box)[0]);
+
+box = tick(state, [msg(p0, OP.TASK_BEGIN, { task: ids0[1], step: 1, spot: 'S1_A' })]);
+check('begin: one station carries one open card', errors(box).includes('จุดงานนี้มีคนอื่นใช้อยู่'), errors(box)[0]);
 
 // ---------------------------------------------------------------- min ms is the server's clock
 box = tick(state, [msg(p0, OP.TASK_DONE, { task: 'T04', step: 1, ms: 99999 })]);
@@ -113,19 +119,23 @@ check('progress: half of a 2-step cart card is half its weight', prog && Math.ab
 check('progress: the rival is still at 0 %', prog && prog.rival.pct === 0);
 
 // ---------------------------------------------------------------- cancel keeps the work
-box = tick(state, [msg(p0, OP.TASK_BEGIN, { task: 'T04', step: 2 })]);
+box = tick(state, [msg(p0, OP.TASK_BEGIN, { task: 'T04', step: 2, spot: 'S1_A' })]);
 check('begin: step 2 is allowed after step 1', errors(box).length === 0, errors(box)[0]);
 box = tick(state, [msg(p0, OP.TASK_CANCEL, { task: 'T04' })]);
 const free = last(box, OP.TASK_LOCK);
 check('cancel: the lock is released', free && free.free === true && free.by === '', JSON.stringify(free));
 check('cancel: finished steps are kept', state.s.teams[0].entries[0].step === 1 && !state.s.teams[0].entries[0].done);
 
+box = tick(state, [msg(p0, OP.TASK_BEGIN, { task: 'T04', step: 2, spot: 'S1_A' })]);
+check('cancel: the station is free again', errors(box).length === 0 && !!lastTo(box, OP.TASK_LOCK, 'u0'), errors(box)[0]);
+tick(state, [msg(p0, OP.TASK_CANCEL, { task: 'T04' })]);
+
 // ---------------------------------------------------------------- the rest of the list, then the result
 function fly(side, who) { // finish every remaining step of one island, honouring the minimum time
   return state.s.teams[side].entries.map(e => {
     while (!e.done) {
       const step = e.step + 1;
-      tick(state, [msg(who, OP.TASK_BEGIN, { task: e.id, step })]);
+      tick(state, [msg(who, OP.TASK_BEGIN, { task: e.id, step, spot: 'S1_' + (side === 0 ? 'A' : 'B') })]);
       const held = state.s.teams[side].locks[e.id];
       if (!held) return e.id + ' never locked at step ' + step;
       held.at -= A.taskMinMs(e.id, step) + 50;
