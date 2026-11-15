@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 738e5622e1384a768337a767ae56a095, type: 3}
+  m_Name: Chapter2_NeighbourJobs
+  m_EditorClassIdentifier: 
+  order: 2
+  title: "รับงานเพื่อนบ้าน"
+  place: "คอนโด 2 ห้อง ติดประตูแคบ"
+  unlockLevel: 6
+  difficulty: 1
+  roundTime: 120
+  backdrop: lobby_condo
+  blurb: "2 เงื่อนไข แหล่งแรง (น้ำร้อน/ไอ) และงบจำกัดต่อรอบ"
+  ruleCards:
+  - "2 เงื่อนไข"
+  - "แหล่งแรง: น้ำร้อน/ไอ"
+  - "งบจำกัด"

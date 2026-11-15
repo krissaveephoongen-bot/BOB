@@ -31,7 +31,7 @@ namespace Bob.Game
         public const float RoundTime = 100f, FreezeTime = 8f;
         public const int Hand = BobRules.HandSolo;
 
-        enum Phase { Title, Loading, Intro, Countdown, Build, Scoring, Test, Result, Lobby, Splash, Login, Modes, Heroes, Shop }
+        enum Phase { Title, Loading, Intro, Countdown, Build, Scoring, Test, Result, Lobby, Splash, Login, Modes, Heroes, Shop, Chapters }
 
         sealed class LastRound
         {
@@ -191,7 +191,7 @@ namespace Bob.Game
             if (overlay != Overlay.None) SetOverlay(phase == Phase.Build && overlay == Overlay.Settings ? Overlay.Pause : Overlay.None);
             else if (phase == Phase.Build) SetOverlay(Overlay.Pause);
             else if (phase == Phase.Intro || phase == Phase.Test || phase == Phase.Result) ToTitle();
-            else if (phase == Phase.Modes || phase == Phase.Heroes || phase == Phase.Shop) GoHome();
+            else if (phase == Phase.Modes || phase == Phase.Heroes || phase == Phase.Shop || phase == Phase.Chapters) GoHome();
         }
 
         EvalResult Ev() => BobRules.EvalStack(stack, R?.Enemies, shield);
