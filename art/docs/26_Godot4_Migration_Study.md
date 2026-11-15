@@ -44,7 +44,7 @@
 - 13 ไฟล์ MP4 (Hailuo AI), 1344×768 (7:4), 24 fps, 6.6 s/คลิป, 3.8–10.7 MB/ไฟล์, รวม 74 MB; อยู่ที่ `unity/Assets/Leonardo/Video` และยังไม่ถูก track
 - เนื้อหา: เกาะลอย/อารีล 2 คลิป, ห้อง cutaway 1 คลิป, twin-island trailer shot 1 คลิป, และ close-up 9 ตัว (เครื่องซักผ้า, เครื่องกาแฟ, ลูกบิดประตู, trash chute, ชั้นกระจก, ถังแยกขยะ, เคาน์เตอร์ครัว, อ่างล้างจาน, ไม้กวาดใต้โต๊ะ)
 - Unity: importer เฝ้าแค่ `Assets/Video/` → คลิปใน `Leonardo/Video` จะถูก import แบบ default และ `Resources.Load` มองไม่เห็น; 15 พ.ย. 2026 เลือก 7 คลิปและ transcode แล้ว — ไฟล์จริงอยู่ที่ `unity/Assets/Resources/Video` (720p, ไม่มี audio) และติดไปกับ APK 78.6 MB แล้ว
-- ข้อควรระวัง: 1344×768 (1.750) → importer 1280×720 (1.778) บีบแนวนอน ~1.6%; คลิป AI 6.6 s อาจไม่ loop เนียน; 74 MB ถ้าใส่หมดจะทำให้ APK โตจาก 67.6 MB; `.gitattributes` มี LFS เฉพาะ `art/leonardo_raw` ไม่ครอบ MP4 → ต้องตัดสินใจเรื่อง LFS/คัดเฉพาะไฟล์ก่อน commit
+- ข้อควรระวัง: 1344×768 (1.750) → importer 1280×720 (1.778) บีบแนวนอน ~1.6%; คลิป AI 6.6 s อาจไม่ loop เนียน; 74 MB ถ้าใส่หมดจะทำให้ APK โตจาก 67.6 MB; **ตัดสินใจแล้ว 16 พ.ย. 2026:** `.gitattributes` ครอบ `*.mp4` และของมีเดียอื่นผ่าน Git LFS — คลิป 7 ไฟล์ที่ใช้จริง (`Resources/Video`) และต้นฉบับทั้ง 13 ไฟล์ (`Leonardo/Video`) commit ผ่าน LFS แล้ว
 - Godot: native `VideoStreamPlayer` อ่านได้แค่ Ogg Theora → ต้อง transcode คลิปที่จะใช้เป็น `.ogv` (หรือใช้ third-party native video plugin); งานนี้ ~1–2 วันสำหรับ 7 คลิปที่เลือก
 
 **คลิปที่เลือกและผูกเข้าเกมแล้ว (15 พ.ย. 2026)**

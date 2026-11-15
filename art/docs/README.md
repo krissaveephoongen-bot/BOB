@@ -38,6 +38,12 @@
 | [26_Godot4_Migration_Study.md](26_Godot4_Migration_Study.md) | **ศึกษาการย้าย Unity 6 → Godot 4.7 .NET (15 พ.ย. 2026):** ขนาดงานจริง 100 ไฟล์ 22,911 บรรทัด (runtime 18k / editor 4.9k), 2 ฉากที่ ship, ของที่ยกได้กับต้องเขียนใหม่, mapping Unity→Godot ทีละระบบ, 11 shader, ความเสี่ยง C# มือถือ experimental + web ไม่ได้, ประมาณ 12–18 สัปดาห์, spike 10 วัน + เกณฑ์ Go/No-Go, ทางเลือก A–D | ทุกคน / Unity dev |
 | [27_UGS_Multiplayer.md](27_UGS_Multiplayer.md) | **Multiplayer พื้นฐานด้วย UGS (16 พ.ย. 2026):** Relay + Lobby + Netcode for GameObjects แบบ player-hosted — package 5 ตัว, สคริปต์ `UgsBootstrapManager` / `RelayLobbyManager` (create / quick-join / heartbeat 15 วิ / leave) / `SimpleDebugLobbyUI` (IMGUI, dev เท่านั้น), ขั้นตั้งค่า NetworkManager + UnityTransport ใน Editor ทีละข้อ, วิธีเทสต์สองเครื่อง, `Bob > Run UGS Check`, โควตา free tier และข้อจำกัด (แยกจาก Nakama เดิม) | Unity dev / ทุกคน |
 
+## Git LFS (16 พ.ย. 2026)
+
+`.gitattributes` ที่ราก repo ครอบ `.mp4/.mov/.psd/.tga/.wav/.blend/.glb` + `art/**/*.png|jpg` → ของมีเดียที่ commit ตั้งแต่นี้ไปอยู่ใน LFS (ต้อง `git lfs install` ก่อน clone)
+ไฟล์ที่ commit ก่อนหน้าอยู่เป็น blob ปกติ — จะย้ายเข้าประวัติต้อง `git lfs migrate import` ซึ่งเขียนประวัติใหม่ (ยังไม่ทำ)
+`unity/Assets/TripoRaw/` (glb ดิบ 776 MB ไม่มี prefab อ้างถึง) ถูก ignore ไว้ในเครื่องเท่านั้น
+
 ## สรุปสั้น
 
 1. **ยึดภาพต้นฉบับ** `concept/BOB_Game_Art_Board.png` และ `concept/BOB_Asset_Sheet.png`: กวาด (ผ้าคาดหัวแดง เสื้อส้ม ไม้กวาด), ฟอง (มวยคู่ เสื้อฟ้า ฟองน้ำ), ถู (ถังโลหะบนหัว เสื้อเขียว ไม้ถู), สเปรย์ (ผมบ็อบดำ แว่นกันลม เสื้อม่วง ขวดสเปรย์ชมพู) ทุกตัวใส่ผ้ากันเปื้อนครีม ยกระดับเป็น 3D toon shading + เส้นขอบน้ำตาลบาง
