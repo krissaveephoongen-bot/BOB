@@ -171,9 +171,25 @@ namespace Bob.TaskRace
         void Awake()
         {
             cached = this;
+            ApplyChapter();
             RemainingSeconds = matchDuration;
             if (cameraRig == null) cameraRig = FindFirstObjectByType<BobTaskRaceCamera>();
             CollectBarriers();
+        }
+
+        /// <summary>
+        /// S13 (docs 24 section 15.3): the chapter picked in the lobby sets the difficulty of this round's list and the
+        /// match clock. Runs in Awake, before TaskRaceRound.Start draws the list, so the seeded composition already
+        /// follows the chapter. Only these two values are applied; the draw itself stays with BobTaskRaceRules.
+        /// </summary>
+        void ApplyChapter()
+        {
+            var chapter = Bob.Rules.BobChapters.Saved;
+            matchDuration = Mathf.Max(30f, chapter.RoundTime);
+            var list = FindFirstObjectByType<TaskRaceRound>();
+            if (list != null) list.ConfigureRound(list.Players, chapter.Difficulty, list.ConfiguredSeed);
+            if (Application.isPlaying)
+                Debug.Log($"[TaskRace] chapter {chapter.Order} \"{chapter.Title}\" · D{chapter.Difficulty} · {matchDuration:0} s clock");
         }
 
         void OnDestroy()

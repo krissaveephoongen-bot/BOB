@@ -39,10 +39,23 @@ namespace Bob.Net
     [Serializable] public sealed class MpPeek { public int total; public bool pass; public MpStats stats; } // Spray's private preview
     public sealed class MpPreview { public int total; public bool pass; }
 
+    // ---- Task Race wire format (docs 16 section 8; match.js opcodes 16-21) ----
+    /// <summary>Your island's numbers: cards done out of the list, plus the weight-based percentage the HUD bar shows.</summary>
+    public sealed class TrTeamProgress { public int done, total; public float pct, dw, tw; }
+    public sealed class TrRivalProgress { public float pct; public int done, total; }
+    /// <summary>team: my island; rival: the other island's percentage only; done: the card ids my island has finished.</summary>
+    public sealed class TrProgress { public TrTeamProgress team; public TrRivalProgress rival; public string[] done; }
+    /// <summary>task: the card; by: user id holding it ("" when free); free: the lock was just released.</summary>
+    public sealed class TrLock { public string task, by; public int step; public bool free; }
+    /// <summary>The emergency stain of docs 16 section 4: id T16, enemy from the seed, at = round second, graceSec to clear it.</summary>
+    public sealed class TrEmergency { public string id, enemy, spot; public int at, graceSec; }
+
     public sealed class BobOnline
     {
         public const long OpMove = 1, OpPick = 2, OpPlace = 3, OpLift = 4, OpReady = 5, OpSubmit = 6, OpPush = 7, OpPass = 8, OpTable = 9, OpAbility = 14;
         public const long OpState = 10, OpPos = 11, OpResult = 12, OpError = 13, OpPeek = 15;
+        // Task Race (docs 16 section 8): the same 'bob_coop' match, started with mode = taskrace.
+        public const long OpTaskBegin = 16, OpTaskDone = 17, OpTaskCancel = 18, OpProgress = 19, OpEmergency = 20, OpTaskLock = 21;
         public const string MatchName = "bob_coop";
 
         readonly ISocket socket;
@@ -62,6 +75,12 @@ namespace Bob.Net
         public event Action<MpPeek> OnPeek;
         /// <summary>Same message as OnPeek, in the shape the Game scene's online mode reads.</summary>
         public event Action<MpPreview> OnPreview;
+        /// <summary>Task Race: a step of my island finished (or the rival moved); carries both percentages.</summary>
+        public event Action<TrProgress> OnProgress;
+        /// <summary>Task Race: a card was taken or released. by = "" means it is free again.</summary>
+        public event Action<TrLock> OnTaskLock;
+        /// <summary>Task Race: the emergency stain spawned; both islands get the same enemy, spot and second.</summary>
+        public event Action<TrEmergency> OnEmergency;
 
         BobOnline(ISocket socket, string me)
         {
@@ -107,6 +126,16 @@ namespace Bob.Net
         public static async Task<BobOnline> CreateAsync(BobServer server, int seed = 0)
         {
             var reply = (await server.CreateMatchRpcAsync(seed)).FromJson<Dictionary<string, object>>();
+            return await JoinAsync(server, (string)reply["match_id"]);
+        }
+
+        /// <summary>
+        /// Private Task Race room (docs 16): the same 'bob_coop' match with mode = taskrace, so the server deals the
+        /// seeded task list and checks every step. Join the others with JoinAsync(server, matchId).
+        /// </summary>
+        public static async Task<BobOnline> CreateTaskRaceAsync(BobServer server, int seed = 0, int difficulty = 1)
+        {
+            var reply = (await server.CreateTaskRaceMatchAsync(seed, difficulty)).FromJson<Dictionary<string, object>>();
             return await JoinAsync(server, (string)reply["match_id"]);
         }
 
@@ -174,6 +203,18 @@ namespace Bob.Net
         /// <summary>Use the hero's ability (once a round). Sweep passes the layer to swap with the one above it.</summary>
         public void Ability(int swapLayer = -1) => Send(OpAbility, swapLayer >= 0 ? "{\"swap\":" + swapLayer + "}" : "{}");
 
+        // ---------------------------------------------------------------- Task Race (docs 16 section 8)
+        // Begin a step of a card at a station, say when it is done, or walk away. The server answers with TASK_LOCK,
+        // PROGRESS and ERROR; a step faster than TaskMinMs is refused, so the phone must not guess.
+        /// <summary>step is 1-based and must be the next step of the card (1, 2, 3). spot is the station id, e.g. S3_A.</summary>
+        public void TaskBegin(string taskId, int step, string spot) =>
+            Send(OpTaskBegin, "{\"task\":\"" + taskId + "\",\"step\":" + step + ",\"spot\":\"" + spot + "\"}");
+        /// <summary>ms is the client-measured time for the step; sample is an optional JSON object for the balance data.</summary>
+        public void TaskDone(string taskId, int step, int ms, string sampleJson = null) =>
+            Send(OpTaskDone, "{\"task\":\"" + taskId + "\",\"step\":" + step + ",\"ms\":" + ms +
+                (string.IsNullOrEmpty(sampleJson) ? "" : ",\"sample\":" + sampleJson) + "}");
+        public void TaskCancel(string taskId) => Send(OpTaskCancel, "{\"task\":\"" + taskId + "\"}");
+
         static string F(float v) => v.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
 
         void Send(long op, string json)
@@ -207,6 +248,9 @@ namespace Bob.Net
                         OnPositions?.Invoke(p); break;
                     case OpResult: LastResult = json.FromJson<MpResult>(); if (LastResult.over) SavedMatchId = null; OnResult?.Invoke(LastResult); break;
                     case OpPeek: { var pk = json.FromJson<MpPeek>(); OnPeek?.Invoke(pk); OnPreview?.Invoke(new MpPreview { total = pk.total, pass = pk.pass }); break; }
+                    case OpProgress: OnProgress?.Invoke(json.FromJson<TrProgress>()); break;
+                    case OpTaskLock: OnTaskLock?.Invoke(json.FromJson<TrLock>()); break;
+                    case OpEmergency: OnEmergency?.Invoke(json.FromJson<TrEmergency>()); break;
                     case OpError: OnRefused?.Invoke(json.FromJson<MpError>().t); break;
                 }
             }

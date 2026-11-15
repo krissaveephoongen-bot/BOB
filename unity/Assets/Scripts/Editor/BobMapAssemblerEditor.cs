@@ -243,7 +243,7 @@ namespace Bob.EditorTools
             // clock lowers at 60 s. RiverBarrier_Group (hedges) still belongs to PureRace only.
             var bridgeBarriers = Child(root, "BridgeBarrier_Group");
             float bridgeZ = islandDepth * 0.3f;
-            const float bridgeWidth = 2f; // a footbridge: wide enough for the walk collider, narrow enough to read as a plank
+            const float bridgeWidth = 1.7f; // a footbridge: wide enough for the walk collider, narrow enough to read as a plank (4.3: trimmed from 2 u)
             // The Field slab is an ellipse, so the bank at the bridge's z sits inboard of the island's widest line.
             // Measure that edge and let the deck land 1.2 u past it: the NavMesh erodes by the agent radius (0.5 u),
             // and a deck that stops short of the bank bakes as two islands with no path between them.

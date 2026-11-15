@@ -55,7 +55,7 @@ namespace Bob.Game
         /// <summary>Screenshots of every out-of-match screen (UX spec section 4), taken before the bot plays.</summary>
         IEnumerator MenuTour()
         {
-            var steps = new (Phase p, string shot)[] { (Phase.Splash, "m1-splash"), (Phase.Login, "m2-login"), (Phase.Title, "m3-home"), (Phase.Modes, "m4-modes"), (Phase.Stages, "m4b-stages") };
+            var steps = new (Phase p, string shot)[] { (Phase.Splash, "m1-splash"), (Phase.Login, "m2-login"), (Phase.Title, "m3-home"), (Phase.Modes, "m4-modes"), (Phase.Chapters, "m4b-chapters") };
             foreach (var (p, s) in steps) { phase = p; RenderAll(); yield return new WaitForSeconds(0.7f); Shot(s); yield return new WaitForSeconds(0.3f); }
             OpenHeroSelect(true); yield return new WaitForSeconds(0.7f); Shot("m5-heroes"); yield return new WaitForSeconds(0.3f); heroTimerOn = false;
             phase = Phase.Shop; RenderAll(); yield return new WaitForSeconds(0.7f); Shot("m6-shop"); yield return new WaitForSeconds(0.3f);

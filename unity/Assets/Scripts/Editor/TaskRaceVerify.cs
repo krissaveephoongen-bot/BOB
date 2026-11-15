@@ -139,8 +139,8 @@ namespace Bob.EditorTools
             if (hud == null || manager == null) return;
             hud.DebugShowResult();
             Debug.Log($"[TaskRaceVerify] result overlay: open={hud.ResultOpen} {hud.ShownResult}");
-            var eye = hero != null ? hero.transform.position + new Vector3(0f, 8.5f, -7.5f) : new Vector3(0f, 10.5f, -15f);
-            var look = hero != null ? hero.transform.position + new Vector3(0f, 0.6f, 0f) : new Vector3(0f, 0.4f, 0.5f);
+            var eye = hero != null ? hero.transform.position + new Vector3(0f, 6.2f, -5.2f) : new Vector3(0f, 10.5f, -15f);
+            var look = hero != null ? hero.transform.position + new Vector3(0f, 0.72f, 0f) : new Vector3(0f, 0.4f, 0.5f);
             Shot($"Logs/taskrace{suffix}-result.png", eye, look, 40f, hud);
             hud.DebugCloseResult();
             manager.DebugResetMatch();
@@ -156,8 +156,8 @@ namespace Bob.EditorTools
                 Debug.LogWarning("[TaskRaceVerify] no card task on Team A: the S28 shot is skipped.");
                 return;
             }
-            var camera = hero.transform.position + new Vector3(0f, 8.5f, -7.5f);
-            var look = hero.transform.position + new Vector3(0f, 0.6f, 0f);
+            var camera = hero.transform.position + new Vector3(0f, 6.2f, -5.2f);
+            var look = hero.transform.position + new Vector3(0f, 0.72f, 0f);
             // One shot per interaction kind: scrub, trace, sort, fill, sequence, hold, tap, multi-step glass.
             foreach (var id in new[] { "T02", "T01", "T05", "T11", "T15", "T06", "T10", "T08" })
             {
@@ -317,15 +317,15 @@ namespace Bob.EditorTools
             Shot($"Logs/taskrace{suffix}-preview.png", new Vector3(0f, 10.5f, -15f), new Vector3(0f, 0.4f, 0.5f), 42f);
             Shot($"Logs/taskrace{suffix}-wide.png", new Vector3(0f, 16f, -26f), new Vector3(0f, 0.5f, 0f), 50f);
 
-            // The shot the player actually gets: BobTaskRaceCamera's 8.5 up / 7.5 back / 40 degree lens on the hero.
+            // The shot the player actually gets: BobTaskRaceCamera's 6.2 up / 5.2 back / 40 degree lens on the hero.
             GameObject hero = null;
             try { hero = GameObject.FindGameObjectWithTag("Player"); } catch (UnityException) { }
             if (hero != null)
-                Shot($"Logs/taskrace{suffix}-play.png", hero.transform.position + new Vector3(0f, 8.5f, -7.5f),
-                    hero.transform.position + new Vector3(0f, 0.6f, 0f), 40f);
+                Shot($"Logs/taskrace{suffix}-play.png", hero.transform.position + new Vector3(0f, 6.2f, -5.2f),
+                    hero.transform.position + new Vector3(0f, 0.72f, 0f), 40f);
             if (hero != null && hud != null)
-                Shot($"Logs/taskrace{suffix}-hud.png", hero.transform.position + new Vector3(0f, 8.5f, -7.5f),
-                    hero.transform.position + new Vector3(0f, 0.6f, 0f), 40f, hud);
+                Shot($"Logs/taskrace{suffix}-hud.png", hero.transform.position + new Vector3(0f, 6.2f, -5.2f),
+                    hero.transform.position + new Vector3(0f, 0.72f, 0f), 40f, hud);
         }
 
         static void Shot(string file, Vector3 eye, Vector3 look, float fov, BobTaskRaceHud hud = null)

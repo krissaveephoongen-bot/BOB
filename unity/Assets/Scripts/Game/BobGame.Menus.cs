@@ -22,6 +22,7 @@ namespace Bob.Game
 
         string mode = "solo";
         int xp, gems, xpGain;
+        int band = 1; // difficulty band of the selected chapter: 1 = chapters 1-2, 2 = 3-4, 3 = 5-6
         readonly HashSet<string> owned = new HashSet<string>();
         float heroTimer; bool heroTimerOn; TMP_Text heroTimerText;
         Image pendingShopRoot;
@@ -42,6 +43,15 @@ namespace Bob.Game
         };
         ModeInfo CurrentMode => Modes.FirstOrDefault(m => m.Id == mode) ?? Modes[1];
 
+        // Chapters (docs 24 §15.3 P0): the six ChapterDefinition assets in Resources/Chapters, the pick saved on the
+        // device, and the best score per difficulty band. Home shows the pick, S13 changes it.
+        ChapterDefinition Chapter => BobChapters.Selected(Level);
+        int TaskBest(int b) { try { return PlayerPrefs.GetInt("bob.taskbest." + b, 0); } catch (Exception) { return 0; } }
+        void SaveTaskBest(int b, int score)
+        {
+            try { if (score > TaskBest(b)) { PlayerPrefs.SetInt("bob.taskbest." + b, score); PlayerPrefs.Save(); } } catch (Exception) { }
+        }
+
         static readonly (string id, string name, string sprite, int price)[] ShopItems =
         {
             ("broom",  "ไม้กวาดฟาง",     "menu_equip_broom",  120),
@@ -51,12 +61,24 @@ namespace Bob.Game
             ("hat",    "หมวกถังน้ำ",      "menu_equip_hat",    200),
         };
 
+        /// <summary>4.6: where an owned item actually shows up, spelled out before the player spends coins.</summary>
+        static string ItemUse(string id) => id switch
+        {
+            "broom" => "เปลี่ยนไม้กวาดในมินิเกมกวาดฝุ่น",
+            "sponge" => "เปลี่ยนฟองน้ำในมินิเกมเช็ดกระจก",
+            "spray" => "เปลี่ยนขวดสเปรย์ในมินิเกมเช็ดกระจก",
+            "mop" => "คอลเลกชันสำหรับห้องของฉัน",
+            _ => "หมวกของตัวละครบนหน้า Home",
+        };
+
         void LoadProfile()
         {
             try
             {
                 mode = PlayerPrefs.GetString("bob.mode", "solo"); if (Modes.All(m => m.Id != mode)) mode = "solo";
                 xp = PlayerPrefs.GetInt("bob.xp", 0); gems = PlayerPrefs.GetInt("bob.gems", 0);
+                band = Mathf.Clamp(PlayerPrefs.GetInt("bob.band", 1), 1, 3);
+                band = BobChapters.Selected(Level).Band; // the chapter is the truth; a stale prefs band follows it
                 foreach (var s in PlayerPrefs.GetString("bob.owned", "").Split(',')) if (s.Length > 0) owned.Add(s);
             }
             catch (Exception) { }
@@ -67,6 +89,7 @@ namespace Bob.Game
             try
             {
                 PlayerPrefs.SetString("bob.mode", mode); PlayerPrefs.SetInt("bob.xp", xp); PlayerPrefs.SetInt("bob.gems", gems);
+                PlayerPrefs.SetInt("bob.band", band);
                 PlayerPrefs.SetInt("bob.coins", coins); PlayerPrefs.SetString("bob.owned", string.Join(",", owned)); PlayerPrefs.Save();
             }
             catch (Exception) { }
@@ -174,8 +197,8 @@ namespace Bob.Game
             var hb = hero.gameObject.AddComponent<Button>(); hb.onClick.AddListener(() => { Sfx("ui_tap"); OpenHeroSelect(false); });
             var hn = H1(S, Hero.Name, 60, BobUi.Surface); BobUi.OutlineText(hn, BobUi.Ink, 0.3f);
             BobUi.Pin(hn.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -225), new Vector2(700, 80));
-            var hs = BobUi.Label(S, "แตะตัวละครเพื่อเปลี่ยน · " + Hero.Ability, 26, BobUi.Surface, TextAnchor.MiddleCenter); BobUi.OutlineText(hs, BobUi.Ink, 0.25f);
-            BobUi.Pin(hs.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -280), new Vector2(900, 44));
+            var hs = BobUi.Label(S, "แตะตัวละครเพื่อเปลี่ยน · ถนัด" + SpecialtyName(charId) + " +25% · " + Hero.Ability, 24, BobUi.Surface, TextAnchor.MiddleCenter); BobUi.OutlineText(hs, BobUi.Ink, 0.25f);
+            BobUi.Pin(hs.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -280), new Vector2(1000, 44));
 
             // dock (bottom left): only buttons that have real icons and a working screen
             var dock = BobUi.Pin(BobUi.Rect("Dock", S), Vector2.zero, Vector2.zero, new Vector2(30, 30), new Vector2(2 * 190, 190));
@@ -183,19 +206,22 @@ namespace Bob.Game
             DockButton(dock, "menu_shop", "ร้านค้า", () => { Phase p = Phase.Shop; phase = p; Sfx("ui_confirm"); RenderAll(); }, false);
             DockButton(dock, "menu_home", "บ้าน", () => { Toast("เร็วๆ นี้: แต่งบ้านและห้องของฉัน"); Sfx("ui_tap"); }, true);
 
-            // Task Race is the only match (docs 24): the chapter card opens the stage select (S13) and PLAY starts the
-            // chapter it shows. The old seven-card mode grid is no longer reachable.
-            var chapter = Chapters.Selected;
-            string chapLine = chapter != null ? $"บท {Chapters.NumberOf(chapter)} · {chapter.Title}" : "Task Race";
-            string chapSub = chapter != null ? $"{chapter.Band} · 2 นาที" : "2 นาที · แข่งกับคู่แข่ง";
-            var mb = BobUi.Button(S, "", BobUi.Hex("#FFF0C2"), () => { Sfx("ui_confirm"); phase = Phase.Stages; RenderAll(); }, 24);
-            BobUi.Pin((RectTransform)mb.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-590, 40), new Vector2(300, 160));
-            BobUi.Pin(BobUi.Label(mb.transform, chapLine, 28, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform,
-                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -18f), new Vector2(284f, 64f));
-            BobUi.Pin(BobUi.Label(mb.transform, chapSub, 22, BobUi.Muted, TextAnchor.MiddleCenter).rectTransform,
-                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -84f), new Vector2(284f, 34f));
-            BobUi.Pin(BobUi.Label(mb.transform, "เลือกบท", 22, BobUi.Teal, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform,
-                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 16f), new Vector2(284f, 34f));
+            // Task Race is the only match (docs 24): the chip above PLAY is the chapter the player picked in S13, tap
+            // opens the stage select. It carries the values the TaskRace scene applies (difficulty + clock), so what
+            // this card says is exactly what the match runs.
+            var chapter = Chapter;
+            var mb = BobUi.Button(S, "", BobUi.Hex("#FFF0C2"), () => { Sfx("ui_tap"); phase = Phase.Chapters; RenderAll(); }, 22);
+            BobUi.Pin((RectTransform)mb.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-590, 40), new Vector2(300, 190));
+            mb.GetComponentInChildren<TMP_Text>().text = "";
+            BobUi.Pin(BobUi.Img(mb.transform, chapter.Backdrop, 62).rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(10, -10), new Vector2(74, 62));
+            BobUi.Pin(BobUi.Label(mb.transform, $"บท {chapter.Order}", 34, BobUi.Ink, TextAnchor.MiddleLeft, FontStyle.Bold).rectTransform,
+                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(96f, -18f), new Vector2(190f, 46f));
+            BobUi.Pin(BobUi.Label(mb.transform, chapter.Title, 26, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform,
+                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -78f), new Vector2(280f, 40f));
+            BobUi.Pin(BobUi.Label(mb.transform, $"D{chapter.Difficulty} · {chapter.RoundTime:0} วิ · ดีสุด {TaskBest(chapter.Band)}", 22, BobUi.Muted, TextAnchor.MiddleCenter).rectTransform,
+                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -120f), new Vector2(280f, 34f));
+            BobUi.Pin(BobUi.Label(mb.transform, "แตะเพื่อเลือกด่าน", 20, BobUi.Teal, TextAnchor.MiddleCenter).rectTransform,
+                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -154f), new Vector2(280f, 30f));
             var play = BobUi.Button(S, "เล่น", BobUi.Sun, PressPlay, 76);
             BobUi.Pin((RectTransform)play.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-40, 30), new Vector2(520, 200));
             play.GetComponentInChildren<TMP_Text>().fontStyle = FontStyles.Bold;
@@ -223,66 +249,72 @@ namespace Bob.Game
             }
         }
 
-        // ---------------------------------------------------------------- S13 stage select (docs 24 section 15.3 P0)
+        // ---------------------------------------------------------------- S13 chapter select (docs 24 section 15.3 P0)
 
-        void StageSelect()
+        /// <summary>
+        /// Six cards straight from Resources/Chapters: lock level, place, difficulty and clock, plus the best score of
+        /// the band. Picking one saves it; PLAY in Home loads the TaskRace scene, which reads the same pick.
+        /// </summary>
+        void ChapterSelect()
         {
-            var chosen = Chapters.Selected;
-            ScreenBackdrop(chosen != null ? chosen.Backdrop : "lobby_rental_room");
-            TopBar(screenRoot, "เลือกบท", true);
+            var selected = Chapter;
+            ScreenBackdrop(selected.Backdrop);
+            TopBar(screenRoot, "เลือกด่าน", true);
 
-            var list = Chapters.All;
-            if (list.Count == 0)
+            var all = BobChapters.All;
+            float gap = 20f, cw = CardW(3, gap, 560), ch = 330f;
+            for (int i = 0; i < all.Count; i++)
             {
-                BobUi.Label(screenRoot, "ยังไม่มีข้อมูลบท — รัน Bob > Data > Build Chapter Definitions", 34, BobUi.Surface, TextAnchor.MiddleCenter);
-                return;
-            }
+                var chapter = all[i];
+                bool unlocked = BobChapters.Unlocked(chapter, Level), isSel = chapter.Order == selected.Order;
+                int col = i % 3, row = i / 3;
+                var pos = new Vector2((col - 1) * (cw + gap), (row == 0 ? 1f : -1f) * (ch + gap) * 0.5f + 25f);
 
-            float cw = CardW(list.Count, 14, 300);
-            var row = BobUi.Pin(BobUi.Rect("Chapters", screenRoot), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(0, -10), new Vector2(list.Count * cw + (list.Count - 1) * 14, 620));
-            var h = row.gameObject.AddComponent<HorizontalLayoutGroup>();
-            h.spacing = 14; h.childControlWidth = h.childControlHeight = true; h.childForceExpandWidth = h.childForceExpandHeight = true;
-
-            for (int i = 0; i < list.Count; i++)
-            {
-                var chapter = list[i];
-                bool open = Chapters.Unlocked(chapter, Level), sel = chapter == chosen;
-                var card = BobUi.Button(row, "", sel ? BobUi.Hex("#FFF0C2") : BobUi.Surface, () =>
-                {
-                    if (!Chapters.Unlocked(chapter, Level)) { Sfx("drop_invalid"); Toast($"บทนี้ปลดที่ระดับ {chapter.UnlockLevel}"); return; }
-                    Chapters.Select(chapter); Sfx("ui_tap"); RenderAll();
-                }, 24);
+                var card = BobUi.Button(screenRoot, "", isSel ? BobUi.Hex("#FFF0C2") : BobUi.Surface, () => PickChapter(chapter), 22);
+                BobUi.Pin((RectTransform)card.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), pos, new Vector2(cw, ch));
                 card.GetComponentInChildren<TMP_Text>().text = "";
 
-                var pic = BobUi.Img(card.transform, chapter.Backdrop, 146, open ? Color.white : new Color(0.62f, 0.62f, 0.66f));
-                BobUi.Pin(pic.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -14), new Vector2(cw - 24, 146));
+                var thumb = BobUi.Img(card.transform, chapter.Backdrop, 140);
+                BobUi.Pin(thumb.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -14), new Vector2(cw - 28, 140));
+                if (!unlocked) thumb.color = new Color(1, 1, 1, 0.35f);
 
-                var no = BobUi.Disc(card.transform, open ? BobUi.Sun : BobUi.Muted, 56, "No");
-                BobUi.Pin(no.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(14, -14), new Vector2(56, 56));
-                BobUi.Stretch(BobUi.Label(no.transform, (i + 1).ToString(), 30, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform);
+                var badge = BobUi.Disc(card.transform, unlocked ? BobUi.Sun : BobUi.Muted, 70, "Badge");
+                BobUi.Pin((RectTransform)badge.transform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(18, -18), new Vector2(70, 70));
+                var bn = BobUi.Label(badge.transform, chapter.Order.ToString(), 38, unlocked ? BobUi.Ink : Color.white, TextAnchor.MiddleCenter, FontStyle.Bold);
+                BobUi.Stretch(bn.rectTransform);
 
-                var nm = BobUi.Label(card.transform, chapter.Title, 28, open ? BobUi.Ink : BobUi.Muted, TextAnchor.MiddleCenter, FontStyle.Bold);
-                BobUi.Pin(nm.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -172), new Vector2(cw - 20, 66));
-                var bd = BobUi.Label(card.transform, $"{chapter.Band} · ระดับ {chapter.UnlockLevel}+", 22, BobUi.Muted, TextAnchor.MiddleCenter);
-                BobUi.Pin(bd.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -238), new Vector2(cw - 20, 36));
-                var blurb = BobUi.Label(card.transform, chapter.Blurb, 20, BobUi.Muted, TextAnchor.UpperCenter);
-                BobUi.Pin(blurb.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -276), new Vector2(cw - 28, 150));
-                var st = BobUi.Label(card.transform, open ? (sel ? "เลือกอยู่" : "แตะเพื่อเลือก") : $"ล็อก · ระดับ {chapter.UnlockLevel}",
-                    24, open && sel ? BobUi.Good : BobUi.Muted, TextAnchor.MiddleCenter, FontStyle.Bold);
-                BobUi.Pin(st.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 22), new Vector2(cw - 20, 44));
+                BobUi.Pin(BobUi.Label(card.transform, chapter.Title, 34, unlocked ? BobUi.Ink : BobUi.Muted, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform,
+                    new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -164), new Vector2(cw - 24, 44));
+                BobUi.Pin(BobUi.Label(card.transform, chapter.Place, 20, BobUi.Muted, TextAnchor.MiddleCenter).rectTransform,
+                    new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -202), new Vector2(cw - 24, 32));
+                BobUi.Pin(BobUi.Label(card.transform, unlocked ? $"{chapter.Tag} · ดีสุด {TaskBest(chapter.Band)}" : $"ล็อก LV {chapter.UnlockLevel}",
+                    22, unlocked ? BobUi.Teal : BobUi.Bad, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform,
+                    new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -236), new Vector2(cw - 24, 32));
+                BobUi.Pin(BobUi.Label(card.transform, string.Join(" · ", chapter.RuleCards), 18, BobUi.Muted, TextAnchor.MiddleCenter).rectTransform,
+                    new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -270), new Vector2(cw - 24, 46));
+
+                if (isSel) BobUi.Pin(BobUi.Img(card.transform, "icon_check", 42, BobUi.Good).rectTransform, Vector2.one, Vector2.one, new Vector2(-16, -16), new Vector2(42, 42));
+                if (unlocked) continue;
+                var veil = BobUi.Rect("Lock", card.transform); BobUi.Stretch(veil);
+                veil.gameObject.AddComponent<Image>().color = new Color(0.10f, 0.11f, 0.17f, 0.42f);
+                BobUi.Stretch(BobUi.Label(veil, "ต้องมี LV " + chapter.UnlockLevel, 30, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform);
             }
 
-            var next = list.FirstOrDefault(c => c.UnlockLevel > Level);
-            var hint = BobUi.Label(screenRoot, next != null
-                ? $"ระดับ {Level} · บทที่ {Chapters.NumberOf(next)} ปลดที่ระดับ {next.UnlockLevel}"
-                : $"ระดับ {Level} · ปลดทุกบทแล้ว", 26, BobUi.Ink, TextAnchor.MiddleLeft, FontStyle.Bold);
-            BobUi.OutlineText(hint, BobUi.Surface, 0.35f);
-            BobUi.Pin(hint.rectTransform, new Vector2(0, 0), new Vector2(0, 0), new Vector2(40, 48), new Vector2(900, 50));
+            var note = BobUi.Label(screenRoot, "ด่านกำหนดความยาก (D) และนาฬิกาของรอบ · การ์ดกติกาจะบังคับใช้ใน P2", 22, BobUi.Surface, TextAnchor.MiddleLeft);
+            BobUi.OutlineText(note, BobUi.Ink, 0.25f);
+            BobUi.Pin(note.rectTransform, Vector2.zero, Vector2.zero, new Vector2(40, 40), new Vector2(1100, 46));
 
-            var play = BobUi.Button(screenRoot, "เล่นบทนี้", BobUi.Sun, PressPlay, 56);
-            BobUi.Pin((RectTransform)play.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-40, 30), new Vector2(420, 180));
-            play.GetComponentInChildren<TMP_Text>().fontStyle = FontStyles.Bold;
+            var go = BobUi.Button(screenRoot, "เริ่มด่านนี้", BobUi.Sun, PressPlay, 52);
+            BobUi.Pin((RectTransform)go.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-40, 30), new Vector2(420, 170));
+            go.GetComponentInChildren<TMP_Text>().fontStyle = FontStyles.Bold;
+        }
+
+        void PickChapter(ChapterDefinition chapter)
+        {
+            if (!BobChapters.Unlocked(chapter, Level)) { Toast("ปลดบทนี้ที่ระดับ " + chapter.UnlockLevel); Sfx("drop_invalid"); return; }
+            BobChapters.Select(chapter, Level);
+            band = chapter.Band;
+            SaveProfile(); Sfx("ui_confirm"); RenderAll();
         }
 
         // ---------------------------------------------------------------- S11 mode select
@@ -411,6 +443,7 @@ namespace Bob.Game
             BobUi.Label(card, "ยืนยันการซื้อ", 52, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
             var ic = BobUi.Img(card, it.sprite, 200); BobUi.Size(ic, 200, 200, 0, 200);
             BobUi.Label(card, it.name, 40, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Label(card, ItemUse(it.id), 26, BobUi.Muted, TextAnchor.MiddleCenter);
             int left = coins - it.price; bool can = left >= 0;
             BobUi.Label(card, $"ราคา {it.price} เหรียญ · มี {coins} · เหลือ {(can ? left.ToString() : "ไม่พอ")}", 30, can ? BobUi.Muted : BobUi.Bad, TextAnchor.MiddleCenter);
             var btns = BobUi.HBox(card, 18, "Buttons"); BobUi.Size(btns, 144, 144); btns.childForceExpandHeight = true;

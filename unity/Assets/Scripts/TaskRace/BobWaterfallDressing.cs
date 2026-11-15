@@ -19,7 +19,7 @@ namespace Bob.TaskRace
 
         // Palette cells (16x16 grid, see art/aa/props/T_BOB_Palette.png).
         static readonly Vector2 Stone = Cell(10, 2), Slate = Cell(2, 2), DarkSlate = Cell(3, 2);
-        static readonly Vector2 Moss = Cell(8, 2), Water = Cell(11, 2), DeepWater = Cell(12, 2);
+        static readonly Vector2 Moss = Cell(8, 2), PaleWater = Cell(7, 1), Water = Cell(11, 2);
         static readonly Vector2 Foam = Cell(4, 0);
 
         GameObject root;
@@ -33,10 +33,10 @@ namespace Bob.TaskRace
         public void Configure(Vector3 centreWorld, float channel, float top)
         {
             centre = centreWorld;
-            // A headwall just wider than the falls; the first version was twice the fall's width and the outer prisms
-            // dominated the play camera.
-            halfWidth = Mathf.Max(1.9f, channel * 0.5f + 0.7f);
-            topY = Mathf.Max(1.6f, top);
+            // 4.3: the headwall came in a step smaller and the falls a shade paler, so the waterfall frames the river
+            // instead of competing with the task signs for attention on a phone screen.
+            halfWidth = Mathf.Max(1.5f, channel * 0.4f + 0.45f);
+            topY = Mathf.Max(1.4f, top - 0.2f);
             waterY = -1.33f;
             Build();
         }
@@ -99,9 +99,9 @@ namespace Bob.TaskRace
 
             // Falls: three interleaved ribbons, centred just in front of the wall, leaning out as they drop.
             float fallZ = z - depth * 0.45f;
-            Ribbon(centre.x - 0.18f, centre.x + 0.18f, fallZ, lipY, waterY, 10, DeepWater, 0.92f);
-            Ribbon(centre.x - 0.62f, centre.x - 0.16f, fallZ - 0.06f, lipY - 0.08f, waterY + 0.08f, 10, Water, 1f);
-            Ribbon(centre.x + 0.16f, centre.x + 0.62f, fallZ - 0.06f, lipY - 0.08f, waterY + 0.08f, 10, Water, 1f);
+            Ribbon(centre.x - 0.18f, centre.x + 0.18f, fallZ, lipY, waterY, 10, Water, 0.98f);
+            Ribbon(centre.x - 0.62f, centre.x - 0.16f, fallZ - 0.06f, lipY - 0.08f, waterY + 0.08f, 10, PaleWater, 0.96f);
+            Ribbon(centre.x + 0.16f, centre.x + 0.62f, fallZ - 0.06f, lipY - 0.08f, waterY + 0.08f, 10, PaleWater, 0.96f);
             Ribbon(centre.x - 0.74f, centre.x - 0.58f, fallZ + 0.04f, lipY - 0.04f, waterY + 0.3f, 8, Foam, 1.08f);
             Ribbon(centre.x + 0.58f, centre.x + 0.74f, fallZ + 0.04f, lipY - 0.04f, waterY + 0.3f, 8, Foam, 1.08f);
 
@@ -111,7 +111,7 @@ namespace Bob.TaskRace
 
             // Splash: a pool disc, a foam ring, shards and three mist puffs.
             float poolZ = fallZ - 0.55f;
-            Disc(new Vector3(centre.x, waterY + 0.02f, poolZ), 1.75f, 12, DeepWater, 1f, (float)rnd.NextDouble() * 360f);
+            Disc(new Vector3(centre.x, waterY + 0.02f, poolZ), 1.75f, 12, Water, 1f, (float)rnd.NextDouble() * 360f);
             Disc(new Vector3(centre.x, waterY + 0.03f, poolZ + 0.2f), 1.1f, 10, Water, 1.06f, 0f);
             for (int i = 0; i < 9; i++)
             {

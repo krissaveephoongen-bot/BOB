@@ -440,7 +440,7 @@ namespace Bob.Game
         void RenderButtons()
         {
             var h = Hero;
-            abilityLabel.text = $"<b>{h.Ability}</b>\n<size=16>{(abUsed ? "ใช้แล้ว" : swapMode ? "แตะ สลับ↑" : "พร้อม")}</size>";
+            abilityLabel.text = $"<b>{h.Ability}</b>\n<size=16>{(abUsed ? "ใช้แล้ว" : swapMode ? "แตะ สลับ↑" : "พร้อม · 1 ครั้ง/แมตช์")}</size>";
             abilityBtn.interactable = phase == Phase.Build && !abUsed;
             var pt = abilityBtn.transform.Find("Portrait");
             if (pt != null) pt.GetComponent<Image>().sprite = art.Get(charId + "_portrait");
@@ -524,7 +524,7 @@ namespace Bob.Game
                 case Phase.Modes: ModeSelect(); break;
                 case Phase.Heroes: HeroSelect(); break;
                 case Phase.Shop: Shop(); break;
-                case Phase.Stages: StageSelect(); break;
+                case Phase.Chapters: ChapterSelect(); break;
                 case Phase.Loading: Busy("กำลังเตรียมห้อง…", online ? "ขอใบงานรอบ " + roundNo + " จากเซิร์ฟเวอร์" : "สุ่มห้องในเครื่อง"); break;
                 case Phase.Scoring: Busy("กำลังทดสอบความสะอาด…", online ? "เซิร์ฟเวอร์กำลังคิดคะแนน" : "คิดคะแนนในเครื่อง"); break;
                 case Phase.Intro: RoomTicket(); break;

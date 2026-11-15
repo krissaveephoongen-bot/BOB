@@ -440,6 +440,8 @@ Progress(team) = Σ น้ำหนักขั้นที่เสร็จ / 
 ค่าคงที่ใหม่: `TaskRoundTime = 120`, `TaskMinMs[id]` (ตามตารางข้อ 5), `EmergencyGraceSec = 25`, `RivalStepPct = 25`, `RivalLiveFromPct = 85`, `AssistTrailPct = 25`, `TaskResumeSec = 10`
 ต้องคงหลักเดิม: กฎมีที่เดียวที่ `prototype/index.html` → `server/build-module.js` สร้าง `modules/index.js` → `BobTasks.cs` (pure C#) แก้ตามด้วยมือ และ `unity-check` เทียบผล
 
+**สถานะ 15 พ.ย. 2026 — สัญญานี้ทำแล้ว (opcode 16–21):** ตารางมินิเกม + สูตรประกอบรายการ (ข้อ 2.2) + `TaskMinMs` อยู่ในบล็อก `TASK RACE` ของ `prototype/index.html` แล้วถูก generate ลง `server/modules/index.js`; `server/match.js` รับ `mode = taskrace` บนแมตช์ `bob_coop` เดิม และตรวจ `TASK_BEGIN`/`TASK_DONE`/`TASK_CANCEL` (ลำดับขั้น, ล็อกงาน, เวลาขั้นต่ำจากนาฬิกา server, แจก `PROGRESS` ตามน้ำหนัก + `EMERGENCY` 2–3 จังหวะจาก seed + `TASK_LOCK`) พร้อมเทสต์ออฟไลน์ `node server/task-race-test.js` (39 เคส) ไม่ต้องมี Nakama; ฝั่ง C# มี `Rules/BobTaskRaceRules.cs` (mulberry32 ตัวเดียวกับ JS + `SelfTest()` เทียบค่าทอง) และ client `Net/BobOnline.cs` ส่ง/รับครบ 6 opcode. `spot` ถูกตรวจ 2 ชั้นแล้ว: ต้องเป็นสถานีของฝั่งผู้เล่นเอง (`S<n>_A` ทีม 0 / `S<n>_B` ทีม 1) และหนึ่งสถานีถือบัตรได้ใบเดียว (ล็อกจำ `spot` ไว้ ปลดตอน DONE/CANCEL อัตโนมัติ). **ที่ยังไม่ตรวจ:** ระยะห่างจริงจากจุดงาน — server ไม่ถือพิกัดจุดงานของซีน จึงยังเชื่อว่าผู้เล่นยืนอยู่ที่สถานีนั้น (งานถัดไป: ส่งตารางจุดงานเข้า match ตอน start)
+
 Analytics ใหม่: `task_done {task, step, ms, char, round, d}` · `task_abandon` · `emergency_missed` · `round_progress {team_pct, rival_pct, at_sec}` · `assist_used`
 
 ---
