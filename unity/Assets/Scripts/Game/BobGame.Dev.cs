@@ -126,7 +126,7 @@ namespace Bob.Game
         /// <summary>Task Race bot: walks to every task point, opens the card, plays the minigame with a scripted pointer, and expects the win screen.</summary>
         IEnumerator AutoPlayTasks()
         {
-            mode = "tasks"; PressPlay();
+            mode = "story"; PressPlay();
             yield return new WaitForSeconds(0.6f);
             int shots = 0;
             while (taskMode && !taskEnded)

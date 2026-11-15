@@ -20,7 +20,7 @@ namespace Bob.Game
     {
         // ---------------------------------------------------------------- profile (device-local)
 
-        string mode = "solo";
+        string mode = "story";
         int xp, gems, xpGain;
         int band = 1; // difficulty band of the selected chapter: 1 = chapters 1-2, 2 = 3-4, 3 = 5-6
         readonly HashSet<string> owned = new HashSet<string>();
@@ -31,17 +31,18 @@ namespace Bob.Game
         static readonly string[] HomeBackdrops = { "lobby_rental_room", "lobby_condo", "lobby_coffee_shop", "lobby_kitchen" };
 
         sealed class ModeInfo { public string Id, Name, Players, Length, Lock; public Color Color; }
+        // S11 tells the truth (B2): the story series (3 rounds x 100 s against the bot) is the only match that runs,
+        // so it is the only card that can be picked. Solo/Task Race were the same match twice and are gone; the online
+        // sizes stay visible but locked until their scenes have a loader and a second player ("เร็วๆ นี้").
         static readonly ModeInfo[] Modes =
         {
-            new ModeInfo { Id = "story",     Name = "Story",     Players = "1-4 คน", Length = "ต่อบท",   Lock = "เร็วๆ นี้: โหมดเนื้อเรื่อง", Color = new Color(0.98f, 0.62f, 0.28f) },
-            new ModeInfo { Id = "solo",      Name = "Solo",      Players = "1 คน",   Length = "6 นาที",  Lock = null,                          Color = new Color(0.40f, 0.71f, 0.95f) },
-            new ModeInfo { Id = "tasks",     Name = "Task Race", Players = "1 คน",   Length = "2 นาที",  Lock = null,                          Color = new Color(0.98f, 0.8f, 0.25f) },
-            new ModeInfo { Id = "duo",       Name = "Duo",       Players = "2 คน",   Length = "6 นาที",  Lock = "เร็วๆ นี้: ต้องผูกคู่ก่อน",   Color = new Color(0.93f, 0.28f, 0.38f) },
-            new ModeInfo { Id = "friends",   Name = "Friends",   Players = "2-4 คน", Length = "6 นาที",  Lock = null,                          Color = new Color(0.24f, 0.72f, 0.52f) },
-            new ModeInfo { Id = "party",     Name = "Party",     Players = "3-7 คน", Length = "8 นาที",  Lock = "เร็วๆ นี้: ปลดที่ระดับ 6",   Color = new Color(0.58f, 0.46f, 0.88f) },
-            new ModeInfo { Id = "community", Name = "Community", Players = "10-15 คน", Length = "10 นาที", Lock = "เร็วๆ นี้: เปิดเป็นรอบเวลา", Color = new Color(0.55f, 0.58f, 0.66f) },
+            new ModeInfo { Id = "story",     Name = "Story",     Players = "1 คน + บอท", Length = "3 รอบ × 100 วิ", Lock = null,                          Color = new Color(0.98f, 0.62f, 0.28f) },
+            new ModeInfo { Id = "duo",       Name = "Duo",       Players = "2 คน",       Length = "—",              Lock = "เร็วๆ นี้: ต้องมีเพื่อนในห้อง", Color = new Color(0.93f, 0.28f, 0.38f) },
+            new ModeInfo { Id = "friends",   Name = "Friends",   Players = "2-4 คน",     Length = "—",              Lock = "เร็วๆ นี้: ยังไม่มีผู้เล่นคนที่สอง", Color = new Color(0.24f, 0.72f, 0.52f) },
+            new ModeInfo { Id = "party",     Name = "Party",     Players = "3-7 คน",     Length = "—",              Lock = "เร็วๆ นี้: ปลดที่ระดับ 6",   Color = new Color(0.58f, 0.46f, 0.88f) },
+            new ModeInfo { Id = "community", Name = "Community", Players = "10-15 คน",   Length = "—",              Lock = "เร็วๆ นี้: เปิดเป็นรอบเวลา", Color = new Color(0.55f, 0.58f, 0.66f) },
         };
-        ModeInfo CurrentMode => Modes.FirstOrDefault(m => m.Id == mode) ?? Modes[1];
+        ModeInfo CurrentMode => Modes.FirstOrDefault(m => m.Id == mode) ?? Modes[0];
 
         // Chapters (docs 24 §15.3 P0): the six ChapterDefinition assets in Resources/Chapters, the pick saved on the
         // device, and the best score per difficulty band. Home shows the pick, S13 changes it.
@@ -75,7 +76,8 @@ namespace Bob.Game
         {
             try
             {
-                mode = PlayerPrefs.GetString("bob.mode", "solo"); if (Modes.All(m => m.Id != mode)) mode = "solo";
+                // Old APKs saved "solo"/"tasks"/"friends"; all of them ran the same story match, so they migrate to it.
+                mode = PlayerPrefs.GetString("bob.mode", "story"); if (Modes.All(m => m.Id != mode)) mode = "story";
                 xp = PlayerPrefs.GetInt("bob.xp", 0); gems = PlayerPrefs.GetInt("bob.gems", 0);
                 band = Mathf.Clamp(PlayerPrefs.GetInt("bob.band", 1), 1, 3);
                 band = BobChapters.Selected(Level).Band; // the chapter is the truth; a stale prefs band follows it
@@ -325,7 +327,7 @@ namespace Bob.Game
         {
             ScreenBackdrop("lobby_coffee_shop");
             TopBar(screenRoot, "เลือกโหมด", true);
-            float mw = CardW(6, 16, 290); var row = BobUi.Pin(BobUi.Rect("Modes", screenRoot), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 10), new Vector2(6 * mw + 5 * 16, 600));
+            float mw = CardW(5, 16, 290); var row = BobUi.Pin(BobUi.Rect("Modes", screenRoot), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 10), new Vector2(5 * mw + 4 * 16, 600));
             var h = row.gameObject.AddComponent<HorizontalLayoutGroup>(); h.spacing = 16; h.childControlWidth = h.childControlHeight = true; h.childForceExpandWidth = h.childForceExpandHeight = true;
             foreach (var m in Modes)
             {
@@ -348,6 +350,11 @@ namespace Bob.Game
                 BobUi.Pin(st.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 30), new Vector2(260, 52));
                 if (locked) { var li = BobUi.Img(card.transform, "icon_cross", 56, BobUi.Muted); BobUi.Pin(li.rectTransform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-12, -12), new Vector2(56, 56)); }
             }
+            // Say out loud what is playable, so a locked card is a roadmap item and not a broken button (B2).
+            var note = BobUi.Label(screenRoot, "ตอนนี้มีแมตช์จริงโหมดเดียว: Story (1 คน + บอท) · โหมดออนไลน์/หลายคนจะมาในเวอร์ชันถัดไป", 22, BobUi.Surface, TextAnchor.MiddleLeft);
+            BobUi.OutlineText(note, BobUi.Ink, 0.25f);
+            BobUi.Pin(note.rectTransform, Vector2.zero, Vector2.zero, new Vector2(40, 40), new Vector2(1300, 46));
+
             // Mode select hands over to stage select (S13), which is the screen that decides what the match runs.
             var ok = BobUi.Button(screenRoot, "เลือก", BobUi.Sun, () => { Sfx("ui_confirm"); phase = Phase.Chapters; RenderAll(); }, 56);
             BobUi.Pin((RectTransform)ok.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-40, 30), new Vector2(420, 180));
