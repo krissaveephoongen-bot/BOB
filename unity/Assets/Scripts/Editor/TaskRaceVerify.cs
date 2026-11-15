@@ -402,8 +402,19 @@ namespace Bob.EditorTools
                     hero.transform.position + new Vector3(0f, 0.72f, 0f), 40f, hud);
         }
 
+        /// <summary>BOB_VIEW=2400x1080 renders the phone aspect instead of the 16:9 default (the APK is landscape-locked).</summary>
+        static void ViewSize(out int w, out int h)
+        {
+            w = 1600; h = 900;
+            var v = System.Environment.GetEnvironmentVariable("BOB_VIEW");
+            if (string.IsNullOrEmpty(v)) return;
+            var wh = v.Split('x');
+            if (wh.Length == 2 && int.TryParse(wh[0], out var vw) && int.TryParse(wh[1], out var vh) && vw > 0 && vh > 0) { w = vw; h = vh; }
+        }
+
         static void Shot(string file, Vector3 eye, Vector3 look, float fov, BobTaskRaceHud hud = null)
         {
+            ViewSize(out var w, out var h);
             var main = Camera.main;
             var go = new GameObject("VerifyCam", typeof(Camera));
             var cam = go.GetComponent<Camera>();
@@ -414,7 +425,7 @@ namespace Bob.EditorTools
             cam.fieldOfView = fov;
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.80f, 0.90f, 0.98f);
-            cam.aspect = 1600f / 900f;
+            cam.aspect = (float)w / h;
             // The shot camera is new, so it needs its own written sky and the same grade the play camera carries.
             go.AddComponent<BobSkyBackdrop>().Fit();
             go.AddComponent<BobPostGrade>();
@@ -424,18 +435,21 @@ namespace Bob.EditorTools
             Camera hudWas = null;
             if (hud != null && hud.UiCanvas != null) { hudWas = hud.UiCanvas.worldCamera; hud.UiCanvas.worldCamera = cam; }
 
-            var rt = new RenderTexture(1600, 900, 24, RenderTextureFormat.ARGB32) { antiAliasing = 2 };
+            var rt = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32) { antiAliasing = 2 };
             cam.targetTexture = rt;
             cam.Render();
 
             if (hud != null && hud.UiCanvas != null) hud.UiCanvas.worldCamera = hudWas;
 
             RenderTexture.active = rt;
-            var tex = new Texture2D(1600, 900, TextureFormat.RGB24, false);
-            tex.ReadPixels(new Rect(0, 0, 1600, 900), 0, 0);
+            var tex = new Texture2D(w, h, TextureFormat.RGB24, false);
+            tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
             tex.Apply();
             Directory.CreateDirectory("Logs");
             var png = tex.EncodeToPNG();
+            if (w != 1600 || h != 900)
+                file = Path.Combine(Path.GetDirectoryName(file) ?? "Logs",
+                    Path.GetFileNameWithoutExtension(file) + "-" + w + "x" + h + Path.GetExtension(file));
             string written = file;
             try { File.WriteAllBytes(Path.GetFullPath(file), png); }
             catch (IOException)

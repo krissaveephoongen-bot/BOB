@@ -35,7 +35,10 @@ namespace Bob.Game
         {
             var dir = System.IO.Path.Combine(Application.dataPath, "../Logs");
             System.IO.Directory.CreateDirectory(dir);
-            ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(dir, "bob-game-" + name + ".png"));
+            // BOB_VIEW=2400x1080 names the phone-aspect run apart from the 16:9 captures.
+            var view = System.Environment.GetEnvironmentVariable("BOB_VIEW");
+            var tag = string.IsNullOrEmpty(view) ? "" : "-" + view;
+            ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(dir, "bob-game-" + name + tag + ".png"));
         }
 
         IEnumerator WaitFor(System.Func<bool> cond, float timeout)
