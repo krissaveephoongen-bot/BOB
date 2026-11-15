@@ -25,6 +25,7 @@ Shader "BOB/Dressing"
         _DirtAmount ("Dirt", Range(0,1)) = 0
         _DirtColor ("Dirt colour", Color) = (0.42,0.34,0.36,1)
         _CurvatureScale ("Curvature scale", Range(0,3)) = 1
+        _Wind ("Wind", Range(0,1)) = 0
     }
     SubShader
     {
@@ -49,6 +50,7 @@ Shader "BOB/Dressing"
             float _RampLow, _RampMid, _RampSoft, _Rim, _DirtAmount, _CurvatureScale;
             float _AmbientBoost, _Shininess, _Sheen, _Mottle;
             float _Strata, _StrataScale;
+            float _Wind;
             fixed4 _CliffShade;
 
             struct appdata { float4 vertex : POSITION; float3 normal : NORMAL; float2 uv : TEXCOORD0; fixed4 color : COLOR; };
@@ -69,6 +71,12 @@ Shader "BOB/Dressing"
                 v2f o;
                 float4 wp = mul(unity_ObjectToWorld, v.vertex);
                 float4 flatWp = wp;
+                // Wind: vertex-colour alpha is the bend weight (0 at a blade's root, 1 at its tip), so only grass moves
+                // and only its tips move. Every other BOB/Dressing mesh keeps _Wind at its 0 default and stands still.
+                float wind = v.color.a * _Wind;
+                float ph = _Time.y * 1.7 + wp.x * 1.9 + wp.z * 1.4;
+                wp.x += (sin(ph) + 0.35 * sin(ph * 2.3 + 1.1)) * 0.045 * wind;
+                wp.z += cos(ph * 0.83) * 0.03 * wind;
                 wp.xyz = BobCurvePosition(wp.xyz, _CurvatureScale);
                 o.pos = mul(UNITY_MATRIX_VP, wp);
                 o.flatPos = flatWp.xyz;

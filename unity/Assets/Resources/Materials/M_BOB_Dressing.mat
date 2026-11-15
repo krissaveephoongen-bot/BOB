@@ -42,6 +42,7 @@ Material:
     - _Shininess: 24
     - _Strata: 0
     - _StrataScale: 2.2
+    - _Wind: 0
     m_Colors:
     - _CliffShade: {r: 0.55, g: 0.48, b: 0.58, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}

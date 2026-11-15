@@ -26,6 +26,10 @@ namespace Bob.TaskRace
         GameObject root;
         Mesh mesh;
 
+        /// <summary>The one renderer of this field. DioramaAmbient turns its wind on through a property block.</summary>
+        public MeshRenderer Renderer => root != null ? root.GetComponent<MeshRenderer>() : null;
+        public static readonly int WindId = Shader.PropertyToID("_Wind");
+
         readonly List<Vector3> verts = new List<Vector3>();
         readonly List<Vector3> normals = new List<Vector3>();
         readonly List<Vector2> uvs = new List<Vector2>();
@@ -152,7 +156,8 @@ namespace Bob.TaskRace
             // A mown tone, not a shadow: the first pass shaded 0.86 of the dark grass cell and the polygons read as
             // camouflage blotches. Keeping the shade at or above 1 makes them gentle mower stripes.
             float shade = 0.97f + (float)rnd.NextDouble() * 0.11f;
-            var tint = new Color(shade, shade, shade, 1f);
+            // Alpha 0: the shader reads vertex alpha as wind weight, and a mown patch is painted on the lawn.
+            var tint = new Color(shade, shade, shade, 0f);
             var c = p + Vector3.up * 0.012f;
             var ring = new Vector3[sides];
             for (int i = 0; i < sides; i++)
@@ -199,8 +204,9 @@ namespace Bob.TaskRace
             int i = verts.Count;
             verts.Add(p - side); verts.Add(p + side); verts.Add(tip);
             for (int k = 0; k < 3; k++) { normals.Add(n); uvs.Add(cell); }
-            colors.Add(new Color(baseShade, baseShade, baseShade, 1f));
-            colors.Add(new Color(baseShade, baseShade, baseShade, 1f));
+            // Alpha is the wind weight: roots pinned (0), tips free (1), so a gust bends the blade instead of sliding it.
+            colors.Add(new Color(baseShade, baseShade, baseShade, 0f));
+            colors.Add(new Color(baseShade, baseShade, baseShade, 0f));
             colors.Add(new Color(tipShade, tipShade, tipShade, 1f));
             tris.Add(i); tris.Add(i + 1); tris.Add(i + 2);
         }
@@ -244,7 +250,7 @@ namespace Bob.TaskRace
             var ez = rot * Vector3.forward * (w * 0.38f);
             var ey = Vector3.up * (h * 0.5f);
             float shade = 1f + (float)rnd.NextDouble() * 0.12f;
-            var tint = new Color(shade, shade, shade, 1f);
+            var tint = new Color(shade, shade, shade, 0f);
             var bottom = new[] { c - ex - ey - ez, c + ex - ey - ez, c + ex - ey + ez, c - ex - ey + ez };
             var top = new[] { c - ex * 0.8f + ey - ez * 0.8f, c + ex * 0.8f + ey - ez * 0.8f,
                               c + ex * 0.8f + ey + ez * 0.8f, c - ex * 0.8f + ey + ez * 0.8f };

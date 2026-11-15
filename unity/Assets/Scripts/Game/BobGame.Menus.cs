@@ -260,6 +260,7 @@ namespace Bob.Game
         {
             var selected = Chapter;
             ScreenBackdrop(selected.Backdrop);
+            MenuBackgroundVideo.Attach(screenRoot);
             TopBar(screenRoot, "เลือกด่าน", true);
 
             var all = BobChapters.All;
@@ -334,6 +335,7 @@ namespace Bob.Game
         void ModeSelect()
         {
             ScreenBackdrop("lobby_coffee_shop");
+            MenuBackgroundVideo.Attach(screenRoot);
             TopBar(screenRoot, "เลือกโหมด", true);
             float mw = CardW(6, 16, 290); var row = BobUi.Pin(BobUi.Rect("Modes", screenRoot), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 10), new Vector2(6 * mw + 5 * 16, 600));
             var h = row.gameObject.AddComponent<HorizontalLayoutGroup>(); h.spacing = 16; h.childControlWidth = h.childControlHeight = true; h.childForceExpandWidth = h.childForceExpandHeight = true;

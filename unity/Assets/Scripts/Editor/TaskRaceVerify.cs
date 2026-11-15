@@ -131,11 +131,15 @@ namespace Bob.EditorTools
             }
             else Debug.LogWarning("[TaskRaceVerify] no BobTaskRaceHud in the scene: the task list is not drawn.");
 
+            // The ambient pass is built in code at runtime; build the same thing here so the shots show it.
+            DioramaAmbient.Preview();
+            DioramaAmbient.Warm(4f);
             Render(suffix, hud);
             RenderS28(suffix, hud, spots, hero);
             RenderResult(suffix, hud, manager, hero);
             RenderChapter(suffix, hud, manager, hero);
             RenderPause(suffix, hud, manager, hero);
+            DioramaAmbient.PreviewTearDown();
             Debug.Log($"[TaskRaceVerify] {scenePath} done.");
         }
 
@@ -204,8 +208,8 @@ namespace Bob.EditorTools
             }
             var camera = hero.transform.position + new Vector3(0f, 6.2f, -5.2f);
             var look = hero.transform.position + new Vector3(0f, 0.72f, 0f);
-            // One shot per interaction kind: scrub, trace, sort, fill, sequence, hold, tap, multi-step glass.
-            foreach (var id in new[] { "T02", "T01", "T05", "T11", "T15", "T06", "T10", "T08" })
+            // One shot per interaction kind: scrub, trace, sort, fill, sequence, hold, tap, multi-step glass, slimes.
+            foreach (var id in new[] { "T02", "T01", "T05", "T11", "T15", "T06", "T10", "T08", "T03" })
             {
                 var spec = MinigameLibrary.All.FirstOrDefault(g => g.Id == id);
                 if (spec.Id != id) continue;
@@ -220,7 +224,14 @@ namespace Bob.EditorTools
                 hud.DebugAdvanceCard(id == "T15" ? 1.5f : 0.9f);
                 Debug.Log($"[TaskRaceVerify] S28 card {id}: {spot.SpotId} \"{spot.TaskName}\" " +
                           $"live={live} cardOpen={hud.CardOpen} step=\"{hud.CardStep}\" hint=\"{hud.CardHint}\"");
+                // The feedback pass (Among Us grammar): a ring blooms, the hit body squashes, and both are gone in 0.3 s.
+                // The shot is taken mid-bloom, so the painted burst from the Leonardo set shows up in the PNG too.
+                string fxBefore = hud.DebugProbeCard();
+                hud.DebugAdvanceCard(0.06f);
                 Shot($"Logs/taskrace{suffix}-s28-{id.ToLowerInvariant()}.png", camera, look, 40f, hud);
+                string fxMid = hud.DebugCardFx;
+                hud.DebugAdvanceCard(0.36f);
+                Debug.Log($"[TaskRaceVerify] S28 fx {id}: {fxBefore} -> +0.06s {fxMid} -> +0.42s {hud.DebugCardFx}");
                 spot.Close(false);
                 hud.DebugCloseCard();
             }
@@ -479,6 +490,7 @@ namespace Bob.EditorTools
 
             var rt = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32) { antiAliasing = 2 };
             cam.targetTexture = rt;
+            BobMinigameStage.RenderForCapture(); // the S28 stage draws to its own texture; no engine camera runs here
             cam.Render();
 
             if (hud != null && hud.UiCanvas != null) hud.UiCanvas.worldCamera = hudWas;

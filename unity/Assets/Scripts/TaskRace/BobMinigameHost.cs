@@ -37,15 +37,28 @@ namespace Bob.TaskRace
         {
             public RectTransform rect;
             public Image img;
+            public Transform twin;
             public Vector2 home, vel;
             public float hp = 1f, life, maxLife, size;
             public bool alive = true, removed;
             public int bin;
+            public Vector2 slotHome;          // sort: the dealt slot a wrong drop returns to
+            public float popLife, punch, shake;
+            public bool flying, flyRemove;
+            public Vector2 flyFrom, flyTo;
+            public float flyT;
         }
 
+        sealed class RingFx { public Image img; public float t, life, from, to, spin, aspect = 1f; public Color colour; }
+
+        // Among Us feedback grammar: every touch answers back inside one frame and the answer is over in < 0.3 s.
+        const float PopTime = 0.18f, RingTime = 0.30f, PunchTime = 0.20f, ShakeTime = 0.26f, FlyTime = 0.16f;
+
         RectTransform play, layer, fx;
+        BobMinigameStage stage3d;
         MiniSurface surface;
         TMP_Text waitLabel, placeholder;
+        int slimeVariant;
 
         TaskSpot spot;
         string taskId = "";
@@ -65,12 +78,23 @@ namespace Bob.TaskRace
         readonly List<Item> pads = new List<Item>();
         readonly List<GrimeDot> grime = new List<GrimeDot>();
         readonly List<GameObject> decor = new List<GameObject>();
+        readonly List<RingFx> rings = new List<RingFx>();
         readonly List<int> sequence = new List<int>();
         int seqIndex, playIndex;
         float flashTimer;
         int flashPad = -1, stage;
+        float bandFlash, lastPuff = -1f;
+
+        static readonly Vector2 FillBottleAt = new Vector2(-80f, -10f);
+
+        // The Leonardo RAW set (art/docs/25) cut to RGBA by art/tools/raw_vfx_to_unity.py: a hit star, a step
+        // sparkle, scrub foam, a dust puff and a splash. Missing files just fall back to the flat ring.
+        static bool fxLoaded;
+        static Sprite fxHit, fxSparkle, fxFoam, fxDust, fxSplash, fxSplat;
 
         Image brush, meterTrack, meterFill, bottleFill, band;
+        Item holdButton;
+        bool bandLit;
         bool rotate;
         float holdSeconds = 2f;
         int turnRequired = 6;
@@ -90,6 +114,7 @@ namespace Bob.TaskRace
 
         public void Build(RectTransform card)
         {
+            LoadFx();
             play = BobUi.Rect("MiniPlay", card);
             BobUi.Pin(play, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 30f), new Vector2(AreaW, AreaH));
             var bg = play.gameObject.AddComponent<Image>();
@@ -97,6 +122,12 @@ namespace Bob.TaskRace
             bg.raycastTarget = true;
             surface = play.gameObject.AddComponent<MiniSurface>();
             surface.host = this;
+
+            // The 3D stage is the backdrop and the bodies; the rects below stay as hitboxes and labels.
+            var stageGo = new GameObject("MiniStage3D");
+            stageGo.transform.SetParent(transform, false);
+            stage3d = stageGo.AddComponent<BobMinigameStage>();
+            stage3d.Build(play);
 
             layer = BobUi.Rect("Items", play);
             BobUi.Stretch(layer);
@@ -132,6 +163,7 @@ namespace Bob.TaskRace
             placeholder.gameObject.SetActive(false);
             play.gameObject.SetActive(true);
             SetupStep();
+            BobTutorialClip.Play(play, taskId);
             return true;
         }
 
@@ -140,6 +172,7 @@ namespace Bob.TaskRace
         {
             playing = false; complete = false;
             HideItems();
+            if (stage3d != null) stage3d.Hide();
             play.gameObject.SetActive(true);
             placeholder.text = text;
             placeholder.gameObject.SetActive(true);
@@ -151,6 +184,7 @@ namespace Bob.TaskRace
         {
             playing = false;
             HideItems();
+            if (stage3d != null) stage3d.Hide();
             if (play != null) play.gameObject.SetActive(false);
             if (waitLabel != null) waitLabel.gameObject.SetActive(false);
             if (placeholder != null) placeholder.gameObject.SetActive(false);
@@ -161,6 +195,7 @@ namespace Bob.TaskRace
         {
             playing = false; complete = false;
             HideItems();
+            if (stage3d != null) stage3d.Hide();
             if (brush != null) brush.gameObject.SetActive(false);
         }
 
@@ -171,10 +206,42 @@ namespace Bob.TaskRace
             Advance();
         }
 
+        /// <summary>Verify only: fire one ring and squash one live item, so the log proves the new tweens run.</summary>
+        public string DebugFeedbackProbe()
+        {
+            Ring(Vector2.zero, T.success, 200f);
+            foreach (var it in items)
+            {
+                if (!it.alive || it.popLife > 0f) continue;
+                it.alive = false; it.removed = true;
+                Pop(it, T.primaryLight);
+                break;
+            }
+            return DebugFeedbackState;
+        }
+
+        public string DebugFeedbackState
+        {
+            get
+            {
+                int popping = 0, flying = 0;
+                foreach (var it in items)
+                {
+                    if (it.popLife > 0f) popping++;
+                    if (it.flying) flying++;
+                }
+                int art = (fxHit != null ? 1 : 0) + (fxSparkle != null ? 1 : 0) + (fxFoam != null ? 1 : 0) +
+                          (fxDust != null ? 1 : 0) + (fxSplash != null ? 1 : 0) + (fxSplat != null ? 1 : 0);
+                return $"rings={rings.Count} popping={popping} flying={flying} fx={art}/6";
+            }
+        }
+
         // ---------------------------------------------------------------- tick
 
         public bool Tick(float dt)
         {
+            TickJuice(dt); // feedback keeps moving even when the card is already solved
+            Sync3D();
             if (complete) return true;
             if (!playing || spot == null) return false;
 
@@ -207,6 +274,17 @@ namespace Bob.TaskRace
 
         void Advance()
         {
+            if (stepKind == MiniKind.Hold)
+            {
+                Ring(holdCentre, T.success, 360f);
+                Fx(fxSparkle, holdCentre, 420f, 0.5f, 35f);
+            }
+            if (stepKind == MiniKind.Fill)
+            {
+                Ring(FillBottleAt, T.success, 320f);
+                Fx(fxSparkle, FillBottleAt, 380f, 0.5f, 35f);
+                bandFlash = 0.4f;
+            }
             if (step + 1 < stepCount)
             {
                 step++;
@@ -224,6 +302,178 @@ namespace Bob.TaskRace
             Hint = "เสร็จแล้ว";
             if (spot != null) spot.SetProgress(1f);
         }
+
+        /// <summary>Among Us feedback grammar: every touch answers in one frame — a ring blooms under the finger,
+        /// the hit body squashes away, a wrong drop flies back and shakes, a sorted card flies into its bin.</summary>
+        void TickJuice(float dt)
+        {
+            for (int i = rings.Count - 1; i >= 0; i--)
+            {
+                var r = rings[i];
+                r.t += dt;
+                float u = Mathf.Clamp01(r.t / r.life);
+                float k = 1f - (1f - u) * (1f - u); // ease-out: fast bloom, soft finish
+                var rt = (RectTransform)r.img.transform;
+                float s = Mathf.Lerp(r.from, r.to, k);
+                rt.sizeDelta = new Vector2(s, s * r.aspect);
+                if (r.spin != 0f) rt.localRotation = Quaternion.Euler(0f, 0f, r.spin * k);
+                var c = r.colour; c.a *= 1f - u;
+                r.img.color = c;
+                if (u >= 1f) { DestroyNow(r.img.gameObject); rings.RemoveAt(i); }
+            }
+
+            for (int i = 0; i < items.Count; i++)
+                if (!pads.Contains(items[i])) TickItem(items[i], dt); // pads live in both lists: tick them once
+            for (int i = 0; i < bins.Count; i++) TickItem(bins[i], dt);
+            for (int i = 0; i < pads.Count; i++) TickItem(pads[i], dt);
+
+            if (band != null)
+            {
+                bandFlash = Mathf.Max(0f, bandFlash - dt);
+                var c = T.success;
+                c.a = 0.35f + 0.55f * Mathf.Clamp01(bandFlash / 0.4f); // the green band blinks as the liquid reaches it
+                band.color = c;
+            }
+        }
+
+        void TickItem(Item it, float dt)
+        {
+            if (it == null || it.rect == null) return;
+            if (it.popLife > 0f)
+            {
+                it.popLife -= dt;
+                float k = Mathf.Clamp01(it.popLife / PopTime);
+                it.rect.localScale = Vector3.one * (0.45f * k + 0.55f * k * k);
+                if (it.popLife <= 0f) it.rect.gameObject.SetActive(false);
+                return;
+            }
+            if (it.punch > 0f) it.punch = Mathf.Max(0f, it.punch - dt);
+            if (it.flying)
+            {
+                it.flyT += dt / FlyTime;
+                float u = Mathf.Clamp01(it.flyT);
+                float k = 1f - (1f - u) * (1f - u);
+                it.home = Vector2.Lerp(it.flyFrom, it.flyTo, k);
+                it.rect.anchoredPosition = it.home;
+                if (u >= 1f)
+                {
+                    it.flying = false;
+                    if (it.flyRemove) Pop(it, T.primaryLight);
+                    else { it.rect.localScale = Vector3.one; it.shake = ShakeTime; }
+                }
+                return;
+            }
+            if (it.shake > 0f)
+            {
+                it.shake = Mathf.Max(0f, it.shake - dt);
+                float amp = 18f * (it.shake / ShakeTime);
+                it.rect.anchoredPosition = it.home + new Vector2(Mathf.Sin(Time.unscaledTime * 70f) * amp, 0f);
+                if (it.shake <= 0f) it.rect.anchoredPosition = it.home;
+            }
+        }
+
+        void Ring(Vector2 at, Color colour, float size)
+        {
+            if (fx == null) return;
+            var img = BobUi.Disc(fx, new Color(colour.r, colour.g, colour.b, 0.55f), size * 0.35f, "HitRing");
+            img.raycastTarget = false;
+            ((RectTransform)img.transform).anchoredPosition = at;
+            rings.Add(new RingFx
+            {
+                img = img, life = RingTime, from = size * 0.35f, to = size * 1.5f,
+                colour = new Color(colour.r, colour.g, colour.b, 0.55f),
+            });
+        }
+
+        /// <summary>A painted burst instead of the flat ring: the Leonardo sprite blooms, turns and fades the same way.</summary>
+        void Fx(Sprite sprite, Vector2 at, float size, float life, float spin = 0f)
+        {
+            if (fx == null || sprite == null) return;
+            var r = BobUi.Rect("Burst", fx);
+            var img = r.gameObject.AddComponent<Image>();
+            img.sprite = sprite;
+            img.raycastTarget = false;
+            float aspect = sprite.rect.height / Mathf.Max(1f, sprite.rect.width);
+            r.anchoredPosition = at;
+            r.sizeDelta = new Vector2(size * 0.35f, size * 0.35f * aspect);
+            var colour = Color.white;
+            img.color = colour;
+            rings.Add(new RingFx
+            {
+                img = img, life = life, from = size * 0.35f, to = size * 1.5f,
+                colour = colour, spin = spin, aspect = aspect,
+            });
+        }
+
+        static void LoadFx()
+        {
+            if (fxLoaded) return;
+            fxLoaded = true;
+            fxHit = LoadSprite("fx_hitstar");
+            fxSparkle = LoadSprite("fx_sparkle");
+            fxFoam = LoadSprite("fx_foam");
+            fxDust = LoadSprite("fx_dust");
+            fxSplash = LoadSprite("fx_splash");
+            fxSplat = LoadSprite("fx_slimesplat");
+        }
+
+        /// <summary>The PNGs import as plain textures in this 3D project, so the sprite is built here, not imported.</summary>
+        static Sprite LoadSprite(string file)
+        {
+            var tex = Resources.Load<Texture2D>("Textures/Minigame/" + file);
+            if (tex == null) return null;
+            return Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
+        }
+
+        /// <summary>Squash an item away; the hitbox dies at once, the body shrinks for PopTime.</summary>
+        void Pop(Item it, Color ringColour, Sprite art = null)
+        {
+            if (it == null || it.rect == null || it.popLife > 0f) return;
+            it.popLife = PopTime;
+            // Big bodies (cards, slimes, pads) get the painted star; small ones keep the cheap ring so a row of
+            // dust specks does not turn into a wall of sparks. A caller can force its own sprite.
+            var sprite = art != null ? art : it.size >= 120f ? fxHit : null;
+            if (sprite != null) Fx(sprite, it.rect.anchoredPosition, it.size * 1.7f, PopTime * 2.2f, 70f);
+            else Ring(it.rect.anchoredPosition, ringColour, it.size * 1.4f);
+        }
+
+        void StartFly(Item it, Vector2 to, bool removeAtEnd)
+        {
+            if (it == null || it.rect == null) return;
+            it.flying = true; it.flyRemove = removeAtEnd;
+            it.flyFrom = it.rect.anchoredPosition; it.flyTo = to; it.flyT = 0f;
+        }
+
+        void ClearRings()
+        {
+            foreach (var r in rings)
+                if (r.img != null) DestroyNow(r.img.gameObject);
+            rings.Clear();
+        }
+
+        /// <summary>Keep every 3D twin on the stage under its hitbox, and hidden exactly when the hitbox is.</summary>
+        void Sync3D()
+        {
+            if (stage3d == null || !stage3d.Ready) return;
+            foreach (var it in items) SyncTwin(it);
+            foreach (var bin in bins) SyncTwin(bin);
+            foreach (var pad in pads) SyncTwin(pad);
+            foreach (var dot in grime) SyncTwin(dot.Dot);
+        }
+
+        void SyncTwin(Item it)
+        {
+            if (it == null || it.twin == null) return;
+            bool on = it.alive || it.popLife > 0f || it.flying;
+            on = on && it.rect != null && it.rect.gameObject.activeSelf;
+            stage3d.SetActive(it.twin, on);
+            if (!on) return;
+            float punch = it.punch > 0f ? 1f + 0.18f * Mathf.Sin((1f - it.punch / PunchTime) * Mathf.PI) : 1f;
+            stage3d.SetSize(it.twin, it.rect.localScale.y * punch);
+            stage3d.Place(it.twin, it.rect.anchoredPosition); // after the size, so the contact shadow scales with the body
+        }
+
+        void LateUpdate() => Sync3D();
 
         // ---------------------------------------------------------------- pointer
 
@@ -276,7 +526,13 @@ namespace Bob.TaskRace
             {
                 holding = false;
                 if (Mathf.Abs(fillLevel - bandCentre) <= bandHalf) { stepProgress = 1f; Hint = "ระดับพอดี"; }
-                else if (fillLevel > bandCentre + bandHalf) { fillLevel = 0.5f; Hint = "ล้น! ลองใหม่"; }
+                else if (fillLevel > bandCentre + bandHalf)
+                {
+                    fillLevel = 0.5f;
+                    Hint = "ล้น! ลองใหม่";
+                    bandLit = false;
+                    Ring(FillBottleAt, T.danger, 300f);
+                }
             }
         }
 
@@ -288,6 +544,7 @@ namespace Bob.TaskRace
             stepProgress = 0f; holdFill = 0f; waitTimer = 0f; fillLevel = 0f;
             turnAccum = 0f; lastAngle = float.NaN; held = null; holding = false;
             seqIndex = 0; playIndex = 0; flashTimer = 0.35f; flashPad = -1; stage = taskId == "T15" ? 0 : 1;
+            bandLit = false; lastPuff = -1f;
             rng = new System.Random((spot != null ? spot.SpotId.GetHashCode() : 7) ^ (step * 397) ^ taskId.GetHashCode());
 
             stepKind = kind;
@@ -298,6 +555,8 @@ namespace Bob.TaskRace
             if (taskId == "T06") rotate = true;
             Hint = HintFor(taskId, step);
 
+            slimeVariant = 0;
+            if (stage3d != null && stage3d.Ready) stage3d.Show(taskId); // also drops last step's twins
             AddContext();
             switch (stepKind)
             {
@@ -361,7 +620,8 @@ namespace Bob.TaskRace
             }
             else if (stepKind == MiniKind.Hold)
             {
-                var ring = BobUi.Disc(layer, new Color(1f, 1f, 1f, 0.7f), 430f, "HoldRing");
+                // Diameter = the 180 px touch radius, and faint: on the 3D stage a strong white disc reads as a torch beam.
+                var ring = BobUi.Disc(layer, new Color(1f, 1f, 1f, 0.14f), 360f, "HoldRing");
                 ring.raycastTarget = false;
                 ((RectTransform)ring.transform).anchoredPosition = new Vector2(0f, -20f);
                 Track(ring.gameObject);
@@ -396,6 +656,7 @@ namespace Bob.TaskRace
         /// <summary>A flat backdrop rect in the play area, behind the items (negative order pushes it further back).</summary>
         void Bg(Vector2 pos, Vector2 size, Color colour, int order = 0)
         {
+            if (stage3d != null && stage3d.Ready) return; // the 3D stage paints the room instead
             var rt = BobUi.Rect("Bg", layer);
             var img = rt.gameObject.AddComponent<Image>();
             img.color = colour;
@@ -472,15 +733,21 @@ namespace Bob.TaskRace
                 var dir = new Vector2((float)rng.NextDouble() * 2f - 1f, (float)rng.NextDouble() * 2f - 1f);
                 if (dir.sqrMagnitude > 0.0001f) dir.Normalize();
                 float radius = stain.size * (0.3f + 0.24f * (float)rng.NextDouble());
+                float dotSize = 22f + 30f * (float)rng.NextDouble();
                 var tint = stain.img.color;
-                var img = BobUi.Disc(layer, new Color(tint.r * 0.92f, tint.g * 0.88f, tint.b * 0.8f, 0.9f),
-                    22f + 30f * (float)rng.NextDouble(), "Grime");
+                var img = BobUi.Disc(layer, new Color(tint.r * 0.92f, tint.g * 0.88f, tint.b * 0.8f, 0.9f), dotSize, "Grime");
                 img.raycastTarget = false;
                 var rt = (RectTransform)img.transform;
                 rt.anchoredPosition = stain.home + dir * radius;
                 rt.SetSiblingIndex(stain.rect.GetSiblingIndex()); // behind the stain: the specks read as a ragged halo
                 Track(img.gameObject);
-                grime.Add(new GrimeDot { Dot = new Item { rect = rt, img = img, home = rt.anchoredPosition }, Stain = stain });
+                var dot = new Item { rect = rt, img = img, home = rt.anchoredPosition };
+                if (stage3d != null && stage3d.Ready)
+                {
+                    dot.twin = stage3d.AddBlob(rt.anchoredPosition, dotSize * 0.9f, img.color);
+                    img.enabled = false;
+                }
+                grime.Add(new GrimeDot { Dot = dot, Stain = stain });
             }
         }
 
@@ -509,15 +776,10 @@ namespace Bob.TaskRace
 
             if (taskId == "T08")
             {
-                var pos = new Vector2(-380f, -30f);
-                var body = MakeBox(pos, new Vector2(180f, 300f), T.secondary, "สเปรย์", 34);
+                // The whole bottle is the touch target: the stage shows the real prop, the rect stays as the hitbox.
+                var body = MakeBox(new Vector2(-380f, -30f), new Vector2(180f, 300f), T.secondary, "สเปรย์", 34,
+                    true, "SM_spray_bottle");
                 body.bin = -1;
-                var neck = MakeBox(pos + new Vector2(0f, 170f), new Vector2(80f, 50f), T.ink, "", 10, false);
-                Track(neck.rect.gameObject);
-                var trigger = MakeBox(pos + new Vector2(80f, 215f), new Vector2(150f, 34f), T.ink, "", 10, false);
-                Track(trigger.rect.gameObject);
-                var tip = MakeBox(pos + new Vector2(150f, 215f), new Vector2(30f, 30f), T.sky, "", 10, false);
-                Track(tip.rect.gameObject);
                 return;
             }
 
@@ -545,11 +807,12 @@ namespace Bob.TaskRace
                 Track(bin.rect.gameObject);
             }
             // Dealt onto a shuffled grid instead of pure random spots: 6-10 cards never pile up on one another.
+            // The rows sit under the backdrop bins and above the tray row, so no card lands on a prop.
             int cols = 4, rows = Mathf.CeilToInt(count / 4f);
             var slots = new List<Vector2>();
             for (int r = 0; r < rows; r++)
             for (int c = 0; c < cols; c++)
-                slots.Add(new Vector2(-360f + c * 240f, 190f - r * 120f));
+                slots.Add(new Vector2(-360f + c * 240f, 130f - r * 120f));
             for (int i = slots.Count - 1; i > 0; i--)
             {
                 int j = rng.Next(i + 1);
@@ -561,6 +824,7 @@ namespace Bob.TaskRace
                 var bite = MakeBox(slots[i], new Vector2(180f, 110f),
                     new Color(T.surface.r, T.surface.g, T.surface.b, 1f), names[kindIndex], 30);
                 bite.bin = kindIndex;
+                bite.slotHome = slots[i];
             }
         }
 
@@ -568,6 +832,7 @@ namespace Bob.TaskRace
         {
             string label = taskId == "T13" ? "กดค้างยก" : taskId == "T06" ? "กดค้างแล้วหมุน" : "กดค้าง";
             var button = MakeDisc(new Vector2(0f, -20f), 320f, new Color(T.primary.r, T.primary.g, T.primary.b, 1f));
+            holdButton = button;
             var text = BobUi.Label(button.rect, label, 40, T.ink, TextAnchor.MiddleCenter, FontStyle.Bold);
             BobUi.Stretch(text.rectTransform);
             holdCentre = new Vector2(0f, -20f);
@@ -675,10 +940,10 @@ namespace Bob.TaskRace
                 else if (taskId == "T10")
                 {
                     it.life -= dt;
-                    if (it.life <= 0f)
+                    if (it.alive && it.life <= 0f)
                     {
                         it.alive = false;
-                        it.rect.gameObject.SetActive(false);
+                        Pop(it, T.surface, fxDust); // the pile puffs out instead of blinking off
                         it.home = RandomSpot();
                         it.life = it.maxLife;
                     }
@@ -705,6 +970,16 @@ namespace Bob.TaskRace
             fillLevel = Mathf.Clamp01(fillLevel + pourSpeed * dt);
             var rt = (RectTransform)bottleFill.transform;
             rt.sizeDelta = new Vector2(rt.sizeDelta.x, fillLevel * 424f);
+
+            bool inBand = Mathf.Abs(fillLevel - bandCentre) <= bandHalf;
+            if (inBand && !bandLit)
+            {
+                bandLit = true;
+                bandFlash = 0.4f;
+                Ring(FillBottleAt, T.success, 260f); // the band blinks the moment the liquid reaches it
+                Fx(fxSplash, FillBottleAt, 300f, 0.35f);
+            }
+            else if (!inBand) bandLit = false;
         }
 
         void TickSequence(float dt)
@@ -744,7 +1019,7 @@ namespace Bob.TaskRace
                 if (Vector2.Distance(it.home, p) <= 54f)
                 {
                     it.alive = false;
-                    it.rect.gameObject.SetActive(false);
+                    Pop(it, T.primaryLight);
                     covered++;
                 }
             }
@@ -758,6 +1033,13 @@ namespace Bob.TaskRace
             if (stain == null || stain.hp <= 0f) return;
             float required = taskId == "T08" ? 900f : taskId == "T09" ? 700f : 1500f - 200f * (difficulty - 1);
             stain.hp = Mathf.Max(0f, stain.hp - distance / required);
+            if (Time.unscaledTime - lastPuff > 0.14f)
+            {
+                lastPuff = Time.unscaledTime;
+                // A little foam pop under the finger so scrubbing feels like contact, not a number going down.
+                if (fxFoam != null) Fx(fxFoam, p, 180f, 0.3f, -40f);
+                else Ring(p, T.surface, 110f);
+            }
             PaintScrub();
             float left = 0f;
             foreach (var it in items) left += Mathf.Max(0f, it.hp);
@@ -768,9 +1050,11 @@ namespace Bob.TaskRace
         {
             foreach (var it in items)
             {
+                if (it.popLife > 0f) continue; // already squashing away
                 float hp = Mathf.Max(0f, it.hp);
                 it.img.color = new Color(it.img.color.r, it.img.color.g, it.img.color.b, 0.2f + 0.8f * hp);
                 it.rect.localScale = Vector3.one * (0.75f + 0.25f * hp);
+                if (hp <= 0.02f && it.alive) { it.alive = false; Pop(it, T.primaryLight); }
             }
             foreach (var dot in grime)
             {
@@ -786,7 +1070,10 @@ namespace Bob.TaskRace
 
         void StartHold(Vector2 p)
         {
-            if (Vector2.Distance(p, holdCentre) <= 180f) { holding = true; lastAngle = float.NaN; }
+            if (Vector2.Distance(p, holdCentre) > 180f) return;
+            holding = true; lastAngle = float.NaN;
+            if (holdButton != null) holdButton.punch = PunchTime;
+            Ring(holdCentre, T.primaryLight, 340f);
         }
 
         void TurnAt(Vector2 p)
@@ -825,23 +1112,32 @@ namespace Bob.TaskRace
         void DropHeld(Vector2 p)
         {
             if (held == null) return;
+            var card = held;
+            held = null;
             foreach (var bin in bins)
             {
                 if (Vector2.Distance(bin.home, p) > 180f) continue;
-                if (bin.bin == held.bin)
+                if (bin.bin == card.bin)
                 {
-                    Remove(held);
+                    card.alive = false; card.removed = true; // counts at once; the card flies into the bin
+                    StartFly(card, bin.home, true);
+                    bin.punch = PunchTime;
+                    Ring(bin.home, T.success, 260f);
+                    Fx(fxSparkle, bin.home, 360f, 0.5f, 30f);
+                    Hint = HintFor(taskId, step);
                     int sorted = 0;
                     foreach (var it in items) if (!it.alive) sorted++;
                     stepProgress = items.Count == 0 ? 1f : sorted / (float)items.Count;
                 }
                 else
                 {
-                    held.home = held.rect.anchoredPosition = RandomSpot();
+                    StartFly(card, card.slotHome, false); // wrong bin: slide home and shake, never teleport
+                    Ring(p, T.danger, 200f);
+                    Hint = "ผิดถัง! ลองอีกที";
                 }
-                break;
+                return;
             }
-            held = null;
+            StartFly(card, card.slotHome, false);
         }
 
         void PadAt(Vector2 p)
@@ -854,11 +1150,15 @@ namespace Bob.TaskRace
                 {
                     seqIndex++;
                     stepProgress = seqIndex / (float)sequence.Count;
+                    pads[i].punch = PunchTime;
+                    Ring(pads[i].home, PadBase(pads[i]), 230f);
                 }
                 else
                 {
                     seqIndex = 0; playIndex = 0; stage = 0; flashTimer = 0.5f; flashPad = -1;
                     Hint = "ผิด! ดูอีกรอบ";
+                    pads[i].shake = ShakeTime;
+                    Ring(pads[i].home, T.danger, 230f);
                 }
                 return;
             }
@@ -870,6 +1170,7 @@ namespace Bob.TaskRace
             var pad = pads[index];
             pad.img.color = lit ? T.primary : PadBase(pad);
             pad.rect.localScale = Vector3.one * (lit ? 1.06f : 1f);
+            if (pad.twin != null && stage3d != null) stage3d.Tint(pad.twin, pad.img.color);
         }
 
         Color PadBase(Item pad)
@@ -888,10 +1189,11 @@ namespace Bob.TaskRace
             foreach (var it in items)
             {
                 if (alive >= wanted) break;
-                if (it.alive || it.removed) continue;
+                if (it.alive || it.removed || it.popLife > 0f) continue;
                 it.alive = true;
                 it.life = it.maxLife;
                 it.home = RandomSpot();
+                it.rect.localScale = Vector3.one;
                 it.rect.anchoredPosition = it.home;
                 it.rect.gameObject.SetActive(true);
                 alive++;
@@ -952,7 +1254,7 @@ namespace Bob.TaskRace
             if (it == null) return;
             it.alive = false;
             it.removed = true;
-            it.rect.gameObject.SetActive(false);
+            Pop(it, T.primaryLight, taskId == "T03" ? fxSplat : null);
         }
 
         Item MakeDisc(Vector2 pos, float size, Color colour)
@@ -965,11 +1267,28 @@ namespace Bob.TaskRace
             outline.effectColor = new Color(T.ink.r, T.ink.g, T.ink.b, 0.75f);
             outline.effectDistance = new Vector2(3f, -3f);
             var item = new Item { rect = rt, img = img, home = pos, size = size };
+            if (stage3d != null && stage3d.Ready)
+            {
+                item.twin = DiscTwin(item, colour);
+                img.enabled = false; // the stage body is the picture; the rect stays as the hitbox
+            }
             items.Add(item);
             return item;
         }
 
-        Item MakeBox(Vector2 pos, Vector2 size, Color colour, string text, int fontSize, bool addToItems = true)
+        /// <summary>The 3D body for a round item: a real slime rig, a smear on the table, a plate, or a dust puff.</summary>
+        Transform DiscTwin(Item it, Color colour)
+        {
+            if (taskId == "T03") return stage3d.AddSlime(it.home, it.size * 0.9f, slimeVariant++);
+            if (taskId == "T08" && stepKind == MiniKind.Scrub) return stage3d.AddPane(it.home, it.size * 0.8f, colour);
+            if (taskId == "T06") return stage3d.AddDisc(it.home, it.size * 0.9f, colour, 0.30f); // a dial, not a puff
+            if (taskId == "T07") return stage3d.AddDisc(it.home, it.size * 0.9f, colour, 0.12f);
+            if (taskId == "T02" || taskId == "T09") return stage3d.AddDisc(it.home, it.size * 0.9f, colour, 0.06f);
+            return stage3d.AddBlob(it.home, it.size * 0.7f, colour);
+        }
+
+        Item MakeBox(Vector2 pos, Vector2 size, Color colour, string text, int fontSize, bool addToItems = true,
+            string prop = null)
         {
             var img = BobUi.Panel(layer, colour, null, "MiniBox");
             img.raycastTarget = false;
@@ -984,6 +1303,13 @@ namespace Bob.TaskRace
             var label = BobUi.Label(rt, text, fontSize, T.ink, TextAnchor.MiddleCenter, FontStyle.Bold);
             BobUi.Stretch(label.rectTransform);
             var item = new Item { rect = rt, img = img, home = pos, size = Mathf.Max(size.x, size.y) };
+            if (stage3d != null && stage3d.Ready)
+            {
+                item.twin = prop != null
+                    ? stage3d.AddProp(prop, pos, size.y / BobMinigameStage.PxPerUnit)
+                    : stage3d.AddBox(pos, size, colour);
+                img.enabled = false; // the label stays on top of the 3D box
+            }
             if (addToItems) items.Add(item);
             return item;
         }
@@ -994,6 +1320,7 @@ namespace Bob.TaskRace
                 if (it.rect != null) DestroyNow(it.rect.gameObject);
             foreach (var go in decor)
                 if (go != null) DestroyNow(go);
+            ClearRings();
             items.Clear();
             bins.Clear();
             pads.Clear();
@@ -1001,6 +1328,8 @@ namespace Bob.TaskRace
             decor.Clear();
             sequence.Clear();
             held = null;
+            holdButton = null;
+            bandLit = false;
             meterTrack = meterFill = bottleFill = band = null;
         }
 

@@ -21,7 +21,8 @@ Shader "Hidden/BOB/PostGrade"
             #include "UnityCG.cginc"
 
             sampler2D _MainTex;
-            float _Vignette, _Saturation, _Contrast;
+            sampler2D _BloomTex;
+            float _Vignette, _Saturation, _Contrast, _Exposure, _Bloom;
             float4 _ShadowTone, _HighlightTone;
 
             struct appdata { float4 vertex : POSITION; float2 uv : TEXCOORD0; };
@@ -39,12 +40,16 @@ Shader "Hidden/BOB/PostGrade"
             {
                 fixed4 c = tex2D(_MainTex, i.uv);
 
+                c.rgb *= _Exposure;
                 c.rgb = saturate((c.rgb - 0.5) * _Contrast + 0.5);
                 float lum = dot(c.rgb, float3(0.299, 0.587, 0.114));
                 c.rgb = lerp(lum.xxx, c.rgb, _Saturation);
 
                 float l = saturate((lum - 0.25) * 1.6);
                 c.rgb *= lerp(_ShadowTone.rgb, _HighlightTone.rgb, l);
+
+                // Bloom is added after the tone curve so it reads as light, not as washed-out colour.
+                c.rgb += tex2D(_BloomTex, i.uv).rgb * _Bloom;
 
                 float2 d = i.uv - 0.5;
                 c.rgb *= saturate(1.0 - dot(d, d) * _Vignette);

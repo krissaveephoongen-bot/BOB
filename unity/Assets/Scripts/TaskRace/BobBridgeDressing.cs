@@ -15,6 +15,8 @@ namespace Bob.TaskRace
         public float width = 1.7f;
         [Tooltip("How far the piers drop under the deck, in units.")]
         public float drop = 2.4f;
+        [Tooltip("Railing posts and rails above the stringers. Off for the pastel skin (docs 24 §15.13): the reference bridge is bare planks.")]
+        public bool rails = true;
         [Tooltip("Piers stand just outside this half-width (the water channel).")]
         public float waterHalfWidth = 2.1f;
         public int seed = 1975;
@@ -83,6 +85,7 @@ namespace Bob.TaskRace
                 Box(new Vector3(centre.x, deck - 0.16f, centre.z + z),
                     new Vector3(halfL, 0.075f, 0.1f), 0f, Beam, 0.9f);
 
+                if (!rails) continue;
                 for (float x = -halfL + 0.3f; x <= halfL - 0.25f; x += 1.55f)
                 {
                     Box(new Vector3(centre.x + x, top + 0.4f, centre.z + z),
