@@ -57,6 +57,24 @@ created by the Nakama module on start. Code: `server/analytics.js`.
   `http://127.0.0.1:7350` and the development key `defaulthttpkey`.
 - Raw SQL: `docker compose exec postgres psql -U postgres -d nakama -c "select event, count(*) from bob_events group by 1"`.
 
+## LINE Login (docs 28)
+
+The green button on the login screen signs a player in with LINE. The browser does the OAuth dance and the Nakama RPC
+`line_login` exchanges the code, because LINE requires the channel secret even with PKCE — so the secret lives in
+`server/.env` (git-ignored, copy `server/.env.example`) and never in the APK:
+
+```
+LINE_CHANNEL_ID=...
+LINE_CHANNEL_SECRET=...
+LINE_REDIRECT_URI=bob://line-login
+```
+
+Then `node build-module.js && docker compose restart nakama`, and check the server sees it:
+`curl -s -X POST "http://127.0.0.1:7350/v2/rpc/line_status?http_key=defaulthttpkey&unwrap=true" -d '{}'`.
+The Android build adds the `bob://line-login` intent filter (`Editor/BobAndroidDeepLinks.cs`): an APK built before this
+change cannot be returned to by the browser. The login screen also accepts a pasted redirect URL when the browser does
+not come back by itself. Full setup and limits: `art/docs/28_LINE_Login.md`.
+
 ## One rule set, three places
 
 `prototype/index.html` is the source of truth. After changing a rule there:

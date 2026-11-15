@@ -43,7 +43,7 @@ namespace Bob.Game
 
         void StartTaskRace()
         {
-            matchId = "t" + System.DateTime.UtcNow.Ticks.ToString("x"); seed = Random.Range(1, 8388608);
+            seed = Random.Range(1, 8388608);
             Time.timeScale = 1; Sfx("ui_confirm");
             R = BobMatch.MakeRound(1, seed); stack.Clear(); hand.Clear(); tasks.Begin(R.Need, 9999);
             ResetRoomForRound(); foreach (var en in enemies) if (en.t != null) en.t.gameObject.SetActive(false);

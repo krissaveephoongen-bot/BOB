@@ -1,6 +1,6 @@
 // Battle of the Brooms: GDD sections 9 and 20 gameplay that is not in the core loop.
-//  - Pushing the cart: walk into it (solo). Park it next to the shelves you need. Online the server owns the cart position, so it stays put.
-//  - Item rest table (โต๊ะพักของ): stash up to 2 hand parts, take them back later (solo; online needs a server op).
+//  - Pushing the cart: walk into it. Park it next to the shelves you need.
+//  - Item rest table (โต๊ะพักของ): stash up to 2 hand parts, take them back later.
 //  - Split-screen test view: our room and the rival's side by side for a few seconds before the scores (GDD 9).
 using System.Collections;
 using System.Collections.Generic;
@@ -66,7 +66,7 @@ namespace Bob.Game
         /// <summary>The cart keeps rolling after a push (friction), tilts into the turn, its load bounces, and it kicks up dust when fast.</summary>
         void TickCart(float dt)
         {
-            if (cartT == null || Online) return;
+            if (cartT == null) return;
             if (pushedFrame) pushedFrame = false;
             else if (cartVel.sqrMagnitude > 0.0009f)
             {
@@ -106,7 +106,7 @@ namespace Bob.Game
             WorldLabel("โต๊ะพักของ", new Vector2(TableRect.center.x, TableRect.yMin - 0.16f), 0.03f, BobUi.Ink);
             var tableProp = tableSr.gameObject.AddComponent<StationProp>();
             tableProp.Configure(InteractableKind.Table, "table", NearCart, null); tableProp.BoundsProvider = () => TableRect;
-            tableProp.CanInteractProvider = () => !Online; tableProp.PromptProvider = () => CtxText(ComputeCtx()); tableProp.OnInteract = _ => DoCtx(); detector.Register(tableProp);
+            tableProp.CanInteractProvider = () => true; tableProp.PromptProvider = () => CtxText(ComputeCtx()); tableProp.OnInteract = _ => DoCtx(); detector.Register(tableProp);
             tableItemsRoot = new GameObject("TableItems").transform; tableItemsRoot.SetParent(worldRoot, false);
         }
 
@@ -122,7 +122,7 @@ namespace Bob.Game
 
         void TakeFromTable()
         {
-            if (Online || phase != Phase.Build || !nearTable || tableItems.Count == 0) return;
+            if (phase != Phase.Build || !nearTable || tableItems.Count == 0) return;
             if (hand.Count >= HandMax) { Toast("มือเต็มแล้ว ถือได้ " + HandMax + " ชิ้น"); Sfx("drop_invalid"); return; }
             hand.Add(tableItems[tableItems.Count - 1]); tableItems.RemoveAt(tableItems.Count - 1);
             Sfx("pickup"); PopHand(); RenderAll();
@@ -132,7 +132,6 @@ namespace Bob.Game
         {
             if (tableItemsRoot == null) return;
             foreach (Transform c in tableItemsRoot) Destroy(c.gameObject);
-            if (Online) return;
             for (int i = 0; i < tableItems.Count; i++)
             {
                 var ic = MakeSprite("T_" + tableItems[i], tableItemsRoot, "part_" + tableItems[i], Raise(new Vector2(TableRect.center.x - 0.16f + i * 0.32f, TableRect.yMin - 0.03f), 0.5f), 0.3f, false);
@@ -252,7 +251,7 @@ namespace Bob.Game
             if (tgt.HasValue) ctxArrow.transform.localPosition = tgt.Value + Raise(Vector2.zero, 0.08f * Mathf.Sin(Time.unscaledTime * 6f));
 
             // enemies appear 2.5 s after "ลุย!" (UX 5A.8) and never before everyone could move
-            if (phase == Phase.Build && overlay == Overlay.None && !Online) buildElapsed += dt;
+            if (phase == Phase.Build && overlay == Overlay.None) buildElapsed += dt;
             if (!taskMode && !enemiesLive && phase == Phase.Build && buildElapsed >= EnemySpawnDelay) ActivateEnemies(true);
         }
 
@@ -294,7 +293,7 @@ namespace Bob.Game
             BobUi.OutlineText(ban, BobUi.Ink, 0.3f);
             BobUi.Pin(ban.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -36), new Vector2(1200, 100));
             SplitHalf(0.25f, "ทีมเรา · " + Hero.Name, L.Mine, L.Stats, L.Win);
-            SplitHalf(0.75f, Online ? "ทีมคู่แข่ง" : "คู่แข่ง", L.Rival.Score, L.Rival.Ev.Stats, !L.Win);
+            SplitHalf(0.75f, "คู่แข่ง", L.Rival.Score, L.Rival.Ev.Stats, !L.Win);
             var line = BobUi.Rect("Divider", screenRoot); line.gameObject.AddComponent<Image>().color = BobUi.Ink;
             BobUi.Pin(line, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -20), new Vector2(6, 760));
             var hint = BobUi.Label(screenRoot, "แตะเพื่อข้าม", 24, BobUi.Surface, TextAnchor.MiddleCenter);

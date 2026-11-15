@@ -1,10 +1,10 @@
 // Battle of the Brooms: the Task Race list of docs 16 section 2.2, as pure C# with no Unity types.
-// This is the phone-side mirror of the rules the Nakama match runs (prototype/index.html -> server/modules/index.js):
-// the same seeded draw, the same weights and the same per-step minimum times, so the server can check every
-// TASK_BEGIN / TASK_DONE a phone sends. Run SelfTest() (or unity-check) after touching either side.
+// This is the phone-side source of truth for the seeded draw (prototype/index.html carries the same numbers):
+// the same weights and per-step minimum times, so a future authoritative server can check every TASK_BEGIN /
+// TASK_DONE a phone sends. Run SelfTest() after touching it.
 //
-// The draw is mulberry32, not System.Random: the browser, the server and this file have to agree bit for bit,
-// and only an algorithm written down by hand can promise that across three runtimes.
+// The draw is mulberry32, not System.Random: the browser and this file have to agree bit for bit,
+// and only an algorithm written down by hand can promise that across runtimes.
 using System;
 using System.Collections.Generic;
 using System.Linq;

@@ -99,3 +99,21 @@ print(r.json())  # ได้ task id แล้วดูสถานะที่ 
 
 - `tripo doctor` ขึ้น `api reachability ... fetch failed` ใน cloud: โดเมน `openapi.tripo3d.ai` ไม่อยู่ใน allowlist (แก้แล้ว 13 พ.ย. 2026)
 - การตั้ง `TRIPO_API_BASE_URL=https://api.tripo3d.ai` ใช้ไม่ได้ โดเมนเก่าไม่มี path `/v3` (ได้ 404)
+
+## 7. นำเข้า .glb เข้า Unity (ติดตั้ง 15 พ.ย. 2026)
+
+Unity 6 ไม่มีตัวแปลง glTF ในตัว ไฟล์ `.glb` ที่วางไว้จึงถูกมองเป็นไฟล์ดิบ (`DefaultImporter`) และ `Resources.Load` ไม่เห็น
+
+| รายการ | สถานะ |
+| --- | --- |
+| แพ็กเกจ | `com.unity.cloud.gltfast` **6.21.0** ใน `unity/Packages/manifest.json` (ต้อง Unity 6000 ขึ้นไป, ดึง Burst 1.8.30 + Collections 2.6.8 + Mathematics 1.3.3 มาด้วย) |
+| โฟลเดอร์หยอดไฟล์ | `unity/Assets/TripoRaw/` — `.glb` ทุกไฟล์ได้ prefab + mesh + material + texture เป็น sub-asset |
+| เมนูใน Editor | `Bob > Art > Reimport GLB` (`Assets/Scripts/Editor/BobGlbImport.cs`) |
+| รันแบบ headless | `Unity.exe -batchmode -quit -projectPath unity -executeMethod Bob.EditorTools.BobGlbImport.ReimportAll` — log บอกจำนวน mesh/verts/tris ต่อไฟล์ |
+| ข้อควรระวังตอนรัน headless | ต้องปิด Unity Editor ก่อน ไม่งั้นโปรเจกต์ถูกล็อกแล้ว batchmode ออกทันที (exit code 1, log มีแค่บรรทัด `changed project path`) |
+
+ผลรอบแรก 15 พ.ย. 2026: **13/13 ไฟล์นำเข้าสำเร็จ** (awning canopy, curved wall, display cabinet, condominium, striped awning, kitchen counter, school, shop, tree, dining table, gazebo, house diorama, pergola)
+
+**⚠ ขนาดหนักเกินมือถือ:** แต่ละไฟล์ ~60–65 MB, ~1.0 ล้าน verts, ~1.9 ล้าน tris — ตัวเดียวหนักกว่าทั้งเกมรวมกัน ต้องลด poly ก่อนใช้จริง (สั่ง Tripo export low-poly/Smart Low Poly หรือ Decimate ใน Blender 4.5 ที่ติดตั้งอยู่) เหมาะกับเป้าราว 20k–50k tris ต่อพร็อพ และ ≤100k ต่อโมเดลฮีโร่
+
+**⚠ อย่า commit .glb ดิบ:** 13 ไฟล์รวม ~795 MB ถ้าจะเก็บใน git ต้องใช้ Git LFS หรือเก็บนอก repo

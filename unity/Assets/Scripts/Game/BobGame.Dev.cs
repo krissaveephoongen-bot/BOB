@@ -11,16 +11,7 @@ namespace Bob.Game
 {
     public partial class BobGame
     {
-        public const string AutoKey = "Bob.AutoGame", OnlineKey = "Bob.AutoOnline";
-
-        bool OnlineTestRequested()
-        {
-#if UNITY_EDITOR
-            return UnityEditor.SessionState.GetBool(OnlineKey, false);
-#else
-            return false;
-#endif
-        }
+        public const string AutoKey = "Bob.AutoGame";
 
         bool AutoRequested()
         {
@@ -58,7 +49,7 @@ namespace Bob.Game
         /// <summary>Screenshots of every out-of-match screen (UX spec section 4), taken before the bot plays.</summary>
         IEnumerator MenuTour()
         {
-            var steps = new (Phase p, string shot)[] { (Phase.Splash, "m1-splash"), (Phase.Login, "m2-login"), (Phase.Title, "m3-home"), (Phase.Modes, "m4-modes"), (Phase.Chapters, "m4b-chapters") };
+            var steps = new (Phase p, string shot)[] { (Phase.Splash, "m1-splash"), (Phase.Title, "m3-home"), (Phase.Modes, "m4-modes"), (Phase.Chapters, "m4b-chapters") };
             foreach (var (p, s) in steps) { phase = p; RenderAll(); yield return new WaitForSeconds(0.7f); Shot(s); yield return new WaitForSeconds(0.3f); }
             OpenHeroSelect(true); yield return new WaitForSeconds(0.7f); Shot("m5-heroes"); yield return new WaitForSeconds(0.3f); heroTimerOn = false;
             phase = Phase.Shop; RenderAll(); yield return new WaitForSeconds(0.7f); Shot("m6-shop"); yield return new WaitForSeconds(0.3f);
@@ -68,10 +59,6 @@ namespace Bob.Game
 
         IEnumerator AutoPlay()
         {
-            Debug.Log("[BobGameBot] waiting for the server check");
-            yield return WaitFor(() => netNote != "กำลังเชื่อมต่อเซิร์ฟเวอร์…", 12f);
-            Debug.Log("[BobGameBot] " + netNote);
-            if (OnlineTestRequested()) { yield return AutoPlayOnline(); yield break; }
 #if UNITY_EDITOR
             if (UnityEditor.SessionState.GetBool("bob.taskbot", false)) { yield return AutoPlayTasks(); yield break; }
 #endif
@@ -80,7 +67,6 @@ namespace Bob.Game
             Shot("1-title");
             yield return new WaitForSeconds(0.3f);
             StartMatch();
-            int serverScored = 0;
             while (true)
             {
                 yield return WaitFor(() => phase == Phase.Intro, 15f);
@@ -109,8 +95,7 @@ namespace Bob.Game
                 if (BobRules.CountLayers(stack) == 0) Debug.LogError("[BobGameBot] nothing was placed");
                 Submit();
                 yield return WaitFor(() => phase == Phase.Test, 15f);
-                if (last.FromServer) serverScored++;
-                Debug.Log($"[BobGameBot] round {roundNo}: us {last.Mine.Total} ({(last.FromServer ? "server" : "local")}) vs rival {last.Rival.Score.Total} -> {(last.Win ? "win" : "lose")}");
+                Debug.Log($"[BobGameBot] round {roundNo}: us {last.Mine.Total} vs rival {last.Rival.Score.Total} -> {(last.Win ? "win" : "lose")}");
                 if (roundNo == 1) { yield return new WaitForSeconds(0.8f); Shot("4a-split"); yield return new WaitForSeconds(SplitTime); Shot("4-test"); yield return new WaitForSeconds(0.3f); }
                 bool over = MatchOver;
                 AfterTest();
@@ -118,9 +103,9 @@ namespace Bob.Game
             }
             yield return WaitFor(() => phase == Phase.Result, 5f);
             yield return new WaitForSeconds(0.4f); Shot("5-result"); yield return new WaitForSeconds(0.5f);
-            bool ok = phase == Phase.Result && (!online || serverScored == roundNo);
-            Debug.Log(ok ? $"GAME TEST PASSED: {wins}:{losses} in {roundNo} rounds, {serverScored} scored by the server, online={online}"
-                         : $"GAME TEST FAILED: phase {phase}, server scored {serverScored}/{roundNo}, online={online}");
+            bool ok = phase == Phase.Result;
+            Debug.Log(ok ? $"GAME TEST PASSED: {wins}:{losses} in {roundNo} rounds"
+                         : $"GAME TEST FAILED: phase {phase}");
         }
 
         /// <summary>Task Race bot: walks to every task point, opens the card, plays the minigame with a scripted pointer, and expects the win screen.</summary>

@@ -1,4 +1,4 @@
-// Battle of the Brooms: the screens around the match (UX spec section 4): splash, login (guest), Home / lobby (S10),
+// Battle of the Brooms: the screens around the match (UX spec section 4): splash, Home / lobby (S10),
 // mode select (S11), hero select with the 15 s timer (S16), shop with a purchase confirm (S30 + P02).
 // Everything uses the real art in the project (Leonardo menu icons, room pictures, hero portraits); where the spec needs
 // a picture that does not exist yet (wardrobe, friends, recipe book icons) the button is simply left out and listed in
@@ -95,14 +95,13 @@ namespace Bob.Game
             catch (Exception) { }
         }
 
-        // ---------------------------------------------------------------- boot flow: splash -> (login once) -> home
+        // ---------------------------------------------------------------- boot flow: splash -> home
 
         IEnumerator BootFlow()
         {
             phase = Phase.Splash; RenderAll();
             yield return new WaitForSecondsRealtime(1.6f);
-            bool guest = false; try { guest = PlayerPrefs.GetInt("bob.guest", 0) == 1; } catch (Exception) { }
-            phase = guest ? Phase.Title : Phase.Login; RenderAll();
+            phase = Phase.Title; RenderAll();
         }
 
         void Splash()
@@ -113,25 +112,6 @@ namespace Bob.Game
             var t = H1(screenRoot, "สมรภูมิปัดกวาด", 64, BobUi.Surface); BobUi.OutlineText(t, BobUi.Ink, 0.3f);
             BobUi.Pin(t.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -210), new Vector2(1100, 100));
             Sfx("broom_sweep");
-        }
-
-        void Login()
-        {
-            ScreenBackdrop("lobby_condo");
-            var panel = Card(screenRoot, "LoginPanel", BobUi.Bg); BobUi.Pin(panel, new Vector2(0.72f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(680, 0));
-            VStack(panel, 50, 44, 22); panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            var lg = BobUi.Img(panel, "menu_logo", 190); BobUi.Size(lg, 190, 190, 0, 190);
-            BobUi.Label(panel, "ยินดีต้อนรับ", 52, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
-            var guest = BobUi.Button(panel, "เล่นเลย (Guest)", BobUi.Sun, () =>
-            {
-                try { PlayerPrefs.SetInt("bob.guest", 1); PlayerPrefs.Save(); } catch (Exception) { }
-                Sfx("ui_confirm"); phase = Phase.Title; RenderAll();
-            }, 44);
-            BobUi.Size(guest, 144, 160); guest.GetComponentInChildren<TMP_Text>().fontStyle = FontStyles.Bold;
-            // A4: the Google and Apple sign-ins were dead grey buttons; no account system exists yet, so they are gone
-            // until one does. Guest is the only way in and it really does reach Home.
-            BobUi.Label(panel, "บัญชีจริง (Google / Apple) จะมาในเวอร์ชันถัดไป", 24, BobUi.Muted, TextAnchor.MiddleCenter);
-            BobUi.Label(panel, "นโยบายความเป็นส่วนตัว · ข้อตกลง", 24, BobUi.Muted, TextAnchor.MiddleCenter);
         }
 
         // ---------------------------------------------------------------- shared pieces
@@ -184,10 +164,6 @@ namespace Bob.Game
             BobUi.Pin(BobUi.Img(gear.transform, "menu_settings", 70).rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(70, 70));
             Chip(S, "item_coin", coins.ToString(), new Vector2(-150, -24));
             Chip(S, "item_gem", gems.ToString(), new Vector2(-150 - 244, -24));
-            // server state (top centre)
-            var net = Card(S, "Net", BobUi.Surface, 1f); BobUi.Pin(net, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(-60, -30), new Vector2(330, 72));
-            var nt = BobUi.Label(net, online ? "ออนไลน์" : connecting ? "กำลังเชื่อมต่อ…" : "ออฟไลน์", 26, online ? BobUi.Good : BobUi.Muted, TextAnchor.MiddleCenter); BobUi.Stretch(nt.rectTransform, 40, 0, 0, 0);
-            BobUi.Pin(BobUi.Img(net, online ? "icon_check" : connecting ? "icon_timer" : "icon_cross", 34, online ? BobUi.Good : BobUi.Muted).rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(22, 0), new Vector2(34, 34));
 
             // hero on a stage (tap = choose hero)
             var stage = BobUi.Disc(S, new Color(1, 1, 1, 0.28f), 440, "Stage"); BobUi.Pin(stage.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 0), new Vector2(440, 440));
@@ -214,6 +190,15 @@ namespace Bob.Game
             var mb = BobUi.Button(S, "", BobUi.Hex("#FFF0C2"), () => { Sfx("ui_tap"); phase = Phase.Chapters; RenderAll(); }, 22);
             BobUi.Pin((RectTransform)mb.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-590, 40), new Vector2(300, 190));
             mb.GetComponentInChildren<TMP_Text>().text = "";
+            // B6 (docs 13): the stage card art fills the chip, and a warm veil sits over it so the Thai labels stay
+            // readable. With no art the chip keeps its flat cream fill and the veil is simply the fill.
+            var stageArt = BobUi.Rect("StageArt", mb.transform); BobUi.Stretch(stageArt);
+            var stageImg = stageArt.gameObject.AddComponent<Image>();
+            stageImg.sprite = BobUi.Art != null && BobUi.Art.Has("stage_card") ? BobUi.Art.Get("stage_card") : null;
+            stageImg.preserveAspect = false; stageImg.raycastTarget = false;
+            if (stageImg.sprite == null) stageImg.enabled = false;
+            var veil = BobUi.Rect("Veil", mb.transform); BobUi.Stretch(veil);
+            veil.gameObject.AddComponent<Image>().color = new Color(1f, 0.988f, 0.94f, 0.66f);
             BobUi.Pin(BobUi.Img(mb.transform, chapter.Backdrop, 62).rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(10, -10), new Vector2(74, 62));
             BobUi.Pin(BobUi.Label(mb.transform, $"บท {chapter.Order}", 34, BobUi.Ink, TextAnchor.MiddleLeft, FontStyle.Bold).rectTransform,
                 new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(96f, -18f), new Vector2(190f, 46f));
@@ -385,9 +370,19 @@ namespace Bob.Game
                 var cid = c.Id; bool sel = cid == charId;
                 var card = BobUi.Button(row, "", sel ? BobUi.Hex("#FFF0C2") : BobUi.Surface, () => { SelectChar(cid); }, 24);
                 card.GetComponentInChildren<TMP_Text>().text = "";
-                var bg = BobUi.Rect("Tint", card.transform); BobUi.Pin(bg, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -14), new Vector2(340, 330));
-                var col = BobUi.Hex(c.Color); bg.gameObject.AddComponent<Image>().color = new Color(col.r, col.g, col.b, 0.35f);
+                // B6 (docs 13): the illustrated card fills the whole card. The art is text-free and keeps a calm spotlight
+                // in the middle for the portrait; a cream panel under the text keeps the Thai labels readable.
+                var art = BobUi.Rect("CardArt", card.transform); BobUi.Stretch(art);
+                var ai = art.gameObject.AddComponent<Image>();
+                ai.sprite = BobUi.Art != null && BobUi.Art.Has("card_" + cid) ? BobUi.Art.Get("card_" + cid) : null;
+                ai.preserveAspect = false; ai.raycastTarget = false;
+                var col = BobUi.Hex(c.Color);
+                if (ai.sprite == null) ai.color = new Color(col.r, col.g, col.b, 0.35f); // old tint if the art is missing
+                var panel = BobUi.Rect("TextPanel", card.transform);
+                BobUi.Pin(panel, new Vector2(0.5f, 0), new Vector2(0.5f, 0), Vector2.zero, new Vector2(hw, 272));
+                panel.gameObject.AddComponent<Image>().color = new Color(1f, 0.992f, 0.96f, 0.96f);
                 var pi = BobUi.Img(card.transform, cid + "_portrait", 300); BobUi.Pin(pi.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -30), new Vector2(300, 300));
+                if (sel) BobUi.Pin(BobUi.Img(card.transform, "icon_check", 44, BobUi.Good).rectTransform, Vector2.one, Vector2.one, new Vector2(-14, -14), new Vector2(44, 44));
                 var nm = BobUi.Label(card.transform, c.Name, 50, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold); BobUi.Pin(nm.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -355), new Vector2(340, 66));
                 var ab = BobUi.Label(card.transform, c.Ability, 34, BobUi.Hex(c.Color), TextAnchor.MiddleCenter, FontStyle.Bold); BobUi.Pin(ab.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -420), new Vector2(340, 52));
                 var ds = BobUi.Label(card.transform, c.Desc, 24, BobUi.Muted, TextAnchor.UpperCenter); BobUi.Pin(ds.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -476), new Vector2(330, 110));
@@ -402,9 +397,6 @@ namespace Bob.Game
             var go = BobUi.Button(screenRoot, heroForMatch ? "ยืนยัน" : "เลือก", BobUi.Sun, ConfirmHero, 56);
             BobUi.Pin((RectTransform)go.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-40, 30), new Vector2(420, 180));
             go.GetComponentInChildren<TMP_Text>().fontStyle = FontStyles.Bold;
-            // Online quick match (2-4 players, two teams). This is the shipped screen, so the matchmaker lives here.
-            var on = BobUi.Button(screenRoot, "ออนไลน์ 2-4 คน", online ? BobUi.Teal : BobUi.Surface, FindOnline, 40, online ? Color.white : BobUi.Muted);
-            BobUi.Pin((RectTransform)on.transform, new Vector2(0, 0), new Vector2(0, 0), new Vector2(40, 40), new Vector2(440, 130));
         }
 
         void ConfirmHero()

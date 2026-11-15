@@ -26,12 +26,11 @@ namespace Bob.EditorTools
         public static void Build()
         {
             var lib = BuildLibrary();
-            // Mobile player settings: landscape only, plain http to the local / LAN Nakama allowed.
+            // Mobile player settings: landscape only, either way round.
             PlayerSettings.productName = "Battle of the Brooms";
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.AutoRotation;
             PlayerSettings.allowedAutorotateToPortrait = false; PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
             PlayerSettings.allowedAutorotateToLandscapeLeft = true; PlayerSettings.allowedAutorotateToLandscapeRight = true;
-            PlayerSettings.insecureHttpOption = InsecureHttpOption.AlwaysAllowed;
             if (AssetDatabase.LoadAssetAtPath<GameObject>(AudioPrefab) == null) BobArtMenu.BuildAudioPrefab();
 
             Directory.CreateDirectory("Assets/Scenes");
@@ -80,11 +79,18 @@ namespace Bob.EditorTools
             return lib;
         }
 
+        /// <summary>Rebuilds only the sprite table from the manifest, with no scene writes, after new art is imported.</summary>
+        [MenuItem("Bob/Art/Rebuild Sprite Library")]
+        public static void RebuildLibrary()
+        {
+            var lib = BuildLibrary();
+            Debug.Log($"Bob: art library rebuilt ({lib.entries.Count} entries).");
+        }
+
         /// <summary>SessionState outlives a batch run, so every entry point clears the modes it does not want;
-        /// otherwise a leftover online/task flag silently changes what the next test does.</summary>
+        /// otherwise a leftover task flag silently changes what the next test does.</summary>
         static void ClearModes()
         {
-            SessionState.SetBool(BobGame.OnlineKey, false);
             SessionState.SetBool("bob.taskbot", false);
         }
 
@@ -94,12 +100,6 @@ namespace Bob.EditorTools
         public static void RunTaskTest() { ClearModes(); SessionState.SetBool(ExitKey, true); SessionState.SetBool("bob.taskbot", true); BeginTest(); }
 
         public static void RunTest() { ClearModes(); SessionState.SetBool(ExitKey, true); BeginTest(); }
-
-        // Online: start the bots first (cd server && node mp-host.js 2 ../unity/Logs/bob-mp-match.txt), then run this.
-        [MenuItem("Bob/Run Online Test")]
-        public static void RunOnlineTestFromMenu() { ClearModes(); SessionState.SetBool(ExitKey, false); SessionState.SetBool(BobGame.OnlineKey, true); BeginTest(); }
-
-        public static void RunOnlineTest() { ClearModes(); SessionState.SetBool(ExitKey, true); SessionState.SetBool(BobGame.OnlineKey, true); BeginTest(); }
 
         /// <summary>Test at another screen size: BOB_VIEW=2400x1080 (phone aspect) before starting Unity. Uses the Game view's
         /// fixed-resolution list through reflection (no public API for it).</summary>
@@ -181,7 +181,7 @@ namespace Bob.EditorTools
         {
             Application.logMessageReceived -= OnLog;
             EditorApplication.update -= Watchdog;
-            SessionState.SetBool(BobGame.AutoKey, false); SessionState.SetBool(BobGame.OnlineKey, false); SessionState.SetBool("bob.taskbot", false);
+            SessionState.SetBool(BobGame.AutoKey, false); SessionState.SetBool("bob.taskbot", false);
             bool exit = SessionState.GetBool(ExitKey, false);
             SessionState.SetBool(ExitKey, false);
             EditorApplication.ExitPlaymode();

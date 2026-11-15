@@ -280,7 +280,7 @@ namespace Bob.Game
                 w = worldRoot.InverseTransformPoint(ray.GetPoint(dist));
             }
             else w = cam.ScreenToWorldPoint(p);
-            if (!Online && phase == Phase.Build && tableItems.Count > 0 && TableRect.Contains(w) && nearTable) { TakeFromTable(); return; }
+            if (phase == Phase.Build && tableItems.Count > 0 && TableRect.Contains(w) && nearTable) { TakeFromTable(); return; }
             if (w.x < -0.3f || w.x > RoomW + 0.3f || w.y < -0.3f || w.y > RoomH + 0.3f) return;
             target = new Vector2(Mathf.Clamp(w.x, 0.18f, RoomW - 0.18f), Mathf.Clamp(w.y, 0.18f, RoomH - 0.18f)); stuck = 0;
         }
@@ -347,7 +347,7 @@ namespace Bob.Game
             lastMove = player.LastMove;
             if (lastMove != Vector2.zero)
             {
-                if (!Online) PushCart(old);
+                PushCart(old);
                 stepT += dt; if (stepT > 0.32f) { stepT = 0; Sfx("footstep"); if (World3D) SpawnFxSized("fx_poof", Raise(pos - lastMove.normalized * 0.12f, 0.05f), 0.28f); }
             }
 
@@ -355,7 +355,7 @@ namespace Bob.Game
             detector.Evaluate(pos);
             string n = detector.NearestId(InteractableKind.Shelf);
             bool nc = detector.IsNear(InteractableKind.Cart);
-            bool ntb = !Online && detector.IsNear(InteractableKind.Table);
+            bool ntb = detector.IsNear(InteractableKind.Table);
             if (n != near || nc != nearCart || ntb != nearTable) { near = n; nearCart = nc; nearTable = ntb; if (phase == Phase.Build) Sfx("ui_tap"); RenderAll(); }
 
             // hero
@@ -390,7 +390,7 @@ namespace Bob.Game
             TickHeroModel(dt);
         }
 
-        IEnumerable<Rect> Solids() { foreach (var r in StationRects) yield return r; if (Online) yield return CartRect; yield return SofaRect; if (!Online) yield return TableRect; }
+        IEnumerable<Rect> Solids() { foreach (var r in StationRects) yield return r; yield return SofaRect; yield return TableRect; }
 
         void FitCamera()
         {

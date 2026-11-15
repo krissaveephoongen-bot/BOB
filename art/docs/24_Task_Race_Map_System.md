@@ -875,6 +875,23 @@ owner สั่ง 4 ข้อ: (1) แสงแดดอุ่นพาสเ�
 4. ชื่อที่เกมค้นหา: `Video/menu_loop` (พื้นหลัง S13) และ `Video/tutorial_<taskId>` (เช่น `tutorial_T02`)
 5. ไม่มีไฟล์ = `MenuBackgroundVideo.Available` เป็น false / ช่องสอนถูกซ่อน — ไม่มีเฟรมดำ ไม่มี error
 
+**คลิปที่เลือกวางจริง (15 พ.ย. 2026)** — copy จาก `Assets/Leonardo/Video` เป็นชื่อที่ runtime ค้นหา; ต้นฉบับ 13 คลิปยังอยู่ครบ
+
+| ไฟล์ใน `Assets/Video/` | ต้นทาง (Hailuo) | ใช้ที่ | ขนาด |
+| --- | --- | --- | ---: |
+| `menu_loop.mp4` | cutaway wooden room | พื้นหลัง S13 + S11 | 4.0 MB |
+| `tutorial_T05.mp4` | three sorting bins | แยกขยะ | 4.1 MB |
+| `tutorial_T07.mp4` | ceramic kitchen sink | ล้างจานกองสูง | 7.2 MB |
+| `tutorial_T08.mp4` | glass display shelf | เช็ดกระจก | 4.8 MB |
+| `tutorial_T10.mp4` | broom under oak table | ไล่ฝุ่นใต้โต๊ะ | 4.6 MB |
+| `tutorial_T11.mp4` | retro espresso machine | เติมน้ำยาตามระดับ | 4.8 MB |
+| `tutorial_T15.mp4` | washing machine | จำลำดับเครื่องซักผ้า | 4.1 MB |
+
+- เมนูเลือก **cutaway wooden room** ไม่ใช่ twin-island trailer เพราะวัด first/last frame diff (mean abs, 0–255): cutaway room `3.4` เกือบไร้รอยต่อ ส่วน trailer `53.9` / aerial fly-by `57.6` / sink `52.8` จะเห็นรอยตัดชัดทุก 6.6 วิ (การ์ดสอนถือแค่ 4 วิ จึงไม่กังวลเรื่องนี้)
+- ยังไม่ transcode: เปิด Unity Editor ครั้งถัดไป importer จะแปลง 720p/no-audio แล้วย้ายเข้า `Resources/Video` เอง; ก่อนถึงตอนนั้น `Available` ยังเป็น false และเกมเล่นได้ปกติโดยไม่มีวิดีโอ
+- อีก 6 คลิป (island cutaway, aerial fly-by, twin-island trailer, trash chute, door lock, kitchen counter) ยังไม่ผูก — เก็บไว้ใช้กับ T01/T02/T04/T06/T09/T12/T13 รอบถัดไป
+- **batchmode:** `EditorApplication.delayCall` ไม่ทันรันก่อน `-quit` คลิปจึงถูก import แต่ไม่ย้าย — เพิ่ม `BobVideoImportSettings.MovePending()` (ย้ายทุกคลิปที่ค้างใน `Assets/Video` แบบ synchronous) และ `BobAndroidBuild.BuildApk` เรียกก่อน build; APK 21:09 15 พ.ย. มีคลิปครบ 7 (65.8 → 78.6 MB, log `Bob: 7 video clip(s) moved to Resources/Video before the build`)
+
 **กับดักที่เจอในรอบนี้ (แก้แล้ว)**
 
 1. `VideoClip` ต้อง `using UnityEngine.Video;` ไม่งั้น `error CS0246` ทั้ง editor assembly (รอบแรก compile ไม่ผ่านทั้งชุด)
@@ -887,7 +904,7 @@ owner สั่ง 4 ข้อ: (1) แสงแดดอุ่นพาสเ�
 
 **หลักฐาน:** `Logs/ambient-final.log` — compile 0 error, `[DioramaAmbient] DustMotes: … live at …, Sprites/Default, tex=AmbientDot, alpha=…`, `WaterMist: …`, `Exiting … return code 0`; ภาพ `Logs/taskrace-play.png`, `-wide.png`, `-preview.png`, `-hud.png` เทียบกับชุดก่อน pass `Logs/taskrace-*-2400x1080.png` (12:02) และตัวเลข luminance ที่วัดด้วยสคริปต์ (ระบุในตารางข้างบน)
 
-**ยังไม่ทำ:** ไฟล์วิดีโอจริงยังไม่มีใน repo (ช่องและ import rule พร้อมแล้ว), ไม่มี SFX ต่อการกระทำ, dust/mist ยังเป็น dot กลม (ยังไม่ใช่ bokeh หลายชั้น), ผิวน้ำยังเป็น quad แบนไม่มีขอบฟอง (§15.13 ข้อค้างเดิม), เงาเบลอใต้เกาะยังไม่มี
+**ยังไม่ทำ:** 7 คลิปที่วางไว้ยังรอ transcode ใน Unity และยังไม่ commit (ขนาดรวม 35.4 MB ต้องตัดสินใจเรื่อง LFS ก่อน), ไม่มี SFX ต่อการกระทำ, dust/mist ยังเป็น dot กลม (ยังไม่ใช่ bokeh หลายชั้น), ผิวน้ำยังเป็น quad แบนไม่มีขอบฟอง (§15.13 ข้อค้างเดิม), เงาเบลอใต้เกาะยังไม่มี
 
 **ไม่แตะ:** กติกา (`BobTaskRaceRules`), ตรรกะ `TaskSpot`, layout `BobTaskRaceHud`, opcode 16–21 / `server/`, YAML ของ `TaskRace*.unity` (ไม่ rebuild), และไม่ commit/push
 
@@ -902,3 +919,20 @@ owner ดูภาพกว้างของแผนที่แล้วช�
 - **บอทข้ามจริง** (`Logs/bot-onebridge.log`): `clean 1 on S2_B` → `bridges open … 1 gate(s) lowered` → `sabotage 1 on S1_A` → `BOT CHECK PASSED`
 - ภาพ: `Logs/taskrace-wide.png` (สะพานช่วงเดียวใต้ผาน้ำตก), `Logs/taskrace-play.png`, `-preview.png`, `-hud.png` · **ย้อนกลับได้:** ปรับ `bridgeZ` ใน assembler แล้วเรียก `Tools > BOB > Build Task Race Scene` ทั้งสามโหมด (จะ bake NavMesh ใหม่ให้เอง)
 - **ไม่แตะ:** กติกา/opcode/`server/`, layout ของ `TaskRaceHud`, สถานีและของประดับ (clearance ยังเป็น 0 overlap) · **ยังไม่ commit/push**
+
+### 15.17 E2E ของเส้นทางที่ผู้เล่นเจอจริง (15 พ.ย. 2026)
+
+owner สั่ง "เทส e2e ของแอพ" — ของเดิม (`BobGameScene.RunTest` + `BobGame.Dev.AutoPlay`) บอทเล่น *ในซีนเดียว* ไม่เคยข้ามไป `TaskRace` เลย จึงไม่เคยพิสูจน์ว่าการเดินเรื่องทั้งเส้นต่อกันได้ ของใหม่จึงเป็นตัวขับที่ข้ามซีนได้จริง
+
+- **ไฟล์ใหม่:** `Assets/Scripts/Dev/BobE2EDriver.cs` (ตัวขับ, `DontDestroyOnLoad`) + `Assets/Scripts/Editor/BobE2E.cs` (ปุ่ม `Bob > Run E2E` และ entry point สำหรับ command line) — เปิด `Game.unity`, รอ editor นิ่ง 12 วิ, `EnterPlaymode`, watchdog 900 วิ, แล้วแปลง `[E2E] E2E PASSED/FAILED` เป็น exit code
+- **ลำดับที่กดจริง (ไม่ใช่ teleport):** ปุ่ม `เล่นเลย (Guest)` (S02) → `เล่น` (S10) → รอ `TaskRaceModeManager` ขึ้น → นับถอยหลัง 3-2-1 ครบ → เช็กว่านาฬิกาเดิน (`RemainingSeconds` ลดใน 1 วิ) → ต่อรอบ: `BobTaskRaceHero.SetDestination(จุดของสถานี)` แล้วรอ `TaskSpot.IsNear`, กดปุ่ม `ทำงาน` ของ HUD, กด `BobMinigameHost.DebugSolve()` จนการ์ดปิด, เช็ก `spot.Done` → `DebugAddPoints(400)` + `DebugFinishRound()` (จำลอง "หมดเวลา") → รอการ์ดบท (`กลับเมนู`) → กด `กลับเมนู` → รอหน้า Home กลับมา
+- **กติกาของตัวขับ:** รอบจะเริ่มได้เมื่อ **ไม่มีบัตรเปิด · ไม่นับถอยหลัง · นาฬิกา > 1 · มีสถานีของฝั่งเราที่ยังสกปรก** (เพราะสถานีถูกแจกใหม่ใน `BeginRound` และ `FinishRound` ปฏิเสธระหว่างช่วงส่งต่อรอบ); จะหยุดทำงานก็ต่อเมื่อ **งานของเรานำคู่แข่ง** (เสมองานตัดสินด้วยแต้มที่เติมให้) ไม่งั้นอาจแพ้ด้วยจำนวนงานทั้งที่ฟีดแบ็กทุกอย่างถูก; `DebugFinishRound` ยิงซ้ำทุก 0.5 วิจนกว่าซีรีส์จะลงบัญชี
+- **บั๊กที่เจอระหว่างทำ** (บันทึกไว้เพราะเป็นกับดักของ harness แนวนี้):
+  1. จุดยืนห่าง `0.75 × InteractRadius` ทำให้ walk หยุดที่ `arriveRadius` 0.4 แล้วจบที่ d = 1.30 ทั้งที่รัศมีจริง 1.20 → HUD ไม่โผล่ `ทำงาน`; ต้องเดินเข้าหาศูนย์สถานี
+  2. `WaitFor(!CardOpen && !IsCountingDown)` ผ่านได้ในช่วงแบนเนอร์ 3 วิระหว่างรอบ (นาฬิกา 0 ไม่ได้กัน) → เก็บงานใส่รอบที่ยังไม่เริ่ม แล้ว `DebugFinishRound` ถูกเมินเพราะ `roundEnding` → ต้องรอรอบที่ "เล่นได้จริง" ตามเงื่อนไขข้างบน
+  3. `Unity` สองตัวเปิดโปรเจกต์เดียวกัน = dialog `Error!` แล้ว log หยุดที่ `Successfully changed project path` (upm แสดง `parent process [19612] is no longer running`) — ต้องเปิดทีละตัว
+- **ผล** (`Logs/e2e-run6.log`, exit 0): `TaskRace up: stage 1 "ห้องเช่า", series=True, 100 s × 2 wins, local TeamA` → `round 1 … S5_A "ถูคราบวน" (T02) … clean, score 0 → 100` → `round 1/3 Win · tasks 1:0 · points 500:0 · series 1-0` → `round 2 … S5_A "แช่คราบรอ" (T09) … clean` → `round 2/3 Win · series 2-0` → `match end: win … reward 100 coins +63 xp` → `chapter card: … series 2-0 · stars 2/3 · coins 1410 → 1510` → `pressed "กลับเมนู"` → `E2E PASSED: login → home → TaskRace (stage 1) → 2-0 with 2/3 stars, +100 coins → home` → `wallet restored, exit code 0`
+- **ภาพ** (`BOB_VIEW=2400x1080`): `Logs/e2e-1-login-2400x1080.png`, `-2-home`, `-3-play`, `-4-near`, `-5-card`, `-6-clean`, `-7-chapter` (การ์ด "ผ่านบท!" 2 ดาว + ปุ่ม 3 ปุ่ม), `-8-home-return` (Home กลับมา, เหรียญ 1510 ก่อนคืนค่า)
+- **คืนกระเป๋า:** `BobE2E` snapshot `bob.guest/coins/xp/taskRace.*/story.lossStreak/story.stars.1–6` ก่อนรัน แล้วเซ็ตคืนตอนจบ (`bob.guest` ถูกบังคับเป็น 0 เพื่อให้ S02 ถูกทดสอบทุกครั้ง)
+- **ยังไม่ครอบ:** โหมดดูโอ/ทีม, การข้ามสะพานไปก่อกวนฝั่งคู่แข่ง, ปุ่ม `เล่นอีกครั้ง` / `บทถัดไป`, การซื้อของในร้าน, และการเล่นด้วยนิ้วจริง (ตัวขับใช้ API เดียวกับที่ touch เรียก ไม่ได้ผ่าน pointer event)
+- **ไม่แตะ:** กติกา/opcode/`server/`/ซีน/`TaskSpot`/layout HUD · **ยังไม่ commit/push**

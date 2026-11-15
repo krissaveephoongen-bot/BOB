@@ -23,6 +23,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    # LINE Login (docs 28). Values come from .env next to this file; an empty pair simply disables the button.
+    environment:
+      - LINE_CHANNEL_ID=${LINE_CHANNEL_ID:-}
+      - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET:-}
+      - LINE_REDIRECT_URI=${LINE_REDIRECT_URI:-bob://line-login}
     entrypoint:
       - "/bin/sh"
       - "-ec"

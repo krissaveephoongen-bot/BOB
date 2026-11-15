@@ -7,7 +7,7 @@
 //  │   zone       │          [hand slot][hand slot][hand slot]   │ [  SUBMIT  ]   │
 //
 // Screens: main menu (hero showcase + PLAY), room ticket before each round, 3-2-1, round result with count-up, match
-// result, pause and settings (sound, music, server address).
+// result, pause and settings (sound, music).
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -285,7 +285,7 @@ namespace Bob.Game
                     bool? res = i < results.Count ? results[i] : (bool?)null;
                     pips[i].color = res == true ? BobUi.Good : res == false ? BobUi.Rose : (i == roundNo - 1 ? BobUi.Sun : BobUi.Line);
                 }
-                scoreText.text = $"รอบ {roundNo}/3  <b>{wins} : {losses}</b>" + (Online ? OnlineRivalNote() : "");
+                scoreText.text = $"รอบ {roundNo}/3  <b>{wins} : {losses}</b>";
                 budgetText.text = BudgetLeft.ToString();
                 RenderOrder(); RenderCart(); RenderHand(); RenderButtons(); RenderStationPop();
             }
@@ -520,13 +520,12 @@ namespace Bob.Game
             {
                 case Phase.Title: Home(); break;
                 case Phase.Splash: Splash(); break;
-                case Phase.Login: Login(); break;
                 case Phase.Modes: ModeSelect(); break;
                 case Phase.Heroes: HeroSelect(); break;
                 case Phase.Shop: Shop(); break;
                 case Phase.Chapters: ChapterSelect(); break;
-                case Phase.Loading: Busy("กำลังเตรียมห้อง…", online ? "ขอใบงานรอบ " + roundNo + " จากเซิร์ฟเวอร์" : "สุ่มห้องในเครื่อง"); break;
-                case Phase.Scoring: Busy("กำลังทดสอบความสะอาด…", online ? "เซิร์ฟเวอร์กำลังคิดคะแนน" : "คิดคะแนนในเครื่อง"); break;
+                case Phase.Loading: Busy("กำลังเตรียมห้อง…", "สุ่มห้องในเครื่อง"); break;
+                case Phase.Scoring: Busy("กำลังทดสอบความสะอาด…", "คิดคะแนนในเครื่อง"); break;
                 case Phase.Intro: RoomTicket(); break;
                 case Phase.Test: if (SplitActive) SplitView(); else RoundResult(); break;
                 case Phase.Result: MatchResult(); break;
@@ -538,10 +537,7 @@ namespace Bob.Game
         {
             var S = screenRoot;
             ScreenBackdrop("lobby_rental_room");
-            // top-left server status, top-right coins + settings
-            var net = Card(S, "Net", BobUi.Surface, 1f); BobUi.Pin(net, new Vector2(0, 1), new Vector2(0, 1), new Vector2(24, -24), new Vector2(330, 72));
-            var nt = BobUi.Label(net, (online ? "ออนไลน์" : connecting ? "กำลังเชื่อมต่อ…" : "ออฟไลน์"), 24, online ? BobUi.Good : BobUi.Muted, TextAnchor.MiddleCenter); BobUi.Stretch(nt.rectTransform, 40, 0, 0, 0);
-            var dot = BobUi.Img(net, online ? "icon_check" : connecting ? "icon_timer" : "icon_cross", 34, online ? BobUi.Good : BobUi.Muted); BobUi.Pin(dot.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(22, 0), new Vector2(34, 34));
+            // top-right coins + settings
             var coin = Card(S, "Coins", BobUi.Surface, 1f); BobUi.Pin(coin, Vector2.one, Vector2.one, new Vector2(-150, -24), new Vector2(230, 96));
             BobUi.Pin(BobUi.Img(coin, "icon_star", 56).rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(16, 0), new Vector2(56, 56));
             var ctext = BobUi.Label(coin, coins.ToString(), 40, BobUi.Ink, TextAnchor.MiddleRight, FontStyle.Bold); BobUi.Stretch(ctext.rectTransform, 76, 0, 22, 0);
@@ -588,9 +584,6 @@ namespace Bob.Game
             BobUi.Pin((RectTransform)play.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-48, 40), new Vector2(440, 180));
             play.GetComponentInChildren<TMP_Text>().fontStyle = FontStyles.Bold;
             StartCoroutine(Breathe(play.transform));
-            // online (2-4 players, two teams): above PLAY, still in the thumb zone
-            var on = BobUi.Button(S, online ? "ออนไลน์ 2-4 คน" : "ออนไลน์ (ต่อเซิร์ฟเวอร์ก่อน)", online ? BobUi.Teal : BobUi.Surface, FindOnline, 36, online ? Color.white : BobUi.Muted);
-            BobUi.Pin((RectTransform)on.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-48, 236), new Vector2(440, 104));
         }
 
         IEnumerator Breathe(Transform t)
@@ -654,13 +647,13 @@ namespace Bob.Game
             StartCoroutine(BobTween.Pop(banner.transform, 0.35f, 1.15f));
 
             Side(new Vector2(-330, 10), "ทีมเรา · " + Hero.Name, L.Mine, L.Stats, L.Stack, L.Win, true);
-            Side(new Vector2(330, 10), Online ? "ทีมคู่แข่ง" : "คู่แข่ง", L.Rival.Score, L.Rival.Ev.Stats, L.Rival.Stack, !L.Win, false);
+            Side(new Vector2(330, 10), "คู่แข่ง", L.Rival.Score, L.Rival.Ev.Stats, L.Rival.Stack, !L.Win, false);
             var vs = BobUi.Disc(screenRoot, BobUi.Rose, 120, "VS"); BobUi.Pin(vs.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 60), new Vector2(120, 120));
             var vt = BobUi.Label(vs.transform, "VS", 48, BobUi.Surface, TextAnchor.MiddleCenter, FontStyle.Bold); BobUi.Stretch(vt.rectTransform);
 
-            var src = BobUi.Label(screenRoot, L.FromServer ? "คะแนนของเราคิดโดยเซิร์ฟเวอร์ Nakama" : "คะแนนคิดในเครื่อง (ออฟไลน์)", 22, BobUi.Surface, TextAnchor.MiddleCenter);
+            var src = BobUi.Label(screenRoot, "คะแนนคิดในเครื่อง", 22, BobUi.Surface, TextAnchor.MiddleCenter);
             BobUi.Pin(src.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 196), new Vector2(900, 34));
-            var next = BobUi.Button(screenRoot, MatchOver ? "ดูผลแมตช์" : Online ? "รอรอบถัดไป…" : "รอบถัดไป", BobUi.Sun, AfterTest, 48);
+            var next = BobUi.Button(screenRoot, MatchOver ? "ดูผลแมตช์" : "รอบถัดไป", BobUi.Sun, AfterTest, 48);
             BobUi.Pin((RectTransform)next.transform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 40), new Vector2(520, 140));
             next.GetComponentInChildren<TMP_Text>().fontStyle = FontStyles.Bold;
         }
@@ -735,7 +728,7 @@ namespace Bob.Game
         void SetOverlay(Overlay o)
         {
             overlay = o;
-            Time.timeScale = o != Overlay.None && phase == Phase.Build && !Online ? 0 : 1; // online the match keeps running
+            Time.timeScale = o != Overlay.None && phase == Phase.Build ? 0 : 1;
             joyActive = false;
             Sfx(o == Overlay.None ? "ui_cancel" : "ui_tap");
             RenderOverlay();
@@ -762,15 +755,7 @@ namespace Bob.Game
             BobUi.Label(card, "ตั้งค่า", 52, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
             BobUi.Size(BobUi.Button(card, "เสียงเอฟเฟกต์: " + (soundOn ? "เปิด" : "ปิด"), soundOn ? BobUi.Sun : BobUi.Surface, () => { SetSound(!soundOn); RenderOverlay(); }, 34), 104, 104);
             BobUi.Size(BobUi.Button(card, "เพลง: " + (musicOn ? "เปิด" : "ปิด"), musicOn ? BobUi.Sun : BobUi.Surface, () => { SetMusic(!musicOn); RenderOverlay(); }, 34), 104, 104);
-            BobUi.Label(card, "ที่อยู่เซิร์ฟเวอร์ (IP ใน LAN หรือ URL https ของ tunnel)", 24, BobUi.Muted);
-            var fieldBg = Card(card, "Host", BobUi.Surface); BobUi.Size(fieldBg, 96, 96);
-            var it = BobUi.LabelLegacy(fieldBg, host, 36, BobUi.Ink, TextAnchor.MiddleCenter); BobUi.Stretch(it.rectTransform, 20, 6, 20, 6);
-            var input = fieldBg.gameObject.AddComponent<InputField>();
-            input.textComponent = it; input.text = host; input.characterLimit = 96;
-            var row = BobUi.HBox(card, 14, "Buttons"); BobUi.Size(row, 110, 110);
-            BobUi.Button(row.transform, "เชื่อมต่อใหม่", BobUi.Teal, () => SetHost(input.text), 32, Color.white);
-            BobUi.Button(row.transform, "ปิด", BobUi.Surface, () => SetOverlay(phase == Phase.Build ? Overlay.Pause : Overlay.None), 32);
-            BobUi.Label(card, netNote, 22, online ? BobUi.Good : BobUi.Muted, TextAnchor.MiddleCenter);
+            BobUi.Size(BobUi.Button(card, "ปิด", BobUi.Surface, () => SetOverlay(phase == Phase.Build ? Overlay.Pause : Overlay.None), 34), 104, 104);
         }
 
         static string Js(double x) => ((int)System.Math.Floor(x + 0.5)).ToString(); // JavaScript Math.round

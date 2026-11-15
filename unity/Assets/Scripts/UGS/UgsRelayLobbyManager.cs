@@ -1,6 +1,6 @@
-// Battle of the Brooms: player-hosted multiplayer over Unity Relay, announced through a Lobby.
-// Flow: CreateGameAsync (host) -> relay join code stored in lobby data -> QuickJoinOrJoinByCodeAsync (client).
-// The host pings the lobby every 15 s; without the ping the lobby expires after 30 s (Lobby service rule).
+// Battle of the Brooms: player-hosted rooms — Relay allocation + Lobby listing + Netcode host/client.
+// Host: CreateRoomAsync -> relay join code stored in lobby data -> StartHost, then a 15 s heartbeat.
+// Client: QuickJoinOrJoinByCodeAsync -> read the code back -> join allocation -> StartClient.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,22 +15,20 @@ using Unity.Services.Relay;
 using Unity.Services.Relay.Models;
 using UnityEngine;
 
-namespace Bob.Networking
+namespace Bob.Ugs
 {
-    public class RelayLobbyManager : MonoBehaviour
+    public class UgsRelayLobbyManager : MonoBehaviour
     {
         public const string RelayJoinCodeKey = "RelayJoinCode";
         const float HeartbeatSeconds = 15f;
         const string ConnectionType = "dtls";
 
-        public static RelayLobbyManager Instance { get; private set; }
+        public static UgsRelayLobbyManager Instance { get; private set; }
 
         [Tooltip("Auto-filled from NetworkManager.Singleton when empty.")]
         public NetworkManager networkManager;
         [Tooltip("Auto-filled from the NetworkManager's transport when empty.")]
         public UnityTransport transport;
-        [Tooltip("Auto-filled from UgsBootstrapManager.Instance when empty.")]
-        public UgsBootstrapManager bootstrap;
 
         public Lobby CurrentLobby { get; private set; }
         public string RelayJoinCode { get; private set; }
@@ -54,18 +52,7 @@ namespace Bob.Networking
             if (Instance == this) Instance = null;
         }
 
-        UgsBootstrapManager Bootstrap
-        {
-            get
-            {
-                if (bootstrap == null) bootstrap = UgsBootstrapManager.Instance;
-                if (bootstrap == null) bootstrap = FindAnyObjectByType<UgsBootstrapManager>();
-                return bootstrap;
-            }
-        }
-
-        /// <summary>Host: relay allocation + lobby + StartHost.</summary>
-        public async Task<bool> CreateGameAsync(string lobbyName, int maxPlayers, bool isPrivate = false)
+        public async Task<bool> CreateRoomAsync(string roomName, int maxPlayers)
         {
             if (IsBusy) return false;
             IsBusy = true;
@@ -76,16 +63,16 @@ namespace Bob.Networking
                 if (!CheckNetworkReady(out var nm, out var utp)) return false;
 
                 SetStatus("creating relay allocation…");
-                // Relay counts connections, not players: the host holds one of the lobby slots.
+                // Relay counts connections, so the host already occupies one of the room slots.
                 Allocation allocation = await RelayService.Instance.CreateAllocationAsync(Mathf.Max(1, maxPlayers - 1));
                 string joinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
                 ApplyRelayData(utp, allocation.ServerEndpoints, allocation.RelayServer.IpV4, allocation.RelayServer.Port,
                     allocation.AllocationIdBytes, allocation.Key, allocation.ConnectionData, allocation.ConnectionData);
 
                 SetStatus("creating lobby…");
-                CurrentLobby = await LobbyService.Instance.CreateLobbyAsync(lobbyName, maxPlayers, new CreateLobbyOptions
+                CurrentLobby = await LobbyService.Instance.CreateLobbyAsync(roomName, maxPlayers, new CreateLobbyOptions
                 {
-                    IsPrivate = isPrivate,
+                    IsPrivate = false,
                     Data = new Dictionary<string, DataObject>
                     {
                         { RelayJoinCodeKey, new DataObject(DataObject.VisibilityOptions.Member, joinCode) }
@@ -96,7 +83,7 @@ namespace Bob.Networking
                 {
                     await LobbyService.Instance.DeleteLobbyAsync(CurrentLobby.Id);
                     CurrentLobby = null;
-                    SetStatus("StartHost failed — check the transport on the NetworkManager");
+                    SetStatus("StartHost failed — check the Network Transport on the NetworkManager");
                     return false;
                 }
 
@@ -112,8 +99,7 @@ namespace Bob.Networking
             finally { IsBusy = false; }
         }
 
-        /// <summary>Client: quick join when no code is given, else join that lobby, then read the relay code from its data.</summary>
-        public async Task<bool> QuickJoinOrJoinByCodeAsync(string lobbyCode = null)
+        public async Task<bool> QuickJoinOrJoinByCodeAsync(string lobbyCode = "")
         {
             if (IsBusy) return false;
             IsBusy = true;
@@ -133,7 +119,7 @@ namespace Bob.Networking
                 {
                     await LobbyService.Instance.RemovePlayerAsync(CurrentLobby.Id, OwnPlayerId);
                     CurrentLobby = null;
-                    SetStatus("lobby has no relay code — host may still be starting");
+                    SetStatus("lobby has no relay code — the host may still be starting");
                     return false;
                 }
 
@@ -146,7 +132,7 @@ namespace Bob.Networking
                 {
                     await LobbyService.Instance.RemovePlayerAsync(CurrentLobby.Id, OwnPlayerId);
                     CurrentLobby = null;
-                    SetStatus("StartClient failed — check the transport on the NetworkManager");
+                    SetStatus("StartClient failed — check the Network Transport on the NetworkManager");
                     return false;
                 }
 
@@ -161,8 +147,8 @@ namespace Bob.Networking
             finally { IsBusy = false; }
         }
 
-        /// <summary>Host deletes the lobby, client leaves it, then the NetworkManager shuts down.</summary>
-        public async Task LeaveOrShutdownAsync()
+        /// <summary>Host deletes the lobby, a client leaves it, then Netcode shuts down.</summary>
+        public async Task LeaveRoomAsync()
         {
             heartbeat?.Cancel(); heartbeat = null;
 
@@ -180,7 +166,7 @@ namespace Bob.Networking
                 }
                 catch (LobbyServiceException e)
                 {
-                    // Already gone (expired or host deleted it) is fine; the local session is closing anyway.
+                    // Already gone (expired, or the host deleted it) is fine while closing the session.
                     if (e.Reason != LobbyExceptionReason.LobbyNotFound)
                         Debug.LogWarning("[UGS] leave lobby: " + e.Message);
                 }
@@ -194,10 +180,10 @@ namespace Bob.Networking
 
         async Task<bool> EnsureServicesAsync()
         {
-            var manager = Bootstrap;
-            if (manager == null) { SetStatus("no UgsBootstrapManager in the scene"); return false; }
-            await manager.EnsureReadyAsync();
-            return true;
+            var bootstrap = UgsBootstrapManager.Instance;
+            if (bootstrap == null) { SetStatus("no UgsBootstrapManager in the scene"); return false; }
+            await bootstrap.EnsureReadyAsync();
+            return bootstrap.IsReady;
         }
 
         bool CheckNetworkReady(out NetworkManager nm, out UnityTransport utp)
@@ -240,8 +226,7 @@ namespace Bob.Networking
                 try
                 {
                     await LobbyService.Instance.SendHeartbeatPingAsync(CurrentLobby.Id);
-                    if (CurrentLobby.MaxPlayers > 0)
-                        SetStatus($"hosting · lobby {CurrentLobby.LobbyCode} · {CurrentLobby.Players.Count}/{CurrentLobby.MaxPlayers}");
+                    SetStatus($"hosting · lobby {CurrentLobby.LobbyCode} · {CurrentLobby.Players.Count}/{CurrentLobby.MaxPlayers}");
                 }
                 catch (LobbyServiceException e)
                 {

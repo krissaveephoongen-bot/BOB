@@ -269,8 +269,8 @@ namespace Bob.TaskRace
         /// <summary>
         /// The seeded task list: cart first, then the long task, the common one, the shorts, all shuffled and never
         /// repeated. Only minigames whose category exists on this map (or Everyone) are drawn.
-        /// The draw itself lives in Rules/BobTaskRaceRules.cs, the same code the Nakama match runs, so the server can
-        /// accept exactly the cards this round deals (docs 16 section 8). Composition and weights are unchanged.
+        /// The draw itself lives in Rules/BobTaskRaceRules.cs, which a future authoritative server can mirror, so it
+        /// accepts exactly the cards this round deals (docs 16 section 8). Composition and weights are unchanged.
         /// </summary>
         public static List<MinigameSpec> PlanRound(int players, int difficulty, int seed, IList<TaskCategory> stationCategories)
         {

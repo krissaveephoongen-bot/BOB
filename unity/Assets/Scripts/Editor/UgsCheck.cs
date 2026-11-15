@@ -1,9 +1,9 @@
-// Check for the UGS Relay + Lobby setup (art/docs/27). Unity Services only initialize in Play Mode, so this
-// opens an empty scene, enters Play, then: anonymous sign-in -> relay allocation -> create and delete a lobby.
+// Check for the pure UGS stack (art/docs/27). Unity Services only initialize in Play Mode, so this opens an empty
+// scene, enters Play, then: anonymous sign-in -> relay allocation -> create and delete a lobby -> real host path.
 //   -executeMethod Bob.EditorTools.UgsCheck.RunBatch     (no -batchmode; exit 0 = PASS)
 using System;
 using System.Threading.Tasks;
-using Bob.Networking;
+using Bob.Ugs;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using Unity.Services.Authentication;
@@ -94,7 +94,7 @@ namespace Bob.EditorTools
             }
         }
 
-        /// <summary>Builds a runtime NetworkManager and drives the real RelayLobbyManager host path.</summary>
+        /// <summary>Builds a runtime NetworkManager and drives the real UgsRelayLobbyManager host path.</summary>
         static async Task CheckHostPhaseAsync()
         {
             var networkGo = new GameObject("UgsCheckNetwork");
@@ -105,23 +105,22 @@ namespace Bob.EditorTools
             nm.NetworkConfig.NetworkTransport = utp;
 
             var bootstrapGo = new GameObject("UgsCheckBootstrap");
-            var bootstrap = bootstrapGo.AddComponent<UgsBootstrapManager>();
+            bootstrapGo.AddComponent<UgsBootstrapManager>();
 
             var lobbyGo = new GameObject("UgsCheckLobby");
-            var manager = lobbyGo.AddComponent<RelayLobbyManager>();
+            var manager = lobbyGo.AddComponent<UgsRelayLobbyManager>();
             manager.networkManager = nm;
             manager.transport = utp;
-            manager.bootstrap = bootstrap;
 
             try
             {
-                bool created = await manager.CreateGameAsync("bob-ugs-check", 4);
+                bool created = await manager.CreateRoomAsync("bob-ugs-check", 4);
                 if (!created || !nm.IsHost || string.IsNullOrEmpty(manager.RelayJoinCode))
                     throw new Exception("host phase failed · " + manager.Status);
                 string lobbyId = manager.CurrentLobby.Id;
                 Debug.Log($"[UGSCHK] host ok · lobby {manager.CurrentLobby.LobbyCode} · relay {manager.RelayJoinCode}");
 
-                await manager.LeaveOrShutdownAsync();
+                await manager.LeaveRoomAsync();
                 // Shutdown finishes on the next network update, not inside the call.
                 for (float waited = 0f; nm.IsListening && waited < 2f; waited += 0.05f)
                     await Task.Delay(50);
