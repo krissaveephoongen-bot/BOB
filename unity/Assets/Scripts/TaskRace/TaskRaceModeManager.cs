@@ -14,6 +14,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Bob.Rules;
 using Unity.AI.Navigation;
 using UnityEngine;
 using UnityEngine.AI;
@@ -71,6 +72,12 @@ namespace Bob.TaskRace
         [SerializeField, Min(0f)] public float loseStreakBonusSeconds = 15f;
         [Tooltip("Pause between the round card and the next round.")]
         [SerializeField, Min(0.5f)] public float nextRoundDelay = 3f;
+
+        [Header("Stage (StageConfig, docs 24 §15.3 Phase 3)")]
+        [Tooltip("Follows the chapter pick by order and is filled from Resources/Stages in Awake.")]
+        public StageConfig stage;
+        /// <summary>Paid to the winning team when the stage closes (stage 6 = 200).</summary>
+        public int StageBonus => stage != null ? stage.StageBonus : 0;
 
         [Header("Team points (shared per team)")]
         [Tooltip("Awarded on every Dirty -> Clean completion, including a re-clean after a sabotage.")]
@@ -172,6 +179,7 @@ namespace Bob.TaskRace
         {
             cached = this;
             ApplyChapter();
+            ApplyStage();
             RemainingSeconds = matchDuration;
             if (cameraRig == null) cameraRig = FindFirstObjectByType<BobTaskRaceCamera>();
             CollectBarriers();
@@ -190,6 +198,29 @@ namespace Bob.TaskRace
             if (list != null) list.ConfigureRound(list.Players, chapter.Difficulty, list.ConfiguredSeed);
             if (Application.isPlaying)
                 Debug.Log($"[TaskRace] chapter {chapter.Order} \"{chapter.Title}\" · D{chapter.Difficulty} · {matchDuration:0} s clock");
+        }
+
+        /// <summary>
+        /// S13 (docs 24 section 15.3 Phase 3): the stage with the same order as the picked chapter sets the clock, the
+        /// moment the gates drop, the points per task and the two assignment rules. Runs after ApplyChapter, before
+        /// TaskRaceRound.Start draws, so the very first round of the scene already follows the stage.
+        /// </summary>
+        void ApplyStage() => ApplyStage(BobStages.Saved);
+
+        void ApplyStage(StageConfig s)
+        {
+            stage = s;
+            matchDuration = stage.ClockSeconds; // PvP clock; the story series keeps its own 3 × storyRoundSeconds
+            openAtRemaining = stage.BridgeOpenAtRemaining;
+            warningAtRemaining = stage.WarningAtRemaining;
+            pointsPerTaskComplete = stage.PointsPerTask;
+            var list = FindAnyObjectByType<TaskRaceRound>();
+            if (list != null) list.SetStageRules(stage.RandomizeSpots, stage.TwoPassStains);
+            if (Application.isPlaying)
+                Debug.Log($"[TaskRace] stage {stage.Order} \"{stage.Title}\" · {stage.Tag} · {stage.PointsPerTask} pts/task" +
+                          $"{(stage.StageBonus > 0 ? $" · bonus {stage.StageBonus}" : "")}" +
+                          $"{(stage.FragileStunSeconds > 0 ? $" · fragile {stage.FragileStunSeconds:0.#} s" : "")}" +
+                          $"{(stage.TwoPassStains ? " · stains take two passes" : "")}{(stage.RandomizeSpots ? " · stations randomized" : "")}");
         }
 
         void OnDestroy()
@@ -314,6 +345,14 @@ namespace Bob.TaskRace
             bool rivalFinished = total > 0 && theirs >= total;
             bool draw = seriesDraw ?? (!localFinished && !rivalFinished && localPool == rivalPool);
             bool won = seriesWon ?? (localFinished || (!rivalFinished && !draw && localPool > rivalPool));
+
+            // Stage 6 pays its bonus once, to the winner, before the result (and the wallet) is written.
+            if (won && StageBonus > 0)
+            {
+                AddPoints(localTeam, StageBonus);
+                localPool = PointsOf(localTeam);
+                ToastRequested?.Invoke($"โบนัสปิดด่าน {StageBonus} แต้ม!");
+            }
 
             RemainingSeconds = 0f;
             LastResult = BobTaskRaceProfile.Record(won, draw, teamAPoints, teamBPoints, tasksA, tasksB, total,
@@ -464,6 +503,15 @@ namespace Bob.TaskRace
             var team = spot.OwnerTeam == TeamId.None ? localTeam : spot.OwnerTeam;
             AddPoints(team, pointsPerTaskComplete);
             if (Application.isPlaying) Debug.Log($"[TaskRace] +{pointsPerTaskComplete} to {team} ({PointsOf(team)}) for {spot.SpotId}.");
+        }
+
+        /// <summary>Stage 4: the first pass of a two-pass stain landed; the station stays Dirty until the second.</summary>
+        public void OnTaskPass(TaskSpot spot)
+        {
+            if (spot == null) return;
+            ToastRequested?.Invoke($"{spot.TaskName}: รอบแรกเสร็จ ขัดอีกรอบให้สะอาด!");
+            if (Application.isPlaying)
+                Debug.Log($"[TaskRace] {spot.SpotId} pass {spot.PassesDone}/{spot.RequiredPasses}: still Dirty.");
         }
 
         public void AddPoints(TeamId team, int amount)
@@ -680,6 +728,18 @@ namespace Bob.TaskRace
         {
             CardOpen = false;
             if (cameraRig != null) cameraRig.SetMinigameFocus(false);
+
+            // Stage 3 "fragile": abandoning a card on your own island costs a short stun.
+            if (spot == null || spot.LastCardCompleted || stage == null || stage.FragileStunSeconds <= 0f) return;
+            if (spot.OwnerTeam != localTeam || IsMatchOver) return;
+            var body = cameraRig != null && cameraRig.target != null
+                ? cameraRig.target.GetComponent<BobTaskRaceHero>()
+                : FindAnyObjectByType<BobTaskRaceHero>();
+            if (body == null) return;
+            body.Stun(stage.FragileStunSeconds);
+            ToastRequested?.Invoke($"งานผิวบอบบาง! ปิดก่อนเสร็จ หยุด {stage.FragileStunSeconds:0.#} วิ");
+            if (Application.isPlaying)
+                Debug.Log($"[TaskRace] fragile stun {stage.FragileStunSeconds:0.#} s after closing {spot.SpotId} early.");
         }
 
         // ---------------------------------------------------------------- debug test bar
@@ -731,6 +791,15 @@ namespace Bob.TaskRace
         }
 
         public void DebugResetMatch() => RestartMatch();
+
+        /// <summary>Debug: play another stage (1-6) without leaving the scene. The pick is not saved to the profile.</summary>
+        public void DebugApplyStage(int order)
+        {
+            ApplyStage(BobStages.Get(order));
+            DebugResetMatch();
+            ToastRequested?.Invoke($"ดีบัก: ด่าน {stage.Order} \"{stage.Title}\" · {stage.Tag}");
+            if (Application.isPlaying) Debug.Log($"[TaskRace] debug stage {stage.Order} \"{stage.Title}\" · {stage.Tag}.");
+        }
 
         /// <summary>Check hook: close the running story round now, as if its clock had run out.</summary>
         public void DebugFinishRound()

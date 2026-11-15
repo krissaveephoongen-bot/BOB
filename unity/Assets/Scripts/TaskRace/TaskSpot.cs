@@ -44,6 +44,9 @@ namespace Bob.TaskRace
         [Tooltip("One sabotage per station per match; a sabotaged station is permanently immune afterwards.")]
         public const int MaxSabotagesPerMatch = 1;
         [SerializeField, Min(0)] int _sabotageCount;
+        [Tooltip("Completed passes a task needs before the station is clean. Stage 4 sets stain stations to 2.")]
+        [SerializeField, Min(1)] int requiredPasses = 1;
+        [SerializeField, Min(0)] int passesDone;
 
         [Header("Shield (timed)")]
         [SerializeField] bool isProtected;
@@ -131,6 +134,11 @@ namespace Bob.TaskRace
         public float ShieldDuration => shieldDuration;
         public int SabotageCount => _sabotageCount;
         public bool SabotageUsed => _sabotageCount >= MaxSabotagesPerMatch;
+        /// <summary>Passes this task needs (stage 4 stains: 2) and the passes already banked.</summary>
+        public int RequiredPasses => Mathf.Max(1, requiredPasses);
+        public int PassesDone => passesDone;
+        /// <summary>True when the last card closed as a completed pass (a two-pass first pass counts as completed).</summary>
+        public bool LastCardCompleted { get; private set; }
         public bool HasTask => hasTask;
         public bool IsNear { get; private set; }
         public bool IsOpen { get; private set; }
@@ -251,8 +259,20 @@ namespace Bob.TaskRace
         {
             if (!IsOpen) return;
             IsOpen = false; LockedBy = null; sabotageSession = false;
+            LastCardCompleted = completed;
             if (completed)
             {
+                // Stage 4: a stain station banks the pass and stays Dirty until the second pass lands.
+                if (RequiredPasses > 1 && passesDone + 1 < RequiredPasses)
+                {
+                    passesDone++;
+                    state = SpotState.Dirty; Progress = 0f; retained = false;
+                    TaskRaceModeManager.Instance?.OnTaskPass(this);
+                    Closed?.Invoke(this, false); AnyClosed?.Invoke(this);
+                    RefreshRing();
+                    return;
+                }
+                passesDone = 0;
                 state = SpotState.Clean; Progress = 1f; retained = false;
                 // Clean/Dirty is the only place points are awarded: every completion, including a re-clean after
                 // a sabotage, runs through here.
@@ -274,6 +294,17 @@ namespace Bob.TaskRace
         {
             if (!hasTask || state == SpotState.Clean) return;
             IsOpen = false; LockedBy = null; sabotageSession = false;
+            LastCardCompleted = true;
+            if (RequiredPasses > 1 && passesDone + 1 < RequiredPasses)
+            {
+                passesDone++;
+                state = SpotState.Dirty; Progress = 0f; retained = false;
+                TaskRaceModeManager.Instance?.OnTaskPass(this);
+                Closed?.Invoke(this, false); AnyClosed?.Invoke(this);
+                RefreshRing();
+                return;
+            }
+            passesDone = 0;
             state = SpotState.Clean; Progress = 1f; retained = false;
             TaskRaceModeManager.Instance?.OnTaskCleaned(this);
             Closed?.Invoke(this, true); AnyClosed?.Invoke(this);
@@ -319,13 +350,17 @@ namespace Bob.TaskRace
         }
 
         /// <summary>Try to take the sabotage TASK_LOCK. The HUD opens the S28 card when this returns true.</summary>
-        public bool TrySabotage(string who, out string message)
+        public bool TrySabotage(string who, out string message) => TrySabotageAs(LocalTeam, who, out message);
+
+        /// <summary>The same lock from a given attacker team: the solo bot raids Team A while the player is Team A, so the
+        /// player-relative <see cref="IsEnemySpot"/> would refuse it.</summary>
+        public bool TrySabotageAs(TeamId attacker, string who, out string message)
         {
             who = string.IsNullOrEmpty(who) ? playerName : who;
             message = null;
             var m = TaskRaceModeManager.Instance;
             if (m == null || !m.AreBridgesOpen) { message = "สะพานยังปิดอยู่ ข้ามไม่ได้"; return false; }
-            if (!IsEnemySpot) { message = "จุดนี้เป็นของทีมเรา"; return false; }
+            if (attacker == TeamId.None || ownerTeam == attacker) { message = "จุดนี้เป็นของทีมเรา"; return false; }
             if (state != SpotState.Clean) return false;
             if (SabotageUsed) { message = "จุดนี้ถูกป่วนไปแล้ว"; return false; }
             if (isProtected) { message = "จุดงานนี้มีเกราะป้องกันอยู่!"; Blocked?.Invoke(this, message); return false; }
@@ -408,15 +443,22 @@ namespace Bob.TaskRace
         public void ResetTask()
         {
             if (IsOpen) Close(false);
-            state = SpotState.Dirty; Progress = 0f; retained = false;
+            state = SpotState.Dirty; Progress = 0f; retained = false; passesDone = 0;
         }
 
         /// <summary>Round: put a sabotaged task back on its station (Dirty, ring on) without reconfiguring it.</summary>
         public void RestoreSabotagedTask()
         {
-            state = SpotState.Dirty; Progress = 0f; retained = false;
+            state = SpotState.Dirty; Progress = 0f; retained = false; passesDone = 0;
             SetTaskActive(true);
             RefreshRing();
+        }
+
+        /// <summary>Stage 4: how many completed passes this task needs (1 by default, 2 for a stain station).</summary>
+        public void SetRequiredPasses(int passes)
+        {
+            requiredPasses = Mathf.Max(1, passes);
+            passesDone = 0;
         }
 
         /// <summary>Turn the station on or off for the round. Off hides the ring and label and refuses to open.</summary>

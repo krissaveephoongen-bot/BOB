@@ -18,6 +18,7 @@ namespace Bob.EditorTools
         public static void Run()
         {
             failures = 0;
+            finalBotOk = false;
             CheckRules();
             entered = false; step = 0;
             SessionState.SetBool(ArmKey, true);
@@ -75,6 +76,9 @@ namespace Bob.EditorTools
         static int step;
         static float stepAt;
         static MeshRenderer fieldOff, soilOff;
+        static TaskRaceBotController bot;
+        static Vector3 botStart;
+        static bool finalBotOk;
         static Material islandMat;
         static Color tintWas;
         static GameObject teamARoot;
@@ -119,6 +123,16 @@ namespace Bob.EditorTools
                 Debug.Log($"[SeriesCheck] start: clock {manager.RemainingSeconds:0} s · round {manager.Series.Round}/{StorySeries.Rounds} · " +
                           $"series {manager.Series.Score} · banner {banner != null} · storySeries {manager.storySeries}");
                 LogRenderState();
+                ProbeSlab();
+                // The solo scene carries the Team B bot: note where it starts so a later step can prove it walked.
+                bot = Object.FindAnyObjectByType<TaskRaceBotController>();
+                if (bot != null)
+                {
+                    botStart = bot.transform.position;
+                    Debug.Log($"[SeriesCheck] bot start: {bot.JobName} at ({botStart.x:0.0},{botStart.z:0.0}) · " +
+                              $"head start {bot.headStart:0}s · pace {bot.pace:0.00}");
+                }
+                else Debug.Log("[SeriesCheck] bot: not in this scene");
                 Capture("1-start");
                 // The play shots show the island top as flat magenta. Hide the Field cap for one frame: if the slab goes,
                 // it is that renderer; if it stays, something drawn over it is the one with the bad material.
@@ -264,6 +278,14 @@ namespace Bob.EditorTools
             else if (step == 10 && Time.unscaledTime > stepAt + manager.nextRoundDelay + 0.6f)
             {
                 Debug.Log($"[SeriesCheck] round {manager.Series.Round} running: clock {manager.RemainingSeconds:0} s");
+                if (bot != null)
+                {
+                    float walked = (bot.transform.position - botStart).magnitude;
+                    Debug.Log($"[SeriesCheck] bot after {Time.timeSinceLevelLoad:0.0}s: {bot.JobName} at " +
+                              $"({bot.transform.position.x:0.0},{bot.transform.position.z:0.0}) · walked {walked:0.00} u · " +
+                              $"clean {bot.CleanCount}, sabotage {bot.SabotageCount}");
+                    finalBotOk = walked > 1f;
+                }
                 Capture("4-round3");
                 stepAt = Time.unscaledTime;
                 step = 11;
@@ -340,6 +362,93 @@ namespace Bob.EditorTools
             var path = t.name;
             for (var p = t.parent; p != null; p = p.parent) path = p.name + "/" + path;
             return path;
+        }
+
+        /// <summary>
+        /// Name the owner of the magenta slab by measurement instead of by guesswork: render the play camera into a
+        /// small target and count magenta pixels, then switch one renderer off at a time. The renderer whose removal
+        /// drops the count is the slab, so the log names it with its mesh, submesh count and materials.
+        /// </summary>
+        static void ProbeSlab()
+        {
+            var cam = Camera.main;
+            if (cam == null) { Debug.LogError("[SeriesCheck] slab probe: no Camera.main"); return; }
+
+            const int size = 64;
+            var rt = RenderTexture.GetTemporary(size, size, 16, RenderTextureFormat.ARGB32);
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            var wasTarget = cam.targetTexture;
+            var wasActive = RenderTexture.active;
+
+            // The grade maps the error magenta to about (166,0,166); a tolerant test keeps it apart from the palette
+            // violets, which always carry green.
+            float MagentaShare()
+            {
+                cam.targetTexture = rt;
+                cam.Render();
+                RenderTexture.active = rt;
+                tex.ReadPixels(new Rect(0, 0, size, size), 0, 0);
+                tex.Apply(false);
+                cam.targetTexture = wasTarget;
+                RenderTexture.active = wasActive;
+                var px = tex.GetPixels32();
+                int n = 0;
+                foreach (var p in px)
+                    if (p.r > 90 && p.g < 60 && p.b > 90 && Mathf.Abs(p.r - p.b) < 60) n++;
+                return n / (float)px.Length;
+            }
+
+            var cands = new System.Collections.Generic.List<Renderer>();
+            foreach (var r in Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None))
+            {
+                if (r == null || !r.enabled || !r.gameObject.activeInHierarchy) continue;
+                if (r is Camera || r.GetComponent<Camera>() != null) continue;
+                cands.Add(r);
+            }
+
+            var baseShare = MagentaShare();
+            Debug.Log($"[SeriesCheck] slab probe: {baseShare * 100f:0.0}% magenta · {cands.Count} renderers up · camera {PathOf(cam.transform)}");
+            if (baseShare < 0.05f)
+            {
+                Debug.Log("[SeriesCheck] slab probe: no magenta in this frame — nothing to bisect");
+            }
+            else
+            {
+                int hits = 0;
+                foreach (var r in cands)
+                {
+                    r.enabled = false;
+                    var share = MagentaShare();
+                    r.enabled = true;
+                    if (baseShare - share < 0.1f) continue;
+                    hits++;
+                    var mf = r.GetComponent<MeshFilter>();
+                    var mesh = mf != null ? mf.sharedMesh : null;
+                    var mats = string.Join(",", System.Array.ConvertAll(r.sharedMaterials, m => m == null ? "null" :
+                        m.name + ":" + (m.shader != null ? m.shader.name : "no-shader") + ":" +
+                        (m.mainTexture != null ? m.mainTexture.name : "no-tex")));
+                    Debug.Log($"[SeriesCheck] slab probe HIT \"{PathOf(r.transform)}\" {r.GetType().Name} " +
+                              $"magenta {baseShare * 100f:0.0}% -> {share * 100f:0.0}% " +
+                              $"mesh {(mesh != null ? mesh.name + " submeshes " + mesh.subMeshCount : "none")} mats [{mats}]");
+                }
+                Debug.Log($"[SeriesCheck] slab probe done: {hits} renderer(s) own the slab · restored {MagentaShare() * 100f:0.0}%");
+            }
+
+            // A renderer whose material slot is empty also comes out magenta, and hiding it would show the same drop,
+            // so list those separately in case the bisect above found nothing.
+            foreach (var r in cands)
+            {
+                var mats = r.sharedMaterials;
+                bool empty = mats == null || mats.Length == 0 || System.Array.Exists(mats, m => m == null);
+                if (!empty) continue;
+                Debug.LogWarning($"[SeriesCheck] slab probe: empty material slot on \"{PathOf(r.transform)}\" " +
+                                 $"{r.GetType().Name} ({mats?.Length ?? 0} slot(s))");
+            }
+
+            cam.targetTexture = wasTarget;
+            RenderTexture.active = wasActive;
+            RenderTexture.ReleaseTemporary(rt);
+            Object.DestroyImmediate(tex);
         }
 
         /// <summary>Name the shaders the map asks for and any renderer that will draw the magenta error material, so a

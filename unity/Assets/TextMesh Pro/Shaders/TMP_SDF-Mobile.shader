@@ -83,7 +83,9 @@ SubShader {
 		CGPROGRAM
 		#pragma vertex VertShader
 		#pragma fragment PixShader
-		#pragma shader_feature __ OUTLINE_ON
+		// BOB: OutlineText turns OUTLINE_ON on per-text materials at runtime, so the variant has to ship
+		// (shader_feature would strip it when no saved material has the keyword).
+		#pragma multi_compile __ OUTLINE_ON
 		#pragma shader_feature __ UNDERLAY_ON UNDERLAY_INNER
 
 		#pragma multi_compile __ UNITY_UI_CLIP_RECT

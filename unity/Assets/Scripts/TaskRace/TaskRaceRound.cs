@@ -89,6 +89,15 @@ namespace Bob.TaskRace
         [Tooltip("A cleaned station stays Clean (and sabotageable) this long before the next queued task arrives.")]
         [SerializeField, Min(0f)] float restockDelay = 6f;
 
+        [Header("Stage rules (StageConfig, docs 24 §15.3 Phase 3)")]
+        [Tooltip("Stage 5: deal the shuffled list to stations without matching their category.")]
+        [SerializeField] bool randomizeSpots;
+        [Tooltip("Stage 4: stain stations (T02) need two completed passes before they are clean.")]
+        [SerializeField] bool twoPassStains;
+
+        /// <summary>The minigame that banks two passes on a stage 4 map (docs 16: ถูคราบวน).</summary>
+        public const string StainId = "T02";
+
         public int Players => players;
         public int Difficulty => difficulty;
         public int ConfiguredSeed => seed;
@@ -182,6 +191,13 @@ namespace Bob.TaskRace
 
         [ContextMenu("Round: reroll seed and restart")]
         void RerollFromMenu() => StartRound(UnityEngine.Random.Range(1, 100000));
+
+        /// <summary>StageConfig: the two stage rules the assignment applies (stages 4 and 5).</summary>
+        public void SetStageRules(bool randomize, bool twoPass)
+        {
+            randomizeSpots = randomize;
+            twoPassStains = twoPass;
+        }
 
         // ---------------------------------------------------------------- round
 
@@ -336,7 +352,7 @@ namespace Bob.TaskRace
                 if (restocks[i].Spot == spot) restocks.RemoveAt(i);
             completedSpec.Remove(spot);
 
-            var spec = TakeNext(side, spot.Category);
+            var spec = TakeNext(side, spot.Category, randomizeSpots);
             if (spec == null)
             {
                 assigned.Remove(spot);
@@ -345,18 +361,25 @@ namespace Bob.TaskRace
             }
             spot.ResetTask();
             spot.Configure(spot.SpotId, spec.Value.Name, spot.Category, ScaleSeconds(spec.Value, difficulty), spec.Value.Id);
+            spot.SetRequiredPasses(twoPassStains && spec.Value.Id == StainId ? 2 : 1);
             spot.SetTaskActive(true);
             assigned[spot] = spec.Value;
             if (entryOf.TryGetValue(spec.Value.Id, out var entry)) entry.Spot = spot;
             Version++;
         }
 
-        /// <summary>Next list entry this station can host: its own category first, then an Everyone task, then any.</summary>
-        static MinigameSpec? TakeNext(Side side, TaskCategory station)
+        /// <summary>Next list entry this station can host: its own category first, then an Everyone task, then any.
+        /// `anyOrder` (stage 5) skips both matches and takes the head of the already-seeded shuffle.</summary>
+        static MinigameSpec? TakeNext(Side side, TaskCategory station, bool anyOrder = false)
         {
-            int pick = side.Remaining.FindIndex(g => g.Category == station);
-            if (pick < 0) pick = side.Remaining.FindIndex(g => g.Category == TaskCategory.Everyone);
-            if (pick < 0 && side.Remaining.Count > 0) pick = 0;
+            int pick;
+            if (anyOrder) pick = side.Remaining.Count > 0 ? 0 : -1;
+            else
+            {
+                pick = side.Remaining.FindIndex(g => g.Category == station);
+                if (pick < 0) pick = side.Remaining.FindIndex(g => g.Category == TaskCategory.Everyone);
+                if (pick < 0 && side.Remaining.Count > 0) pick = 0;
+            }
             if (pick < 0) return null;
             var spec = side.Remaining[pick];
             side.Remaining.RemoveAt(pick);

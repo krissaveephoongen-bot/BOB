@@ -158,7 +158,14 @@ namespace Bob.Game
         }
 
         /// <summary>Outline for a TMP label (the uGUI Outline component does not work on TextMeshPro).</summary>
-        public static void OutlineText(TMP_Text t, Color c, float width = 0.2f) { if (t == null) return; t.outlineColor = c; t.outlineWidth = width; }
+        public static void OutlineText(TMP_Text t, Color c, float width = 0.2f)
+        {
+            if (t == null) return;
+            t.outlineColor = c;
+            t.outlineWidth = width;
+            // TMP only writes _OutlineWidth; the SDF shader draws it behind OUTLINE_ON, which no font material sets.
+            if (width > 0f && t.fontMaterial != null) t.fontMaterial.EnableKeyword("OUTLINE_ON");
+        }
 
         public static Text LabelLegacy(Transform parent, string text, int size = 24, Color? color = null, TextAnchor align = TextAnchor.MiddleLeft, FontStyle style = FontStyle.Normal)
         {
