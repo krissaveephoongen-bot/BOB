@@ -253,41 +253,33 @@ namespace Bob.TaskRace
         /// <summary>
         /// The seeded task list: cart first, then the long task, the common one, the shorts, all shuffled and never
         /// repeated. Only minigames whose category exists on this map (or Everyone) are drawn.
+        /// The draw itself lives in Rules/BobTaskRaceRules.cs, the same code the Nakama match runs, so the server can
+        /// accept exactly the cards this round deals (docs 16 section 8). Composition and weights are unchanged.
         /// </summary>
         public static List<MinigameSpec> PlanRound(int players, int difficulty, int seed, IList<TaskCategory> stationCategories)
         {
-            CompositionFor(players, difficulty, out int common, out int longs, out int shorts);
-            int total = common + longs + shorts;
-            var rng = new System.Random(seed);
-
-            var pool = MinigameLibrary.All
-                .Where(g => g.Category == TaskCategory.Everyone || stationCategories.Contains(g.Category))
+            var cats = new List<Bob.Rules.TaskCat>();
+            if (stationCategories != null)
+                foreach (var c in stationCategories)
+                {
+                    var rc = ToRulesCategory(c);
+                    if (!cats.Contains(rc)) cats.Add(rc);
+                }
+            return Bob.Rules.BobTaskRaceRules.PlanRound(seed, players, difficulty, cats)
+                .Select(card => MinigameLibrary.All.FirstOrDefault(g => g.Id == card.Id))
+                .Where(g => g.Id != null && g.Id != "")            // the rules table and the library share the 15 ids
                 .ToList();
-            var list = new List<MinigameSpec> { MinigameLibrary.Cart };
-
-            AddShuffled(longs - 1, g => g.Span == TaskSpan.Long && g.Id != "T04");
-            AddShuffled(common, g => g.Span == TaskSpan.Common);
-            AddShuffled(shorts, g => g.Span == TaskSpan.Short);
-            AddShuffled(total - list.Count, _ => true);                     // top up if a category pool ran dry
-            AddShuffled(total - list.Count, _ => true, MinigameLibrary.All); // last resort: borrow from other categories
-            return list;
-
-            void AddShuffled(int count, Func<MinigameSpec, bool> filter, MinigameSpec[] source = null)
-            {
-                var candidates = (source ?? pool.ToArray())
-                    .Where(g => filter(g) && !list.Any(x => x.Id == g.Id)).ToList();
-                for (int i = candidates.Count - 1; i > 0; i--)
-                {
-                    int j = rng.Next(i + 1);
-                    (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
-                }
-                foreach (var g in candidates)
-                {
-                    if (count <= 0) break;
-                    list.Add(g); count--;
-                }
-            }
         }
+
+        /// <summary>Station family on this map -> the shared rule category (one enum per side, same five values).</summary>
+        static Bob.Rules.TaskCat ToRulesCategory(TaskCategory c) => c switch
+        {
+            TaskCategory.Sweep => Bob.Rules.TaskCat.Sweep,
+            TaskCategory.Wash => Bob.Rules.TaskCat.Wash,
+            TaskCategory.Scrub => Bob.Rules.TaskCat.Scrub,
+            TaskCategory.Spray => Bob.Rules.TaskCat.Spray,
+            _ => Bob.Rules.TaskCat.Everyone,
+        };
 
         public static float ScaleSeconds(MinigameSpec spec, int difficulty) =>
             spec.Seconds * (1f + DifficultyStep * (Mathf.Clamp(difficulty, 1, 3) - 1));
