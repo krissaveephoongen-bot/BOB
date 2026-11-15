@@ -26,9 +26,9 @@ _(รอ owner เติมกฎจริง — ด้านล่างเป
 
 | Branch | Session | ขอบเขตงาน | สถานะ | อัปเดตล่าสุด |
 | --- | --- | --- | --- | --- |
-| `main` (local, **ยังไม่ push**) | Claude (session นี้) | `8655d11` → **P3 ซีรีส์เนื้อเรื่อง `e474ae2`** → **merge branch Qoder `c769fa8`** (4.3/4.5/4.6 + B + A + P3 อยู่ไลน์เดียว) แล้ว rebuild + verify + ถ่ายภาพทุกหน้าจอ | 🟢 ว่าง / พร้อมจองงานใหม่ | 15 พ.ย. 2026 |
+| `main` (local, **ยังไม่ push**) | Claude (session นี้) | `8655d11` → **P3 ซีรีส์เนื้อเรื่อง `e474ae2`** → **merge branch Qoder `c769fa8`** (4.3/4.5/4.6 + B + A + P3 อยู่ไลน์เดียว) → rebuild · verify · ถ่ายภาพทุกหน้าจอ → **`6a98bb5`** เก็บงานเข้า local | 🟢 ว่าง / พร้อมจองงานใหม่ | 15 พ.ย. 2026 |
 | `qoder/general-session-98ru4v` | Qoder (session ขนาน) | **4.3 / 4.5 / 4.6 / B / A** — `9b40bab` → `067166f`; code ที่อยู่บน remote คือ `6a66ab7` (head `967e353` ไม่มีบน remote) · merge เข้า `main` แล้วเป็น `c769fa8` | ✅ merge แล้ว / ปิดรอบ | 15 พ.ย. 2026 |
-| `origin/main` | remote | `76a1266` (ยังไม่มี P3/merge — `main` local นำหน้า 2 commit, ยังไม่ push) | — | 15 พ.ย. 2026 |
+| `origin/main` | remote | `76a1266` (ยังไม่มี P3/merge — `main` local นำหน้า 3 commit, ยังไม่ push) | — | 15 พ.ย. 2026 |
 
 ---
 
