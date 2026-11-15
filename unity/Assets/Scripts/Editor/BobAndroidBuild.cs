@@ -61,6 +61,9 @@ namespace Bob.EditorTools
         public static void BuildApk()
         {
             Apply();
+            // A dropped clip is moved to Resources by a deferred editor call that batchmode never reaches before -quit.
+            int clips = BobVideoImportSettings.MovePending();
+            Debug.Log($"Bob: {clips} video clip(s) moved to Resources/Video before the build.");
             // The lobby shell and the one match scene of docs 24. Coop is retired: the APK must not boot a mode
             // whose rules no longer exist.
             var scenes = new[] { "Assets/Scenes/Game.unity", "Assets/Scenes/TaskRace.unity" }.Where(File.Exists).ToArray();

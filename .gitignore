@@ -35,3 +35,8 @@ firebase-debug.log
 firebase-key.json
 .env
 !.env.example
+
+# Raw Tripo downloads (776 MB, no prefab references them; the cleaned kit in art/aa is what ships)
+unity/Assets/TripoRaw/
+unity/Assets/TripoRaw.meta
+art/aa/clean_batch.log

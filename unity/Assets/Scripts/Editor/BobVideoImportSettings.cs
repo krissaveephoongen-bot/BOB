@@ -48,21 +48,43 @@ namespace Bob.EditorTools
             }
         }
 
-        static void Move(string from)
+        static void Move(string from) => MoveOne(from);
+
+        /// <summary>
+        /// Batchmode quits before the deferred delayCall above runs, so a dropped clip is imported but never reaches
+        /// Resources. Build methods call this first: it moves every clip still sitting in Assets/Video.
+        /// </summary>
+        public static int MovePending()
         {
-            if (AssetDatabase.LoadAssetAtPath<VideoClip>(from) == null) return;
+            if (!AssetDatabase.IsValidFolder(Drop.TrimEnd('/'))) return 0;
+            int moved = 0;
+            foreach (var guid in AssetDatabase.FindAssets("t:VideoClip", new[] { Drop.TrimEnd('/') }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (IsClip(path) && MoveOne(path)) moved++;
+            }
+            if (moved > 0) AssetDatabase.SaveAssets();
+            return moved;
+        }
+
+        static bool MoveOne(string from)
+        {
+            if (AssetDatabase.LoadAssetAtPath<VideoClip>(from) == null) return false;
             string to = Runtime + Path.GetFileName(from);
             if (AssetDatabase.LoadAssetAtPath<VideoClip>(to) != null)
             {
                 Debug.LogWarning($"[BobVideo] {to} already exists: {from} stays put and will not load at runtime.");
-                return;
+                return false;
             }
             EnsureFolder(Runtime);
             string error = AssetDatabase.MoveAsset(from, to);
             if (string.IsNullOrEmpty(error))
+            {
                 Debug.Log($"[BobVideo] {from} -> {to} (H264, 720p, no audio). MenuBackgroundVideo finds it as \"Video/{Path.GetFileNameWithoutExtension(to)}\".");
-            else
-                Debug.LogWarning($"[BobVideo] could not move {from} to {to}: {error}. Move it by hand, or Resources.Load cannot see it.");
+                return true;
+            }
+            Debug.LogWarning($"[BobVideo] could not move {from} to {to}: {error}. Move it by hand, or Resources.Load cannot see it.");
+            return false;
         }
 
         static void EnsureFolder(string path)
