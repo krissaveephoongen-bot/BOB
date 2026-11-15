@@ -22,6 +22,24 @@ namespace Bob.Net
 
         ISocket socket;
 
+        /// <summary>
+        /// Builds the client from the Settings field: "host", "host:port" or "https://host[:port]" (443 when the scheme
+        /// says https). A public server behind Caddy/Cloudflare Tunnel needs the https form.
+        /// </summary>
+        public static BobServer FromAddress(string address, int defaultPort = 7350, string serverKey = "defaultkey")
+        {
+            var s = (address ?? "").Trim();
+            var scheme = "http";
+            var port = defaultPort;
+            if (s.StartsWith("https://", System.StringComparison.OrdinalIgnoreCase)) { scheme = "https"; s = s.Substring(8); port = 443; }
+            else if (s.StartsWith("http://", System.StringComparison.OrdinalIgnoreCase)) { s = s.Substring(7); }
+            var slash = s.IndexOf('/'); if (slash >= 0) s = s.Substring(0, slash);
+            var colon = s.LastIndexOf(':');
+            if (colon > 0 && int.TryParse(s.Substring(colon + 1), out var p)) { port = p; s = s.Substring(0, colon); }
+            if (s.Length == 0) s = "127.0.0.1";
+            return new BobServer(scheme, s, port, serverKey);
+        }
+
         public bool SignedIn => session != null && !session.IsExpired;
         public string UserId => session?.UserId;
 

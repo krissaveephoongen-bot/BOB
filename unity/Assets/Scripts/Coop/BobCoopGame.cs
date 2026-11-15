@@ -82,7 +82,7 @@ namespace Bob.Coop
             Go(View.Connecting, "กำลังเชื่อมต่อ " + host + "…");
             try
             {
-                server = new BobServer("http", host, port, serverKey);
+                server = BobServer.FromAddress(host, port, serverKey);
                 await WithTimeout(server.SignInAsync(SystemInfo.deviceUniqueIdentifier + "-bob-coop"), 5000);
                 await WithTimeout(server.ConnectAsync(), 5000);
                 Go(View.Menu, "ออนไลน์ (" + host + ")");

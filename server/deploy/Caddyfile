@@ -1,0 +1,6 @@
+# Caddy fronts Nakama: TLS (Let's Encrypt) and the realtime WebSocket on the same 443.
+# SITE_ADDRESS comes from .env: a domain for real TLS, or ":80" when the server only has a bare IP.
+{$SITE_ADDRESS} {
+	encode zstd gzip
+	reverse_proxy nakama:7350
+}

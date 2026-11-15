@@ -762,11 +762,11 @@ namespace Bob.Game
             BobUi.Label(card, "ตั้งค่า", 52, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
             BobUi.Size(BobUi.Button(card, "เสียงเอฟเฟกต์: " + (soundOn ? "เปิด" : "ปิด"), soundOn ? BobUi.Sun : BobUi.Surface, () => { SetSound(!soundOn); RenderOverlay(); }, 34), 104, 104);
             BobUi.Size(BobUi.Button(card, "เพลง: " + (musicOn ? "เปิด" : "ปิด"), musicOn ? BobUi.Sun : BobUi.Surface, () => { SetMusic(!musicOn); RenderOverlay(); }, 34), 104, 104);
-            BobUi.Label(card, "ที่อยู่เซิร์ฟเวอร์ (บนมือถือใส่ IP ของคอมในวง LAN)", 24, BobUi.Muted);
+            BobUi.Label(card, "ที่อยู่เซิร์ฟเวอร์ (IP ใน LAN หรือ URL https ของ tunnel)", 24, BobUi.Muted);
             var fieldBg = Card(card, "Host", BobUi.Surface); BobUi.Size(fieldBg, 96, 96);
             var it = BobUi.LabelLegacy(fieldBg, host, 36, BobUi.Ink, TextAnchor.MiddleCenter); BobUi.Stretch(it.rectTransform, 20, 6, 20, 6);
             var input = fieldBg.gameObject.AddComponent<InputField>();
-            input.textComponent = it; input.text = host; input.characterLimit = 64;
+            input.textComponent = it; input.text = host; input.characterLimit = 96;
             var row = BobUi.HBox(card, 14, "Buttons"); BobUi.Size(row, 110, 110);
             BobUi.Button(row.transform, "เชื่อมต่อใหม่", BobUi.Teal, () => SetHost(input.text), 32, Color.white);
             BobUi.Button(row.transform, "ปิด", BobUi.Surface, () => SetOverlay(phase == Phase.Build ? Overlay.Pause : Overlay.None), 32);

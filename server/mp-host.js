@@ -2,14 +2,14 @@
 // Run: node mp-host.js [bots=2] [matchIdFile]   Writes the match id to matchIdFile, waits for one more player,
 // then every bot readies and plays like in mp-test.js. Bots on the human's team never submit: the human does.
 const fs = require('fs');
-const { Bot, auth, OP, sleep, HOST } = require('./mp-test');
+const { Bot, auth, OP, sleep, HOST, HTTP } = require('./mp-test');
 const N = Math.max(1, Math.min(3, +process.argv[2] || 2));
 const FILE = process.argv[3] || 'mp-match.txt';
 
 (async () => {
   const bots = [];
   for (let i = 0; i < N; i++) { const b = new Bot(i + 10, await auth(i + 10)); await b.open(); bots.push(b); }
-  const r = await fetch(`http://${HOST}/v2/rpc/bob_create_match?unwrap`, {
+  const r = await fetch(`${HTTP}/v2/rpc/bob_create_match?unwrap`, {
     method: 'POST', headers: { Authorization: 'Bearer ' + bots[0].token }, body: JSON.stringify({ seed: 5151 }) });
   const { match_id } = await r.json();
   for (const b of bots) await b.join(match_id);

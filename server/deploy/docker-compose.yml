@@ -1,0 +1,66 @@
+# Public Nakama for BOB (Task Race / coop rooms). Base is the local server/docker-compose.yml:
+# same image and modules, plus restart policies, a private database and Caddy in front for TLS.
+#   cp .env.example .env   # fill the passwords, then: docker compose up -d
+# The database is this stack's own volume (bob_pg) and its own `nakama` database - nothing is shared.
+name: bob-online
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-nakama}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?copy .env.example to .env and set POSTGRES_PASSWORD}
+    volumes:
+      - bob_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "${POSTGRES_DB:-nakama}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  nakama:
+    image: heroiclabs/nakama:3.22.0
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint:
+      - "/bin/sh"
+      - "-ec"
+      - >
+        /nakama/nakama migrate up --database.address postgres:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-nakama} &&
+        exec /nakama/nakama --name bob-online
+        --database.address postgres:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-nakama}
+        --logger.level ${NAKAMA_LOG_LEVEL:-INFO}
+        --session.token_expiry_sec 7200 --session.refresh_token_expiry_sec 2592000
+        --runtime.path /nakama/data/modules --runtime.js_entrypoint index.js
+        --console.username ${NAKAMA_CONSOLE_USER:-admin} --console.password ${NAKAMA_CONSOLE_PASSWORD:?set NAKAMA_CONSOLE_PASSWORD}
+        --socket.server_key ${NAKAMA_SERVER_KEY:-defaultkey}
+    volumes:
+      - ../modules:/nakama/data/modules:ro
+    expose:
+      - "7350"
+    healthcheck:
+      test: ["CMD", "/nakama/nakama", "healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+  # Only Caddy is reachable from outside: 443 (TLS + WebSocket) and 80 (redirect / cert). The API port 7350 and the
+  # console 7351 stay on the docker network.
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - nakama
+    environment:
+      - SITE_ADDRESS=${SITE_ADDRESS:?set SITE_ADDRESS, e.g. bob.example.duckdns.org}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+volumes:
+  bob_pg:
+  caddy_data:
+  caddy_config:

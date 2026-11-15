@@ -105,7 +105,7 @@ namespace Bob.Game
             connecting = true; online = false; netNote = "กำลังเชื่อมต่อ " + host + "…"; RenderAll();
             try
             {
-                server = new BobServer("http", host, port, serverKey);
+                server = BobServer.FromAddress(host, port, serverKey);
                 await WithTimeout(server.SignInAsync(SystemInfo.deviceUniqueIdentifier + "-bob-game"), 5000);
                 await WithTimeout(server.PingAsync(), 4000);
                 online = true; netNote = "เซิร์ฟเวอร์ Nakama ออนไลน์ (" + host + ")";

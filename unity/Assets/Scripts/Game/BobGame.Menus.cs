@@ -402,6 +402,9 @@ namespace Bob.Game
             var go = BobUi.Button(screenRoot, heroForMatch ? "ยืนยัน" : "เลือก", BobUi.Sun, ConfirmHero, 56);
             BobUi.Pin((RectTransform)go.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-40, 30), new Vector2(420, 180));
             go.GetComponentInChildren<TMP_Text>().fontStyle = FontStyles.Bold;
+            // Online quick match (2-4 players, two teams). This is the shipped screen, so the matchmaker lives here.
+            var on = BobUi.Button(screenRoot, "ออนไลน์ 2-4 คน", online ? BobUi.Teal : BobUi.Surface, FindOnline, 40, online ? Color.white : BobUi.Muted);
+            BobUi.Pin((RectTransform)on.transform, new Vector2(0, 0), new Vector2(0, 0), new Vector2(40, 40), new Vector2(440, 130));
         }
 
         void ConfirmHero()

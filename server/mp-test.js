@@ -1,7 +1,12 @@
-// End-to-end test of the 'bob_coop' match against a local Nakama (node 22+, no packages).
+// End-to-end test of the 'bob_coop' match against a Nakama (node 22+, no packages).
 // Run: node mp-test.js [players=2]   Each bot joins, readies, walks to a station, picks a part, carries it to its
 // team's cart, places it and submits. Passes when all 3 rounds are scored and every bot sees the same results.
-const HOST = process.env.BOB_HOST || '127.0.0.1:7350', KEY = 'defaultkey';
+// Point it at a public server with BOB_HOST=host[:port] and BOB_TLS=1 (https/wss), plus BOB_KEY if it is not defaultkey.
+const RAW_HOST = process.env.BOB_HOST || '127.0.0.1:7350';
+const TLS = process.env.BOB_TLS === '1' || /^(https|wss):\/\//i.test(RAW_HOST);
+const HOST = RAW_HOST.replace(/^(https?|wss?):\/\//i, '').replace(/\/.*$/, '');
+const HTTP = (TLS ? 'https://' : 'http://') + HOST, WS = (TLS ? 'wss://' : 'ws://') + HOST;
+const KEY = process.env.BOB_KEY || 'defaultkey';
 const N = Math.max(2, Math.min(4, +process.argv[2] || 2));
 const OP = { MOVE: 1, PICK: 2, PLACE: 3, LIFT: 4, READY: 5, SUBMIT: 6, ABILITY: 14, STATE: 10, POS: 11, RESULT: 12, ERROR: 13, PREVIEW: 15 };
 const STATION = { tool: [1.2, 3.75], chem: [6.8, 3.75], energy: [1.2, 1.25], method: [6.8, 1.25] };
@@ -13,7 +18,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 const b64 = o => Buffer.from(JSON.stringify(o)).toString('base64');
 
 async function auth(id) {
-  const r = await fetch(`http://${HOST}/v2/account/authenticate/device?create=true&username=bot${id}`, {
+  const r = await fetch(`${HTTP}/v2/account/authenticate/device?create=true&username=bot${id}`, {
     method: 'POST', headers: { Authorization: 'Basic ' + Buffer.from(KEY + ':').toString('base64'), 'Content-Type': 'application/json' },
     body: JSON.stringify({ id: 'bob-mp-test-device-' + id })
   });
@@ -25,7 +30,7 @@ class Bot {
   constructor(i, token) { this.i = i; this.token = token; this.results = []; this.errors = []; this.state = null; this.cid = 0; this.wait = {}; }
   open() {
     return new Promise((ok, bad) => {
-      this.ws = new WebSocket(`ws://${HOST}/ws?lang=en&status=true&format=json&token=${this.token}`);
+      this.ws = new WebSocket(`${WS}/ws?lang=en&status=true&format=json&token=${this.token}`);
       this.ws.onopen = ok; this.ws.onerror = e => bad(new Error('socket error'));
       this.ws.onmessage = ev => this.onMsg(JSON.parse(ev.data));
     });
@@ -76,11 +81,11 @@ class Bot {
   }
 }
 
-module.exports = { Bot, auth, OP, sleep, HOST };
+module.exports = { Bot, auth, OP, sleep, HOST, HTTP, WS };
 if (require.main === module) (async () => {
   const bots = [];
   for (let i = 0; i < N; i++) { const b = new Bot(i, await auth(i)); await b.open(); bots.push(b); }
-  const r = await fetch(`http://${HOST}/v2/rpc/bob_create_match?unwrap`, {
+  const r = await fetch(`${HTTP}/v2/rpc/bob_create_match?unwrap`, {
     method: 'POST', headers: { Authorization: 'Bearer ' + bots[0].token }, body: JSON.stringify({ seed: 4242 }) });
   const { match_id } = await r.json();
   console.log('match', match_id);

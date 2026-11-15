@@ -25,7 +25,7 @@ namespace Bob.Dev
         {
             try
             {
-                server = new BobServer("http", host, port);
+                server = BobServer.FromAddress(host, port);
                 await server.SignInAsync(SystemInfo.deviceUniqueIdentifier + "-bob-smoke");
                 Log("signed in as " + server.UserId);
                 Log("ping: " + await server.PingAsync());
