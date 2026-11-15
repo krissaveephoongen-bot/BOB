@@ -80,21 +80,55 @@ namespace Bob.EditorTools
             return lib;
         }
 
+        /// <summary>SessionState outlives a batch run, so every entry point clears the modes it does not want;
+        /// otherwise a leftover online/task flag silently changes what the next test does.</summary>
+        static void ClearModes()
+        {
+            SessionState.SetBool(BobGame.OnlineKey, false);
+            SessionState.SetBool("bob.taskbot", false);
+        }
+
         [MenuItem("Bob/Run Game Test")]
-        public static void RunTestFromMenu() { SessionState.SetBool(ExitKey, false); BeginTest(); }
+        public static void RunTestFromMenu() { ClearModes(); SessionState.SetBool(ExitKey, false); BeginTest(); }
 
-        public static void RunTaskTest() { SessionState.SetBool(ExitKey, true); SessionState.SetBool("bob.taskbot", true); BeginTest(); }
+        public static void RunTaskTest() { ClearModes(); SessionState.SetBool(ExitKey, true); SessionState.SetBool("bob.taskbot", true); BeginTest(); }
 
-        public static void RunTest() { SessionState.SetBool(ExitKey, true); BeginTest(); }
+        public static void RunTest() { ClearModes(); SessionState.SetBool(ExitKey, true); BeginTest(); }
 
         // Online: start the bots first (cd server && node mp-host.js 2 ../unity/Logs/bob-mp-match.txt), then run this.
         [MenuItem("Bob/Run Online Test")]
-        public static void RunOnlineTestFromMenu() { SessionState.SetBool(ExitKey, false); SessionState.SetBool(BobGame.OnlineKey, true); BeginTest(); }
+        public static void RunOnlineTestFromMenu() { ClearModes(); SessionState.SetBool(ExitKey, false); SessionState.SetBool(BobGame.OnlineKey, true); BeginTest(); }
 
-        public static void RunOnlineTest() { SessionState.SetBool(ExitKey, true); SessionState.SetBool(BobGame.OnlineKey, true); BeginTest(); }
+        public static void RunOnlineTest() { ClearModes(); SessionState.SetBool(ExitKey, true); SessionState.SetBool(BobGame.OnlineKey, true); BeginTest(); }
+
+        /// <summary>Test at another screen size: BOB_VIEW=2400x1080 (phone aspect) before starting Unity. Uses the Game view's
+        /// fixed-resolution list through reflection (no public API for it).</summary>
+        static void ApplyViewSize()
+        {
+            var env = System.Environment.GetEnvironmentVariable("BOB_VIEW"); if (string.IsNullOrEmpty(env)) return;
+            var wh = env.Split('x'); if (wh.Length != 2 || !int.TryParse(wh[0], out var w) || !int.TryParse(wh[1], out var h)) return;
+            try
+            {
+                var T = typeof(Editor).Assembly;
+                var sizesType = T.GetType("UnityEditor.GameViewSizes"); var single = typeof(ScriptableSingleton<>).MakeGenericType(sizesType);
+                var inst = single.GetProperty("instance").GetValue(null);
+                var group = sizesType.GetMethod("GetGroup").Invoke(inst, new object[] { 0 }); // Standalone
+                var gt = group.GetType();
+                var sizeType = T.GetType("UnityEditor.GameViewSize"); var kind = T.GetType("UnityEditor.GameViewSizeType");
+                var ctor = sizeType.GetConstructor(new[] { kind, typeof(int), typeof(int), typeof(string) });
+                var size = ctor.Invoke(new object[] { System.Enum.Parse(kind, "FixedResolution"), w, h, "Bob " + env });
+                gt.GetMethod("AddCustomSize").Invoke(group, new[] { size });
+                int index = (int)gt.GetMethod("GetTotalCount").Invoke(group, null) - 1;
+                var gv = T.GetType("UnityEditor.GameView"); var win = EditorWindow.GetWindow(gv);
+                gv.GetMethod("SizeSelectionCallback", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic).Invoke(win, new object[] { index, size });
+                Debug.Log("[BobGameTest] Game view set to " + env);
+            }
+            catch (System.Exception e) { Debug.LogWarning("[BobGameTest] could not set the Game view size: " + e.Message); }
+        }
 
         static void BeginTest()
         {
+            ApplyViewSize();
             if (!File.Exists(ScenePath)) Build();
             EditorSceneManager.OpenScene(ScenePath);
             SessionState.SetBool(BobGame.AutoKey, true);

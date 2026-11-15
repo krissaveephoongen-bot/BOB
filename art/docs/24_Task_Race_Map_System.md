@@ -601,3 +601,99 @@ result overlay: open=True draw 0:0 points · tasks 0/6 vs 0/6 · reward 45 coins
 | P0 (สถานะ) | 6 บทใน `Resources/Chapters` | — | ด่าน 1–6 ปลดที่ LV 1 / 6 / 13 / 21 / 31 / 41 ตามข้อ 15.1 · D ต่อบท = band เดิม (1-2 → D1, 3-4 → D2, 5-6 → D3) · นาฬิกาทุกบท 120 วิ (ช่อง `roundTime` เตรียมไว้ให้ P3 ที่จะใช้ 100 วิ) · ภาพการ์ดใช้ชุด `lobby_*` ที่มีจริง (บท 5–6 ใช้ภาพซ้ำจนกว่า P1 จะทำ skin) |
 
 **ข้อสรุป:** ระบบที่ขาดไม่ใช่ตัวมินิเกม แต่เป็น "ชั้นบท" (chapter data + stage select + scene skin) ที่ห่อรอบเดิมอยู่ — ถ้าทำ P0+P1 ก่อน จะได้ภาพรวมเกม 6 บทตาม GDD โดยไม่ต้องแก้กฎการแข่ง และเก็บ P2–P4 ไว้เป็นกลไกของบทนั้น ๆ
+
+**ลำดับที่ owner เคาะ 15 พ.ย. 2026** (เรียงตามความสำคัญ; ทุกเฟสมีเกณฑ์จบของตัวเอง):
+
+| เฟส | งาน | เกณฑ์จบ |
+| --- | --- | --- |
+| 0 | ปิดแผ่นม่วงบนเกาะในโหมดเนื้อเรื่อง (ข้อ 15.5 "ค้าง (ภาพ)") — probe แบบ pixel bisect ด้วย RenderTexture; ถ้า 2 รอบไม่เจอ ใช้ทางลัดบังคับ island mesh variant เดียวทั้งสามโหมดแล้ว rebuild | `series-1-start.png` ไม่มีม่วง, duo/team ไม่เปลี่ยน, `SERIES CHECK PASSED` |
+| 1 | P3 ที่เหลือ (ข้อ 15.5) + การ์ด S13 ต้องอ่าน `100 วิ × 3` ไม่ใช่ `roundTime` 120 | การ์ดตรงกฎจริง, ดาว 0–3, profile มีผลรายรอบ, แพ้ติดนับต่อบท |
+| 2 | P1 skin 6 บท: material tint พื้น + prop 6–8 ชิ้น/บท จาก `Assets/Resources/Props` ผ่าน `BobFieldDressing`; ภาพการ์ด S13 ถ่ายจาก skin ใหม่ (ไม่ต้อง gen) | แต่ละบทเห็นความต่างชัด, ไม่แตะ spot/gameplay, trio verify ผ่าน |
+| 3 | P2 **บังคับใช้การ์ดกติกาครบทั้ง 8 ใบ** (`ruleCards` → `TaskRaceRound`/`BobMinigameHost`): เงื่อนไข 1–3, แหล่งแรง, งบจำกัด, วิธีเฉพาะทาง, ผิวบอบบาง, คราบซ้อน, ถนอมของเดิม, เวลาสั้นลง, ชิ้นส่วนสุ่ม, การ์ดพิเศษ | การ์ดบน S13 ตรงกับสิ่งที่เกมบังคับจริงทุกใบ |
+| 4 | P4 Cart Rush เป็น**ภารกิจที่ 2 ของบท 2** (ไม่เพิ่มเมนู Home) | เล่นครบ loop เดิน–หยิบ 2 ชิ้น–ซ้อน–ส่งต่อ, มี HUD/ผล |
+| 5 | `BobMinigameSfx` ผูก 8 mini kind กับ WAV 38 ไฟล์ที่มี + T16 emergency stain + rival bar (#47) ขับด้วย seed ท้องถิ่นใน solo | ทุก kind มีเสียง tick/สำเร็จ/พลาด, T16 เกิดตาม seed |
+| 6 | ต่อ `BobOnline.CreateTaskRaceAsync` (ยังไม่มี caller) ส่ง `difficulty`/seed ต่อบท, ทดสอบ 2 client — **หลัง APK v1** | PvP ข้ามเครื่องเล่นได้ |
+| 7 | APK + Firebase App Distribution **หลังเฟส 0–1**, sync docs, ตอบ #44; S28 3D stage (#46) เลื่อนไปหลัง APK | APK บนเครื่องจริงผ่าน, เอกสารตรงโค้ด |
+
+### 15.4 P0 ที่ทำแล้ว (15 พ.ย. 2026)
+
+> หลัง merge `c769fa8` (15 พ.ย. 2026) เหลือ implementation เดียว: ชุดของ session ขนาน (`Rules/…`). ชุดแรกของฝั่งเรา (`Game/ChapterDefinition.cs` + `Chapters` loader + `BobChapterBuilder` + `ch0*.asset`) ถูกถอดออกทั้งชุดเพื่อไม่ให้มีสองระบบอ่าน `bob.chapter` คนละแบบ
+
+- **`ChapterDefinition`** (ScriptableObject, `Rules/ChapterDefinition.cs`): `order`, `title`, `place`, `unlockLevel`, `difficulty` D1–D3, `roundTime`, `backdrop`, `blurb`, `ruleCards` — 6 asset อยู่ใน `Assets/Resources/Chapters/Chapter1_RentalRoom … Chapter6_Market` ตามตาราง §15.1: LV 1 / 6 / 13 / 21 / 31 / 41, band D1 (บท 1–2) / D2 (3–4) / D3 (5–6), นาฬิกา 120 วิ (ยกเว้นโหมดเนื้อเรื่องที่ P3 ใช้ 100 วิต่อรอบ); เมนูตรวจบันได **Bob > Chapters > Check Ladder** (`Editor/BobChapterCheck.cs`)
+- **`BobChapters`** (static loader): โหลดจาก `Resources/Chapters` เรียงตาม `order`, เก็บบทที่เลือกใน PlayerPrefs `bob.chapter` และคุม `bob.band` ให้คะแนนดีสุดเดิมตามบท, `Unlocked` / `Selected(level)` / `LastUnlocked` / `Validate()`; `Level = 1 + xp/200` ของล็อบบี้
+- **S13 เลือกบท** (`BobGame.Menus.cs > ChapterSelect`, `Phase.Chapters`): การ์ด 6 ใบ 3×2 (ภาพฉาก + หมายเลขบท + ชื่อ + สถานที่ + `LV/D` + ดีสุด + การ์ดกติกา) ล็อกจนถึงระดับปลดล็อกพร้อมม่านมืด, ปุ่ม `เริ่มด่านนี้` → `PressPlay` โหลดซีน `TaskRace`; ปุ่ม back / Android back กลับ Home
+- **Home:** ชิป Task Race เดิมเป็นการ์ดบท (ภาพ + `บท N` + ชื่อ + `D · เวลา · ดีสุด`) แตะเพื่อเข้า S13 — ปุ่ม `เล่น` ยังเริ่มบทที่เลือก
+- **`TaskRaceModeManager.ApplyChapter()`** ใน `Awake`: ตั้ง `matchDuration = chapter.RoundTime` และ `ConfigureRound(players, chapter.Difficulty, seed)` **ก่อน** `TaskRaceRound.Start` วาดรายการ; ตัว `TaskRaceRound` ไม่ได้อ่านบทเองแล้ว (สูตรสุ่มยังอยู่ที่ `BobTaskRaceRules`)
+- **ยังไม่ทำ (P1/P2):** skin ชั้นบนเกาะ, การบังคับใช้ `ruleCards`, ดาว 0–3 และแผนที่หมุดแบบ S13 เต็มรูปแบบ — หน้าเลือกบทตอนนี้ใช้การ์ดภาพล็อบบี้แทน
+
+### 15.5 P3 ที่ทำแล้ว (15 พ.ย. 2026)
+
+- **`StorySeries`** (`TaskRace/StorySeries.cs`, ตรรกะล้วน ไม่ผูก MonoBehaviour เพื่อให้ editor check เล่นครบซีรีส์ได้โดยไม่ต้องเข้า Play): `Rounds = 3`, `WinsToTake = 2`, `SecondsForRound`; `Register(localTasks, rivalTasks, localPoints, rivalPoints)` ปิดรอบ — เทียบงานก่อน แต้มใช้ตัดสินเฉพาะงานเท่ากัน, เท่ากันทั้งคู่ = เสมอ; `Over` จบเมื่อฝ่ายใดฝ่ายหนึ่งชนะครบ 2 หรือเล่นครบรอบ 3
+  - เสมอไม่นับให้ใคร: 0-0 สองรอบยังเล่นรอบสามต่อ (ทดสอบใน `StorySeriesCheck`)
+  - **บั๊กที่แก้ตอนตรวจ:** เดิม `Over` ใช้ `Round >= Rounds` แต่ `Round` ถูกเลื่อนเป็นรอบถัดไปแล้วหลังปิดรอบ → ซีรีส์ 0-0 จบที่รอบ 2 ตอนนี้ `Over` วัดจาก `LastRound.Value.Number`
+  - `ChallengeOffered`: ชนะรอบด้วยส่วนต่าง ≥ `MarginForChallenge` (3) งาน
+- **`TaskRaceModeManager`** — เฉพาะ `storySeries = true` (PvP คงรอบเดียว `matchDuration` 120 วิ ไม่แตะ): `BeginMatch` สร้าง `StorySeries(storyRoundSeconds, seriesWinsToTake)`, เริ่มรอบแรกด้วย `StorySecondsForRound`; จบรอบ → `FinishRound()` แจกแต้ม/ประกาศ `RoundEnded` ตามเดิม แล้วรอ `nextRoundDelay` (3 วิ) → `BeginRound()`; ครบซีรีส์ → `EndMatch(seriesWon, seriesDraw)` และ HUD overlay ทำงานเหมือน PvP
+  - ค่า Inspector ใหม่: `storySeries`, `seriesWinsToTake` 2, `storyRoundSeconds` 100, `loseStreakBonusSeconds` 15, `nextRoundDelay` 3 (`OnValidate` clamp)
+  - **mercy แพ้ติด 2:** `StoryLossStreak` (PlayerPrefs `bob.story.lossStreak`) นับบทที่แพ้ติด; ครบ 2 บท รอบแรกของบทถัดไปได้ +15 วิ พร้อม toast; ชนะซีรีส์แล้วรีเซ็ต — best-of-3 จบที่ 2 ชนะ จึงไม่มีทางแพ้ติด 2 รอบภายในซีรีส์เดียว โบนัสจึงลงที่รอบแรกของบทถัดไป
+  - `DebugFinishRound()` จบรอบด้วยคะแนนจริงของรอบนั้น (ใช้โดย check)
+- **`BobSeriesBanner`** (`TaskRace/BobSeriesBanner.cs`) — canvas แยก `sortingOrder 40` ไม่แตะ layout ของ `BobTaskRaceHud`: การ์ดกลางจอ 760×380 ตอนปิดรอบ (หัวข้อสีตามผล, ป้าย `ด่านท้าทายปลดแล้ว!` เมื่อ `ChallengeOffered`, `เรา X - Y คู่แข่ง`, นับถอยหลังรอบถัดไป) + แถบล่างกลางจอ `รอบ N/3 · เรา X - Y คู่แข่ง` ตลอดซีรีส์; ผูก `MatchStarted` / `RoundEnded` / `MatchEnded`
+- **ตรวจ:** เมนู **Bob > Run Story Series Check** (`Editor/StorySeriesCheck.cs`) — โหมดแก้ไขตรวจกฎรวมเส้นทางเสมอ, เข้า Play แล้วจบ 3 รอบจริงด้วย `DebugFinishRound` นับรอบ 1→2→3, ถ่าย `Logs/series-1-start … 5-result.png` (มีชุด toggle Field / Soil / Dressing / CloudSea / fog สำหรับไล่ปัญหาเรื่องภาพ) ปิดท้าย `[SeriesCheck] SERIES CHECK PASSED`; ผลรันล่าสุด: rules PASSED, chapter end last round 3, overlay ผลเปิด
+- **ยังไม่ทำ:** หน้าจอด่านท้าทายปลายทาง (ตอนนี้แค่ป้ายแจ้ง), ดาว 0–3 ต่อบท, การบันทึกผลรายรอบลง `BobTaskRaceProfile` (ยังบันทึกเป็นแมตช์เดียว), สถิติแพ้ติดต่อบท (ตอนนี้นับรวมทุกบท), ข้อความบนการ์ด S13 ที่ยังพิมพ์ 120 วิ (ที่จริงโหมดเนื้อเรื่องใช้ 100 วิ × 3 รอบ — `ChapterDefinition.roundTime` มีผลกับ PvP เท่านั้น)
+- **แก้แล้ว 15 พ.ย. 2026 — แผ่นม่วงบนเกาะ (ProbeSlab ใน `StorySeriesCheck`)**: ในซีน solo ระหว่างเล่นซีรีส์ พื้นเกือบทั้งเกาะเคยถูกวาดเป็นแผ่นม่วง `#A600A6` (กล้องเล่น) แต่ preview/wide และ duo/team ปกติ. วิธีหาเจ้าของ: render กล้องเล่นลง RenderTexture 64×64 แล้วนับพิกเซลม่วง ปิด renderer ทีละตัว — ผลคือ **`TaskRaceMap/TeamA/Island/Outline` เพียงตัวเดียว** (45.4% → 0.0%). สาเหตุ: prefab ทุกตัวใน `Resources/Props` ถูก import ตอนที่ `Resources/Materials/M_BOB_Outline` ยังไม่มี child `Outline` (inverted hull จาก `BobToon.Outline`) จึงมี `m_Materials: - {fileID: 0}` มาตั้งแต่ commit `5f93e71` — ใน Scene view ไม่ถูกวาด แต่พอเข้า Play mode static batching รวมเป็น `Combined Mesh (root: scene)` แล้ว submesh ที่ไม่มี material ออกมาเป็น error magenta. แก้ด้วยเมนู **`Bob/Fix Null Outline Renderers`** (`Editor/BobOutlineFix.cs`) ปิด renderer `Outline` ที่ material ว่าง: 91 ตัวใน prefab + 27/29/33 ตัวใน `TaskRace{,_Duo,_Team}.unity`; เส้นขอบของพื้นแผนที่ยังมาจาก pass OUTLINE ใน `BOB/CurvedWorld` ตามเดิม. ตรวจซ้ำ: `slab probe: 0.0% magenta`, `SERIES CHECK PASSED`, ภาพ `Logs/series-1-start.png` เขียวปกติ
+
+### 15.6 เฟส 2–3 ของแผน twin-island (15 พ.ย. 2026)
+
+**เฟส 2 — ยาร์ดโมดูลาร์บนเกาะคู่ (`Editor/BobTwinIslandRig.cs`).** สร้างชุดเดียวบน Team A จาก prop ที่มีใน `Resources/Props` (ไม่ import asset ใหม่) แล้ว mirror ไป Team B ด้วยการสะท้อน transform ข้ามระนาบ x = 0 ของเกาะ: `localPosition.x -> -x`, `localRotation = (x, -y, -z, w)`, `localScale` คงเดิม — **ไม่มี `localScale.x = -1` ที่ไหน** (collider, NavMesh, ป้ายข้อความ และ normal ของแสงจึงถูกทั้งสองฝั่ง) และเป็นสูตรที่ตรงเป๊ะทางคณิตศาสตร์แม้ parent จะ scale ไม่เท่ากัน (`M·P·L·M = (M·P·M)(M·L·M)`, `M·S·M = S`). ทุกครั้งที่ rebuild ซีนจะได้ยาร์ดเดิมทุกจุด
+
+| สถานี | เฟอร์นิเจอร์/แองเคอร์ (Team A, island-local) | prop ที่ใช้จริง | มินิเกม |
+| --- | --- | --- | --- |
+| S1 ล้างจานกองสูง | แขน E-counter ที่ 1 (x −3.15, z 0.85) | `SM_plates_stack`, `SM_dish_rack_blue` บนท็อป 0.85 ม. | T07 |
+| S2 แยกขยะ | แขนที่ 2 (x −1.75) | `SM_bin_recycle_blue`, `SM_bin_trash_grey`, `SM_trash_bag_black` | T05 |
+| S3 จัดรถเข็นตามสูตร | แขนที่ 3 (x −0.35) | `SM_crate_oranges` ×2, `SM_sack_coffee`, `SM_board_menu` | T04 |
+| S4 ไล่ฝุ่นใต้โต๊ะ | โต๊ะขาเปิด (x −4.55, z 0.55) | ขา/โครงจาก primitive + `SM_bucket_metal_blue`, `SM_brush_scrub_wood`, ฝุ่น 3 กอง (`Dust`, 12/18/35°) ใต้ท็อป | T10 |
+| S5 เช็ดกระจก | ชั้นวาง 3 ชั้นเปิดโล่ง มี `Slot_Top/Mid/Bottom` (x 3.25) | `SM_spray_bottle` (Top), `SM_gloves_pair` (Mid) | T08 |
+| S6 จำลำดับเครื่องซักผ้า | ถัดจากชั้นวาง (x 4.55) | `SM_washing_machine` (สูง 0.84, สเกล 1.4), `SM_basket_clothes`, `SM_detergent_pump` | T15 |
+
+- **E-counter:** สัน 4.2 × 0.5 ม. สูง 0.85 ม. ที่ z 1.55 + แขน 3 ท่อน 1.3 ม. หันเข้าหาสนาม (arm z 0.65, x −3.15/−1.75/−0.35) พร้อม toe kick — ใช้ `M_BOB_Station` และ UV palette ของ `M_BOB_CurvedMap`; แขนแต่ละท่อนมี `Counter`/`CounterTop` ของตัวเอง sehingga clearance/contact shadow วัดจากแขน ไม่ใช่สัน
+- **กำแพงหลัง (135°):** รัศมี 2.8 ม. ศูนย์ที่ x −1.75 / z 1.45, กว้าง 18 ท่อน, สูง 1.85 ม. ในช่วง ±45° แล้ว taper เชิงเส้นลงเหลือ curb 0.35 ม. ที่ ±67.5°; ปลายตะวันออกหยุดที่ x 0.84 / z 2.52 จึงไม่กินปากสะพานเหนือ; `WallMountSocket` 5 ตัวที่มุม −54/−27/0/27/54° (สูงสุด 1.30 ม.) ใส่ `industrial_fan`, `shelf_wall_books`, `tv_flat`, `clock_alarm`, `ac_wall_teal` — socket พร้อมรับ prop ใหม่โดยไม่ต้องแก้โค้ด
+- **ธรรมชาติ 3 ชั้น:** ใหญ่ `bush_green` ×3 (สูง 1.15–1.30, กว้างสุด 1.80 กันล้ำเคาน์เตอร์/สะพาน), กลาง `plant_pot`/`pot_blue`/`pot_ceramic_gold` ×4 (สเกล 0.9, yaw ต่างกันทุกต้น), เล็ก `rocks_grass` ×4 (สเกล 0.8) — ย้ายออกจากทางขึ้นสะพานเหนือทั้งหมด
+- **ตรวจแล้ว (rebuild trio):** `[TwinRig] 7 root(s) built on Team A, 7 mirrored to Team B`, `clearance: 12 prop(s) checked, 0 decor and 0 station overlap(s)` ทั้ง solo/duo/team, 12 `TaskSpot` (6/ฝั่ง) เดินถึงทุกจุด, ภาพ `Logs/taskrace-play.png`, `-wide.png`
+
+**เฟส 3 — `StageConfig` หกด่าน (`Rules/StageConfig.cs`, `Rules/BobStages.cs`, `Editor/BobStageBuilder.cs`, `Resources/Stages/*.asset`).** ด่านผูกกับบทตาม `order` (บท 1 → Stage 1 … บท 6 → Stage 6) ไม่มีคีย์เลือกด่านใหม่; asset สร้าง/อัปเดตซ้ำได้ด้วยเมนู **`Tools/BOB/Stages/Rebuild Six Stage Assets`** (idempotent ผ่าน SerializedObject)
+
+| ด่าน | บท | นาฬิกา | สะพานเปิดเมื่อเหลือ | แต้ม/งาน | กฎพิเศษ |
+| --- | --- | --- | --- | --- | --- |
+| 1 ห้องเช่า | 1 | 120 วิ | 60 วิ | 100 | — |
+| 2 รับงานเพื่อนบ้าน | 2 | 120 วิ | 60 วิ | 75 | — |
+| 3 ร้านค้าในซอย | 3 | 120 วิ | 60 วิ | 100 | ปิดการ์ดก่อนเสร็จ = สตัน 1.5 วิ |
+| 4 บ้านเก่ามีเรื่องเล่า | 4 | 120 วิ | 60 วิ | 100 | คราบ (`T02`) ต้องขัด 2 รอบ |
+| 5 งานใหญ่ของย่าน | 5 | 90 วิ | 45 วิ | 100 | แจกงานแบบสุ่ม ไม่ยึดหมวดสถานี |
+| 6 ฟื้นตลาดเก่า | 6 | 120 วิ | 60 วิ | 100 | โบนัสปิดด่าน +200 |
+
+- **ผูกเข้าเกม:** `TaskRaceModeManager.ApplyStage()` รันใน `Awake` ต่อจาก `ApplyChapter()` (ด่านชนะค่า chapter): ตั้ง `matchDuration`, `openAtRemaining`, `warningAtRemaining = open + 5`, `pointsPerTaskComplete` และส่ง `SetStageRules(randomize, twoPass)` ให้ `TaskRaceRound`; โหมดเรื่องยังใช้ `storyRoundSeconds` 100 วิ × 3 ของตัวเอง
+- **กฎที่บังคับจริง:** `TaskSpot.requiredPasses` + `LastCardCompleted` (คราบ 2 รอบ: รอบแรก `OnTaskPass` → toast "รอบแรกเสร็จ ขัดอีกรอบให้สะอาด!" แล้วยัง Dirty), `TaskRaceRound.TakeNext(..., anyOrder)` (สุ่มลำดับ), `BobTaskRaceHero.Stun()` (หยุดรับ stick/tap, HUD ยังอ่าน stick), `EndMatch` จ่าย `StageBonus` พร้อม toast; ค่าคงที่คราบคือ `TaskRaceRound.StainId = "T02"`
+- **S13/Home/Mode:** `ChapterSelect` อ่าน `BobStages.Get(chapter.Order)` → บรรทัดการ์ด `LV x · Dn · 120 วิ · สะพาน 60 วิ` และ `สถานที่ · ดีสุด`, ชิปบน Home ใช้ `ClockSeconds` ของด่าน, ปุ่ม `เริ่มด่านนี้` = `PressPlay`; Mode Select ปุ่ม `เลือก` → `Phase.Chapters` (เดิมกลับ Home); ชื่อ/ข้อมูลการ์ดโหมดเปิด TMP Auto Size (20–46) เพื่อให้ "Community" ไม่ล้น
+- **หัวข้อ `เลือกโหมด` / `เลือกด่าน` อ่านไม่ชัด (แก้ 15 พ.ย.):** ข้อความขาวบนฟ้าครีมจมหายเพราะ `BobUi.OutlineText` ตั้งแค่ `outlineWidth/outlineColor` แต่ตัว shader `TMP_SDF-Mobile` วาด outline ใต้ keyword `OUTLINE_ON` ซึ่งวัสดุฟอนต์ (`Mitr-Medium SDF`, `IBMPlexSansThai-Medium SDF`) ไม่ได้เปิด → outline ทั้งเกมไม่เคยถูกวาด. แก้: helper เปิด keyword บนวัสดุต่อ label (`t.fontMaterial.EnableKeyword("OUTLINE_ON")`) และเปลี่ยน `#pragma shader_feature __ OUTLINE_ON` เป็น `multi_compile` ใน `Assets/TextMesh Pro/Shaders/TMP_SDF-Mobile.shader` เพื่อให้ variant ติดไปกับ build (shader_feature จะถูกตัดถ้าไม่มี material ที่บันทึกค่า keyword ไว้); ภาพยืนยัน `Logs/bob-game-m4-modes.png` / `m4b-chapters.png` มีขอบกรมท่ารอบตัวอักษรแล้ว
+- **ตรวจแล้ว (`TaskRaceVerify`):** `stages: 6 asset(s) … validate ok · saved #1`; `two-pass T02: first pass -> Dirty (passes 1/2), second -> Clean`; `random: 4 Team A station(s) hold a task from another family`; `stun: stunned=True for 1.5s`; trio verify ผ่านซ้ำหลังเฟส 4 (log `Logs/verify-rig-{solo,duo,team}.log`, `Logs/verify-{solo,duo,team}6.log`, build `Logs/build-rig-{solo5,duo2,team2}.log`)
+
+### 15.7 เฟส 4–5 ของแผน twin-island (15 พ.ย. 2026)
+
+**เฟส 4 — บอท Team B + แผงดีบัก (`TaskRace/TaskRaceBotController.cs`, `Editor/BotCheck.cs`).** บอทอยู่ในซีน solo เท่านั้น (duo/team ยังใช้ `BobTaskRaceRival` แบบเดิม) และเดินด้วย waypoint ไม่ใช้ `NavMeshAgent`: แผนที่แบนและ clearance check การันตีเลนสะพานอยู่แล้ว waypoint ข้ามสะพานคือ `(sign(from.x)·5, 0, ±2.7) → (0,0,±2.7) → (−sign·5,0,±2.7) → เป้าหมาย` โดยเลือกฝั่งเหนือ/ใต้จากผลรวมระยะ z ถึง ±2.7
+
+- ค่าเริ่มต้น: `speed 3.0` (ฮีโร่ 3.2), `pace 1.12` (เวลางาน = ค่าประมาณ × 1.12), `headStart 4 วิ`, `retrySeconds 1`, `raidCooldown 14 วิ`, `sabotageHoldSeconds 2.75` (เท่าการ์ดผู้เล่น), `arriveRadius 0.55`
+- งาน: เลือกสถานี Dirty ของตัวเองที่ใกล้สุด → เดิน → ครบเวลา → `ForceComplete` (แต้ม Team B ออกตามค่าด่านผ่าน `TaskRaceRound`) → ถ้าพูลถึง `shieldItemCost` (150) และสถานียังไม่ติดเกราะ ซื้อเกราะ 30 วิทันที; เมื่อ `AreBridgesOpen` และพ้น cooldown จะเลือกสถานี Clean ของ Team A ที่ใกล้สุด (`!IsProtected`, `!SabotageUsed`) เดินข้ามสะพาน → `TrySabotage("คู่แข่ง")` → `CompleteSabotage`
+- **ซีนบิลเดอร์:** `BuildVariant` ใส่ `Bot` (mesh `Characters/SK_hero_sweep`, yaw 90° คูณ prefab) เฉพาะ `players == 1` และเปิด shadow ให้ mesh; เมื่อมีบอทจะไม่สร้าง `BobTaskRaceRival`
+- **แผงดีบัก:** 10 ปุ่มในกริด 176×52 (บาร์ 756×190 มุมขวาบน) — `โหมด: Raid`, `เวลา -10`, `⏭ 65 วิ` (`DebugSetRemaining(warningAtRemaining)`), `เปิดสะพาน`, `+150 แต้ม`, `ป่วน`, `เกราะ`, `ด่าน +1`, `รีเซ็ต`, `ซ่อน`; แสดงเฉพาะ `showDebugBar && (isEditor || isDebugBuild)`
+- **ดีบักเปลี่ยนด่าน:** `TaskRaceModeManager.ApplyStage(StageConfig)` แยกจาก `ApplyStage()` ที่อ่านด่านที่บันทึก; `DebugApplyStage(order)` ใช้ลองด่าน 1–6 ในซีนเดียวโดยไม่บันทึกโปรไฟล์ (ปุ่ม `ด่าน +1` วน 6 ด่าน)
+- **ตรวจ:** `TaskRaceVerify.CheckBot` รายงานใน solo `bot: idle at (9.7,-2.7) on TeamB …` และใน duo/team `bot: none (PvP variant …)`; `Editor/BotCheck.cs` (เมนู **Bob > Run Bot Check**, `-executeMethod Bob.EditorTools.BotCheck.Run` — ต้องรันโดยไม่ใส่ `-batchmode -quit` เพราะโค้ดเข้าสู่ Play และออกเอง) ใช้ hook `DebugWorkNow()` / `DebugRaidNow()` สั่งบอททำงานและข้ามสะพาน: ผลรัน `clean 1 on S2_B` → ตั้ง Team A `S1_A` สะอาด → `bridges open True` → เดินข้ามสะพานเหนือ (z 2.7, x 9.4 → −11.2) → `sabotage 1` → `BOT CHECK PASSED` (moved 20.90 u, log `Logs/bot-check4.log`)
+- **บั๊กที่เจอตอนตรวจ:** `TaskSpot.TrySabotage` ตัดสินฝ่ายจาก `IsEnemySpot` (`LocalTeam != ownerTeam`) ซึ่งเป็นมุมของผู้เล่น Team A — บอท Team B จึงโดน `"จุดนี้เป็นของทีมเรา"` ทุกครั้ง. แยกเป็น `TrySabotageAs(TeamId attacker, …)` (ผู้เล่นเรียกผ่าน `TrySabotage` เดิม ไม่เปลี่ยนพฤติกรรม) และบอทเรียก `TrySabotageAs(TeamId.TeamB, "คู่แข่ง", …)`; `CompleteSabotage`/`TaskRaceRound.HandleSabotage` ยังตัดยอดฝั่งเจ้าของสถานีจาก `sideOf` ตามเดิม
+- `StorySeriesCheck` มี probe บอทแล้ว: `[SeriesCheck] bot start: …` และ `bot after 16.2s: … walked 1.28 u` — เดินจริงแต่รอบซีรีส์ถูกปิดทุก ~4 วิ จึงยังทำงานไม่จบ (คนละกรณีกับ BotCheck ที่ปล่อยให้เล่นเต็มรอบ); series ยัง `SERIES CHECK PASSED` (log `Logs/series-bot3.log`)
+
+**เฟส 5 — Docker + Firebase App Distribution (`distribute-android.sh`, `.env.example`).**
+
+- แพ็กเกจ Android: **`com.bob.battleofthebrooms`** (`unity/ProjectSettings/ProjectSettings.asset`); `AndroidBundleVersionCode` ปัจจุบัน 2 และสคริปต์ bump เองทุกครั้ง (sed เฉพาะตัวเลข คง CRLF)
+- `bash distribute-android.sh` = bump versionCode → Unity batch build (`Bob.EditorTools.BobAndroidBuild.BuildApk`) → อัปโหลด; มี `--no-bump` และ `--upload-only`; `FIREBASE_GROUPS=internal-testers` เพิ่มกลุ่มผู้ทดสอบ
+- อัปโหลดผ่าน Docker `node:20-alpine` รัน `npx -y firebase-tools appdistribution:distribute` โดย mount repo เป็น `/work` และตั้ง `GOOGLE_APPLICATION_CREDENTIALS=/work/firebase-key.json` — เครื่องนี้ไม่ต้องติดตั้ง Firebase tooling; ถ้าไม่มีคีย์จะใช้ CLI ที่ล็อกอินอยู่; ถ้าไม่มีทั้งคู่จะพิมพ์ `SKIPPED the upload` แล้วจบ exit 0 (APK ยังอยู่ที่ `Builds/BOB-prototype-v1.apk`)
+- ซ่อนความลับ: `firebase-key.json` และ `.env` อยู่ใน `.gitignore`; `.env.example` มีแต่ค่าไม่ลับ (`FIREBASE_APP_ID`, `FIREBASE_TESTER_GROUP`, `FIREBASE_KEY_PATH`); แอปอยู่ใน Firebase project **bob-preprod**
+- ยังไม่รันจริง: รอบนี้ไม่มี APK และไม่อัปโหลด (รอ owner สั่ง) — คำสั่งเดียวคือ `bash distribute-android.sh`
+

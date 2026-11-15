@@ -1,11 +1,12 @@
 // Battle of the Brooms: builds the Task Race scenes (docs 24) from the Task Race Map Assembler.
 // One command does what the Inspector guide lists by hand: camera + hero + light, the twin-island map with real
-// bob_map_* prefabs, the mode's station set on Team A cloned to Team B, and the scene added to Build Settings.
+// bob_map_* prefabs, the six-station rig on Team A mirrored to Team B, and the scene added to Build Settings.
 //   Tools > BOB > Build Task Race Scene (solo / duo / team)
 //   -executeMethod Bob.EditorTools.TaskRaceSceneBuilder.Build        (solo, the default scene)
 //   -executeMethod Bob.EditorTools.TaskRaceSceneBuilder.BuildDuo
 //   -executeMethod Bob.EditorTools.TaskRaceSceneBuilder.BuildTeam
-// The three modes share every rule; only the map size and the number of stations differ (docs 24 section 13).
+// The three modes share every rule; only the map size and the seeded list length differ (docs 24 section 13). The
+// station layout is the same six-station rig on all three (phase 2, docs 24 section 15.3).
 using System.IO;
 using System.Linq;
 using Bob.Game;
@@ -27,50 +28,18 @@ namespace Bob.EditorTools
         static readonly string[] BuildOrder = { ScenePath, DuoScenePath, TeamScenePath };
         const string StationMaterialPath = "Assets/Resources/Materials/M_BOB_Station.mat";
 
-        // Station positions are authored for the 12 u island and scaled by islandSize / 12, so every mode keeps the
-        // same relative layout on its field (92% of the field ellipse is usable after the counter footprint).
-        static readonly StationSpec[] SoloStations =
-        {
-            // The south bridge deck cuts across the island at z = -islandDepth * 0.3, so every inner counter sits
-            // 1.0 u farther toward the island's centre line than the round-2 layout (docs 24 section 3.1); S2 sits on
-            // the centre line itself, because its counter is the one nearest the west bridge landing.
-            new StationSpec("S1_A", "ล้างเครื่องชงกาแฟ", TaskCategory.Wash, 12f, new Vector3(-3f, 0f, -1f),
-                ("espresso_machine", new Vector3(0f, 0.63f, 0f), 270f)),
-            new StationSpec("S2_A", "ขัดพื้นทางเดิน", TaskCategory.Scrub, 16f, new Vector3(0.5f, 0f, 0f),
-                ("bucket_metal_blue", new Vector3(-0.38f, 0.63f, 0.1f), 270f),
-                ("brush_scrub_wood", new Vector3(0.32f, 0.63f, 0f), 250f)),
-            new StationSpec("S3_A", "กวาดใบไม้", TaskCategory.Sweep, 10f, new Vector3(3f, 0f, -1f),
-                ("basket_clothes", new Vector3(0f, 0.63f, 0f), 270f),
-                ("brush_pair_yellow", new Vector3(0.95f, 0f, 0.45f), 300f)),
-        };
-
-        static readonly StationSpec[] DuoStations = SoloStations.Concat(new[]
-        {
-            new StationSpec("S4_A", "ฉีดน้ำยาเช็ดกระจก", TaskCategory.Spray, 14f, new Vector3(-3f, 0f, 0.5f),
-                ("spray_bottle", new Vector3(-0.3f, 0.63f, 0f), 260f),
-                ("gloves_pair", new Vector3(0.35f, 0.63f, 0.05f), 280f)),
-        }).ToArray();
-
-        static readonly StationSpec[] TeamStations = DuoStations.Concat(new[]
-        {
-            new StationSpec("S5_A", "ล้างถังน้ำยา", TaskCategory.Wash, 20f, new Vector3(3.2f, 0f, 0.8f),
-                ("bucket_blue", new Vector3(-0.3f, 0.63f, 0f), 270f),
-                ("detergent_pump", new Vector3(0.32f, 0.63f, 0f), 250f)),
-            new StationSpec("S6_A", "เก็บขยะและใบไม้", TaskCategory.Everyone, 18f, new Vector3(-0.5f, 0f, -1.4f),
-                ("trash_bag_black", new Vector3(0f, 0.63f, 0f), 270f),
-                ("brush_pair_yellow", new Vector3(0.9f, 0f, 0.5f), 300f)),
-        }).ToArray();
-
+        // The station layout is the Phase 2 twin-island rig (BobTwinIslandRig): the same six stations on every mode,
+        // mirrored to Team B. The mode only changes the map size and the seeded list length.
         [MenuItem("Tools/BOB/Build Task Race Scene (solo)")]
-        public static void Build() => BuildVariant(ScenePath, 12f, 16f, SoloStations, 1);
+        public static void Build() => BuildVariant(ScenePath, 12f, 16f, 1);
 
         [MenuItem("Tools/BOB/Build Task Race Scene (duo)")]
-        public static void BuildDuo() => BuildVariant(DuoScenePath, 15f, 20f, DuoStations, 2);
+        public static void BuildDuo() => BuildVariant(DuoScenePath, 15f, 20f, 2);
 
         [MenuItem("Tools/BOB/Build Task Race Scene (team)")]
-        public static void BuildTeam() => BuildVariant(TeamScenePath, 18f, 24f, TeamStations, 3);
+        public static void BuildTeam() => BuildVariant(TeamScenePath, 18f, 24f, 3);
 
-        static void BuildVariant(string scenePath, float islandSize, float islandGap, StationSpec[] stations, int players)
+        static void BuildVariant(string scenePath, float islandSize, float islandGap, int players)
         {
             Directory.CreateDirectory("Assets/Scenes");
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -128,7 +97,9 @@ namespace Bob.EditorTools
             camGo.AddComponent<BobSkyBackdrop>();
             camGo.AddComponent<BobPostGrade>();
 
-            var hero = BuildHero(ChooseSpawn(-islandGap * 0.5f, islandSize, stations));
+            var hero = BuildHero(ChooseSpawn(-islandGap * 0.5f, islandSize));
+            // Solo has a visible opponent on Team B (docs 24 §15.4 Phase 4); the other modes keep the pace rival.
+            var bot = players == 1 ? BuildBot(ChooseSpawn(islandGap * 0.5f, islandSize)) : null;
 
             // The window's own builder: prefabs, flat walk colliders, mode groups, camera rig, curved materials.
             // The dressing material has to exist before the map builds, because the seeded bridge deck and waterfall
@@ -144,18 +115,18 @@ namespace Bob.EditorTools
 
             var propsA = map.transform.Find("TeamA/Props");
             if (propsA == null) { Debug.LogError("[TaskRaceScene] TeamA/Props is missing; the map skeleton did not build."); return; }
+            var propsB = map.transform.Find("TeamB/Props");
             var mat = StationMaterialAsset();
-            float k = islandSize / 12f;
-            foreach (var spec in stations) AddStation(propsA, spec, k, mat);
-            AddIslandDecor(propsA, k);
-            assembler.CloneTeamA();
+            // Phase 2 of docs 24 section 15.3: the six-station kitbash on Team A, mirrored to Team B (x -> -x).
+            BobTwinIslandRig.Build(propsA, propsB, mat);
             // The prop/character prefabs ship with shadows off (the rental room's painted look), so a Task Race scene
             // has to switch them back on or no cast shadow ever reaches the grass.
             EnableShadows(map);
             EnableShadows(hero);
+            if (bot != null) EnableShadows(bot);
             AddContactShadows(map);
             AddDressing(map);
-            // Now that both teams carry their stations and decor: the bridge lanes can only be judged after the clone.
+            // Both islands now carry the rig: the bridge lanes can only be judged after the mirror.
             BobMapAssemblerEditor.ValidateClearance(map.transform);
 
             var rig = camGo.GetComponent<BobTaskRaceCamera>();
@@ -170,8 +141,9 @@ namespace Bob.EditorTools
                 var round = systems.gameObject.AddComponent<TaskRaceRound>();
                 round.ConfigureRound(players, 1, 1975);
                 round.StartRound(1975);
-                // The opponent until the server exists: a pace model on Team B (docs 24 section 12).
-                systems.gameObject.AddComponent<BobTaskRaceRival>();
+                // The opponent until the server exists: the solo bot walks Team B, the other modes keep the pace model
+                // (docs 24 section 12).
+                if (bot == null) systems.gameObject.AddComponent<BobTaskRaceRival>();
 
                 // The HUD of docs 24 section 10: task list, weight bar and the main context button. Built here so the
                 // scene carries it and the verify renders show the list.
@@ -386,11 +358,11 @@ namespace Bob.EditorTools
         }
 
         /// <summary>The south-half point of the field that is farthest from every station, so the hero never starts
-        /// inside a preview/NEAR ring (the 6-station team layout otherwise puts S6 on the old spawn).</summary>
-        static Vector3 ChooseSpawn(float islandCentreX, float islandSize, StationSpec[] stations)
+        /// inside a preview/NEAR ring.</summary>
+        static Vector3 ChooseSpawn(float islandCentreX, float islandSize)
         {
             float a = islandSize * 0.4f * 0.9f, c = islandSize * 0.3f * 0.9f; // 0.8 field ellipse, 10% margin
-            float k = islandSize / 12f;
+            var anchors = BobTwinIslandRig.StationAnchors;
             var best = Vector3.zero;
             float bestClear = -1f;
             for (float x = -a; x <= a; x += 0.5f)
@@ -398,9 +370,9 @@ namespace Bob.EditorTools
             {
                 if (x * x / (a * a) + z * z / (c * c) > 1f) continue;
                 float clear = float.MaxValue;
-                foreach (var s in stations)
+                foreach (var at in anchors)
                 {
-                    var d = new Vector2(s.At.x * k - x, s.At.z * k - z);
+                    var d = new Vector2(at.x - x, at.z - z);
                     clear = Mathf.Min(clear, d.magnitude);
                 }
                 if (clear > bestClear) { bestClear = clear; best = new Vector3(x, 0.05f, z); }
@@ -438,117 +410,30 @@ namespace Bob.EditorTools
             return root;
         }
 
-        static void AddStation(Transform props, StationSpec spec, float k, Material mat)
+        /// <summary>The solo opponent (docs 24 §15.4 Phase 4): the same hero mesh on Team B, driven by
+        /// TaskRaceBotController. No CharacterController — the bot walks waypoints on the flat map.</summary>
+        static GameObject BuildBot(Vector3 at)
         {
-            var station = new GameObject("Station_" + spec.Id);
-            station.transform.SetParent(props, false);
-            station.transform.localPosition = spec.At * k;
+            var root = new GameObject("Bot");
+            root.transform.position = at;
+            root.AddComponent<TaskRaceBotController>();
 
-            // Low work counter: the hero is 1.15 u, so the top edge stays below the chest and never hides the props.
-            var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            body.name = "Counter";
-            body.transform.SetParent(station.transform, false);
-            body.transform.localPosition = new Vector3(0f, 0.275f, 0f);
-            body.transform.localScale = new Vector3(1.25f, 0.55f, 0.85f);
-            Object.DestroyImmediate(body.GetComponent<Collider>());
-            body.GetComponent<MeshRenderer>().sharedMaterial = mat;
-            PaletteCell(body, 10, 1);   // PALETTE "wood"
-
-            var top = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            top.name = "CounterTop";
-            top.transform.SetParent(station.transform, false);
-            top.transform.localPosition = new Vector3(0f, 0.59f, 0f);
-            top.transform.localScale = new Vector3(1.36f, 0.08f, 0.95f);
-            Object.DestroyImmediate(top.GetComponent<Collider>());
-            top.GetComponent<MeshRenderer>().sharedMaterial = mat;
-            PaletteCell(top, 10, 2);    // PALETTE "stone"
-
-            foreach (var (prop, at, yaw) in spec.Decor) AddProp(station.transform, prop, at, yaw);
-
-            var spot = station.AddComponent<TaskSpot>();
-            spot.Configure(spec.Id, spec.Name, spec.Category, spec.Seconds);
-            // Team A is the left island; the assembler sets TeamB on each clone.
-            spot.SetOwnerTeam(TeamId.TeamA);
-        }
-
-        /// <summary>The dressed set (docs 24 section 8, "อุปกรณ์ประกอบฉาก"): lamps, bushes, a cafe corner, crates, a
-        /// planter rim and a few stones, all placed under TeamA/Props before the clone so Team B gets the exact same
-        /// arrangement by translation. Positions are authored on the 12 u island and scaled by the mode.</summary>
-        static void AddIslandDecor(Transform props, float k)
-        {
-            // Every prop sits in the clear centre band: the north and south bridge decks cross the island at
-            // z = +-islandDepth * 0.3 and the rebuild keeps a 1.0 u lane along each deck's sides plus a 1.5 u landing at
-            // its ends (docs 24 section 3.1). The decks cover the field's north and south edges, so the band between
-            // them (|z| <= 0.74 after the prop's own footprint) is the only real estate that clears the lanes.
-            var set = new (string name, float x, float z, float yaw, float height)[]
+            var prefab = Resources.Load<GameObject>("Characters/SK_hero_sweep");
+            if (prefab != null)
             {
-                ("street_lamp",      -4.30f, -0.45f,   0f, 2.2f),
-                ("street_lamp",       4.30f, -0.45f,   0f, 2.2f),
-                // the flowering bush is 3.0 x 2.9 u at 1.3 m, far wider than the band: keep it as a 0.6 m shrub
-                ("bush_green",       -4.35f,  0.00f,  15f, 0.6f),
-                ("table_round_cafe",  4.15f,  0.00f,  10f, 0.75f),
-                ("stool_red",         4.60f,  0.10f,   0f, 0.45f),
-                ("stool_red",         3.30f,  0.00f,   0f, 0.45f),
-                ("crate_oranges",    -1.20f,  0.15f,  20f, 0.55f),
-                ("crate_oranges",    -0.80f,  0.00f,  35f, 0.5f),
-                ("chalkboard_easel", -4.30f,  0.10f,  75f, 1.1f),
-                ("sign_stand_wood",  -4.35f, -0.10f,  90f, 1.0f),
-                ("rocks_grass",       2.40f,  0.15f, 140f, 0.35f),
-                ("rocks_grass",       1.80f,  0.20f,  80f, 0.3f),
-                ("pot_blue",         -4.05f, -0.15f,   0f, 0.6f),
-                ("pot_ceramic_gold",  4.05f, -0.30f,   0f, 0.55f),
-                // Cleaning gear of the trade, kept small and in the clear band: the island reads as a crew's courtyard,
-                // not a garden. All seven footprints stay inside |z| <= 0.74, so the bridge lanes keep their 1.0 u.
-                ("bucket_blue",      -2.20f,  0.35f,  10f, 0.32f),
-                ("brush_scrub_wood", -1.80f,  0.30f, -30f, 0.45f),
-                ("hose_coil",        -2.60f,  0.38f,   0f, 0.28f),
-                ("detergent_pump",    1.45f,  0.32f,   5f, 0.50f),
-                ("spray_bottle",      1.95f,  0.35f, -15f, 0.30f),
-                ("sign_wet_floor",   -3.55f,  0.42f,  20f, 0.80f),
-                ("trash_bag_black",   2.15f,  0.40f, -35f, 0.45f),
-            };
-            int n = 0;
-            foreach (var (name, x, z, yaw, height) in set)
-                if (AddDecor(props, name, new Vector3(x * k, 0f, z * k), yaw, height)) n++;
-            Debug.Log($"[TaskRaceScene] island decor: {n} prop(s) placed on Team A, cloned to Team B.");
-        }
-
-        /// <summary>Instantiate a prop from Assets/Resources/Props, scale it to a target height and sit it on the
-        /// grass (the FBX pivots are not at the bottom).</summary>
-        static bool AddDecor(Transform parent, string name, Vector3 at, float yaw, float height)
-        {
-            var prefab = Resources.Load<GameObject>("Props/SM_" + name);
-            if (prefab == null) { Debug.LogWarning("[TaskRaceScene] decor prefab missing: SM_" + name); return false; }
-            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
-            go.name = "Decor_" + name;
-            go.transform.localPosition = at;
-            go.transform.localRotation = Quaternion.Euler(0f, yaw, 0f) * prefab.transform.localRotation;
-            if (height > 0.01f && BoundsOf(go, out var b0) && b0.size.y > 0.001f)
-                go.transform.localScale *= height / b0.size.y;
-            if (BoundsOf(go, out var b1))
-                go.transform.localPosition = at + Vector3.up * (0.02f - b1.min.y);
-            return true;
-        }
-
-        static bool BoundsOf(GameObject go, out Bounds b)
-        {
-            var renderers = go.GetComponentsInChildren<Renderer>();
-            b = default;
-            if (renderers.Length == 0) return false;
-            b = renderers[0].bounds;
-            for (int i = 1; i < renderers.Length; i++) b.Encapsulate(renderers[i].bounds);
-            return true;
-        }
-
-        static Transform AddProp(Transform parent, string name, Vector3 localPos, float yaw)
-        {
-            var prefab = Resources.Load<GameObject>("Props/SM_" + name);
-            if (prefab == null) { Debug.LogWarning("[TaskRaceScene] prop prefab missing: SM_" + name); return null; }
-            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
-            go.name = "SM_" + name;
-            go.transform.localPosition = localPos;
-            go.transform.localRotation = Quaternion.Euler(0f, yaw, 0f) * prefab.transform.localRotation;
-            return go.transform;
+                var body = (GameObject)PrefabUtility.InstantiatePrefab(prefab, root.transform);
+                body.name = "SK_hero_sweep";
+                body.transform.localPosition = Vector3.zero;
+                body.transform.localRotation = Quaternion.Euler(0f, 90f, 0f) * prefab.transform.localRotation;
+                return root;
+            }
+            var capsule = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            capsule.name = "Body";
+            capsule.transform.SetParent(root.transform, false);
+            capsule.transform.localScale = new Vector3(0.55f, 0.575f, 0.55f);
+            capsule.transform.localPosition = new Vector3(0f, 0.575f, 0f);
+            Object.DestroyImmediate(capsule.GetComponent<Collider>());
+            return root;
         }
 
         /// <summary>M_BOB_Station: the shared palette material, so station props colour like the map pieces.</summary>
@@ -565,35 +450,6 @@ namespace Bob.EditorTools
             if (palette != null) { m.mainTexture = palette.mainTexture; m.color = Color.white; }
             EditorUtility.SetDirty(m);
             return m;
-        }
-
-        /// <summary>Point every UV at one palette cell (colour comes from T_BOB_Palette.png, not a flat tint).</summary>
-        static void PaletteCell(GameObject go, int cellX, int cellY, int grid = 16)
-        {
-            var mf = go.GetComponent<MeshFilter>();
-            if (mf == null || mf.sharedMesh == null) return;
-            var mesh = Object.Instantiate(mf.sharedMesh);
-            mesh.name = go.name + "_PaletteUV";
-            var uv = new Vector2[mesh.vertexCount];
-            var centre = new Vector2((cellX + 0.5f) / grid, 1f - (cellY + 0.5f) / grid);
-            for (int i = 0; i < uv.Length; i++) uv[i] = centre;
-            mesh.uv = uv;
-            mf.sharedMesh = mesh;
-        }
-
-        readonly struct StationSpec
-        {
-            public readonly string Id, Name;
-            public readonly TaskCategory Category;
-            public readonly float Seconds;
-            public readonly Vector3 At;
-            public readonly (string prop, Vector3 at, float yaw)[] Decor;
-
-            public StationSpec(string id, string name, TaskCategory category, float seconds, Vector3 at,
-                params (string, Vector3, float)[] decor)
-            {
-                Id = id; Name = name; Category = category; Seconds = seconds; At = at; Decor = decor;
-            }
         }
     }
 }

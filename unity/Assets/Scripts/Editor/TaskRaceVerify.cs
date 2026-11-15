@@ -5,6 +5,7 @@
 // Reports the map pieces, task spot ids and both modes (barrier obstacles vs bridge links), then renders previews.
 using System.IO;
 using System.Linq;
+using Bob.Rules;
 using Bob.TaskRace;
 using Unity.AI.Navigation;
 using UnityEditor;
@@ -109,6 +110,8 @@ namespace Bob.EditorTools
             if (hero != null && farSpot != null) CheckNav("PureRace", hero.transform.position, farSpot.transform.position);
             manager.SetMode(mode);
 
+            CheckStageRules(spots);
+            CheckBot(manager);
             CheckGameplay(manager, spots);
 
             var hud = Object.FindAnyObjectByType<BobTaskRaceHud>();
@@ -120,9 +123,10 @@ namespace Bob.EditorTools
                 hud.SetDebugBarVisible(false); // the shot must show the player's HUD, not the authoring bar
                 var touch = hud.GetComponent<BobTaskRaceTouch>();
                 var rival = Object.FindAnyObjectByType<BobTaskRaceRival>();
+                var bot = Object.FindAnyObjectByType<TaskRaceBotController>();
                 Debug.Log($"[TaskRaceVerify] player HUD: {hud.RowCount} task row(s), canvas {hud.UiCanvas.renderMode}, " +
                           $"touch={(touch != null && touch.HasHero ? "joystick + walk" : "missing")}, " +
-                          $"rival={(rival != null ? $"pace {rival.pace:0.00}" : "missing")}, " +
+                          $"opponent={(bot != null ? $"bot {bot.JobName}" : rival != null ? $"rival pace {rival.pace:0.00}" : "missing")}, " +
                           $"the round bar reads {round?.DoneWeight}/{round?.TotalWeight} weight");
             }
             else Debug.LogWarning("[TaskRaceVerify] no BobTaskRaceHud in the scene: the task list is not drawn.");
@@ -178,6 +182,76 @@ namespace Bob.EditorTools
                 spot.Close(false);
                 hud.DebugCloseCard();
             }
+        }
+
+        /// <summary>The StageConfig layer (docs 24 §15.3 Phase 3): the six assets validate, and the three rule hooks the
+        /// stage toggles — the two-pass stain gate, the random assignment order and the fragile stun — really fire.</summary>
+        static void CheckStageRules(TaskSpot[] spots)
+        {
+            var problems = BobStages.Validate();
+            var saved = BobStages.Saved;
+            Debug.Log($"[TaskRaceVerify] stages: {BobStages.Count} asset(s) " +
+                      string.Join(" | ", BobStages.All.Select(s => $"#{s.Order} {s.Title} {s.Tag} +{s.PointsPerTask}" +
+                          (s.StageBonus > 0 ? $" bonus {s.StageBonus}" : "") + (s.FragileStunSeconds > 0f ? $" stun {s.FragileStunSeconds:0.#}" : "") +
+                          (s.TwoPassStains ? " two-pass" : "") + (s.RandomizeSpots ? " random" : ""))) +
+                      " · " + (problems.Count > 0 ? "PROBLEMS " + string.Join("; ", problems) : "validate ok") +
+                      $" · saved #{saved.Order} \"{saved.Title}\"");
+
+            var spot = spots.FirstOrDefault(s => s.OwnerTeam == TeamId.TeamA);
+            var round = Object.FindAnyObjectByType<TaskRaceRound>();
+            if (spot == null || round == null) { Debug.LogWarning("[TaskRaceVerify] stage rules: need a Team A spot and the round."); return; }
+
+            // Stage 4: the stain card needs two passes; the first one leaves the station Dirty with no points.
+            spot.ResetTask();
+            spot.Configure(spot.SpotId, "ถูคราบวน", TaskCategory.Wash, 10f, TaskRaceRound.StainId);
+            spot.SetRequiredPasses(2);
+            spot.TryOpen("verify", out _); spot.Close(true);
+            var afterFirst = spot.State;
+            int firstPasses = spot.PassesDone;
+            spot.TryOpen("verify", out _); spot.Close(true);
+            Debug.Log($"[TaskRaceVerify] stage two-pass {TaskRaceRound.StainId}: first pass -> {afterFirst} (passes {firstPasses}/{spot.RequiredPasses}), " +
+                      $"second -> {spot.State}");
+            spot.SetRequiredPasses(1);
+
+            // Stage 5: the random order ignores the station category, so at least one task lands on a station of another family.
+            round.SetStageRules(true, false);
+            round.StartRound(round.ConfiguredSeed);
+            int off = 0;
+            foreach (var s in spots.Where(s => s.OwnerTeam == TeamId.TeamA && s.HasTask))
+            {
+                var spec = MinigameLibrary.All.FirstOrDefault(g => g.Id == s.TaskId);
+                if (spec.Id != s.TaskId) continue;
+                if (spec.Category != s.Category && spec.Category != TaskCategory.Everyone) off++;
+            }
+            Debug.Log($"[TaskRaceVerify] stage random: {off} Team A station(s) hold a task from another family " +
+                      "(0 would mean the category always wins)");
+            round.SetStageRules(false, false);
+            round.StartRound(round.ConfiguredSeed);
+
+            // Stage 3: a closed-before-finished card stuns the body; the stun is what the manager hands out.
+            var body = Object.FindAnyObjectByType<BobTaskRaceHero>();
+            if (body == null) { Debug.LogWarning("[TaskRaceVerify] stage stun: no BobTaskRaceHero in the scene."); return; }
+            body.Stun(saved.FragileStunSeconds > 0f ? saved.FragileStunSeconds : 1.5f);
+            Debug.Log($"[TaskRaceVerify] stage stun: stunned={body.IsStunned} for {body.StunRemaining:0.0}s " +
+                      $"(stage {saved.Order} sets {saved.FragileStunSeconds:0.#})");
+        }
+
+        /// <summary>The solo opponent: the scene must carry exactly one bot (or none, in the PvP variants) and it must be
+        /// able to pick a job and route across the bridge. Only reads state — the walk happens in Play, not here.</summary>
+        static void CheckBot(TaskRaceModeManager manager)
+        {
+            var bots = Object.FindObjectsByType<TaskRaceBotController>(FindObjectsInactive.Exclude);
+            if (bots.Length == 0)
+            {
+                Debug.Log("[TaskRaceVerify] bot: none (PvP variant, the human rival plays Team B)");
+                return;
+            }
+            if (bots.Length > 1) Debug.LogWarning($"[TaskRaceVerify] bot: {bots.Length} controllers in one scene, expected 1.");
+            var bot = bots[0];
+            var side = bot.transform.position.x > 0f ? TeamId.TeamB : TeamId.TeamA;
+            Debug.Log($"[TaskRaceVerify] bot: {bot.JobName} at ({bot.transform.position.x:0.0},{bot.transform.position.z:0.0}) " +
+                      $"on {side} · pace {bot.pace:0.00} · shield at {manager.shieldItemCost} pts · " +
+                      $"clean {bot.CleanCount}, sabotage {bot.SabotageCount}");
         }
 
         /// <summary>Drive the rules the scene builder cannot prove by looking: the clock and gate state, the team pool on
@@ -328,8 +402,19 @@ namespace Bob.EditorTools
                     hero.transform.position + new Vector3(0f, 0.72f, 0f), 40f, hud);
         }
 
+        /// <summary>BOB_VIEW=2400x1080 renders the phone aspect instead of the 16:9 default (the APK is landscape-locked).</summary>
+        static void ViewSize(out int w, out int h)
+        {
+            w = 1600; h = 900;
+            var v = System.Environment.GetEnvironmentVariable("BOB_VIEW");
+            if (string.IsNullOrEmpty(v)) return;
+            var wh = v.Split('x');
+            if (wh.Length == 2 && int.TryParse(wh[0], out var vw) && int.TryParse(wh[1], out var vh) && vw > 0 && vh > 0) { w = vw; h = vh; }
+        }
+
         static void Shot(string file, Vector3 eye, Vector3 look, float fov, BobTaskRaceHud hud = null)
         {
+            ViewSize(out var w, out var h);
             var main = Camera.main;
             var go = new GameObject("VerifyCam", typeof(Camera));
             var cam = go.GetComponent<Camera>();
@@ -340,7 +425,7 @@ namespace Bob.EditorTools
             cam.fieldOfView = fov;
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.80f, 0.90f, 0.98f);
-            cam.aspect = 1600f / 900f;
+            cam.aspect = (float)w / h;
             // The shot camera is new, so it needs its own written sky and the same grade the play camera carries.
             go.AddComponent<BobSkyBackdrop>().Fit();
             go.AddComponent<BobPostGrade>();
@@ -350,18 +435,21 @@ namespace Bob.EditorTools
             Camera hudWas = null;
             if (hud != null && hud.UiCanvas != null) { hudWas = hud.UiCanvas.worldCamera; hud.UiCanvas.worldCamera = cam; }
 
-            var rt = new RenderTexture(1600, 900, 24, RenderTextureFormat.ARGB32) { antiAliasing = 2 };
+            var rt = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32) { antiAliasing = 2 };
             cam.targetTexture = rt;
             cam.Render();
 
             if (hud != null && hud.UiCanvas != null) hud.UiCanvas.worldCamera = hudWas;
 
             RenderTexture.active = rt;
-            var tex = new Texture2D(1600, 900, TextureFormat.RGB24, false);
-            tex.ReadPixels(new Rect(0, 0, 1600, 900), 0, 0);
+            var tex = new Texture2D(w, h, TextureFormat.RGB24, false);
+            tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
             tex.Apply();
             Directory.CreateDirectory("Logs");
             var png = tex.EncodeToPNG();
+            if (w != 1600 || h != 900)
+                file = Path.Combine(Path.GetDirectoryName(file) ?? "Logs",
+                    Path.GetFileNameWithoutExtension(file) + "-" + w + "x" + h + Path.GetExtension(file));
             string written = file;
             try { File.WriteAllBytes(Path.GetFullPath(file), png); }
             catch (IOException)

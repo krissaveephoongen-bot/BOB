@@ -26,3 +26,12 @@ Thumbs.db
 unity/.vscode/
 Builds/
 unity/.utmp/
+
+# Firebase CLI debug output (can carry auth headers)
+firebase-debug.log
+.firebase/
+
+# Firebase App Distribution: service account key and local env (key never enters the repo)
+firebase-key.json
+.env
+!.env.example

@@ -218,7 +218,7 @@ namespace Bob.Game
                 new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(96f, -18f), new Vector2(190f, 46f));
             BobUi.Pin(BobUi.Label(mb.transform, chapter.Title, 26, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform,
                 new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -78f), new Vector2(280f, 40f));
-            BobUi.Pin(BobUi.Label(mb.transform, $"D{chapter.Difficulty} · {chapter.RoundTime:0} วิ · ดีสุด {TaskBest(chapter.Band)}", 22, BobUi.Muted, TextAnchor.MiddleCenter).rectTransform,
+            BobUi.Pin(BobUi.Label(mb.transform, $"D{chapter.Difficulty} · {BobStages.Get(chapter.Order).ClockSeconds:0} วิ · ดีสุด {TaskBest(chapter.Band)}", 22, BobUi.Muted, TextAnchor.MiddleCenter).rectTransform,
                 new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -120f), new Vector2(280f, 34f));
             BobUi.Pin(BobUi.Label(mb.transform, "แตะเพื่อเลือกด่าน", 20, BobUi.Teal, TextAnchor.MiddleCenter).rectTransform,
                 new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -154f), new Vector2(280f, 30f));
@@ -266,6 +266,7 @@ namespace Bob.Game
             for (int i = 0; i < all.Count; i++)
             {
                 var chapter = all[i];
+                var stageCfg = BobStages.Get(chapter.Order);
                 bool unlocked = BobChapters.Unlocked(chapter, Level), isSel = chapter.Order == selected.Order;
                 int col = i % 3, row = i / 3;
                 var pos = new Vector2((col - 1) * (cw + gap), (row == 0 ? 1f : -1f) * (ch + gap) * 0.5f + 25f);
@@ -285,9 +286,9 @@ namespace Bob.Game
 
                 BobUi.Pin(BobUi.Label(card.transform, chapter.Title, 34, unlocked ? BobUi.Ink : BobUi.Muted, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform,
                     new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -164), new Vector2(cw - 24, 44));
-                BobUi.Pin(BobUi.Label(card.transform, chapter.Place, 20, BobUi.Muted, TextAnchor.MiddleCenter).rectTransform,
+                BobUi.Pin(BobUi.Label(card.transform, $"{chapter.Place} · ดีสุด {TaskBest(chapter.Band)}", 20, BobUi.Muted, TextAnchor.MiddleCenter).rectTransform,
                     new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -202), new Vector2(cw - 24, 32));
-                BobUi.Pin(BobUi.Label(card.transform, unlocked ? $"{chapter.Tag} · ดีสุด {TaskBest(chapter.Band)}" : $"ล็อก LV {chapter.UnlockLevel}",
+                BobUi.Pin(BobUi.Label(card.transform, unlocked ? $"{chapter.Tag} · {stageCfg.Tag}" : $"ล็อก LV {chapter.UnlockLevel}",
                     22, unlocked ? BobUi.Teal : BobUi.Bad, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform,
                     new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -236), new Vector2(cw - 24, 32));
                 BobUi.Pin(BobUi.Label(card.transform, string.Join(" · ", chapter.RuleCards), 18, BobUi.Muted, TextAnchor.MiddleCenter).rectTransform,
@@ -300,7 +301,7 @@ namespace Bob.Game
                 BobUi.Stretch(BobUi.Label(veil, "ต้องมี LV " + chapter.UnlockLevel, 30, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform);
             }
 
-            var note = BobUi.Label(screenRoot, "ด่านกำหนดความยาก (D) และนาฬิกาของรอบ · การ์ดกติกาจะบังคับใช้ใน P2", 22, BobUi.Surface, TextAnchor.MiddleLeft);
+            var note = BobUi.Label(screenRoot, "ด่านกำหนดความยาก (D) นาฬิกา และเวลาสะพาน · กฎพิเศษของด่านบังคับใช้แล้ว (ผิวบอบบาง คราบสองรอบ ชิ้นส่วนสุ่ม โบนัสปิดด่าน)", 22, BobUi.Surface, TextAnchor.MiddleLeft);
             BobUi.OutlineText(note, BobUi.Ink, 0.25f);
             BobUi.Pin(note.rectTransform, Vector2.zero, Vector2.zero, new Vector2(40, 40), new Vector2(1100, 46));
 
@@ -338,12 +339,16 @@ namespace Bob.Game
                 band.gameObject.AddComponent<Image>().color = locked ? new Color(0.7f, 0.7f, 0.74f) : m.Color;
                 var big = BobUi.Label(band, m.Name.Substring(0, 1), 150, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold); BobUi.Stretch(big.rectTransform);
                 var nm = BobUi.Label(card.transform, m.Name, 46, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold); BobUi.Pin(nm.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -230), new Vector2(260, 64));
+                // Long names tie with the card width ("Community" is the worst case), so the two text blocks scale instead of clipping.
+                nm.enableAutoSizing = true; nm.fontSizeMin = 30; nm.fontSizeMax = 46;
                 var inf = BobUi.Label(card.transform, m.Players + "\n" + m.Length, 30, BobUi.Muted, TextAnchor.UpperCenter); BobUi.Pin(inf.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -310), new Vector2(260, 100));
+                inf.enableAutoSizing = true; inf.fontSizeMin = 20; inf.fontSizeMax = 30;
                 var st = BobUi.Label(card.transform, locked ? "ล็อก" : sel ? "เลือกอยู่" : "เล่นได้", 28, locked ? BobUi.Muted : BobUi.Good, TextAnchor.MiddleCenter, FontStyle.Bold);
                 BobUi.Pin(st.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 30), new Vector2(260, 52));
                 if (locked) { var li = BobUi.Img(card.transform, "icon_cross", 56, BobUi.Muted); BobUi.Pin(li.rectTransform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-12, -12), new Vector2(56, 56)); }
             }
-            var ok = BobUi.Button(screenRoot, "เลือก", BobUi.Sun, () => { Sfx("ui_confirm"); GoHome(); }, 56);
+            // Mode select hands over to stage select (S13), which is the screen that decides what the match runs.
+            var ok = BobUi.Button(screenRoot, "เลือก", BobUi.Sun, () => { Sfx("ui_confirm"); phase = Phase.Chapters; RenderAll(); }, 56);
             BobUi.Pin((RectTransform)ok.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-40, 30), new Vector2(420, 180));
         }
 

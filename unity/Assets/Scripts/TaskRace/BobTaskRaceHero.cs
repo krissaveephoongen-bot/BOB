@@ -29,6 +29,7 @@ namespace Bob.TaskRace
         TaskRaceModeManager manager;
         Vector2 move;
         float fall;
+        float stunUntil;
         Vector3 lastSafe;
         Vector3? destination;
 
@@ -38,6 +39,17 @@ namespace Bob.TaskRace
         public bool HasDestination => destination.HasValue;
         /// <summary>The card or the result overlay holds the body; the stick still reads for the cancel gesture.</summary>
         public bool IsFrozen => manager != null && (manager.CardOpen || manager.LastResult.HasValue);
+        /// <summary>Stage 3 "fragile": the body stands still for a moment after a card is abandoned.</summary>
+        public bool IsStunned => Time.unscaledTime < stunUntil;
+        public float StunRemaining => Mathf.Max(0f, stunUntil - Time.unscaledTime);
+
+        /// <summary>Stun the hero for `seconds` (stage 3). The camera keeps tracking; only the walk stops.</summary>
+        public void Stun(float seconds)
+        {
+            if (seconds <= 0f) return;
+            stunUntil = Mathf.Max(stunUntil, Time.unscaledTime + seconds);
+            destination = null;
+        }
 
         void Awake() => controller = GetComponent<CharacterController>();
 
@@ -58,7 +70,7 @@ namespace Bob.TaskRace
             move = Vector2.ClampMagnitude(v, 1f);
 
             var step = Vector2.zero;
-            if (!IsFrozen)
+            if (!IsFrozen && !IsStunned)
             {
                 if (move.sqrMagnitude > 0.02f) destination = null; // the stick wins over an old tap
                 else if (destination.HasValue) move = Steer(destination.Value);

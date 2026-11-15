@@ -11,8 +11,10 @@
 // purchase live here; the spots own the reach rules. The manager also owns the S28 camera focus (open -> zoom + shift
 // right, close -> back) and the "joystick past 70% closes the card" rule.
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Bob.Rules;
 using Unity.AI.Navigation;
 using UnityEngine;
 using UnityEngine.AI;
@@ -46,7 +48,7 @@ namespace Bob.TaskRace
         public TeamId localTeam = TeamId.TeamA;
 
         [Header("Match clock (docs 24 section 12)")]
-        [Tooltip("A match lasts 120 s. The clock runs in both modes.")]
+        [Tooltip("A PvP match lasts 120 s. The clock runs in both modes.")]
         [SerializeField, Min(10f)] public float matchDuration = 120f;
         [Tooltip("Seconds remaining when the 5 s warning starts (barrier shake + HUD warning).")]
         [SerializeField, Min(1f)] public float warningAtRemaining = 65f;
@@ -58,6 +60,24 @@ namespace Bob.TaskRace
         [SerializeField, Min(0.05f)] public float barrierDropSeconds = 0.6f;
         [Tooltip("Length of the warning shake before the drop.")]
         [SerializeField, Min(0f)] public float warningShakeSeconds = 5f;
+
+        [Header("Story series (docs 24 section 15.3 P3, GDD 9)")]
+        [Tooltip("On: a chapter is three rounds, best of three (100 s each). Off: the 120 s single PvP match.")]
+        [SerializeField] public bool storySeries = true;
+        [Tooltip("Rounds needed to take the chapter.")]
+        [SerializeField, Min(1)] public int seriesWinsToTake = 2;
+        [Tooltip("Clock of one story round.")]
+        [SerializeField, Min(10f)] public float storyRoundSeconds = 100f;
+        [Tooltip("Extra seconds for the round after two losses in a row.")]
+        [SerializeField, Min(0f)] public float loseStreakBonusSeconds = 15f;
+        [Tooltip("Pause between the round card and the next round.")]
+        [SerializeField, Min(0.5f)] public float nextRoundDelay = 3f;
+
+        [Header("Stage (StageConfig, docs 24 §15.3 Phase 3)")]
+        [Tooltip("Follows the chapter pick by order and is filled from Resources/Stages in Awake.")]
+        public StageConfig stage;
+        /// <summary>Paid to the winning team when the stage closes (stage 6 = 200).</summary>
+        public int StageBonus => stage != null ? stage.StageBonus : 0;
 
         [Header("Team points (shared per team)")]
         [Tooltip("Awarded on every Dirty -> Clean completion, including a re-clean after a sabotage.")]
@@ -107,10 +127,13 @@ namespace Bob.TaskRace
         public event Action MatchStarted;
         /// <summary>The clock ran out or one team finished its list. Raised once per match, rewards already paid.</summary>
         public event Action<MatchResult> MatchEnded;
+        /// <summary>A story round closed and another one follows. Not raised on the round that ends the chapter.</summary>
+        public event Action<SeriesRound> RoundEnded;
 
         readonly List<BobBridgeBarrier> barriers = new List<BobBridgeBarrier>();
         TaskRaceRound round;
-        bool warned, opened, cancelArmed = true;
+        StorySeries series;
+        bool warned, opened, cancelArmed = true, roundEnding;
 
         /// <summary>Seconds left on the match clock. The top HUD bar reads this.</summary>
         public float RemainingSeconds { get; private set; }
@@ -125,7 +148,26 @@ namespace Bob.TaskRace
         public bool CardOpen { get; private set; }
         /// <summary>Set once the match is decided; the HUD draws the result overlay from it.</summary>
         public MatchResult? LastResult { get; private set; }
+        /// <summary>The chapter series while storySeries is on; null in a PvP match.</summary>
+        public StorySeries Series => series;
+        /// <summary>A story round is running and the chapter is still open.</summary>
+        public bool InSeries => series != null && !series.Over;
+        /// <summary>The round that just closed (story series only).</summary>
+        public SeriesRound? LastRound => series?.LastRound;
         public TeamId OtherTeam => localTeam == TeamId.TeamB ? TeamId.TeamA : TeamId.TeamB;
+
+        /// <summary>Device-local count of chapters lost in a row: two of them buy the next attempt 15 s (GDD 9).</summary>
+        public const string LossStreakKey = "bob.story.lossStreak";
+
+        public static int StoryLossStreak
+        {
+            get => PlayerPrefs.GetInt(LossStreakKey, 0);
+            set { PlayerPrefs.SetInt(LossStreakKey, Mathf.Max(0, value)); PlayerPrefs.Save(); }
+        }
+
+        /// <summary>A story round is 100 s, plus the mercy seconds once two chapters were lost in a row.</summary>
+        public float StorySecondsForRound =>
+            storyRoundSeconds + (StoryLossStreak >= 2 ? loseStreakBonusSeconds : 0f);
 
         public int PointsOf(TeamId team) =>
             team == TeamId.TeamB ? teamBPoints : team == TeamId.TeamA ? teamAPoints : 0;
@@ -137,6 +179,7 @@ namespace Bob.TaskRace
         {
             cached = this;
             ApplyChapter();
+            ApplyStage();
             RemainingSeconds = matchDuration;
             if (cameraRig == null) cameraRig = FindFirstObjectByType<BobTaskRaceCamera>();
             CollectBarriers();
@@ -155,6 +198,29 @@ namespace Bob.TaskRace
             if (list != null) list.ConfigureRound(list.Players, chapter.Difficulty, list.ConfiguredSeed);
             if (Application.isPlaying)
                 Debug.Log($"[TaskRace] chapter {chapter.Order} \"{chapter.Title}\" · D{chapter.Difficulty} · {matchDuration:0} s clock");
+        }
+
+        /// <summary>
+        /// S13 (docs 24 section 15.3 Phase 3): the stage with the same order as the picked chapter sets the clock, the
+        /// moment the gates drop, the points per task and the two assignment rules. Runs after ApplyChapter, before
+        /// TaskRaceRound.Start draws, so the very first round of the scene already follows the stage.
+        /// </summary>
+        void ApplyStage() => ApplyStage(BobStages.Saved);
+
+        void ApplyStage(StageConfig s)
+        {
+            stage = s;
+            matchDuration = stage.ClockSeconds; // PvP clock; the story series keeps its own 3 × storyRoundSeconds
+            openAtRemaining = stage.BridgeOpenAtRemaining;
+            warningAtRemaining = stage.WarningAtRemaining;
+            pointsPerTaskComplete = stage.PointsPerTask;
+            var list = FindAnyObjectByType<TaskRaceRound>();
+            if (list != null) list.SetStageRules(stage.RandomizeSpots, stage.TwoPassStains);
+            if (Application.isPlaying)
+                Debug.Log($"[TaskRace] stage {stage.Order} \"{stage.Title}\" · {stage.Tag} · {stage.PointsPerTask} pts/task" +
+                          $"{(stage.StageBonus > 0 ? $" · bonus {stage.StageBonus}" : "")}" +
+                          $"{(stage.FragileStunSeconds > 0 ? $" · fragile {stage.FragileStunSeconds:0.#} s" : "")}" +
+                          $"{(stage.TwoPassStains ? " · stains take two passes" : "")}{(stage.RandomizeSpots ? " · stations randomized" : "")}");
         }
 
         void OnDestroy()
@@ -197,18 +263,27 @@ namespace Bob.TaskRace
             if (round != null) round.RoundWon += OnRoundWon;
             ApplyMode();
             BeginMatch();
+            if (series != null) BobSeriesBanner.Attach(this);
         }
 
         /// <summary>The local island finished its whole list: the race is over even with time on the clock.</summary>
-        void OnRoundWon(TaskRaceRound finished) => EndMatch();
+        void OnRoundWon(TaskRaceRound finished)
+        {
+            if (series != null) FinishRound();
+            else EndMatch();
+        }
 
         void Update()
         {
-            if (Application.isPlaying && !IsMatchOver)
+            if (Application.isPlaying && !IsMatchOver && !roundEnding)
             {
                 RemainingSeconds = Mathf.Max(0f, RemainingSeconds - Time.deltaTime);
                 TickClock();
-                if (IsMatchOver) EndMatch();
+                if (IsMatchOver)
+                {
+                    if (series != null) FinishRound();
+                    else EndMatch();
+                }
             }
 
             float tilt = ReadJoystick();
@@ -222,11 +297,13 @@ namespace Bob.TaskRace
 
         // ---------------------------------------------------------------- match
 
-        /// <summary>Restart the score and the clock: 120 s, gates shut, both pools at zero.</summary>
+        /// <summary>Restart the score and the clock: 120 s PvP, or round one of a three-round story chapter.</summary>
         public void BeginMatch()
         {
             teamAPoints = 0; teamBPoints = 0;
-            RemainingSeconds = matchDuration;
+            roundEnding = false;
+            series = storySeries ? new StorySeries(storyRoundSeconds, seriesWinsToTake) : null;
+            RemainingSeconds = series != null ? StorySecondsForRound : matchDuration;
             warned = opened = false;
             LastResult = null;
             TaskSpot.LocalTeam = localTeam;
@@ -234,15 +311,24 @@ namespace Bob.TaskRace
             PointsChanged?.Invoke(TeamId.TeamA, teamAPoints);
             PointsChanged?.Invoke(TeamId.TeamB, teamBPoints);
             MatchStarted?.Invoke();
-            if (Application.isPlaying) Debug.Log($"[TaskRace] match start: {matchDuration:0} s, {mode}, local team {localTeam}.");
+            if (series != null && StoryLossStreak >= 2)
+            {
+                ToastRequested?.Invoke($"แพ้ติด 2 บท — รอบแรกได้เวลาเพิ่ม {loseStreakBonusSeconds:0} วิ");
+                if (Application.isPlaying) Debug.Log($"[TaskRace] mercy: {StoryLossStreak} chapters lost in a row, round 1 is {RemainingSeconds:0} s.");
+            }
+            if (Application.isPlaying)
+                Debug.Log(series != null
+                    ? $"[TaskRace] chapter start: round 1/{StorySeries.Rounds}, {RemainingSeconds:0} s each, {mode}, local team {localTeam}."
+                    : $"[TaskRace] match start: {matchDuration:0} s, {mode}, local team {localTeam}.");
         }
 
         /// <summary>
         /// Decide and pay the match. Runs when the clock hits zero or when either list is finished; the second call
         /// in the same match is a no-op, so rewards are never paid twice. `record` false composes the result for the
-        /// editor's verify shot without touching the wallet.
+        /// editor's verify shot without touching the wallet. The series flags override the single-round verdict when a
+        /// three-round chapter ends 2-1 or 1-1.
         /// </summary>
-        public void EndMatch(bool record = true)
+        public void EndMatch(bool record = true, bool? seriesWon = null, bool? seriesDraw = null)
         {
             if (LastResult.HasValue) return;
             if (round == null) round = FindAnyObjectByType<TaskRaceRound>();
@@ -257,8 +343,16 @@ namespace Bob.TaskRace
 
             bool localFinished = total > 0 && mine >= total;
             bool rivalFinished = total > 0 && theirs >= total;
-            bool draw = !localFinished && !rivalFinished && localPool == rivalPool;
-            bool won = localFinished || (!rivalFinished && !draw && localPool > rivalPool);
+            bool draw = seriesDraw ?? (!localFinished && !rivalFinished && localPool == rivalPool);
+            bool won = seriesWon ?? (localFinished || (!rivalFinished && !draw && localPool > rivalPool));
+
+            // Stage 6 pays its bonus once, to the winner, before the result (and the wallet) is written.
+            if (won && StageBonus > 0)
+            {
+                AddPoints(localTeam, StageBonus);
+                localPool = PointsOf(localTeam);
+                ToastRequested?.Invoke($"โบนัสปิดด่าน {StageBonus} แต้ม!");
+            }
 
             RemainingSeconds = 0f;
             LastResult = BobTaskRaceProfile.Record(won, draw, teamAPoints, teamBPoints, tasksA, tasksB, total,
@@ -274,7 +368,75 @@ namespace Bob.TaskRace
             BeginMatch();
             if (round == null) round = FindAnyObjectByType<TaskRaceRound>();
             round?.StartRound(UnityEngine.Random.Range(1, 100000));
-            if (Application.isPlaying) Debug.Log("[TaskRace] restart: score 0, clock 120 s, gates shut, new round.");
+            if (Application.isPlaying) Debug.Log("[TaskRace] restart: score 0, clock reset, gates shut, new round.");
+        }
+
+        /// <summary>
+        /// Close a story round. Two wins either way (or three rounds played) hands the chapter to EndMatch, which pays
+        /// once; otherwise the round banner sits for nextRoundDelay seconds and the next round starts on a fresh list.
+        /// </summary>
+        void FinishRound()
+        {
+            if (series == null || series.Over || roundEnding) return;
+            roundEnding = true;
+            if (round == null) round = FindAnyObjectByType<TaskRaceRound>();
+
+            int tasksA = round?.DoneCountOf(TeamId.TeamA) ?? 0;
+            int tasksB = round?.DoneCountOf(TeamId.TeamB) ?? 0;
+            int mine = localTeam == TeamId.TeamB ? tasksB : tasksA;
+            int theirs = localTeam == TeamId.TeamB ? tasksA : tasksB;
+            RemainingSeconds = 0f;
+
+            var line = series.Register(mine, theirs, PointsOf(localTeam), PointsOf(OtherTeam));
+            if (Application.isPlaying) Debug.Log($"[TaskRace] {line}");
+            if (line.Outcome == RoundOutcome.Win && series.ChallengeOffered)
+            {
+                ToastRequested?.Invoke("ชนะขาด! เปิดด่านท้าทายของบทนี้แล้ว");
+                if (Application.isPlaying) Debug.Log($"[TaskRace] challenge stage offered: win margin {line.LocalTasks - line.RivalTasks} tasks.");
+            }
+            else
+            {
+                ToastRequested?.Invoke(series.Over
+                    ? (series.LocalTookSeries ? $"ชนะซีรีส์ {series.Score}!" : series.LocalWins == series.RivalWins ? $"เสมอซีรีส์ {series.Score}" : $"แพ้ซีรีส์ {series.Score}")
+                    : $"จบรอบ {line.Number}: {(line.Outcome == RoundOutcome.Win ? "เราชนะ" : line.Outcome == RoundOutcome.Loss ? "เราแพ้" : "เสมอ")} {series.Score} · รอบหน้า {series.SecondsForRound:0} วิ");
+            }
+            RoundEnded?.Invoke(line);
+
+            if (series.Over)
+            {
+                roundEnding = false;
+                // Two chapters lost in a row buy the next attempt 15 s; a win clears the streak for good.
+                if (series.LocalTookSeries) StoryLossStreak = 0;
+                else if (series.LocalWins < series.RivalWins) StoryLossStreak = StoryLossStreak + 1;
+                EndMatch(seriesWon: series.LocalTookSeries, seriesDraw: series.LocalWins == series.RivalWins);
+                return;
+            }
+            StartCoroutine(NextRoundAfter(nextRoundDelay));
+        }
+
+        IEnumerator NextRoundAfter(float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            if (series == null || series.Over) { roundEnding = false; yield break; }
+            BeginRound(series.SecondsForRound);
+        }
+
+        /// <summary>Fresh list, zero points, gates shut, new seed; the clock is this round's series length.</summary>
+        void BeginRound(float seconds)
+        {
+            roundEnding = false;
+            teamAPoints = 0; teamBPoints = 0;
+            RemainingSeconds = seconds;
+            warned = opened = false;
+            CloseBarriers();
+            PointsChanged?.Invoke(TeamId.TeamA, teamAPoints);
+            PointsChanged?.Invoke(TeamId.TeamB, teamBPoints);
+            if (round == null) round = FindAnyObjectByType<TaskRaceRound>();
+            round?.StartRound(UnityEngine.Random.Range(1, 100000));
+            MatchStarted?.Invoke();
+            ToastRequested?.Invoke($"รอบ {series?.Round ?? 2}/{StorySeries.Rounds} · {seconds:0} วิ");
+            if (Application.isPlaying)
+                Debug.Log($"[TaskRace] round {(series?.Round ?? 0)}/{StorySeries.Rounds} start: {seconds:0} s, series {series?.Score}.");
         }
 
         void TickClock()
@@ -341,6 +503,15 @@ namespace Bob.TaskRace
             var team = spot.OwnerTeam == TeamId.None ? localTeam : spot.OwnerTeam;
             AddPoints(team, pointsPerTaskComplete);
             if (Application.isPlaying) Debug.Log($"[TaskRace] +{pointsPerTaskComplete} to {team} ({PointsOf(team)}) for {spot.SpotId}.");
+        }
+
+        /// <summary>Stage 4: the first pass of a two-pass stain landed; the station stays Dirty until the second.</summary>
+        public void OnTaskPass(TaskSpot spot)
+        {
+            if (spot == null) return;
+            ToastRequested?.Invoke($"{spot.TaskName}: รอบแรกเสร็จ ขัดอีกรอบให้สะอาด!");
+            if (Application.isPlaying)
+                Debug.Log($"[TaskRace] {spot.SpotId} pass {spot.PassesDone}/{spot.RequiredPasses}: still Dirty.");
         }
 
         public void AddPoints(TeamId team, int amount)
@@ -557,6 +728,18 @@ namespace Bob.TaskRace
         {
             CardOpen = false;
             if (cameraRig != null) cameraRig.SetMinigameFocus(false);
+
+            // Stage 3 "fragile": abandoning a card on your own island costs a short stun.
+            if (spot == null || spot.LastCardCompleted || stage == null || stage.FragileStunSeconds <= 0f) return;
+            if (spot.OwnerTeam != localTeam || IsMatchOver) return;
+            var body = cameraRig != null && cameraRig.target != null
+                ? cameraRig.target.GetComponent<BobTaskRaceHero>()
+                : FindAnyObjectByType<BobTaskRaceHero>();
+            if (body == null) return;
+            body.Stun(stage.FragileStunSeconds);
+            ToastRequested?.Invoke($"งานผิวบอบบาง! ปิดก่อนเสร็จ หยุด {stage.FragileStunSeconds:0.#} วิ");
+            if (Application.isPlaying)
+                Debug.Log($"[TaskRace] fragile stun {stage.FragileStunSeconds:0.#} s after closing {spot.SpotId} early.");
         }
 
         // ---------------------------------------------------------------- debug test bar
@@ -609,10 +792,30 @@ namespace Bob.TaskRace
 
         public void DebugResetMatch() => RestartMatch();
 
+        /// <summary>Debug: play another stage (1-6) without leaving the scene. The pick is not saved to the profile.</summary>
+        public void DebugApplyStage(int order)
+        {
+            ApplyStage(BobStages.Get(order));
+            DebugResetMatch();
+            ToastRequested?.Invoke($"ดีบัก: ด่าน {stage.Order} \"{stage.Title}\" · {stage.Tag}");
+            if (Application.isPlaying) Debug.Log($"[TaskRace] debug stage {stage.Order} \"{stage.Title}\" · {stage.Tag}.");
+        }
+
+        /// <summary>Check hook: close the running story round now, as if its clock had run out.</summary>
+        public void DebugFinishRound()
+        {
+            if (series != null) FinishRound();
+            else EndMatch(record: false);
+        }
+
         void OnValidate()
         {
             cancelThreshold = Mathf.Clamp(cancelThreshold, 0.3f, 1f);
             matchDuration = Mathf.Max(10f, matchDuration);
+            storyRoundSeconds = Mathf.Max(10f, storyRoundSeconds);
+            seriesWinsToTake = Mathf.Max(1, seriesWinsToTake);
+            nextRoundDelay = Mathf.Max(0.5f, nextRoundDelay);
+            loseStreakBonusSeconds = Mathf.Max(0f, loseStreakBonusSeconds);
             openAtRemaining = Mathf.Clamp(openAtRemaining, 1f, matchDuration);
             warningAtRemaining = Mathf.Clamp(warningAtRemaining, openAtRemaining, matchDuration);
             pointsPerTaskComplete = Mathf.Max(0, pointsPerTaskComplete);

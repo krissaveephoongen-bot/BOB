@@ -957,17 +957,19 @@ namespace Bob.TaskRace
 
             debugBar = (RectTransform)BobUi.Panel(page, new Color(T.surface.r, T.surface.g, T.surface.b, 0.94f), null, "DebugBar").transform;
             BobUi.Pin(debugBar, new Vector2(1f, 1f), new Vector2(1f, 1f),
-                new Vector2(-cardInset.x, -120f), new Vector2(756f, 122f));
+                new Vector2(-cardInset.x, -120f), new Vector2(756f, 190f));
 
             var grid = BobUi.Grid(debugBar, new Vector2(176f, 52f), 4, 8f);
             BobUi.Stretch((RectTransform)grid.transform, 8f, 8f, 8f, 8f);
 
             debugModeLabel = AddDebugButton(grid.transform, "โหมด: Raid", OnDebugMode);
             AddDebugButton(grid.transform, "เวลา -10", OnDebugBack);
+            AddDebugButton(grid.transform, "⏭ 65 วิ", OnDebugSkipToWarning);
             AddDebugButton(grid.transform, "เปิดสะพาน", OnDebugBridges);
-            AddDebugButton(grid.transform, "+100 แต้ม", OnDebugPoints);
+            AddDebugButton(grid.transform, "+150 แต้ม", OnDebugPoints);
             AddDebugButton(grid.transform, "ป่วน", OnDebugSabotage);
             AddDebugButton(grid.transform, "เกราะ", OnDebugShield);
+            AddDebugButton(grid.transform, "ด่าน +1", OnDebugStage);
             AddDebugButton(grid.transform, "รีเซ็ต", OnDebugReset);
             AddDebugButton(grid.transform, "ซ่อน", HideDebug);
 
@@ -1004,9 +1006,20 @@ namespace Bob.TaskRace
 
         void OnDebugBack() => manager?.DebugAddTime(-10f);
 
+        /// <summary>Jump to the last second before the 5 s warning, so the bridge sequence can be watched from the start.</summary>
+        void OnDebugSkipToWarning() => manager?.DebugSetRemaining(Mathf.Max(0f, manager.warningAtRemaining));
+
         void OnDebugBridges() => manager?.DebugOpenBridges();
 
-        void OnDebugPoints() => manager?.DebugAddPoints(100);
+        void OnDebugPoints() => manager?.DebugAddPoints(150);
+
+        /// <summary>Cycle the six stages in place: clock, bridge moment, points and the stage rules all follow.</summary>
+        void OnDebugStage()
+        {
+            if (manager == null) return;
+            int next = (manager.stage != null ? manager.stage.Order % 6 : 0) + 1;
+            manager.DebugApplyStage(next);
+        }
 
         void OnDebugSabotage()
         {

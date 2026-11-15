@@ -416,12 +416,12 @@ namespace Bob.Game
 
         static bool TutorialDue()
         {
-            try { return PlayerPrefs.GetInt("bob.tutorial", 0) == 0; } catch (Exception) { return false; }
+            try { return PlayerPrefs.GetInt("bob.tutorial", 0) == 0; } catch (System.Exception) { return false; }
         }
 
         static void TutorialDone()
         {
-            try { PlayerPrefs.SetInt("bob.tutorial", 1); PlayerPrefs.Save(); } catch (Exception) { }
+            try { PlayerPrefs.SetInt("bob.tutorial", 1); PlayerPrefs.Save(); } catch (System.Exception) { }
         }
 
         // T05: drag each piece into the matching bin; a correct drop flies in, a wrong one springs back
