@@ -605,6 +605,20 @@ result overlay: open=True draw 0:0 points · tasks 0/6 vs 0/6 · reward 45 coins
 - **`ChapterDefinition`** (ScriptableObject, `Game/ChapterDefinition.cs`): `id`, `title`, `blurb`, `unlockLevel`, `difficulty` (D1–D3), `backdrop` — 6 asset อยู่ใน `Assets/Resources/Chapters` สร้าง/อัปเดตด้วยเมนู **Bob > Data > Build Chapter Definitions** (`Editor/BobChapterBuilder.cs`) ตามตาราง §15.1: ระดับ 1 / 6 / 13 / 21 / 31 / 41 และ band D1 (บท 1–2), D2 (3–4), D3 (5–6)
 - **`Chapters`** (static loader): โหลด asset เรียงตาม `unlockLevel`, จำบทที่เลือกใน PlayerPrefs `bob.chapter`, `Unlocked(chapter, level)` เทียบกับ `Level = 1 + xp/200` ของล็อบบี้
 - **S13 เลือกบท** (`BobGame.Menus.cs > StageSelect`, `Phase.Stages`): การ์ด 6 ใบแนวนอน (ภาพฉาก + หมายเลขบท + ชื่อ + band + คำอธิบาย) ล็อกจนถึงระดับปลดล็อก, แถบล่างบอกระดับผู้เล่นและบทถัดไปที่ปลดได้, ปุ่ม `เล่นบทนี้` → `PressPlay` โหลดซีน `TaskRace`; ปุ่ม back / Android back กลับ Home
-- **Home:** ชิป Task Race เดิมเปลี่ยนเป็นการ์ดบท (`บท N · ชื่อ`, band, `เลือกบท ▸`) แตะเพื่อเข้า S13 — ปุ่ม `เล่น` ยังเริ่มรอบที่เลือก
+- **Home:** ชิป Task Race เดิมเปลี่ยนเป็นการ์ดบท (`บท N · ชื่อ`, band, `เลือกบท`) แตะเพื่อเข้า S13 — ปุ่ม `เล่น` ยังเริ่มรอบที่เลือก
 - **`TaskRaceRound.Start`:** อ่านบทที่เลือกแล้วตั้ง `difficulty` ก่อน `StartRound`; ค่า serialized ยังเป็น fallback ให้ scene builder/tests ที่ตั้งรอบเอง (builder ยัง `ConfigureRound(players, 1, 1975)`), log ตอนเริ่มรอบมีชื่อบท
 - **ยังไม่ทำ (P1/P2):** skin ชั้นบนเกาะ, `ruleCards`, ดาว 0–3 และแผนที่หมุดแบบ S13 เต็มรูปแบบ (ภาพ `screen_stage_select` ยังไม่มีในโปรเจกต์) — หน้าเลือกบทตอนนี้ใช้การ์ดภาพล็อบบี้แทน
+
+### 15.5 P3 ที่ทำแล้ว (15 พ.ย. 2026)
+
+- **`StorySeries`** (`TaskRace/StorySeries.cs`, ตรรกะล้วน ไม่ผูก MonoBehaviour เพื่อให้ editor check เล่นครบซีรีส์ได้โดยไม่ต้องเข้า Play): `Rounds = 3`, `WinsToTake = 2`, `SecondsForRound`; `Register(localTasks, rivalTasks, localPoints, rivalPoints)` ปิดรอบ — เทียบงานก่อน แต้มใช้ตัดสินเฉพาะงานเท่ากัน, เท่ากันทั้งคู่ = เสมอ; `Over` จบเมื่อฝ่ายใดฝ่ายหนึ่งชนะครบ 2 หรือเล่นครบรอบ 3
+  - เสมอไม่นับให้ใคร: 0-0 สองรอบยังเล่นรอบสามต่อ (ทดสอบใน `StorySeriesCheck`)
+  - **บั๊กที่แก้ตอนตรวจ:** เดิม `Over` ใช้ `Round >= Rounds` แต่ `Round` ถูกเลื่อนเป็นรอบถัดไปแล้วหลังปิดรอบ → ซีรีส์ 0-0 จบที่รอบ 2 ตอนนี้ `Over` วัดจาก `LastRound.Value.Number`
+  - `ChallengeOffered`: ชนะรอบด้วยส่วนต่าง ≥ `MarginForChallenge` (3) งาน
+- **`TaskRaceModeManager`** — เฉพาะ `storySeries = true` (PvP คงรอบเดียว `matchDuration` 120 วิ ไม่แตะ): `BeginMatch` สร้าง `StorySeries(storyRoundSeconds, seriesWinsToTake)`, เริ่มรอบแรกด้วย `StorySecondsForRound`; จบรอบ → `FinishRound()` แจกแต้ม/ประกาศ `RoundEnded` ตามเดิม แล้วรอ `nextRoundDelay` (3 วิ) → `BeginRound()`; ครบซีรีส์ → `EndMatch(seriesWon, seriesDraw)` และ HUD overlay ทำงานเหมือน PvP
+  - ค่า Inspector ใหม่: `storySeries`, `seriesWinsToTake` 2, `storyRoundSeconds` 100, `loseStreakBonusSeconds` 15, `nextRoundDelay` 3 (`OnValidate` clamp)
+  - **mercy แพ้ติด 2:** `StoryLossStreak` (PlayerPrefs `bob.story.lossStreak`) นับบทที่แพ้ติด; ครบ 2 บท รอบแรกของบทถัดไปได้ +15 วิ พร้อม toast; ชนะซีรีส์แล้วรีเซ็ต — best-of-3 จบที่ 2 ชนะ จึงไม่มีทางแพ้ติด 2 รอบภายในซีรีส์เดียว โบนัสจึงลงที่รอบแรกของบทถัดไป
+  - `DebugFinishRound()` จบรอบด้วยคะแนนจริงของรอบนั้น (ใช้โดย check)
+- **`BobSeriesBanner`** (`TaskRace/BobSeriesBanner.cs`) — canvas แยก `sortingOrder 40` ไม่แตะ layout ของ `BobTaskRaceHud`: การ์ดกลางจอ 760×380 ตอนปิดรอบ (หัวข้อสีตามผล, ป้าย `ด่านท้าทายปลดแล้ว!` เมื่อ `ChallengeOffered`, `เรา X - Y คู่แข่ง`, นับถอยหลังรอบถัดไป) + แถบล่างกลางจอ `รอบ N/3 · เรา X - Y คู่แข่ง` ตลอดซีรีส์; ผูก `MatchStarted` / `RoundEnded` / `MatchEnded`
+- **ตรวจ:** เมนู **Bob > Run Story Series Check** (`Editor/StorySeriesCheck.cs`) — โหมดแก้ไขตรวจกฎรวมเส้นทางเสมอ, เข้า Play แล้วจบ 3 รอบจริงด้วย `DebugFinishRound` นับรอบ 1→2→3, ถ่าย `Logs/series-1-start … 5-result.png` (มีชุด toggle Field / Soil / Dressing / CloudSea / fog สำหรับไล่ปัญหาเรื่องภาพ) ปิดท้าย `[SeriesCheck] SERIES CHECK PASSED`; ผลรันล่าสุด: rules PASSED, chapter end last round 3, overlay ผลเปิด
+- **ยังไม่ทำ:** หน้าจอด่านท้าทายปลายทาง (ตอนนี้แค่ป้ายแจ้ง), ดาว 0–3 ต่อบท, การบันทึกผลรายรอบลง `BobTaskRaceProfile` (ยังบันทึกเป็นแมตช์เดียว), สถิติแพ้ติดต่อบท (ตอนนี้นับรวมทุกบท)
