@@ -44,7 +44,7 @@ namespace Bob.TaskRace
         [Tooltip("Waypoint arrival radius.")]
         public float arriveRadius = 0.55f;
 
-        enum Job { None, Walk, Work, Sabotage }
+        enum Job { None, Walk, Work, Sabotage, Courier }
         Job job, pending;
         TaskRaceModeManager manager;
         TaskRaceRound round;
@@ -52,6 +52,7 @@ namespace Bob.TaskRace
         readonly System.Collections.Generic.List<Vector3> route = new System.Collections.Generic.List<Vector3>();
         int waypoint;
         float workSeconds, jobUntil, nextRaidAt, nextPickAt;
+        System.Action courierDone;
 
         /// <summary>Work the bot finished this match (the HUD reads the round; this is for the log).</summary>
         public int CleanCount { get; private set; }
@@ -85,6 +86,7 @@ namespace Bob.TaskRace
             job = Job.None;
             target = null;
             route.Clear();
+            courierDone = null;
             nextPickAt = Time.time + headStart;
             nextRaidAt = Time.time + headStart + raidCooldown;
         }
@@ -100,6 +102,7 @@ namespace Bob.TaskRace
                     if (Time.time >= nextPickAt) PickJob();
                     break;
                 case Job.Walk:
+                case Job.Courier:
                     Walk();
                     break;
                 case Job.Work:
@@ -185,6 +188,24 @@ namespace Bob.TaskRace
             nextPickAt = Time.time + pause;
         }
 
+        /// <summary>
+        /// T12 hand-off (BobChairTask): walk to a point and report back, dropping the current job for that walk. The
+        /// chair rides this body's hand meanwhile; the caller seats it when the callback fires.
+        /// </summary>
+        public bool CarryTo(Vector3 point, System.Action onArrived)
+        {
+            if (manager == null || manager.IsMatchOver || manager.LastResult.HasValue) return false;
+            job = Job.Courier;
+            target = null;
+            pending = Job.None;
+            courierDone = onArrived;
+            waypoint = 0;
+            BuildRoute(point);
+            nextPickAt = float.MaxValue;
+            Debug.Log($"[TaskRaceBot] hand-off: walking a chair to ({point.x:0.0}, {point.z:0.0}).");
+            return true;
+        }
+
         // ---------------------------------------------------------------- walking
 
         void BuildRoute(Vector3 to)
@@ -235,6 +256,16 @@ namespace Bob.TaskRace
 
         void Arrive()
         {
+            if (job == Job.Courier)
+            {
+                var done = courierDone;
+                courierDone = null;
+                job = Job.None;
+                route.Clear();
+                nextPickAt = Time.time + 0.5f;
+                done?.Invoke();
+                return;
+            }
             if (target == null) { Schedule(); return; }
             job = pending;
             jobUntil = Time.time + workSeconds;
@@ -266,6 +297,11 @@ namespace Bob.TaskRace
 
         TaskSpot DirtyOwnSpot()
         {
+            // P03 Quick Ping (docs 11 section 5A.5): a call from the player sends the mate to that station first, for
+            // the twelve seconds the call lives. Anything that stops being a job is ignored and the normal pick runs.
+            var called = round != null ? round.Pinged(team) : null;
+            if (called != null) return called;
+
             TaskSpot best = null;
             float bestD = float.MaxValue;
             foreach (var spot in round.StationsOf(team))

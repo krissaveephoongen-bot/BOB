@@ -16,12 +16,14 @@
 //
 // Layout is placed by hand instead of layout groups: the card is authored in the editor (no layout pass runs
 // outside play mode), and fixed row heights keep a wrapped Thai name from sliding into the next row.
+using System.Collections.Generic;
 using Bob.Game;
 using Bob.Rules;
 using Bob.UI;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -104,6 +106,20 @@ namespace Bob.TaskRace
         RectTransform debugBar, debugToggle;
         TMP_Text debugModeLabel;
 
+        // P03 Quick Ping (docs 11 section 5A.5): the round button above the main action, the six-word fan it opens and
+        // the short bubble over the sender's head. Built at runtime from the palette — no icon art, no new sound file.
+        RectTransform pingButton, pingRoot, pingHub, pingBubble;
+        Image pingButtonImg;
+        TMP_Text pingHubLabel, pingBubbleLabel;
+        CanvasGroup pingBubbleGroup;
+        readonly List<Image> pingDiscs = new List<Image>();
+        readonly List<TMP_Text> pingDiscLabels = new List<TMP_Text>();
+        BobTaskRaceHero pingHero;
+        bool pingWheelOpen, pingHolding;
+        int pingHover = -1;
+        Vector2 pingOrigin;
+        float pingBubbleUntil;
+
         int builtVersion = -1;
         float shownPercent = -1f;
         float toastUntil;
@@ -167,6 +183,7 @@ namespace Bob.TaskRace
             BuildMainButton();
             BuildMinigameCard();
             BuildToast();
+            BuildPing();
             BuildEmergency();
             BuildDebugBar();
             RenderRows();
@@ -245,6 +262,7 @@ namespace Bob.TaskRace
             RenderTopBar();
             RenderMain();
             RenderEmergency();
+            RenderPing();
             RenderCard();
             RenderPause();
             if (manager != null)
@@ -304,6 +322,10 @@ namespace Bob.TaskRace
             emergencyTitle = emergencySub = null; emergencyButton = null;
             stains = null; cardEmergency = false;
             debugModeLabel = null;
+            pingButton = pingRoot = pingHub = pingBubble = null;
+            pingButtonImg = null; pingHubLabel = pingBubbleLabel = null; pingBubbleGroup = null;
+            pingDiscs.Clear(); pingDiscLabels.Clear(); pingHero = null;
+            pingWheelOpen = pingHolding = false; pingHover = -1; pingBubbleUntil = 0f;
         }
 
         void BuildTouch(Camera cam)
@@ -613,6 +635,7 @@ namespace Bob.TaskRace
         void OnBackPressed()
         {
             if (ResultOpen) return;
+            if (pingWheelOpen) { ClosePingWheel(); return; }
             if (CardOpen) { TaskSpot.CancelOpenSessions(); HideCard(); return; }
             if (PauseOpen) ResumeMatch();
             else PauseMatch();
@@ -1511,6 +1534,301 @@ namespace Bob.TaskRace
             if (!done) return;
             stains.Clear();
             HideCard();
+        }
+
+        // ---------------------------------------------------------------- quick ping (P03)
+
+        /// <summary>The six words of docs 11 section 5A.5. They are statements and thanks, never blame.</summary>
+        static readonly string[] PingWords =
+        {
+            "ช่วยวางอันนี้", "ฉันไปหยิบเอง", "ยกชั้นบนออกที", "ใกล้หมดเวลา!", "เยี่ยม!", "ขอบคุณ",
+        };
+
+        const float PingButtonSize = 132f, PingDiscSize = 184f, PingRadius = 258f;
+        const float PingFanStart = 195f, PingFanStep = 42f, PingDeadZone = 34f;
+        /// <summary>Centre of the fan in page-local units: a thumb-slide up and left of the button, clear of the bar.</summary>
+        static readonly Vector2 PingWheelCentre = new Vector2(600f, -110f);
+
+        Camera PingCamera => canvas != null && canvas.worldCamera != null ? canvas.worldCamera : Camera.main;
+
+        /// <summary>The ping exists where a team-mate can hear it; solo hides the button instead of offering a dead word.</summary>
+        bool PingAllowed => (round != null && round.Players > 1) ||
+                            (Bob.Game.MatchRequest.Has && Bob.Game.MatchRequest.Online);
+
+        void BuildPing()
+        {
+            // The button sits on the thumb arc above the main action: right edge, above the stain bar, below the clock.
+            pingButtonImg = BobUi.Disc(page, T.secondary, PingButtonSize, "PingButton");
+            pingButton = (RectTransform)pingButtonImg.transform;
+            BobUi.Pin(pingButton, new Vector2(1f, 0f), new Vector2(1f, 0f),
+                new Vector2(-cardInset.x, cardInset.y + 150f + 14f), new Vector2(PingButtonSize, PingButtonSize));
+            var caption = BobUi.Label(pingButton, "ปิง", 30, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Stretch(caption.rectTransform);
+            pingButton.gameObject.AddComponent<PingPad>().Init(this);
+
+            // A full-page catcher under the chips: a tap anywhere else closes the wheel. It is invisible but blocks the
+            // walk tap for the moment the wheel is open, which is what a menu must do.
+            pingRoot = BobUi.Stretch(BobUi.Rect("PingWheel", page));
+            var catcher = pingRoot.gameObject.AddComponent<Image>();
+            catcher.color = new Color(0f, 0f, 0f, 0.001f);
+            catcher.raycastTarget = true;
+            pingRoot.gameObject.AddComponent<PingCatcher>().Init(this);
+
+            // The hub names the hovered word at reading size: the thumb is over the chip it picked, so the words are
+            // also written where the eye lands. This is the piece that makes the six chips legible on a phone.
+            pingHub = (RectTransform)BobUi.Panel(pingRoot, T.surface, null, "PingHub").transform;
+            BobUi.Pin(pingHub, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), PingWheelCentre, new Vector2(300f, 110f));
+            var hubOutline = pingHub.gameObject.AddComponent<Outline>();
+            hubOutline.effectColor = new Color(T.ink.r, T.ink.g, T.ink.b, 0.25f);
+            hubOutline.effectDistance = new Vector2(3f, -3f);
+            pingHubLabel = BobUi.Label(pingHub, "เลื่อนนิ้วไปที่คำ\nแล้วปล่อย", 24, T.inkMuted, TextAnchor.MiddleCenter);
+            pingHubLabel.enableAutoSizing = true; pingHubLabel.fontSizeMin = 18f; pingHubLabel.fontSizeMax = 26f;
+            BobUi.Stretch(pingHubLabel.rectTransform, 12f, 6f, 12f, 6f);
+
+            for (int i = 0; i < PingWords.Length; i++)
+            {
+                float a = (PingFanStart - i * PingFanStep) * Mathf.Deg2Rad;
+                var at = PingWheelCentre + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * PingRadius;
+                var disc = BobUi.Disc(pingRoot, T.surface, PingDiscSize, "Ping_" + i);
+                BobUi.Pin((RectTransform)disc.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                    at, new Vector2(PingDiscSize, PingDiscSize));
+                var outline = disc.gameObject.AddComponent<Outline>();
+                outline.effectColor = new Color(T.ink.r, T.ink.g, T.ink.b, 0.22f);
+                outline.effectDistance = new Vector2(2f, -2f);
+                var text = BobUi.Label(disc.transform, PingWords[i], 24, T.ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+                text.enableAutoSizing = true; text.fontSizeMin = 18f; text.fontSizeMax = 24f;
+                text.textWrappingMode = TextWrappingModes.Normal;
+                BobUi.Stretch(text.rectTransform, 16f, 10f, 16f, 10f);
+                disc.gameObject.AddComponent<PingOption>().Init(this, i);
+                pingDiscs.Add(disc);
+                pingDiscLabels.Add(text);
+            }
+
+            // The bubble over the hero's head, 2.5 s (docs 11 section 5A.5). It follows the body while it is up.
+            var plate = BobUi.Panel(page, T.surface, null, "PingBubble");
+            pingBubble = (RectTransform)plate.transform;
+            BobUi.Pin(pingBubble, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(460f, 84f));
+            var bubbleOutline = plate.gameObject.AddComponent<Outline>();
+            bubbleOutline.effectColor = new Color(T.ink.r, T.ink.g, T.ink.b, 0.3f);
+            bubbleOutline.effectDistance = new Vector2(3f, -3f);
+            pingBubbleLabel = BobUi.Label(pingBubble, "", 30, T.ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+            pingBubbleLabel.enableAutoSizing = true; pingBubbleLabel.fontSizeMin = 22f; pingBubbleLabel.fontSizeMax = 30f;
+            BobUi.Stretch(pingBubbleLabel.rectTransform, 16f, 6f, 16f, 6f);
+            pingBubbleGroup = plate.gameObject.AddComponent<CanvasGroup>();
+            pingBubble.gameObject.SetActive(false);
+
+            pingRoot.gameObject.SetActive(false);
+        }
+
+        void RenderPing()
+        {
+            if (pingButton == null) return;
+            bool show = PingAllowed && !PauseOpen && !ResultOpen && !CardOpen;
+            if (pingButton.gameObject.activeSelf != show) pingButton.gameObject.SetActive(show);
+            if (!show && pingWheelOpen) ClosePingWheel();
+            RenderPingBubble();
+        }
+
+        void OpenPingWheel()
+        {
+            if (pingRoot == null) return;
+            pingWheelOpen = true;
+            pingRoot.gameObject.SetActive(true);
+            pingRoot.SetAsLastSibling();
+            if (pingButtonImg != null) pingButtonImg.color = T.primary;
+            pingHover = -2;   // out of range, so the reset below always repaints the chips left over from last time
+            SetPingHover(-1);
+        }
+
+        void ClosePingWheel()
+        {
+            pingWheelOpen = false;
+            pingHolding = false;
+            if (pingButtonImg != null) pingButtonImg.color = T.secondary;
+            if (pingHover != -1) { pingHover = -2; SetPingHover(-1); }
+            if (pingRoot != null) pingRoot.gameObject.SetActive(false);
+        }
+
+        /// <summary>Highlight one chip and name it in the hub; -1 returns the hint.</summary>
+        void SetPingHover(int index)
+        {
+            if (index == pingHover) return;
+            pingHover = index;
+            for (int i = 0; i < pingDiscs.Count; i++)
+            {
+                bool on = i == index;
+                if (pingDiscs[i] != null) pingDiscs[i].color = on ? T.secondary : T.surface;
+                if (i < pingDiscLabels.Count && pingDiscLabels[i] != null)
+                    pingDiscLabels[i].color = on ? Color.white : T.ink;
+            }
+            if (pingHubLabel == null) return;
+            bool named = index >= 0 && index < PingWords.Length;
+            pingHubLabel.text = named ? PingWords[index] : "เลื่อนนิ้วไปที่คำ\nแล้วปล่อย";
+            pingHubLabel.color = named ? T.ink : T.inkMuted;
+        }
+
+        int NearestPingDisc(Vector2 local)
+        {
+            int best = -1;
+            float bestD = PingDiscSize * 0.85f;
+            for (int i = 0; i < pingDiscs.Count; i++)
+            {
+                if (pingDiscs[i] == null) continue;
+                float d = (pingDiscs[i].rectTransform.anchoredPosition - local).magnitude;
+                if (d <= bestD) { bestD = d; best = i; }
+            }
+            return best;
+        }
+
+        // The pad and the chips call back into these: a hold-and-slide, or a tap on the button and then a tap on a chip.
+
+        void PingDown(PointerEventData e)
+        {
+            if (pingRoot == null) return;
+            if (pingWheelOpen) { ClosePingWheel(); return; } // a second press on the button is always "close"
+            OpenPingWheel();
+            pingHolding = true;
+            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(page, e.position, PingCamera, out var local))
+                pingOrigin = local;
+            Bob.Art.BobSfx.Play("ui_tap", 0.6f);
+        }
+
+        void PingDrag(PointerEventData e)
+        {
+            if (!pingWheelOpen || !pingHolding) return;
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(page, e.position, PingCamera, out var local)) return;
+            // The first few units are the press itself, not a pick: the chip nearest the button would otherwise win
+            // before the thumb has moved at all.
+            if ((local - pingOrigin).magnitude < PingDeadZone) { SetPingHover(-1); return; }
+            SetPingHover(NearestPingDisc(local));
+        }
+
+        void PingRelease(PointerEventData e)
+        {
+            if (!pingWheelOpen) return;
+            pingHolding = false;
+            if (pingHover >= 0) SendPing(pingHover);
+            // No chip under the thumb: the wheel stays up, and the next tap on a chip sends (the tap-then-tap path).
+        }
+
+        void PingChoose(int index) => SendPing(index);
+
+        void SendPing(int index)
+        {
+            if (index < 0 || index >= PingWords.Length) return;
+            ClosePingWheel();
+
+            // A call beside a job also points the offline team-mates at it for twelve seconds (TaskRaceRound.PingSpot),
+            // so the wheel is a real co-op control, not only a line of text.
+            var spot = PingTarget();
+            if (spot != null && round != null) round.PingSpot(spot);
+
+            if (pingBubbleLabel != null)
+            {
+                pingBubbleLabel.text = spot != null ? $"{PingWords[index]} · {spot.TaskName}" : PingWords[index];
+                if (pingBubbleGroup != null) pingBubbleGroup.alpha = 1f;
+                pingBubble.gameObject.SetActive(true);
+                pingBubble.SetAsLastSibling();
+            }
+            pingBubbleUntil = Time.unscaledTime + 2.5f;
+            Bob.Art.BobSfx.Play("bubble_pop", 0.8f);
+            Debug.Log($"[TaskRacePing] \"{PingWords[index]}\"{(spot != null ? " @ " + spot.SpotId : "")} · {TaskSpot.LocalTeam}");
+        }
+
+        /// <summary>The station a call is about: the one under the hero, else the nearest own dirty job within 8 units.</summary>
+        TaskSpot PingTarget()
+        {
+            if (round == null) return null;
+            var near = TaskSpot.ActiveNear;
+            if (near != null && near.OwnerTeam == TaskSpot.LocalTeam && near.HasTask &&
+                near.State == SpotState.Dirty && !near.IsOpen)
+                return near;
+
+            var hero = PingHero();
+            if (hero == null) return null;
+            TaskSpot best = null;
+            float bestD = 8f;
+            foreach (var spot in round.StationsOf(TaskSpot.LocalTeam))
+            {
+                if (spot == null || !spot.HasTask || spot.State != SpotState.Dirty || spot.IsOpen) continue;
+                float d = Vector3.Distance(spot.transform.position, hero.transform.position);
+                if (d <= bestD) { bestD = d; best = spot; }
+            }
+            return best;
+        }
+
+        BobTaskRaceHero PingHero()
+        {
+            if (pingHero == null) pingHero = FindAnyObjectByType<BobTaskRaceHero>();
+            return pingHero;
+        }
+
+        /// <summary>Keep the bubble over the head, clamped inside the safe page, fading out over its last 0.35 s.</summary>
+        void RenderPingBubble()
+        {
+            if (pingBubble == null) return;
+            bool live = Time.unscaledTime < pingBubbleUntil && !CardOpen && !PauseOpen && !ResultOpen;
+            var hero = live ? PingHero() : null;
+            var cam = PingCamera;
+            if (!live || hero == null || cam == null)
+            {
+                if (pingBubble.gameObject.activeSelf) pingBubble.gameObject.SetActive(false);
+                return;
+            }
+
+            var screen = cam.WorldToScreenPoint(hero.transform.position + Vector3.up * 2.15f);
+            if (screen.z <= 0f ||
+                !RectTransformUtility.ScreenPointToLocalPointInRectangle(page, screen, cam, out var local))
+            {
+                if (pingBubble.gameObject.activeSelf) pingBubble.gameObject.SetActive(false);
+                return;
+            }
+
+            if (page != null && page.rect.width > 1f)
+            {
+                var half = page.rect.size * 0.5f;
+                var size = pingBubble.rect.size;
+                local.x = Mathf.Clamp(local.x, -half.x + size.x * 0.5f + 12f, half.x - size.x * 0.5f - 12f);
+                local.y = Mathf.Clamp(local.y, -half.y + size.y * 0.5f + 150f, half.y - size.y * 0.5f - 120f);
+            }
+            pingBubble.anchoredPosition = local;
+            if (!pingBubble.gameObject.activeSelf) pingBubble.gameObject.SetActive(true);
+            if (pingBubbleGroup != null)
+                pingBubbleGroup.alpha = Mathf.Clamp01((pingBubbleUntil - Time.unscaledTime) / 0.35f);
+        }
+
+        /// <summary>Verify: open the wheel as the button does, so a shot can show the six words without a finger.</summary>
+        public bool DebugOpenPing()
+        {
+            if (pingRoot == null) return false;
+            OpenPingWheel();
+            SetPingHover(0);
+            return pingWheelOpen;
+        }
+        public void DebugClosePing() => ClosePingWheel();
+
+        sealed class PingPad : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler
+        {
+            BobTaskRaceHud owner;
+            public void Init(BobTaskRaceHud hud) => owner = hud;
+            public void OnPointerDown(PointerEventData e) => owner.PingDown(e);
+            public void OnDrag(PointerEventData e) => owner.PingDrag(e);
+            public void OnPointerUp(PointerEventData e) => owner.PingRelease(e);
+        }
+
+        sealed class PingOption : MonoBehaviour, IPointerClickHandler
+        {
+            BobTaskRaceHud owner;
+            int index;
+            public void Init(BobTaskRaceHud hud, int i) { owner = hud; index = i; }
+            public void OnPointerClick(PointerEventData e) => owner.PingChoose(index);
+        }
+
+        sealed class PingCatcher : MonoBehaviour, IPointerClickHandler
+        {
+            BobTaskRaceHud owner;
+            public void Init(BobTaskRaceHud hud) => owner = hud;
+            public void OnPointerClick(PointerEventData e) => owner.ClosePingWheel();
         }
 
         // ---------------------------------------------------------------- debug test bar

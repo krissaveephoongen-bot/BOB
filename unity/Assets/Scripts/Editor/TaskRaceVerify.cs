@@ -444,14 +444,17 @@ namespace Bob.EditorTools
             Shot($"Logs/taskrace{suffix}-preview.png", new Vector3(0f, 10.5f, -15f), new Vector3(0f, 0.4f, 0.5f), 42f);
             Shot($"Logs/taskrace{suffix}-wide.png", new Vector3(0f, 16f, -26f), new Vector3(0f, 0.5f, 0f), 50f);
 
-            // The shot the player actually gets: BobTaskRaceCamera's 6.2 up / 5.2 back / 40 degree lens on the hero.
+            // The shot the player actually gets: the rig's 45 degree pitch / 5.2 back / 40 degree lens on the hero.
             GameObject hero = null;
             try { hero = GameObject.FindGameObjectWithTag("Player"); } catch (UnityException) { }
+            var rig = Object.FindFirstObjectByType<BobTaskRaceCamera>();
+            float up = rig != null ? rig.Height : 5.2f;
+            float back = rig != null ? rig.Distance : 5.2f;
             if (hero != null)
-                Shot($"Logs/taskrace{suffix}-play.png", hero.transform.position + new Vector3(0f, 6.2f, -5.2f),
+                Shot($"Logs/taskrace{suffix}-play.png", hero.transform.position + new Vector3(0f, up, -back),
                     hero.transform.position + new Vector3(0f, 0.72f, 0f), 40f);
             if (hero != null && hud != null)
-                Shot($"Logs/taskrace{suffix}-hud.png", hero.transform.position + new Vector3(0f, 6.2f, -5.2f),
+                Shot($"Logs/taskrace{suffix}-hud.png", hero.transform.position + new Vector3(0f, up, -back),
                     hero.transform.position + new Vector3(0f, 0.72f, 0f), 40f, hud);
         }
 

@@ -135,6 +135,33 @@ namespace Bob.TaskRace
         /// <summary>Buff keys the cart won for the whole team this round (empty when the formula failed).</summary>
         public IReadOnlyList<string> CartBuffs => cartBuffs;
 
+        /// <summary>How long a P03 ping keeps pointing the team-mates at a station (docs 11 section 5A.5).</summary>
+        public const float PingSeconds = 12f;
+        /// <summary>The station a team-mate was last called to, or null once the call expired or the job is gone.</summary>
+        public TaskSpot PingedSpot { get; private set; }
+        float pingedUntil;
+
+        /// <summary>P03 Quick Ping: "come here" for the offline team-mates (the online room sends its own pose/chat).</summary>
+        public void PingSpot(TaskSpot spot)
+        {
+            PingedSpot = spot;
+            pingedUntil = Time.time + PingSeconds;
+            Version++;
+        }
+
+        /// <summary>The pinged station while it is still a job for this team; anything else clears the call.</summary>
+        public TaskSpot Pinged(TeamId team)
+        {
+            if (PingedSpot == null) return null;
+            if (Time.time > pingedUntil || PingedSpot.HasTask == false || PingedSpot.State != SpotState.Dirty ||
+                PingedSpot.IsOpen || PingedSpot.OwnerTeam != team)
+            {
+                PingedSpot = null;
+                return null;
+            }
+            return PingedSpot;
+        }
+
         public event Action<TaskRaceRound> RoundWon;
 
         sealed class Side
@@ -524,6 +551,8 @@ namespace Bob.TaskRace
             CartPassed = null;
             CartPassCount = 0;
             cartBuffs.Clear();
+            PingedSpot = null;
+            pingedUntil = 0f;
             CartNeed = Bob.Rules.BobTaskRaceRules.CartNeed(CurrentSeed > 0 ? CurrentSeed : seed, difficulty);
             var hero = Application.isPlaying ? FindAnyObjectByType<BobTaskRaceHero>() : null;
             if (hero != null) { hero.speedScale = 1f; hero.dragFactor = 1f; }

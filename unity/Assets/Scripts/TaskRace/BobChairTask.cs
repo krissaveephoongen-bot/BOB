@@ -32,6 +32,9 @@ namespace Bob.TaskRace
         public static int ClutterCount(int difficulty) => Mathf.Clamp(difficulty, 1, 3) - 1;
         /// <summary>How far the slots sit in front of the station; the chair radius is the rest of the drag.</summary>
         public const float SlotAhead = 1.75f;
+        /// <summary>Reach of the docs 11 section 5A.3 "ส่งต่อ" hand-off: stand beside a team-mate with the chair in hand.</summary>
+        public const float PassRadius = 2.6f;
+        const float CourierTimeout = 20f;
         const int RingSegments = 40;
 
         sealed class Chair
@@ -58,6 +61,13 @@ namespace Bob.TaskRace
         Transform root;
         float finishTimer = -1f, pulse;
         bool finished, built;
+
+        // Hand-off to an offline team-mate (docs 11 section 5A.3 "ส่งต่อ"): the chair rides the mate's hand while the
+        // mate walks it to the nearest free slot. The hero is free for the next chair during the walk.
+        Transform carrier;
+        Chair carriedChair;
+        float carryUntil, mateScanAt;
+        TaskRaceBotController[] mateCache;
 
         public bool Active => built && !finished;
         public int Seats => seats;
@@ -271,6 +281,19 @@ namespace Bob.TaskRace
                 return;
             }
 
+            if (carrier != null)
+            {
+                // Kept before the hand block: the hero may already be carrying the next chair while the mate walks.
+                var hand = carrier.position + carrier.forward * 0.5f;
+                hand.y = spot.transform.position.y;
+                if (carriedChair != null && !carriedChair.seated && carriedChair.body != null)
+                {
+                    carriedChair.body.position = hand + Vector3.up * 0.45f;
+                    carriedChair.body.rotation = Quaternion.Euler(0f, carrier.eulerAngles.y + 90f, 0f);
+                }
+                if (Time.unscaledTime > carryUntil) DropCarried("เพื่อนวางเก้าอี้ไม่ลงช่อง");
+            }
+
             if (held != null)
             {
                 if (hero == null) { DropHeld(false); return; }
@@ -333,7 +356,7 @@ namespace Bob.TaskRace
             float bestDistance = GrabRadius;
             foreach (var c in chairs)
             {
-                if (c.seated || c.body == null) continue;
+                if (c.seated || c.body == null || c == carriedChair) continue; // a mate's chair is not free to grab
                 float d = Flat(c.body.position - from).magnitude;
                 if (d <= bestDistance) { best = c; bestDistance = d; }
             }
@@ -360,8 +383,21 @@ namespace Bob.TaskRace
             if (held != null)
             {
                 bool inSlot = HeldSlotIndex() >= 0;
-                label = inSlot ? "วางเก้าอี้ที่ช่อง" : "ลากเก้าอี้ไปที่โต๊ะ";
-                can = inSlot;
+                if (inSlot)
+                {
+                    label = "วางเก้าอี้ที่ช่อง";
+                    can = true;
+                    return true;
+                }
+                // docs 11 section 5A.3 "ส่งต่อ": a mate within reach takes the chair and walks it to a slot.
+                if (NearestMate(pos) != null)
+                {
+                    label = "ส่งเก้าอี้ให้เพื่อน";
+                    can = true;
+                    return true;
+                }
+                label = "ลากเก้าอี้ไปที่โต๊ะ";
+                can = false;
                 return true;
             }
 
@@ -394,8 +430,10 @@ namespace Bob.TaskRace
             if (held != null)
             {
                 int slot = NearestFreeSlot(pos, SeatRadius);
-                if (slot >= 0) Seat(held, slot);
-                else BobMinigameSfx.Wrong("drop_invalid");
+                if (slot >= 0) { Seat(held, slot); return true; }
+                var mate = NearestMate(pos);
+                if (mate != null) { HandOff(mate); return true; }
+                BobMinigameSfx.Wrong("drop_invalid");
                 return true;
             }
 
@@ -417,6 +455,7 @@ namespace Bob.TaskRace
 
         void Seat(Chair chair, int slot)
         {
+            if (chair == null || chair.seated) return; // a mate already carried it home
             chair.seated = true;
             chair.slot = slot;
             held = null;
@@ -461,9 +500,93 @@ namespace Bob.TaskRace
             if (message) AnyMessage?.Invoke("วางเก้าอี้ไม่ลงช่อง");
         }
 
+        // ---------------------------------------------------------------- hand-off to a team-mate
+
+        /// <summary>The nearest offline team-mate of this island, refreshed twice a second: a hand-off is a walk-in move.</summary>
+        TaskRaceBotController NearestMate(Vector3 from)
+        {
+            if (mateCache == null || Time.unscaledTime >= mateScanAt)
+            {
+                mateScanAt = Time.unscaledTime + 0.5f;
+                mateCache = FindObjectsByType<TaskRaceBotController>(FindObjectsSortMode.None);
+            }
+            TaskRaceBotController best = null;
+            float bestDistance = PassRadius;
+            foreach (var bot in mateCache)
+            {
+                if (bot == null || bot.raidEnemy || bot.team != spot.OwnerTeam) continue;
+                float d = Flat(bot.transform.position - from).magnitude;
+                if (d <= bestDistance) { bestDistance = d; best = bot; }
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// docs 11 section 5A.3 "ส่งต่อ": standing beside a team-mate hands the chair over. The mate walks it to the
+        /// nearest free slot and seats it, so the hero can start the next chair instead of finishing this drag. The
+        /// chair rides the mate's hand exactly as it rides the hero's, a little higher so it reads as carried.
+        /// </summary>
+        void HandOff(TaskRaceBotController mate)
+        {
+            int slot = NearestFreeSlot(mate.transform.position, 99f);
+            if (slot < 0) { AnyMessage?.Invoke("ช่องวางเต็มแล้ว"); return; }
+
+            carriedChair = held;
+            held = null;
+            carrier = mate.transform;
+            carryUntil = Time.unscaledTime + CourierTimeout;
+            if (hero != null) hero.dragFactor = 1f;
+            BobSfx.Loop("cart_roll_loop", false);
+            BobSfx.Play("pass_part", 0.85f);
+
+            if (!mate.CarryTo(slots[slot], OnMateArrived))
+            {
+                // The match ended or the mate is frozen: the chair comes straight back to the hero's hand.
+                held = carriedChair;
+                carriedChair = null;
+                carrier = null;
+                if (hero != null) hero.dragFactor = DragSlow;
+                AnyMessage?.Invoke("เพื่อนรับเก้าอี้ไม่ได้");
+                return;
+            }
+            AnyMessage?.Invoke("ส่งเก้าอี้ให้เพื่อนแล้ว");
+            Debug.Log($"[BobChairTask] {spot.SpotId}: chair handed to {mate.name} → slot {slot}.");
+        }
+
+        /// <summary>The mate reached the slot: seat the chair there, or leave it on the floor if the slot filled up.</summary>
+        void OnMateArrived()
+        {
+            var chair = carriedChair;
+            carrier = null;
+            carriedChair = null;
+            if (chair == null) return;
+            if (chair.seated) return;
+            int slot = NearestFreeSlot(chair.body != null ? chair.body.position : spot.transform.position, 99f);
+            if (slot < 0) { AnyMessage?.Invoke("เพื่อนวางเก้าอี้ไว้ที่พื้น"); return; }
+            AnyMessage?.Invoke("เพื่อนวางเก้าอี้ให้แล้ว");
+            Seat(chair, slot);
+        }
+
+        /// <summary>A mate that never arrived (stuck, match over) must not leave a chair hovering: set it down.</summary>
+        void DropCarried(string message)
+        {
+            var chair = carriedChair;
+            carrier = null;
+            carriedChair = null;
+            if (chair != null && chair.body != null && !chair.seated)
+            {
+                var bounds = Bounds(chair.body.gameObject);
+                chair.body.position += Vector3.up * (spot.transform.position.y + 0.02f - bounds.min.y);
+            }
+            if (!string.IsNullOrEmpty(message)) AnyMessage?.Invoke(message);
+        }
+
         void Clear()
         {
             DropHeld(false);
+            carrier = null;
+            carriedChair = null;
+            mateCache = null;
             foreach (var c in chairs)
             {
                 if (c.body != null) DestroySafe(c.body.gameObject);
@@ -507,6 +630,27 @@ namespace Bob.TaskRace
             return true;
         }
 
+        /// <summary>Verify: hand the chair to the nearest team-mate without walking up to him (the hand-off path).</summary>
+        public bool DebugPassNow()
+        {
+            if (!Active || held == null || hero == null) return false;
+            if (mateCache == null) mateCache = FindObjectsByType<TaskRaceBotController>(FindObjectsSortMode.None);
+            TaskRaceBotController best = null;
+            float bestD = float.MaxValue;
+            foreach (var bot in mateCache)
+            {
+                if (bot == null || bot.raidEnemy || bot.team != spot.OwnerTeam) continue;
+                float d = Flat(bot.transform.position - hero.transform.position).magnitude;
+                if (d < bestD) { bestD = d; best = bot; }
+            }
+            if (best == null) return false;
+            HandOff(best);
+            return carrier != null;
+        }
+
+        /// <summary>Verify: a mate is walking a chair to a slot right now.</summary>
+        public bool DebugCarrying => carrier != null;
+
         /// <summary>Verify: seat every chair at once, so the round can be checked without a drag.</summary>
         public int DebugSeatAll()
         {
@@ -514,7 +658,7 @@ namespace Bob.TaskRace
             for (int i = 0; i < chairs.Count; i++)
             {
                 if (finished) break;
-                if (chairs[i].seated) continue;
+                if (chairs[i].seated || chairs[i] == carriedChair) continue;
                 int slot = NearestFreeSlot(slots[i], 99f);
                 if (slot < 0) break;
                 held = chairs[i];
