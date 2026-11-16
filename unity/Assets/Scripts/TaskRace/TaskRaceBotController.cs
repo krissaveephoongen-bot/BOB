@@ -5,12 +5,21 @@
 // The map is flat and the bridges are kept clear by the clearance check, so the bot walks straight segments with
 // explicit bridge waypoints instead of a NavMeshAgent: no bake dependency, no agent that can miss the bridge links.
 // It replaces BobTaskRaceRival in the solo scene (the rival stays the invisible pace model of the other modes).
+//
+// Since the lobby can start a Duo/Team match (docs 11 S14), the same brain also drives an offline teammate: `team`
+// picks the island it defends, and `raidEnemy` off keeps a teammate at home while the opponent still crosses to sabotage.
 using UnityEngine;
 
 namespace Bob.TaskRace
 {
     public class TaskRaceBotController : MonoBehaviour
     {
+        [Header("Team")]
+        [Tooltip("The island this bot defends. The solo scene's opponent is Team B; an offline teammate is Team A.")]
+        public TeamId team = TeamId.TeamB;
+        [Tooltip("Cross the bridges to sabotage the other island. A teammate stays home and only cleans.")]
+        public bool raidEnemy = true;
+
         [Header("Pace")]
         [Tooltip("Walk speed in world units per second; the hero walks 3.2.")]
         public float speed = 3.0f;
@@ -107,13 +116,13 @@ namespace Bob.TaskRace
             if (round == null) { nextPickAt = Time.time + retrySeconds; return; }
 
             // A raid beats cleaning while the bridges are open: undoing a clean station is worth more than one task.
-            if (manager.AreBridgesOpen && Time.time >= nextRaidAt)
+            if (raidEnemy && manager.AreBridgesOpen && Time.time >= nextRaidAt)
             {
                 var victim = CleanEnemySpot();
                 if (victim != null)
                 {
                     Begin(victim, Job.Sabotage, sabotageHoldSeconds);
-                    Debug.Log($"[TaskRaceBot] raid: walking to sabotage {victim.SpotId} on Team A.");
+                    Debug.Log($"[TaskRaceBot] raid: walking to sabotage {victim.SpotId} on {OtherTeam}.");
                     return;
                 }
             }
@@ -144,26 +153,29 @@ namespace Bob.TaskRace
         {
             if (!target.ForceComplete()) { NextPick(1.2f); return; } // the card is held by the player right now
             CleanCount++;
-            Debug.Log($"[TaskRaceBot] clean {CleanCount} on {target.SpotId}; Team B {round?.DoneCountOf(TeamId.TeamB)}/{round?.TaskCount}.");
+            Debug.Log($"[TaskRaceBot] clean {CleanCount} on {target.SpotId}; {team} {round?.DoneCountOf(team)}/{round?.TaskCount}.");
 
-            if (buyShield && manager.PointsOf(TeamId.TeamB) >= manager.shieldItemCost && !target.IsProtected &&
-                manager.TryPurchaseShield(TeamId.TeamB, target))
-                Debug.Log($"[TaskRaceBot] shield on {target.SpotId}; pool {manager.PointsOf(TeamId.TeamB)}.");
+            if (buyShield && manager.PointsOf(team) >= manager.shieldItemCost && !target.IsProtected &&
+                manager.TryPurchaseShield(team, target))
+                Debug.Log($"[TaskRaceBot] shield on {target.SpotId}; pool {manager.PointsOf(team)}.");
 
             NextPick(1.2f);
         }
 
         void FinishSabotage()
         {
-            if (target.TrySabotageAs(TeamId.TeamB, "คู่แข่ง", out var message))
+            if (target.TrySabotageAs(team, "คู่แข่ง", out var message))
             {
                 target.CompleteSabotage();
                 SabotageCount++;
-                Debug.Log($"[TaskRaceBot] sabotage {SabotageCount} on {target.SpotId}; Team A {round?.DoneCountOf(TeamId.TeamA)}/{round?.TaskCount}.");
+                Debug.Log($"[TaskRaceBot] sabotage {SabotageCount} on {target.SpotId}; {OtherTeam} {round?.DoneCountOf(OtherTeam)}/{round?.TaskCount}.");
             }
             else Debug.Log($"[TaskRaceBot] sabotage on {target.SpotId} refused: {message}");
             NextPick(raidCooldown);
         }
+
+        /// <summary>The island this bot attacks: the one it does not defend.</summary>
+        TeamId OtherTeam => team == TeamId.TeamB ? TeamId.TeamA : TeamId.TeamB;
 
         void NextPick(float pause)
         {
@@ -240,15 +252,15 @@ namespace Bob.TaskRace
             return true;
         }
 
-        /// <summary>Check hook: cross the bridge now to sabotage the nearest clean Team A station, ignoring the cooldown.</summary>
+        /// <summary>Check hook: cross the bridge now to sabotage the nearest clean enemy station, ignoring the cooldown.</summary>
         public bool DebugRaidNow()
         {
-            if (manager == null || !manager.AreBridgesOpen) return false;
+            if (!raidEnemy || manager == null || !manager.AreBridgesOpen) return false;
             var victim = CleanEnemySpot();
             if (victim == null) return false;
             Begin(victim, Job.Sabotage, sabotageHoldSeconds);
             nextRaidAt = Time.time + raidCooldown;
-            Debug.Log($"[TaskRaceBot] debug raid: walking to sabotage {victim.SpotId} on Team A.");
+            Debug.Log($"[TaskRaceBot] debug raid: walking to sabotage {victim.SpotId} on {OtherTeam}.");
             return true;
         }
 
@@ -256,7 +268,7 @@ namespace Bob.TaskRace
         {
             TaskSpot best = null;
             float bestD = float.MaxValue;
-            foreach (var spot in round.StationsOf(TeamId.TeamB))
+            foreach (var spot in round.StationsOf(team))
             {
                 if (spot == null || !spot.HasTask || spot.State != SpotState.Dirty || spot.IsOpen) continue;
                 float d = Vector3.Distance(transform.position, spot.transform.position);
@@ -269,7 +281,7 @@ namespace Bob.TaskRace
         {
             TaskSpot best = null;
             float bestD = float.MaxValue;
-            foreach (var spot in round.StationsOf(TeamId.TeamA))
+            foreach (var spot in round.StationsOf(OtherTeam))
             {
                 if (spot == null || !spot.HasTask || spot.State != SpotState.Clean || spot.SabotageUsed || spot.IsProtected) continue;
                 float d = Vector3.Distance(transform.position, spot.transform.position);

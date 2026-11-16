@@ -31,18 +31,34 @@ namespace Bob.Game
         int Level => BobChapters.LevelFromXp(xp);
         static readonly string[] HomeBackdrops = { "lobby_rental_room", "lobby_condo", "lobby_coffee_shop", "lobby_kitchen" };
 
-        sealed class ModeInfo { public string Id, Name, Players, Length, Lock; public Color Color; }
+        sealed class ModeInfo
+        {
+            public string Id, Name, Players, Length, Lock, Scene, Blurb;
+            /// <summary>Players per side the round list is sized for; must match the scene's own baked value.</summary>
+            public int ListPlayers;
+            /// <summary>Story = three rounds, best of three; every other mode is one timed round.</summary>
+            public bool Series;
+            /// <summary>Team: the screen offers 2v2 / 3v3 and fills the empty slots with offline teammates.</summary>
+            public bool Team;
+            public Color Color;
+        }
+        // S11 (docs 11 section 4): the modes whose scene actually exists and loads. Party/Community stay locked with the
+        // reason on the card; Story is the chapter ladder, the other three are one timed round on their own map
+        // (docs 24 section 13: 3 / 4 / 6 stations per side).
         static readonly ModeInfo[] Modes =
         {
-            new ModeInfo { Id = "story",     Name = "Story",     Players = "1-4 คน", Length = "ต่อบท",   Lock = "เร็วๆ นี้: โหมดเนื้อเรื่อง", Color = new Color(0.98f, 0.62f, 0.28f) },
-            new ModeInfo { Id = "solo",      Name = "Solo",      Players = "1 คน",   Length = "6 นาที",  Lock = null,                          Color = new Color(0.40f, 0.71f, 0.95f) },
-            new ModeInfo { Id = "tasks",     Name = "Task Race", Players = "1 คน",   Length = "2 นาที",  Lock = null,                          Color = new Color(0.98f, 0.8f, 0.25f) },
-            new ModeInfo { Id = "duo",       Name = "Duo",       Players = "2 คน",   Length = "6 นาที",  Lock = "เร็วๆ นี้: ต้องผูกคู่ก่อน",   Color = new Color(0.93f, 0.28f, 0.38f) },
-            new ModeInfo { Id = "friends",   Name = "Friends",   Players = "2-4 คน", Length = "6 นาที",  Lock = null,                          Color = new Color(0.24f, 0.72f, 0.52f) },
-            new ModeInfo { Id = "party",     Name = "Party",     Players = "3-7 คน", Length = "8 นาที",  Lock = "เร็วๆ นี้: ปลดที่ระดับ 6",   Color = new Color(0.58f, 0.46f, 0.88f) },
-            new ModeInfo { Id = "community", Name = "Community", Players = "10-15 คน", Length = "10 นาที", Lock = "เร็วๆ นี้: เปิดเป็นรอบเวลา", Color = new Color(0.55f, 0.58f, 0.66f) },
+            new ModeInfo { Id = "story",     Name = "Story",     Players = "1 คน",            Length = "3 รอบ",   Scene = "TaskRace",      ListPlayers = 1, Series = true,
+                           Blurb = "บทที่เลือก · 3 รอบ", Color = new Color(0.98f, 0.62f, 0.28f) },
+            new ModeInfo { Id = "solo",      Name = "Solo",      Players = "1 คน",            Length = "2 นาที",  Scene = "TaskRace",      ListPlayers = 1,
+                           Blurb = "เกาะเล็ก 3 สถานี/ฝั่ง", Color = new Color(0.40f, 0.71f, 0.95f) },
+            new ModeInfo { Id = "duo",       Name = "Duo",       Players = "1 พบ 1",          Length = "2 นาที",  Scene = "TaskRace_Duo",  ListPlayers = 2,
+                           Blurb = "เกาะกลาง 4 สถานี/ฝั่ง", Color = new Color(0.93f, 0.28f, 0.38f) },
+            new ModeInfo { Id = "team",      Name = "Team",      Players = "2 พบ 2 · 3 พบ 3", Length = "2 นาที",  Scene = "TaskRace_Team", ListPlayers = 3, Team = true,
+                           Blurb = "เกาะใหญ่ 6 สถานี/ฝั่ง", Color = new Color(0.24f, 0.72f, 0.52f) },
+            new ModeInfo { Id = "party",     Name = "Party",     Players = "3-7 คน",         Length = "8 นาที",  Lock = "เร็วๆ นี้: ต้องมีห้องออนไลน์", Color = new Color(0.58f, 0.46f, 0.88f) },
+            new ModeInfo { Id = "community", Name = "Community", Players = "10-15 คน",       Length = "10 นาที", Lock = "เร็วๆ นี้: เปิดเป็นรอบเวลา",   Color = new Color(0.55f, 0.58f, 0.66f) },
         };
-        ModeInfo CurrentMode => Modes.FirstOrDefault(m => m.Id == mode) ?? Modes[1];
+        ModeInfo CurrentMode => Modes.FirstOrDefault(m => m.Id == mode) ?? Modes[0];
 
         // Chapters (docs 24 §15.3 P0): the six ChapterDefinition assets in Resources/Chapters, the pick saved on the
         // device, and the best score per difficulty band. Home shows the pick, S13 changes it.
@@ -226,11 +242,11 @@ namespace Bob.Game
         // ---------------------------------------------------------------- shared pieces
 
         /// <summary>Top bar of the out-of-match screens: back or profile on the left, currency on the right.</summary>
-        void TopBar(Transform p, string title, bool back)
+        void TopBar(Transform p, string title, bool back, Action onBack = null)
         {
             if (back)
             {
-                var b = BobUi.Button(p, "", BobUi.Surface, () => { Sfx("ui_cancel"); GoHome(); }, 24);
+                var b = BobUi.Button(p, "", BobUi.Surface, () => { Sfx("ui_cancel"); if (onBack != null) onBack(); else GoHome(); }, 24);
                 BobUi.Pin((RectTransform)b.transform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(24, -24), new Vector2(112, 96));
                 b.GetComponentInChildren<TMP_Text>().text = "";
                 var x = BobUi.Img(b.transform, "menu_close", 70); BobUi.Pin(x.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(70, 70));
@@ -321,6 +337,15 @@ namespace Bob.Game
             BobUi.Pin((RectTransform)play.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-40, 30), new Vector2(520, 200));
             play.GetComponentInChildren<TMP_Text>().fontStyle = FontStyles.Bold;
             StartCoroutine(Breathe(play.transform));
+
+            // S11 entry (docs 11 S11): Solo / Duo / Team load their own map at runtime, so the way in is on the lobby and
+            // not the editor any more. Story stays behind the เล่น button above (the chapter picked on the card).
+            var modes = BobUi.Button(S, "โหมด · Solo / Duo / Team", BobUi.Surface, () =>
+            {
+                Sfx("ui_tap");
+                phase = Phase.Modes; RenderAll();
+            }, 28);
+            BobUi.Pin((RectTransform)modes.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-40, 246), new Vector2(520, 96));
         }
 
         /// <summary>One square dock button: the icon sits over the label in the bottom thumb zone. Only screens that work get one (A4).</summary>
@@ -335,13 +360,19 @@ namespace Bob.Game
         {
             Sfx("ui_confirm");
             // The lobby is only the shell: the match lives in its own scene (docs 24), so a match can re-enter the
-            // lobby with fresh player prefs (coins and XP paid by the result overlay).
-            if (Application.CanStreamedLevelBeLoaded("TaskRace")) SceneManager.LoadScene("TaskRace");
-            else
-            {
-                Debug.LogWarning("[BobGame] TaskRace scene is not in Build Settings: no match to start.");
-                Toast("ยังไม่มีฉากแข่งขัน (TaskRace)");
-            }
+            // lobby with fresh player prefs (coins and XP paid by the result overlay). Home's play and S13's start are
+            // the story chapter: three rounds on the solo map, handed to the scene through MatchRequest.
+            MatchRequest.Story();
+            mode = "story"; SaveProfile();
+            LoadMatchScene("TaskRace");
+        }
+
+        /// <summary>Open a match scene, or explain on screen why this build cannot (the scene is not in Build Settings).</summary>
+        void LoadMatchScene(string scene)
+        {
+            if (Application.CanStreamedLevelBeLoaded(scene)) { SceneManager.LoadScene(scene); return; }
+            Debug.LogWarning("[BobGame] " + scene + " is not in Build Settings: no match to start.");
+            Toast("ยังไม่มีฉากแข่งขัน (" + scene + ")");
         }
 
         // ---------------------------------------------------------------- S13 chapter select (docs 24 section 15.3 P0)
@@ -450,11 +481,7 @@ namespace Bob.Game
             foreach (var m in Modes)
             {
                 var mm = m; bool locked = m.Lock != null, sel = m.Id == mode;
-                var card = BobUi.Button(row, "", sel ? BobUi.Hex("#FFF0C2") : BobUi.Surface, () =>
-                {
-                    if (mm.Lock != null) { Toast(mm.Lock); Sfx("drop_invalid"); return; }
-                    mode = mm.Id; SaveProfile(); Sfx("ui_confirm"); phase = Phase.Title; RenderAll();
-                }, 24);
+                var card = BobUi.Button(row, "", sel ? BobUi.Hex("#FFF0C2") : BobUi.Surface, () => PressMode(mm), 24);
                 card.GetComponentInChildren<TMP_Text>().text = "";
                 var band = BobUi.Rect("Band", card.transform); BobUi.Pin(band, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -14), new Vector2(250, 190));
                 band.gameObject.AddComponent<Image>().color = locked ? new Color(0.7f, 0.7f, 0.74f) : m.Color;
@@ -464,13 +491,179 @@ namespace Bob.Game
                 nm.enableAutoSizing = true; nm.fontSizeMin = 30; nm.fontSizeMax = 46;
                 var inf = BobUi.Label(card.transform, m.Players + "\n" + m.Length, 30, BobUi.Muted, TextAnchor.UpperCenter); BobUi.Pin(inf.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -310), new Vector2(260, 100));
                 inf.enableAutoSizing = true; inf.fontSizeMin = 20; inf.fontSizeMax = 30;
-                var st = BobUi.Label(card.transform, locked ? "ล็อก" : sel ? "เลือกอยู่" : "เล่นได้", 28, locked ? BobUi.Muted : BobUi.Good, TextAnchor.MiddleCenter, FontStyle.Bold);
+                string status = locked ? "ล็อก" : m.Id == "story" ? "เลือกบทก่อน" : m.Team ? "จัดทีม 2v2 · 3v3" : "จัดทีม";
+                var st = BobUi.Label(card.transform, status, 26, locked ? BobUi.Muted : BobUi.Good, TextAnchor.MiddleCenter, FontStyle.Bold);
                 BobUi.Pin(st.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 30), new Vector2(260, 52));
                 if (locked) { var li = BobUi.Img(card.transform, "icon_cross", 56, BobUi.Muted); BobUi.Pin(li.rectTransform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-12, -12), new Vector2(56, 56)); }
             }
-            // Mode select hands over to stage select (S13), which is the screen that decides what the match runs.
-            var ok = BobUi.Button(screenRoot, "เลือก", BobUi.Sun, () => { Sfx("ui_confirm"); phase = Phase.Chapters; RenderAll(); }, 56);
-            BobUi.Pin((RectTransform)ok.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-40, 30), new Vector2(420, 180));
+            var note = BobUi.Label(screenRoot, "Story = บทที่เลือก 3 รอบ · Solo / Duo / Team = รอบเดียว 2 นาที · ช่องเพื่อนในทีมเป็นบอทออฟไลน์จนกว่าห้องออนไลน์จะมา", 22, BobUi.Surface, TextAnchor.MiddleLeft);
+            BobUi.OutlineText(note, BobUi.Ink, 0.25f);
+            BobUi.Pin(note.rectTransform, Vector2.zero, Vector2.zero, new Vector2(40, 40), new Vector2(1500, 46));
+        }
+
+        void PressMode(ModeInfo m)
+        {
+            if (m.Lock != null) { Toast(m.Lock); Sfx("drop_invalid"); return; }
+            if (m.Id == "story") { Sfx("ui_confirm"); phase = Phase.Chapters; RenderAll(); return; }
+            OpenTeamSetup(m);
+        }
+
+        // ---------------------------------------------------------------- S14 team select (the room before a match)
+
+        // The room of docs 11 S14 without a network: pick your hero, and for Team pick 2v2 or 3v3 and the heroes that fill
+        // the other slots. Those slots are offline teammates (BobTaskRaceTeammates) until docs 27's lobby seats friends.
+        ModeInfo pendingMode;
+        int teamSize = 3;
+        readonly string[] partner = { "bubble", "spray" };
+
+        void OpenTeamSetup(ModeInfo m)
+        {
+            pendingMode = m; Sfx("ui_tap");
+            phase = Phase.Team; RenderAll();
+        }
+
+        /// <summary>Tasks one team is dealt in this mode: the round director's own composition table, so the card and
+        /// the match can never disagree (docs 16 section 2.2).</summary>
+        static int TasksFor(int players, int difficulty)
+        {
+            Bob.TaskRace.TaskRaceRound.CompositionFor(players, difficulty, out int common, out int longs, out int shorts);
+            return common + longs + shorts;
+        }
+
+        /// <summary>The heroes of the player's side, you first: the partner picks, skipping anyone already in the team.</summary>
+        List<string> Lineup(int slots)
+        {
+            var ids = BobMatch.Chars.Select(c => c.Id).ToList();
+            var line = new List<string> { charId };
+            foreach (var pick in partner)
+            {
+                if (line.Count >= slots) break;
+                string next = ids.Contains(pick) && !line.Contains(pick) ? pick : ids.FirstOrDefault(id => !line.Contains(id));
+                if (next != null) line.Add(next);
+            }
+            while (line.Count < slots) { var next = ids.FirstOrDefault(id => !line.Contains(id)); if (next == null) break; line.Add(next); }
+            return line;
+        }
+
+        /// <summary>Tap a partner slot: the next roster hero that is not you and not already in the team.</summary>
+        void CyclePartner(int slot)
+        {
+            var line = Lineup(teamSize);
+            string current = slot < line.Count ? line[slot] : null;
+            var ids = BobMatch.Chars.Select(c => c.Id).ToList();
+            int at = Mathf.Max(0, ids.IndexOf(current ?? ""));
+            for (int k = 1; k <= ids.Count; k++)
+            {
+                var next = ids[(at + k) % ids.Count];
+                if (next == charId || line.Contains(next)) continue;
+                partner[Mathf.Clamp(slot - 1, 0, partner.Length - 1)] = next;
+                Sfx("ui_tap"); RenderAll(); return;
+            }
+        }
+
+        void TeamSetup()
+        {
+            var m = pendingMode ?? Modes.First(x => x.Id == "duo");
+            var chapter = Chapter;
+            int slots = m.Team ? Mathf.Clamp(teamSize, 2, 3) : 1;
+            int listPlayers = m.Team ? slots : m.ListPlayers;
+            var line = Lineup(slots);
+
+            ScreenBackdrop("lobby_kitchen");
+            TopBar(screenRoot, "จัดทีม · " + m.Name, true, () => { phase = Phase.Modes; RenderAll(); });
+
+            // --- your side: the slots, then the hero picker
+            var left = Card(screenRoot, "Team", BobUi.Surface);
+            BobUi.Pin(left, new Vector2(0, 1), new Vector2(0, 1), new Vector2(40, -140), new Vector2(1060, 800));
+            BobUi.Pin(BobUi.Label(left, "ทีมเรา", 42, BobUi.Ink, TextAnchor.UpperLeft, FontStyle.Bold).rectTransform,
+                new Vector2(0, 1), new Vector2(0, 1), new Vector2(28, -18), new Vector2(400, 56));
+            BobUi.Pin(BobUi.Label(left, slots == 1 ? "คุณคนเดียว" : $"คุณ + เพื่อนบอท {slots - 1} คน", 24, BobUi.Muted, TextAnchor.UpperRight).rectTransform,
+                new Vector2(1, 1), new Vector2(1, 1), new Vector2(-28, -22), new Vector2(560, 40));
+
+            float sw = slots >= 3 ? 300f : 340f, sgap = 26f;
+            for (int i = 0; i < slots; i++)
+            {
+                string hid = line[i];
+                bool mine = i == 0;
+                var slot = Card(left, "Slot", mine ? BobUi.Hex("#FFF0C2") : BobUi.Hex("#F4EEDC"), 1.1f);
+                BobUi.Pin(slot, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2((i - (slots - 1) / 2f) * (sw + sgap), -84), new Vector2(sw, 300));
+                BobUi.Pin(BobUi.Img(slot, hid + "_portrait", 200).rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -14), new Vector2(200, 200));
+                BobUi.Pin(BobUi.Label(slot, BobMatch.Char(hid).Name, 30, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform,
+                    new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -216), new Vector2(sw - 16, 36));
+                BobUi.Pin(BobUi.Label(slot, mine ? "คุณ" : "เพื่อนบอท · แตะเพื่อเปลี่ยน", 20, mine ? BobUi.Teal : BobUi.Muted, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform,
+                    new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -254), new Vector2(sw - 16, 30));
+                if (!mine)
+                {
+                    // the slot is a button: tap to walk the partner through the rest of the roster
+                    var b = slot.gameObject.AddComponent<Button>();
+                    int s = i;
+                    b.onClick.AddListener(() => CyclePartner(s));
+                }
+            }
+
+            BobUi.Pin(BobUi.Label(left, "ตัวละครของคุณ", 28, BobUi.Muted, TextAnchor.UpperLeft, FontStyle.Bold).rectTransform,
+                new Vector2(0, 1), new Vector2(0, 1), new Vector2(28, -404), new Vector2(500, 40));
+            var chars = BobMatch.Chars;
+            float cw = 230f, cgap = 20f;
+            for (int i = 0; i < chars.Length; i++)
+            {
+                var c = chars[i]; bool sel = c.Id == charId;
+                var card = BobUi.Button(left, "", sel ? BobUi.Hex("#FFF0C2") : BobUi.Surface, () => SelectChar(c.Id), 22);
+                BobUi.Pin((RectTransform)card.transform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(28 + i * (cw + cgap), -450), new Vector2(cw, 200));
+                card.GetComponentInChildren<TMP_Text>().text = "";
+                BobUi.Pin(BobUi.Img(card.transform, c.Id + "_portrait", 116).rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -10), new Vector2(116, 116));
+                BobUi.Pin(BobUi.Label(card.transform, c.Name, 28, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform,
+                    new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 54), new Vector2(cw - 10, 34));
+                BobUi.Pin(BobUi.Label(card.transform, c.Ability, 20, BobUi.Teal, TextAnchor.MiddleCenter).rectTransform,
+                    new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 18), new Vector2(cw - 10, 30));
+                if (sel) BobUi.Pin(BobUi.Img(card.transform, "icon_check", 34, BobUi.Good).rectTransform, Vector2.one, Vector2.one, new Vector2(-8, -8), new Vector2(34, 34));
+            }
+            BobUi.Pin(BobUi.Label(left, "กติกากลางรอบเหมือนกันทุกโหมด · สกิลฮีโร่ยังไม่มีผลใน Task Race (Phase 2)", 20, BobUi.Muted, TextAnchor.LowerLeft).rectTransform,
+                new Vector2(0, 0), new Vector2(0, 0), new Vector2(28, 20), new Vector2(1000, 40));
+
+            // --- the right: what this pick actually runs
+            var right = Card(screenRoot, "Summary", BobUi.Bg);
+            BobUi.Pin(right, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-40, -140), new Vector2(760, 0));
+            VStack(right, 34, 30, 12);
+            right.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            BobUi.Label(right, m.Name, 64, m.Color, TextAnchor.MiddleLeft, FontStyle.Bold);
+            BobUi.Label(right, m.Blurb, 24, BobUi.Muted, TextAnchor.MiddleLeft);
+            BobUi.Label(right, $"งานต่อทีม · {TasksFor(listPlayers, chapter.Difficulty)} งาน", 28, BobUi.Ink);
+            BobUi.Label(right, $"นาฬิกา · {BobStages.Get(chapter.Order).ClockSeconds:0} วิ · สะพานเปิด {BobStages.Get(chapter.Order).BridgeOpenAtRemaining:0} วิ", 26, BobUi.Ink);
+            BobUi.Label(right, $"บทที่ใช้ · บท {chapter.Order} “{chapter.Title}” · D{chapter.Difficulty}", 24, BobUi.Muted);
+            if (m.Team)
+            {
+                BobUi.Label(right, "ขนาดทีม", 26, BobUi.Muted, TextAnchor.MiddleLeft, FontStyle.Bold);
+                var sizes = BobUi.HBox(right, 14, "Sizes"); BobUi.Size(sizes, 104, 110);
+                foreach (int n in new[] { 2, 3 })
+                {
+                    int size = n;
+                    var b = BobUi.Button(sizes.transform, size == 2 ? "2 พบ 2" : "3 พบ 3", teamSize == size ? BobUi.Sun : BobUi.Surface,
+                        () => { teamSize = size; Sfx("ui_tap"); RenderAll(); }, 34);
+                    b.GetComponentInChildren<TMP_Text>().fontStyle = FontStyles.Bold;
+                }
+            }
+            BobUi.Label(right, m.Team
+                ? "ช่องเพื่อนเป็นบอทในเครื่องนี้: ช่วยเก็บงานฝั่งเรา เดินช้ากว่าคุณและไม่ข้ามไปป่วน · เพื่อนจริงจะมาเมื่อเปิดห้องออนไลน์ (Phase 2)"
+                : "โหมดนี้เล่นคนเดียว รอบเดียว 2 นาที · คู่แข่งเป็นแบบจำลองฝีมือ (pace model)", 20, BobUi.Muted, TextAnchor.UpperLeft);
+
+            var go = BobUi.Button(right, "เริ่มแมตช์", BobUi.Sun, StartPendingMatch, 52);
+            BobUi.Size(go, 150, 160);
+            go.GetComponentInChildren<TMP_Text>().fontStyle = FontStyles.Bold;
+        }
+
+        void StartPendingMatch()
+        {
+            var m = pendingMode ?? Modes.First(x => x.Id == "duo");
+            int slots = m.Team ? Mathf.Clamp(teamSize, 2, 3) : 1;
+            var helpers = m.Team ? Lineup(slots).Skip(1).ToArray() : new string[0];
+            Sfx("ui_confirm");
+            // The scene reads this in Awake (TaskRaceModeManager.ApplyMatchRequest): team size, series and the offline
+            // teammates. Writing it here, right before the load, keeps the pick and the match in one place.
+            MatchRequest.Set(m.Id, m.Team ? slots : m.ListPlayers, m.Series, helpers);
+            mode = m.Id; SaveProfile();
+            LoadMatchScene(m.Scene);
         }
 
         // ---------------------------------------------------------------- S16 hero select (15 s when starting a match)

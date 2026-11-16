@@ -1087,6 +1087,9 @@ namespace Bob.TaskRace
             BobChapters.Select(next, level);
             HideResult();
             HideCard();
+            // A chapter is always one hero, three rounds — say so explicitly, so a Duo/Team request left in the static
+            // MatchRequest can never turn the next chapter into a single round on the wrong island (docs 24 15.22).
+            Bob.Game.MatchRequest.Story();
             if (Application.CanStreamedLevelBeLoaded("TaskRace")) SceneManager.LoadScene("TaskRace");
             else Debug.LogWarning("[TaskRace] the TaskRace scene is not in Build Settings: cannot open the next chapter.");
         }

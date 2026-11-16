@@ -95,6 +95,7 @@ Unity.exe -projectPath . -logFile Logs/ugs-check.log -executeMethod Bob.EditorTo
 - `PureUgsDebugUI` เป็น IMGUI สำหรับทดสอบ ไม่ใช่ UI จริงของเกม
 - ยังไม่มี reconnect / host migration / scene sync — host ปิด = จบห้อง
 - ยังไม่ผูกปุ่มห้องเข้า Home/S16: โปรไฟล์และอันดับพร้อมใช้ แต่ปุ่มห้องยังเป็น debug
+- **Duo/Team เล่นได้แบบออฟไลน์แล้ว (16 พ.ย. 2026)** — Home → S11 → S14 → `TaskRace_Duo`/`TaskRace_Team` พร้อมเพื่อนบอทในเครื่อง (`TaskRace/BobTaskRaceTeammates.cs`, ใบงานเดียวกับผู้เล่น). นี่ไม่ใช่ multiplayer: ไม่มี Relay/Lobby/Netcode ในเส้นทางนี้ และ S15 matchmaker ยังไม่ทำ — ห้องจริงยังเป็นคิว 7b (`art/docs/11` §3.2/§4 S14, `art/docs/24` §15.22)
 - ถ้า Unity Cloud ยังไม่เปิด Relay/Lobby/Cloud Save/Leaderboards จะได้ `Unauthorized` / `Service disabled` — กลับไปเปิดที่ dashboard
 - Leaderboard id ต้องตรงกับที่สร้างใน dashboard (`global_high_score`) ไม่งั้นได้ error ตอน submit
 

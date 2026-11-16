@@ -193,12 +193,33 @@ namespace Bob.TaskRace
         void Awake()
         {
             cached = this;
+            ApplyMatchRequest();
             ApplyChapter();
             ApplyStage();
             RemainingSeconds = matchDuration;
             if (cameraRig == null) cameraRig = FindFirstObjectByType<BobTaskRaceCamera>();
             CollectBarriers();
             DioramaAmbient.Ensure(gameObject);
+        }
+
+        /// <summary>
+        /// The lobby's pick (docs 11 S11 -> S14): a story chapter is three rounds and a lone hero, while a Solo/Duo/Team
+        /// pick is one timed round and Team may carry offline teammates. Runs before ApplyChapter, so the chapter's
+        /// difficulty lands on the team size the player chose. A direct play of this scene carries no request and keeps
+        /// exactly what the scene was built with.
+        /// </summary>
+        void ApplyMatchRequest()
+        {
+            if (!Bob.Game.MatchRequest.Has) return;
+            storySeries = Bob.Game.MatchRequest.Series;
+            var list = FindFirstObjectByType<TaskRaceRound>();
+            if (list != null)
+                list.ConfigureRound(Bob.Game.MatchRequest.Players, list.Difficulty, list.ConfiguredSeed);
+            if (Application.isPlaying)
+                Debug.Log($"[TaskRace] lobby pick: {Bob.Game.MatchRequest.ModeId} · " +
+                          $"{Bob.Game.MatchRequest.Players} player(s)/side · " +
+                          $"{(storySeries ? "story series (3 rounds)" : "one round")} · " +
+                          $"{Bob.Game.MatchRequest.Helpers.Length} offline teammate(s)");
         }
 
         /// <summary>
@@ -279,6 +300,9 @@ namespace Bob.TaskRace
             }
             round = FindAnyObjectByType<TaskRaceRound>();
             if (round != null) round.RoundWon += OnRoundWon;
+            // Team pick: the empty slots of the player's island are offline teammates until docs 27's lobby is wired.
+            if (Bob.Game.MatchRequest.Has && Bob.Game.MatchRequest.Helpers.Length > 0)
+                BobTaskRaceTeammates.Spawn(Bob.Game.MatchRequest.Helpers, localTeam);
             ApplyMode();
             BeginMatch();
             if (series != null) BobSeriesBanner.Attach(this);
