@@ -106,6 +106,46 @@ static class Program
         Check("series: reset clears the emergency tally",
             spotless.EmergencySpawned == 0 && spotless.EmergencyCleared == 0 && !spotless.EmergencyClean);
 
+        // Star 2 (docs 16 section 2.5): a card closed before the job was done only costs the star if nobody finishes
+        // that job later in the chapter.
+        var tidy = new StorySeries(100f, 2);
+        Check("series: a chapter that never closed a card keeps the no-abandon star", tidy.NoAbandoned && tidy.CardsAbandoned == 0);
+        tidy.NoteCardClosed();
+        tidy.NoteCardClosed();
+        Check("series: two closes with nothing recovered cost it",
+            tidy.CardsAbandoned == 2 && tidy.AbandonedLeft == 2 && !tidy.NoAbandoned);
+        tidy.NoteCardRecovered();
+        Check("series: one job picked up again still leaves a close open",
+            tidy.AbandonedLeft == 1 && !tidy.NoAbandoned);
+        tidy.NoteCardRecovered();
+        Check("series: every close forgiven earns it back", tidy.AbandonedLeft == 0 && tidy.NoAbandoned);
+        tidy.NoteCardRecovered();
+        Check("series: a spare recovery never goes negative", tidy.AbandonedLeft == 0);
+
+        // Star 3: only the cart formulas the team actually locked count, and all of them must pass.
+        var carts = new StorySeries(100f, 2);
+        Check("series: a chapter without a cart lock has no cart star", !carts.CartClean && carts.CartRuns == 0);
+        carts.NoteCart(true);
+        carts.NoteCart(false);
+        Check("series: one failed formula costs the cart star",
+            carts.CartRuns == 2 && carts.CartPasses == 1 && !carts.CartClean);
+        carts.NoteCart(true);
+        Check("series: 2/3 is still not every formula", !carts.CartClean);
+        carts.Reset();
+        Check("series: reset clears the cart tally", carts.CartRuns == 0 && carts.CartPasses == 0 && !carts.CartClean);
+        carts.NoteCart(true);
+        Check("series: every formula passed earns the star", carts.CartClean && carts.CartPasses == 1);
+
+        // The three quality stars are reports only: they must not change the chapter's own 0-3 stars.
+        var plain = new StorySeries(100f, 2);
+        plain.Register(6, 4, 0, 0);
+        plain.Register(6, 4, 0, 0);
+        int starsBefore = plain.Stars;
+        plain.NoteCardClosed();
+        plain.NoteEmergency(false);
+        plain.NoteCart(false);
+        Check("series: quality stars never move the chapter stars", plain.Stars == starsBefore && plain.Stars == 2);
+
         Console.WriteLine(fails == 0 ? "UNITY-CHECK PASSED" : $"UNITY-CHECK FAILED: {fails}");
         return fails == 0 ? 0 : 1;
     }

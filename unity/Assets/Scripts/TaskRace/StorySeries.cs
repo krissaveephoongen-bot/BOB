@@ -62,6 +62,20 @@ namespace Bob.TaskRace
         public int EmergencyCleared { get; private set; }
         /// <summary>docs 16 section 2.5: the team quality star "จัดการฉุกเฉินทันทุกตัว". False when none showed up.</summary>
         public bool EmergencyClean => EmergencySpawned > 0 && EmergencyCleared >= EmergencySpawned;
+        /// <summary>Cards the team opened and closed again before the job was done (docs 16 section 2.5, star 2).</summary>
+        public int CardsAbandoned { get; private set; }
+        /// <summary>How many of those jobs were picked up and finished later in the chapter.</summary>
+        public int CardsRecovered { get; private set; }
+        /// <summary>Closes that were never made good: the jobs left undone when their time ran out.</summary>
+        public int AbandonedLeft => Math.Max(0, CardsAbandoned - CardsRecovered);
+        /// <summary>docs 16 section 2.5 star 2 "ไม่มี task ที่ถูกปิดกลางคันแล้วหมดเวลาเก็บ".</summary>
+        public bool NoAbandoned => AbandonedLeft == 0;
+        /// <summary>Cart formulas locked across the chapter, and how many of them passed (star 3).</summary>
+        public int CartRuns { get; private set; }
+        public int CartPasses { get; private set; }
+        /// <summary>docs 16 section 2.5 star 3 "รถเข็น T04 ผ่านสูตร": every locked formula of the chapter passed.
+        /// A chapter that never locked one has no cart star, the same rule the emergency star follows.</summary>
+        public bool CartClean => CartRuns > 0 && CartPasses >= CartRuns;
         /// <summary>Rounds actually closed, 0 before the first result.</summary>
         public int RoundsPlayed => LastRound.HasValue ? LastRound.Value.Number : 0;
         /// <summary>Clock of a round; the manager starts every round at this length.</summary>
@@ -93,10 +107,25 @@ namespace Bob.TaskRace
             if (cleared) EmergencyCleared++;
         }
 
+        /// <summary>A task card was closed before the job was done (the × button, the joystick or a round end).</summary>
+        public void NoteCardClosed() => CardsAbandoned++;
+
+        /// <summary>An abandoned job was finished after all; it no longer counts against the star.</summary>
+        public void NoteCardRecovered() => CardsRecovered++;
+
+        /// <summary>The T04 formula was locked this round; passed says whether the stack met the difficulty need.</summary>
+        public void NoteCart(bool passed)
+        {
+            CartRuns++;
+            if (passed) CartPasses++;
+        }
+
         public void Reset()
         {
             Round = 1; LocalWins = RivalWins = 0;
             EmergencySpawned = EmergencyCleared = 0;
+            CardsAbandoned = CardsRecovered = 0;
+            CartRuns = CartPasses = 0;
             TotalLocalTasks = TotalRivalTasks = TotalLocalPoints = TotalRivalPoints = 0;
             ChallengeOffered = false; LastRound = null; SecondsForRound = roundSeconds;
         }

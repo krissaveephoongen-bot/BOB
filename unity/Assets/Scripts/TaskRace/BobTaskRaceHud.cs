@@ -132,6 +132,10 @@ namespace Bob.TaskRace
         TaskRaceBotController[] mateScan;
         float mateScanAt;
 
+        // docs 16 section 2.5 star 2: the task ids whose card was closed before the job was done, so the chapter can
+        // forgive the ones that were finished later (a close is not a loss until the clock ends).
+        readonly HashSet<string> abandonedCards = new HashSet<string>();
+
         int builtVersion = -1;
         float shownPercent = -1f;
         float toastUntil;
@@ -240,6 +244,7 @@ namespace Bob.TaskRace
             {
                 hooked.ToastRequested -= ShowToast;
                 hooked.MatchEnded -= OnMatchEnded;
+                hooked.MatchStarted -= OnMatchStarted;
             }
             hooked = null;
             if (stains != null) stains.Message -= ShowToast;
@@ -253,12 +258,14 @@ namespace Bob.TaskRace
             {
                 hooked.ToastRequested -= ShowToast;
                 hooked.MatchEnded -= OnMatchEnded;
+                hooked.MatchStarted -= OnMatchStarted;
             }
             hooked = manager;
             if (hooked != null)
             {
                 hooked.ToastRequested += ShowToast;
                 hooked.MatchEnded += OnMatchEnded;
+                hooked.MatchStarted += OnMatchStarted;
             }
         }
 
@@ -289,6 +296,9 @@ namespace Bob.TaskRace
         }
 
         void OnMatchEnded(MatchResult result) => ShowResult(result);
+
+        /// <summary>A new chapter starts its own tally: the ids that were abandoned last time mean nothing now.</summary>
+        void OnMatchStarted() => abandonedCards.Clear();
 
         // ---------------------------------------------------------------- canvas
 
@@ -421,6 +431,7 @@ namespace Bob.TaskRace
 
             title.text = $"ใบงาน · ทีมเรา {round.DoneCount}/{round.TaskCount}";
             footerText.text = AdviceLine();
+            NoteRecoveredJobs();
 
             var tasks = round.Tasks;
             RowCount = tasks.Count;
@@ -428,6 +439,30 @@ namespace Bob.TaskRace
             for (int i = 0; i < tasks.Count; i++) if (!tasks[i].Done) { nextIndex = i; break; } // highlight the next job
             for (int i = 0; i < tasks.Count; i++) BuildRow(tasks[i], i, i == nextIndex);
             FitCard(tasks.Count);
+        }
+
+        /// <summary>
+        /// docs 16 section 2.5 star 2: a close is forgiven the moment that job is finished by anyone on the team. The
+        /// list is rebuilt on every round Version change, which is exactly when a job can go Done, so this needs no
+        /// timer of its own.
+        /// </summary>
+        void NoteRecoveredJobs()
+        {
+            if (abandonedCards.Count == 0 || round == null || manager == null || manager.Series == null) return;
+            List<string> recovered = null;
+            foreach (var entry in round.Tasks)
+            {
+                if (entry == null || !entry.Done) continue;
+                if (!abandonedCards.Contains(entry.Spec.Id)) continue;
+                (recovered ??= new List<string>()).Add(entry.Spec.Id);
+            }
+            if (recovered == null) return;
+            foreach (var id in recovered)
+            {
+                abandonedCards.Remove(id);
+                manager.Series.NoteCardRecovered();
+                Debug.Log($"[TaskRace] abandoned job finished later: {id}");
+            }
         }
 
         void BuildRow(TaskEntry entry, int index, bool next)
@@ -954,7 +989,12 @@ namespace Bob.TaskRace
                 // T04: hand the locked stack to the round, which decides the team buff (docs 16 section 4).
                 if (cardSpot.TaskId == "T04" && round != null)
                 {
+                    bool? before = round.CartPassed;
                     round.NoteCartResult(mini.CartStats);
+                    // docs 16 section 2.5 star 3: the first lock of the round is the one that counts, so the series
+                    // hears only the transition the round itself accepted.
+                    if (!before.HasValue && round.CartPassed.HasValue && manager != null && manager.Series != null)
+                        manager.Series.NoteCart(round.CartPassed.Value);
                     ShowToast(mini.CartPassed
                         ? $"รถเข็นผ่านสูตร {mini.CartPassCount}/4 · ทีมได้บัฟ"
                         : $"รถเข็นล็อกแล้ว แต่ผ่าน {mini.CartPassCount}/4 · ยังไม่ได้บัฟ");
@@ -1004,6 +1044,17 @@ namespace Bob.TaskRace
             // Leaving the panel without the × (result, quit, round handover) must release the station's TASK_LOCK,
             // otherwise the ring keeps saying "กำลังทำ" with no card to finish.
             if (cardSpot != null && cardSpot.IsOpen) cardSpot.Close(false);
+            // docs 16 section 2.5 star 2: a card closed while the station is still dirty is a job left half done. It
+            // only costs the star if nobody finishes it before the chapter ends, so the id is remembered and forgiven
+            // in RenderRows the moment that job goes Done.
+            // One count per task, not per close: docs 16 section 2.5 asks for tasks left uncollected, so closing the
+            // same job twice is still one job (HashSet.Add says whether this is the first close of that id).
+            if (cardSpot != null && !cardSabotage && cardSpot.State == SpotState.Dirty &&
+                !string.IsNullOrEmpty(cardSpot.TaskId) && abandonedCards.Add(cardSpot.TaskId))
+            {
+                if (manager != null && manager.Series != null) manager.Series.NoteCardClosed();
+                Debug.Log($"[TaskRace] card closed unfinished: {cardSpot.TaskId} ({cardSpot.SpotId})");
+            }
             cardSpot = null;
             cardSabotage = false;
             cardEmergency = false;
@@ -1124,15 +1175,20 @@ namespace Bob.TaskRace
 
             string Halo(bool on) => on ? $"<color=#{ColorUtility.ToHtmlStringRGB(T.success)}>✓</color>"
                                        : $"<color=#{ColorUtility.ToHtmlStringRGB(T.inkMuted)}>✕</color>";
-            // The fourth ask is the T16 team quality star of docs 16 section 2.5: every stain of the chapter cleared
-            // inside its 25 s. It never decides the chapter — it is a report of how the three rounds were played.
-            string quality = s.EmergencySpawned > 0
-                ? $"      {Halo(s.EmergencyClean)} คราบ {s.EmergencyCleared}/{s.EmergencySpawned}"
-                : "";
+            // The three team quality stars of docs 16 section 2.5 sit after the chapter asks. They never decide the
+            // chapter — they report how the rounds were played — and each one only appears when it was in play, so a
+            // chapter with no stains and no cart is not padded with lines about them.
+            var quality = "";
+            if (s.EmergencySpawned > 0)
+                quality += $" · {Halo(s.EmergencyClean)} คราบ {s.EmergencyCleared}/{s.EmergencySpawned}";
+            if (s.CardsAbandoned > 0)
+                quality += $" · {Halo(s.NoAbandoned)} ไม่ทิ้งงาน";
+            if (s.CartRuns > 0)
+                quality += $" · {Halo(s.CartClean)} รถเข็น {s.CartPasses}/{s.CartRuns}";
             var asks = BobUi.Label(p,
                 $"{Halo(won)} ชนะบท      {Halo(s.CleanSweep)} ไม่เสียรอบ      {Halo(s.ChallengeOffered)} ชนะขาด 3 งานขึ้นไป{quality}",
                 26, T.inkMuted, TextAnchor.MiddleCenter);
-            asks.enableAutoSizing = true; asks.fontSizeMin = 20; asks.fontSizeMax = 26;
+            asks.enableAutoSizing = true; asks.fontSizeMin = 16; asks.fontSizeMax = 26;
             BobUi.Pin(asks.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0f, -352f), new Vector2(1080f, 40f));
 
