@@ -193,6 +193,7 @@ namespace Bob.TaskRace
         void Awake()
         {
             cached = this;
+            EnsureEventSystem();
             ApplyMatchRequest();
             ApplyChapter();
             ApplyStage();
@@ -200,6 +201,22 @@ namespace Bob.TaskRace
             if (cameraRig == null) cameraRig = FindFirstObjectByType<BobTaskRaceCamera>();
             CollectBarriers();
             DioramaAmbient.Ensure(gameObject);
+        }
+
+        /// <summary>
+        /// The Task Race scenes carry no EventSystem (the lobby builds its own inside the Game scene, and scene loads
+        /// destroy it), so every uGUI pointer event here — joystick, tap-to-walk, the card, ping, the mate tray — would
+        /// be dead in a build and in a direct Play of the scene. One is created if the scene has none, with the legacy
+        /// StandaloneInputModule, because Project Settings pins activeInputHandler to 0 (the new Input System package is
+        /// not in the manifest, so the newer module would throw).
+        /// </summary>
+        static void EnsureEventSystem()
+        {
+            if (UnityEngine.EventSystems.EventSystem.current != null) return;
+            if (UnityEngine.Object.FindFirstObjectByType<UnityEngine.EventSystems.EventSystem>() != null) return;
+            var go = new GameObject("EventSystem", typeof(UnityEngine.EventSystems.EventSystem),
+                typeof(UnityEngine.EventSystems.StandaloneInputModule));
+            if (Application.isPlaying) UnityEngine.Object.DontDestroyOnLoad(go);
         }
 
         /// <summary>
