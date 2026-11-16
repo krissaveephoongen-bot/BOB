@@ -651,6 +651,10 @@ namespace Bob.Game
             var go = BobUi.Button(right, "เริ่มแมตช์", BobUi.Sun, StartPendingMatch, 52);
             BobUi.Size(go, 150, 160);
             go.GetComponentInChildren<TMP_Text>().fontStyle = FontStyles.Bold;
+
+            // S15 (docs 27): the same screen also offers a real room. The offline pick above still works with no network.
+            var online = BobUi.Button(right, "ออนไลน์ 2–4 คน", BobUi.Surface, OpenOnlineRoom, 28, BobUi.Ink);
+            BobUi.Size(online, 96, 104);
         }
 
         void StartPendingMatch()
@@ -664,6 +668,254 @@ namespace Bob.Game
             MatchRequest.Set(m.Id, m.Team ? slots : m.ListPlayers, m.Series, helpers);
             mode = m.Id; SaveProfile();
             LoadMatchScene(m.Scene);
+        }
+
+        // ---------------------------------------------------------------- S15 online room (docs 27)
+
+        // A real room: a UGS Lobby carries the 6-character code, Relay is the transport, and Netcode named messages carry
+        // the match start, the hero poses and the station states. The host picks the seed, so every device draws the same
+        // task list (docs 24 section 15.23). No network = nothing here changes the offline modes.
+        bool roomBusy;
+        string roomCode = "", roomNote, roomSig;
+        TouchScreenKeyboard roomKeyboard;
+
+        void OpenOnlineRoom()
+        {
+            Sfx("ui_tap");
+            phase = Phase.Online;
+            roomSig = null;
+            RenderAll();
+        }
+
+        /// <summary>Redraw the room only when its state actually changed; the keyboard must not rebuild the screen per key.</summary>
+        void TickOnline()
+        {
+            if (roomKeyboard != null)
+            {
+                if (roomKeyboard.active) { var t = CleanCode(roomKeyboard.text); if (t != roomCode) { roomCode = t; roomSig = null; } }
+                else roomKeyboard = null;
+            }
+            else
+            {
+                // hardware keyboard fallback (the editor, a desktop build); the phone uses the touch keyboard above
+                string typed = Input.inputString;
+                if (!string.IsNullOrEmpty(typed))
+                {
+                    if (typed.IndexOf('\b') >= 0) roomCode = roomCode.Length > 0 ? roomCode.Substring(0, roomCode.Length - 1) : "";
+                    var t = CleanCode(roomCode + typed.Replace("\b", ""));
+                    if (t != roomCode) { roomCode = t; roomSig = null; }
+                }
+            }
+
+            var room = Bob.Ugs.BobOnlineRoom.Instance;
+            string sig = room == null
+                ? "none"
+                : room.Status + "|" + room.Code + "|" + room.Players + "|" + string.Join(",", room.Roster) + "|" +
+                  roomCode + "|" + roomBusy + "|" + (room.Connected ? "c" : "-") + "|" + (roomNote ?? "");
+            if (sig == roomSig) return;
+            roomSig = sig;
+            RenderAll();
+        }
+
+        static string CleanCode(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            var chars = new List<char>(8);
+            foreach (char c in s.ToUpperInvariant())
+            {
+                if ((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) chars.Add(c);
+                if (chars.Count >= 8) break;
+            }
+            return new string(chars.ToArray());
+        }
+
+        static string RoomStateThai(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            if (s == "offline") return "ออฟไลน์";
+            if (s.StartsWith("preparing")) return "กำลังเตรียม…";
+            if (s.StartsWith("creating") || s.StartsWith("joining") || s.StartsWith("quick")) return "กำลังทำงาน…";
+            if (s.StartsWith("hosting")) return "เป็นเจ้าของห้อง";
+            if (s.StartsWith("lobby error")) return "เซิร์ฟเวอร์ห้องไม่ตอบ";
+            if (s.StartsWith("relay error")) return "รีเลย์ไม่ตอบ";
+            if (s.StartsWith("services")) return "ต่อเซิร์ฟเวอร์ไม่ได้";
+            if (s.StartsWith("room closed")) return "ห้องถูกปิดแล้ว";
+            if (s.StartsWith("already connected")) return "เชื่อมต่ออยู่แล้ว";
+            return s;
+        }
+
+        void PressTypeCode()
+        {
+            Sfx("ui_tap");
+            try { roomKeyboard = TouchScreenKeyboard.Open(roomCode, TouchScreenKeyboardType.Default, false, false, true, false, "รหัสห้อง"); }
+            catch (Exception) { roomKeyboard = null; }
+            roomNote = "พิมพ์รหัส 6 ตัวจากเจ้าของห้อง";
+            roomSig = null; RenderAll();
+        }
+
+        void PressHostRoom()
+        {
+            if (roomBusy) return;
+            Sfx("ui_confirm");
+            StartCoroutine(RoomHostRoutine());
+        }
+
+        IEnumerator RoomHostRoutine()
+        {
+            roomBusy = true; roomNote = "กำลังสร้างห้อง…"; roomSig = null; RenderAll();
+            var room = Bob.Ugs.BobOnlineRoom.Ensure();
+            var task = room.HostAsync(charId, 4);
+            while (!task.IsCompleted) yield return null;
+            roomBusy = false;
+            if (!task.Result) roomNote = "สร้างห้องไม่สำเร็จ · " + RoomStateThai(room.Status);
+            roomSig = null; RenderAll();
+        }
+
+        void PressJoinRoom(bool quick)
+        {
+            if (roomBusy) return;
+            if (!quick && roomCode.Length < 4) { Toast("ใส่รหัสห้องก่อน"); Sfx("drop_invalid"); return; }
+            Sfx("ui_confirm");
+            StartCoroutine(RoomJoinRoutine(quick));
+        }
+
+        IEnumerator RoomJoinRoutine(bool quick)
+        {
+            roomBusy = true; roomNote = quick ? "กำลังหาห้องที่เปิดอยู่…" : "กำลังเข้าห้อง…"; roomSig = null; RenderAll();
+            var room = Bob.Ugs.BobOnlineRoom.Ensure();
+            var task = room.JoinAsync(charId, quick ? "" : roomCode);
+            while (!task.IsCompleted) yield return null;
+            roomBusy = false;
+            if (!task.Result) roomNote = "เข้าห้องไม่สำเร็จ · " + RoomStateThai(room.Status);
+            roomSig = null; RenderAll();
+        }
+
+        void PressLeaveRoom()
+        {
+            Sfx("ui_tap");
+            var room = Bob.Ugs.BobOnlineRoom.Instance;
+            if (room != null) _ = room.LeaveAsync();
+            roomNote = "ออกจากห้องแล้ว";
+            roomSig = null; RenderAll();
+        }
+
+        void PressStartOnline()
+        {
+            var room = Bob.Ugs.BobOnlineRoom.Instance;
+            if (room == null || !room.InRoom || !room.IsHost) return;
+            Sfx("ui_confirm");
+            // The host's seed is the round both devices draw; the scene loads from the room, not from here.
+            room.StartMatch(UnityEngine.Random.Range(1, 100000), Mathf.Clamp(room.Players, 1, 4));
+        }
+
+        /// <summary>Back from the room: release the lobby and the relay before leaving the screen.</summary>
+        void LeaveRoomAndBack()
+        {
+            var room = Bob.Ugs.BobOnlineRoom.Instance;
+            if (room != null && room.InRoom) _ = room.LeaveAsync();
+            phase = Phase.Modes;
+            roomSig = null;
+            RenderAll();
+        }
+
+        void OnlineRoom()
+        {
+            ScreenBackdrop("lobby_kitchen");
+            TopBar(screenRoot, "ห้องออนไลน์", true, LeaveRoomAndBack);
+
+            var room = Bob.Ugs.BobOnlineRoom.Instance;
+            bool inRoom = room != null && room.InRoom;
+            bool host = inRoom && room.IsHost;
+
+            // --- the room itself: code and seats
+            var left = Card(screenRoot, "Room", BobUi.Surface);
+            BobUi.Pin(left, new Vector2(0, 1), new Vector2(0, 1), new Vector2(40, -140), new Vector2(880, 760));
+            BobUi.Pin(BobUi.Label(left, "ห้องของเรา", 42, BobUi.Ink, TextAnchor.UpperLeft, FontStyle.Bold).rectTransform,
+                new Vector2(0, 1), new Vector2(0, 1), new Vector2(30, -22), new Vector2(400, 54));
+            BobUi.Pin(BobUi.Label(left, RoomStateThai(room != null ? room.Status : null), 24, BobUi.Muted, TextAnchor.UpperRight).rectTransform,
+                new Vector2(1, 1), new Vector2(1, 1), new Vector2(-30, -26), new Vector2(420, 44));
+
+            if (inRoom)
+            {
+                BobUi.Pin(BobUi.Label(left, string.IsNullOrEmpty(room.Code) ? "—" : room.Code, 110, BobUi.Teal, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform,
+                    new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -96), new Vector2(800, 140));
+                BobUi.Pin(BobUi.Label(left, "บอกโค้ดนี้ให้เพื่อน · ห้องรับ 2–4 คน", 26, BobUi.Muted, TextAnchor.MiddleCenter).rectTransform,
+                    new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -238), new Vector2(800, 40));
+            }
+            else
+            {
+                BobUi.Pin(BobUi.Label(left, "สร้างห้องเพื่อให้เพื่อนเข้าด้วยโค้ด\nหรือใส่โค้ดของเพื่อนแล้วเข้าร่วม", 30, BobUi.Muted, TextAnchor.MiddleCenter).rectTransform,
+                    new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -140), new Vector2(780, 120));
+            }
+
+            var seats = BobUi.Pin(BobUi.Rect("Seats", left), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -300), new Vector2(800, 250));
+            var row = seats.gameObject.AddComponent<HorizontalLayoutGroup>();
+            row.spacing = 18; row.childAlignment = TextAnchor.MiddleCenter;
+            row.childControlWidth = row.childControlHeight = true; row.childForceExpandWidth = false;
+            var roster = inRoom ? room.Roster : null;
+            int shown = roster != null ? Mathf.Min(4, roster.Count) : 0;
+            for (int i = 0; i < 4; i++)
+            {
+                string hero = i < shown ? roster[i] : null;
+                var slot = BobUi.Rect("Seat", seats);
+                BobUi.Size(slot, 220, 230, 0, 180);
+                var fill = slot.gameObject.AddComponent<Image>();
+                fill.color = hero == null ? BobUi.Hex("#F4EEDC") : BobUi.Surface;
+                if (hero != null)
+                    BobUi.Pin(BobUi.Img(slot, hero + "_portrait", 118).rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -16), new Vector2(118, 118));
+                BobUi.Pin(BobUi.Label(slot, hero == null ? "ว่าง" : BobMatch.Char(hero).Name, 24,
+                    hero == null ? BobUi.Muted : BobUi.Ink, TextAnchor.MiddleCenter, hero == null ? FontStyle.Normal : FontStyle.Bold).rectTransform,
+                    new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 16), new Vector2(170, 60));
+            }
+
+            BobUi.Pin(BobUi.Label(left, "ออนไลน์ใช้เน็ตจริง · ถ้าต่อเซิร์ฟเวอร์ไม่ได้ โหมดออฟไลน์ยังเล่นได้ทุกโหมด", 22, BobUi.Muted, TextAnchor.LowerLeft).rectTransform,
+                new Vector2(0, 0), new Vector2(0, 0), new Vector2(30, 22), new Vector2(800, 40));
+
+            // --- what you can do here
+            var right = Card(screenRoot, "RoomActions", BobUi.Bg);
+            BobUi.Pin(right, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-40, -140), new Vector2(900, 0));
+            VStack(right, 36, 34, 16);
+            right.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            BobUi.Label(right, host ? "คุณเป็นเจ้าของห้อง" : inRoom ? "อยู่ในห้องแล้ว" : "เริ่มเล่นออนไลน์", 40, BobUi.Ink, TextAnchor.MiddleLeft, FontStyle.Bold);
+            BobUi.Label(right, $"ผู้เล่น {room?.Players ?? 0}/{(room != null && room.MaxPlayers > 0 ? room.MaxPlayers : 4)} · ทุกเครื่องได้ใบงานชุดเดียวกัน", 24, BobUi.Muted);
+
+            if (!inRoom)
+            {
+                var create = BobUi.Button(right, roomBusy ? "กำลังทำงาน…" : "สร้างห้อง", BobUi.Sun, PressHostRoom, 40);
+                BobUi.Size(create, 130, 140);
+                create.interactable = !roomBusy;
+
+                var codeRow = BobUi.HBox(right, 14, "Code");
+                BobUi.Size(codeRow, 104, 110);
+                var codeLabel = BobUi.Label(codeRow.transform, string.IsNullOrEmpty(roomCode) ? "รหัสห้อง: —" : "รหัสห้อง: " + roomCode, 32, BobUi.Ink, TextAnchor.MiddleLeft, FontStyle.Bold);
+                BobUi.Size(codeLabel, 104, 110, 1, 430);
+                var type = BobUi.Button(codeRow.transform, "กรอกรหัส", BobUi.Surface, PressTypeCode, 30, BobUi.Ink);
+                BobUi.Size(type, 104, 110, 0, 250);
+
+                var join = BobUi.Button(right, "เข้าร่วมด้วยโค้ดนี้", BobUi.Surface, () => PressJoinRoom(false), 32, BobUi.Ink);
+                BobUi.Size(join, 118, 128);
+                join.interactable = !roomBusy && roomCode.Length >= 4;
+
+                var quick = BobUi.Button(right, "เข้าห้องที่เปิดอยู่", BobUi.Surface, () => PressJoinRoom(true), 28, BobUi.Ink);
+                BobUi.Size(quick, 108, 116);
+                quick.interactable = !roomBusy;
+            }
+            else
+            {
+                var start = BobUi.Button(right, "เริ่มแมตช์", BobUi.Sun, PressStartOnline, 46);
+                BobUi.Size(start, 150, 160);
+                start.interactable = host && room.Connected;
+                start.GetComponentInChildren<TMP_Text>().fontStyle = FontStyles.Bold;
+
+                var leave = BobUi.Button(right, host ? "ปิดห้อง" : "ออกจากห้อง", BobUi.Surface, PressLeaveRoom, 30, BobUi.Ink);
+                BobUi.Size(leave, 108, 116);
+            }
+
+            if (!string.IsNullOrEmpty(roomNote))
+                BobUi.Label(right, roomNote, 24, BobUi.Muted, TextAnchor.UpperLeft);
+
+            BobUi.Label(right, "ห้องออนไลน์: ทุกคนอยู่ฝั่งเราและแข่งกับคู่แข่งจำลองจนกว่าจะมีระบบทีมสองฝั่ง", 20, BobUi.Muted, TextAnchor.UpperLeft);
         }
 
         // ---------------------------------------------------------------- S16 hero select (15 s when starting a match)

@@ -21,7 +21,7 @@ namespace Bob.Game
         public const float RoundTime = 100f, FreezeTime = 8f;
         public const int Hand = BobRules.HandSolo;
 
-        enum Phase { Title, Loading, Intro, Countdown, Build, Scoring, Test, Result, Splash, Login, Modes, Heroes, Shop, Chapters, Team }
+        enum Phase { Title, Loading, Intro, Countdown, Build, Scoring, Test, Result, Splash, Login, Modes, Heroes, Shop, Chapters, Team, Online }
 
         sealed class LastRound
         {
@@ -86,6 +86,7 @@ namespace Bob.Game
             if (Input.GetKeyDown(KeyCode.Escape)) OnBack();
             TickInput();
             TickMenus(); UpdateMusic();
+            if (phase == Phase.Online) TickOnline();
             if (taskMode && phase == Phase.Build) TickTasks(Time.deltaTime);
             else if (phase == Phase.Build && overlay == Overlay.None)
             {
@@ -136,6 +137,7 @@ namespace Bob.Game
             else if (phase == Phase.Build) SetOverlay(Overlay.Pause);
             else if (phase == Phase.Intro || phase == Phase.Test || phase == Phase.Result) ToTitle();
             else if (phase == Phase.Team) { phase = Phase.Modes; RenderAll(); }
+            else if (phase == Phase.Online) { LeaveRoomAndBack(); }
             else if (phase == Phase.Modes || phase == Phase.Heroes || phase == Phase.Shop || phase == Phase.Chapters) GoHome();
         }
 

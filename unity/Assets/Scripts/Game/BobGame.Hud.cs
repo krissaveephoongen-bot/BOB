@@ -523,6 +523,7 @@ namespace Bob.Game
                 case Phase.Login: Login(); break;
                 case Phase.Modes: ModeSelect(); break;
                 case Phase.Team: TeamSetup(); break;
+                case Phase.Online: OnlineRoom(); break;
                 case Phase.Heroes: HeroSelect(); break;
                 case Phase.Shop: Shop(); break;
                 case Phase.Chapters: ChapterSelect(); break;

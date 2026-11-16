@@ -214,12 +214,18 @@ namespace Bob.TaskRace
             storySeries = Bob.Game.MatchRequest.Series;
             var list = FindFirstObjectByType<TaskRaceRound>();
             if (list != null)
-                list.ConfigureRound(Bob.Game.MatchRequest.Players, list.Difficulty, list.ConfiguredSeed);
+            {
+                // An online match draws the host's seed on every device (docs 27); an offline pick keeps the scene's own.
+                int seed = Bob.Game.MatchRequest.Seed > 0 ? Bob.Game.MatchRequest.Seed : list.ConfiguredSeed;
+                list.ConfigureRound(Bob.Game.MatchRequest.Players, list.Difficulty, seed);
+                if (Bob.Game.MatchRequest.Seed > 0) list.LockSeed(seed);
+            }
             if (Application.isPlaying)
                 Debug.Log($"[TaskRace] lobby pick: {Bob.Game.MatchRequest.ModeId} · " +
                           $"{Bob.Game.MatchRequest.Players} player(s)/side · " +
                           $"{(storySeries ? "story series (3 rounds)" : "one round")} · " +
-                          $"{Bob.Game.MatchRequest.Helpers.Length} offline teammate(s)");
+                          $"{Bob.Game.MatchRequest.Helpers.Length} offline teammate(s)" +
+                          $"{(Bob.Game.MatchRequest.Online ? $" · online {(Bob.Game.MatchRequest.Host ? "host" : "client")} seed {Bob.Game.MatchRequest.Seed}" : "")}");
         }
 
         /// <summary>
@@ -303,6 +309,9 @@ namespace Bob.TaskRace
             // Team pick: the empty slots of the player's island are offline teammates until docs 27's lobby is wired.
             if (Bob.Game.MatchRequest.Has && Bob.Game.MatchRequest.Helpers.Length > 0)
                 BobTaskRaceTeammates.Spawn(Bob.Game.MatchRequest.Helpers, localTeam);
+            // Online room (docs 27): presence and the shared station states over Netcode named messages.
+            if (Bob.Game.MatchRequest.Has && Bob.Game.MatchRequest.Online)
+                BobTaskRaceOnline.Attach();
             ApplyMode();
             BeginMatch();
             if (series != null) BobSeriesBanner.Attach(this);

@@ -135,4 +135,32 @@ namespace Bob.Ugs
         public System.Threading.Tasks.Task KickoffAsync() => null;
         public System.Threading.Tasks.Task EnsureReadyAsync() => null;
     }
+
+    /// <summary>The real room (UGS/BobOnlineRoom.cs) needs the Lobby, Relay and Netcode assemblies. Mirror only what the
+    /// screens and the Task Race scene read: the state they draw, the two events they listen to, and the calls they make.</summary>
+    public sealed class BobOnlineRoom : MonoBehaviour
+    {
+        public static BobOnlineRoom Instance { get; private set; }
+        public static BobOnlineRoom Ensure() => null;
+        public bool InRoom { get; private set; }
+        public bool IsHost { get; private set; }
+        public bool Connected { get; private set; }
+        public int LocalNetId { get; private set; }
+        public int Players { get; private set; }
+        public int MaxPlayers { get; private set; }
+        public string Code { get; private set; }
+        public string Status { get; private set; }
+        public bool Starting { get; private set; }
+        public int StartSeed { get; private set; }
+        public string HeroId { get; private set; }
+        public System.Collections.Generic.IReadOnlyList<string> Roster { get; private set; }
+        public event System.Action<int, Vector3, float> PoseReceived;
+        public event System.Action<int, string, bool> TaskReceived;
+        public System.Threading.Tasks.Task<bool> HostAsync(string heroId, int maxPlayers) => null;
+        public System.Threading.Tasks.Task<bool> JoinAsync(string heroId, string code) => null;
+        public System.Threading.Tasks.Task LeaveAsync() => null;
+        public void StartMatch(int seed, int players) { }
+        public void SendPose(Vector3 position, float yaw) { }
+        public void SendTask(string spotId, bool completed) { }
+    }
 }

@@ -86,6 +86,7 @@ namespace Bob.TaskRace
         [SerializeField] int seed = 1975;
         [SerializeField] bool randomSeedEachPlay = true;
         [SerializeField] bool autoStart = true;
+        bool seedLocked;
         [Tooltip("A cleaned station stays Clean (and sabotageable) this long before the next queued task arrives.")]
         [SerializeField, Min(0f)] float restockDelay = 6f;
 
@@ -176,7 +177,8 @@ namespace Bob.TaskRace
 
         void Start()
         {
-            if (autoStart) StartRound(randomSeedEachPlay ? UnityEngine.Random.Range(1, 100000) : seed);
+            // An online match locks the host's seed so Start() cannot reroll it past the value the room sent (docs 27).
+            if (autoStart) StartRound(seedLocked || !randomSeedEachPlay ? seed : UnityEngine.Random.Range(1, 100000));
         }
 
         // ---------------------------------------------------------------- setup (editor / tests)
@@ -187,6 +189,13 @@ namespace Bob.TaskRace
             players = Mathf.Max(1, newPlayers);
             difficulty = Mathf.Clamp(newDifficulty, 1, 3);
             seed = newSeed;
+        }
+
+        /// <summary>Online (docs 27): the host picked the seed, so Start must draw that list instead of rerolling it.</summary>
+        public void LockSeed(int lockedSeed)
+        {
+            seed = Mathf.Max(1, lockedSeed);
+            seedLocked = true;
         }
 
         [ContextMenu("Round: reroll seed and restart")]

@@ -961,9 +961,21 @@ namespace Bob.TaskRace
 
             RewardBlock(p, r, -326f);
 
-            var again = BobUi.Button(p, "เล่นอีกครั้ง", T.primary, RestartFromResult, T.buttonLg, T.ink);
-            BobUi.Pin((RectTransform)again.transform, new Vector2(1f, 0f), new Vector2(1f, 0f),
-                new Vector2(-40f, 40f), new Vector2(480f, 160f));
+            // An online round cannot restart on one device alone (docs 27): the seed is the host's, so the replay is a
+            // new room. The card says so instead of leaving a button that would desync the two islands.
+            bool online = Bob.Game.MatchRequest.Has && Bob.Game.MatchRequest.Online;
+            if (online)
+            {
+                var note = BobUi.Label(p, "ออนไลน์ · กลับเมนูแล้วสร้างห้องใหม่เพื่อเล่นอีกครั้ง", 28, T.inkMuted, TextAnchor.MiddleRight);
+                BobUi.Pin(note.rectTransform, new Vector2(1f, 0f), new Vector2(1f, 0f),
+                    new Vector2(-40f, 92f), new Vector2(560f, 60f));
+            }
+            else
+            {
+                var again = BobUi.Button(p, "เล่นอีกครั้ง", T.primary, RestartFromResult, T.buttonLg, T.ink);
+                BobUi.Pin((RectTransform)again.transform, new Vector2(1f, 0f), new Vector2(1f, 0f),
+                    new Vector2(-40f, 40f), new Vector2(480f, 160f));
+            }
             var home = BobUi.Button(p, "กลับเมนู", T.surfaceCream, BackToLobby, T.buttonLg, T.ink);
             BobUi.Pin((RectTransform)home.transform, new Vector2(0f, 0f), new Vector2(0f, 0f),
                 new Vector2(40f, 40f), new Vector2(480f, 160f));
@@ -1111,6 +1123,13 @@ namespace Bob.TaskRace
 
         void BackToLobby()
         {
+            // Leaving an online round must also release the room: otherwise the lobby would hold a dead player for 30 s
+            // and the relay allocation would stay allocated (docs 27).
+            if (Bob.Game.MatchRequest.Has && Bob.Game.MatchRequest.Online)
+            {
+                var room = Bob.Ugs.BobOnlineRoom.Instance;
+                if (room != null) _ = room.LeaveAsync();
+            }
             if (Application.CanStreamedLevelBeLoaded("Game")) SceneManager.LoadScene("Game");
             else Debug.LogWarning("[TaskRace] the Game scene is not in Build Settings: cannot return to the lobby.");
         }

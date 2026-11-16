@@ -47,6 +47,18 @@ namespace Bob.TaskRace
             return placed;
         }
 
+        /// <summary>
+        /// One remote player's body (docs 27 online room): the same roster mesh as a teammate, with no brain attached —
+        /// the online component moves it from the poses the other device sends.
+        /// </summary>
+        public static GameObject Avatar(string heroId, string name, Transform parent = null)
+        {
+            var go = new GameObject(string.IsNullOrEmpty(name) ? "Remote" : name);
+            if (parent != null) go.transform.SetParent(parent, false);
+            Body(go.transform, heroId);
+            return go;
+        }
+
         /// <summary>The roster mesh under Resources/Characters, or a capsule so a missing prefab still walks.</summary>
         static void Body(Transform parent, string heroId)
         {
