@@ -88,6 +88,24 @@ static class Program
         margin.Register(6, 3, 0, 0);
         Check("series: exactly three tasks does", margin.ChallengeOffered);
 
+        // The T16 quality star (docs 16 section 2.5): a chapter counts every stain of every round, and only a
+        // chapter where all of them were cleared earns it. No stains at all is not "clean".
+        var quiet = new StorySeries(100f, 2);
+        Check("series: a chapter without stains has no emergency star", !quiet.EmergencyClean && quiet.EmergencySpawned == 0);
+        quiet.NoteEmergency(true);
+        quiet.NoteEmergency(false);
+        quiet.NoteEmergency(true);
+        Check("series: one spread stain costs the emergency star",
+            quiet.EmergencySpawned == 3 && quiet.EmergencyCleared == 2 && !quiet.EmergencyClean);
+        var spotless = new StorySeries(100f, 2);
+        spotless.NoteEmergency(true);
+        spotless.NoteEmergency(true);
+        Check("series: every stain cleared earns it", spotless.EmergencyClean && spotless.EmergencyCleared == 2);
+        spotless.Register(6, 5, 0, 0);
+        spotless.Reset();
+        Check("series: reset clears the emergency tally",
+            spotless.EmergencySpawned == 0 && spotless.EmergencyCleared == 0 && !spotless.EmergencyClean);
+
         Console.WriteLine(fails == 0 ? "UNITY-CHECK PASSED" : $"UNITY-CHECK FAILED: {fails}");
         return fails == 0 ? 0 : 1;
     }

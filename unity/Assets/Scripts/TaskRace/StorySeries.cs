@@ -56,6 +56,12 @@ namespace Bob.TaskRace
         /// <summary>Points the local side scored across every closed round.</summary>
         public int TotalLocalPoints { get; private set; }
         public int TotalRivalPoints { get; private set; }
+        /// <summary>Emergency stains that showed up across the chapter's rounds (T16).</summary>
+        public int EmergencySpawned { get; private set; }
+        /// <summary>How many of those the team cleared inside the 25 s grace.</summary>
+        public int EmergencyCleared { get; private set; }
+        /// <summary>docs 16 section 2.5: the team quality star "จัดการฉุกเฉินทันทุกตัว". False when none showed up.</summary>
+        public bool EmergencyClean => EmergencySpawned > 0 && EmergencyCleared >= EmergencySpawned;
         /// <summary>Rounds actually closed, 0 before the first result.</summary>
         public int RoundsPlayed => LastRound.HasValue ? LastRound.Value.Number : 0;
         /// <summary>Clock of a round; the manager starts every round at this length.</summary>
@@ -80,9 +86,17 @@ namespace Bob.TaskRace
         public int Stars => !Over || !LocalTookSeries ? 0 : 1 + (CleanSweep ? 1 : 0) + (ChallengeOffered ? 1 : 0);
         public string Score => $"{LocalWins}-{RivalWins}";
 
+        /// <summary>One stain came up; cleared says whether it was put down inside the grace (T16 feeds this).</summary>
+        public void NoteEmergency(bool cleared)
+        {
+            EmergencySpawned++;
+            if (cleared) EmergencyCleared++;
+        }
+
         public void Reset()
         {
             Round = 1; LocalWins = RivalWins = 0;
+            EmergencySpawned = EmergencyCleared = 0;
             TotalLocalTasks = TotalRivalTasks = TotalLocalPoints = TotalRivalPoints = 0;
             ChallengeOffered = false; LastRound = null; SecondsForRound = roundSeconds;
         }

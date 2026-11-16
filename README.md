@@ -115,12 +115,15 @@ Unity screen consumes it after the pure-UGS migration. Full setup and limits: `a
   (`BobTaskRaceRules.EmergencyTimes(seed, difficulty)`, at 40/75/100 s scaled to the round length) next to a
   station; a red banner counts a 25 s grace, a screen-edge arrow points at the stain while its station is
   off-camera, and the S28 card plays an easy minigame (T02/T03/T05, one difficulty step down). Clearing one is
-  free; letting it run out adds one short `คราบลาม` task to the victims' queue. Still missing from the T16
-  spec: the boss stain, a portrait on the card, the quality star and online sync.
+  free; letting it run out adds one short `คราบลาม` task to the victims' queue. The chapter card now reports the
+  team quality line `คราบ n/m` (`StorySeries.NoteEmergency`), which is the first of the three quality stars of
+  docs 16 section 2.5. Still missing from the T16 spec: the boss stain, a portrait on the card, the other two
+  quality stars and online sync.
 - **T04 and T12 are playable but not complete.** The cart is a two-step card (pick three parts off the shelf, stack
   them, hold 0.6 s to lock) judged by `BobTaskRaceRules.CartNeed`; only the speed buff lands (walk +10% for the
-  round). The chairs are dragged in the world by the context button; the owner portrait, the per-difficulty clutter
-  and the server-held chair position are missing. Both score on the client (no `bob_score_stack` round trip).
+  round). The chairs are dragged in the world by the context button, with a 3/4/5 unit drag and 0/1/2 pieces of
+  clutter (real colliders, carved navmesh) as difficulty rises; the owner portrait and the server-held chair
+  position are missing. Both score on the client (no `bob_score_stack` round trip).
 - Scrub and Wash abilities, obstacles other than the sofa, the shelves and the table, the other 7 scenes; Party / Community modes.
 - Balance: every number is an untested starting value. `node server/balance-sim.js` compares the hero abilities
   (results and suggested tweaks: `art/docs/13_Balance_Sim.md`); nothing has been changed from it yet.

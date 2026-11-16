@@ -13,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using Bob.Art;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace Bob.TaskRace
 {
@@ -25,6 +26,12 @@ namespace Bob.TaskRace
         public const float SeatRadius = 1.15f;
         /// <summary>docs 16 section 5: dragging a chair makes the body walk 20% slower.</summary>
         public const float DragSlow = 0.8f;
+        /// <summary>docs 16 section 5 row T12: the drag is 3 / 4 / 5 units long at D1 / D2 / D3.</summary>
+        public static float DragDistance(int difficulty) => 3f + 2f * (Mathf.Clamp(difficulty, 1, 3) - 1);
+        /// <summary>docs 16 section 5 row T12: 0 / 1 / 2 pieces of clutter in the way, so higher D needs a detour.</summary>
+        public static int ClutterCount(int difficulty) => Mathf.Clamp(difficulty, 1, 3) - 1;
+        /// <summary>How far the slots sit in front of the station; the chair radius is the rest of the drag.</summary>
+        public const float SlotAhead = 1.75f;
         const int RingSegments = 40;
 
         sealed class Chair
@@ -43,6 +50,7 @@ namespace Bob.TaskRace
         TaskSpot spot;
         BobTaskRaceHero hero;
         int seats = 2;
+        int level = 1;
         readonly List<Chair> chairs = new List<Chair>();
         readonly List<Vector3> slots = new List<Vector3>();
         readonly List<LineRenderer> slotRings = new List<LineRenderer>();
@@ -62,21 +70,22 @@ namespace Bob.TaskRace
         /// TaskRaceRound hands a station its T12 card. One component per station: a restock on the same station reuses
         /// it, and the component tears itself down as soon as the station carries another task.
         /// </summary>
-        public static BobChairTask Attach(TaskSpot station, int players)
+        public static BobChairTask Attach(TaskSpot station, int players, int difficulty = 1)
         {
             if (station == null) return null;
             var comp = station.GetComponent<BobChairTask>();
             if (comp == null) comp = station.gameObject.AddComponent<BobChairTask>();
-            comp.Bind(station, players);
+            comp.Bind(station, players, difficulty);
             return comp;
         }
 
-        void Bind(TaskSpot station, int players)
+        void Bind(TaskSpot station, int players, int difficulty)
         {
             DropHeld(false);
             Clear();
             spot = station;
             hero = FindAnyObjectByType<BobTaskRaceHero>();
+            level = Mathf.Clamp(difficulty, 1, 3);
             seats = Mathf.Clamp(players <= 1 ? 2 : players, 2, 4); // docs 16: one chair per player, two for a lone hero
             finished = false;
             finishTimer = -1f;
@@ -84,7 +93,8 @@ namespace Bob.TaskRace
             built = true;
             Build();
             Current = this;
-            Debug.Log($"[BobChairTask] {spot.SpotId}: {seats} chairs, players {players}.");
+            Debug.Log($"[BobChairTask] {spot.SpotId}: {seats} chairs, players {players}, D{level}, " +
+                      $"drag {DragDistance(level):0.0} u, clutter {ClutterCount(level)}.");
         }
 
         void OnDisable()
@@ -109,7 +119,7 @@ namespace Bob.TaskRace
             {
                 float u = seats <= 1 ? 0.5f : i / (float)(seats - 1);
                 float x = Mathf.Lerp(-0.95f, 0.95f, u);
-                var local = new Vector3(x, 0f, 1.75f);
+                var local = new Vector3(x, 0f, SlotAhead);
                 var world = anchor.TransformPoint(local);
                 world.y = floorY;
                 slots.Add(world);
@@ -123,7 +133,9 @@ namespace Bob.TaskRace
             {
                 // Spread the fallen chairs around the back and the sides: never on top of a slot, never on each other.
                 float a = Mathf.Lerp(-150f, 150f, seats <= 1 ? 0.5f : i / (float)(seats - 1)) + (float)(rng.NextDouble() * 14.0 - 7.0);
-                float r = 2.45f + (float)rng.NextDouble() * 0.45f;
+                // The drag of docs 16 is measured chair to slot: the chair stands the rest of that distance behind the
+                // station, so D1 is a short carry and D3 asks for a real walk.
+                float r = Mathf.Max(SlotAhead, DragDistance(level) - SlotAhead) + (float)rng.NextDouble() * 0.35f;
                 var dir = Quaternion.Euler(0f, a, 0f) * anchor.forward;
                 var world = anchor.position + dir * r;
                 world.y = floorY;
@@ -148,7 +160,51 @@ namespace Bob.TaskRace
                 chair.ring = Ring("ChairRing_" + i, world, 0.36f, TeamColour(spot.OwnerTeam), 0.06f);
                 chairs.Add(chair);
             }
+            BuildClutter(floorY);
             RenderSlots();
+        }
+
+        /// <summary>
+        /// docs 16 section 5 row T12: 0 / 1 / 2 pieces of clutter stand in the way at D1 / D2 / D3. They are real
+        /// obstacles (a box for the hero's CharacterController, a carved NavMeshObstacle so the bot team-mates path
+        /// around), placed at the sides of the station so the front slot corridor always stays open — the player has
+        /// to step wide, never gets sealed in.
+        /// </summary>
+        void BuildClutter(float floorY)
+        {
+            int count = ClutterCount(level);
+            if (count <= 0) return;
+            var names = new[] { "SM_crate_oranges", "SM_bin_trash_grey", "SM_cone_traffic" };
+            var anchor = spot.transform;
+            for (int i = 0; i < count && i < names.Length; i++)
+            {
+                var prefab = Resources.Load<GameObject>("Props/" + names[i]);
+                if (prefab == null)
+                {
+                    Debug.LogWarning("[BobChairTask] Props/" + names[i] + " missing: the clutter count is shorter.");
+                    continue;
+                }
+                float side = i == 0 ? -1f : 1f;
+                var world = anchor.TransformPoint(new Vector3(side * 1.45f, 0f, 0.55f));
+                world.y = floorY;
+                var body = Instantiate(prefab, root, false);
+                body.name = "Clutter_" + i;
+                body.transform.position = world;
+                body.transform.rotation = Quaternion.Euler(0f, anchor.eulerAngles.y + side * 18f, 0f) * prefab.transform.rotation;
+                var bounds = Bounds(body);
+                body.transform.position += Vector3.up * (world.y + 0.02f - bounds.min.y);
+                var size = bounds.size;
+                size = new Vector3(Mathf.Max(0.4f, size.x * 0.9f), Mathf.Max(0.55f, size.y * 0.9f), Mathf.Max(0.4f, size.z * 0.9f));
+                var box = body.AddComponent<BoxCollider>();
+                box.size = size;
+                box.center = new Vector3(0f, size.y * 0.5f, 0f);
+                var obstacle = body.AddComponent<NavMeshObstacle>();
+                obstacle.shape = NavMeshObstacleShape.Box;
+                obstacle.center = box.center;
+                obstacle.size = size;
+                obstacle.carving = true;
+                obstacle.carveOnlyStationary = false;
+            }
         }
 
         static Color TeamColour(TeamId team) => team == TeamId.TeamB

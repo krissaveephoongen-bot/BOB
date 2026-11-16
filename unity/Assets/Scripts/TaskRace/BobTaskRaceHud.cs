@@ -1085,11 +1085,17 @@ namespace Bob.TaskRace
 
             string Halo(bool on) => on ? $"<color=#{ColorUtility.ToHtmlStringRGB(T.success)}>✓</color>"
                                        : $"<color=#{ColorUtility.ToHtmlStringRGB(T.inkMuted)}>✕</color>";
+            // The fourth ask is the T16 team quality star of docs 16 section 2.5: every stain of the chapter cleared
+            // inside its 25 s. It never decides the chapter — it is a report of how the three rounds were played.
+            string quality = s.EmergencySpawned > 0
+                ? $"      {Halo(s.EmergencyClean)} คราบ {s.EmergencyCleared}/{s.EmergencySpawned}"
+                : "";
             var asks = BobUi.Label(p,
-                $"{Halo(won)} ชนะบท      {Halo(s.CleanSweep)} ไม่เสียรอบ      {Halo(s.ChallengeOffered)} ชนะขาด 3 งานขึ้นไป",
+                $"{Halo(won)} ชนะบท      {Halo(s.CleanSweep)} ไม่เสียรอบ      {Halo(s.ChallengeOffered)} ชนะขาด 3 งานขึ้นไป{quality}",
                 26, T.inkMuted, TextAnchor.MiddleCenter);
+            asks.enableAutoSizing = true; asks.fontSizeMin = 20; asks.fontSizeMax = 26;
             BobUi.Pin(asks.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0f, -352f), new Vector2(1020f, 40f));
+                new Vector2(0f, -352f), new Vector2(1080f, 40f));
 
             RewardBlock(p, r, -400f);
 

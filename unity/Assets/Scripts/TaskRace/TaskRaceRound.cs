@@ -391,7 +391,7 @@ namespace Bob.TaskRace
             // next to this station and the hero drags them home by hand. Only the local island gets the prompt: the
             // rival's chairs are the rival's business.
             if (spec.Value.Id == ChairId && Application.isPlaying && spot.OwnerTeam == TaskSpot.LocalTeam)
-                BobChairTask.Attach(spot, players);
+                BobChairTask.Attach(spot, players, difficulty);
             Version++;
         }
 

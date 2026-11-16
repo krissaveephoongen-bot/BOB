@@ -226,6 +226,7 @@ namespace Bob.TaskRace
             if (current == null) return false;
             var gone = current;
             current = null;
+            NoteQuality(true);
             BobSfx.Play("enemy_defeat", 0.9f);
             if (gone.Body != null) StartCoroutine(ShrinkAway(gone.Body));
             Message?.Invoke($"ปราบ{gone.Name}แล้ว!");
@@ -239,6 +240,7 @@ namespace Bob.TaskRace
         {
             var gone = current;
             current = null;
+            NoteQuality(false);
             BobSfx.Play("enemy_defeat", 0.7f);
             if (gone.Body != null) StartCoroutine(ShrinkAway(gone.Body));
 
@@ -249,6 +251,16 @@ namespace Bob.TaskRace
             if (Application.isPlaying)
                 Debug.Log($"[EmergencyStains] {gone.Name} at {gone.SpotId} was not cleared in {graceSeconds:0} s: " +
                           $"penalty task {(added ? "added" : "refused")}.");
+        }
+
+        /// <summary>
+        /// docs 16 section 2.5: the team quality star "จัดการฉุกเฉินทันทุกตัว". The chapter series counts every stain of
+        /// every round, so the result card can say how the chapter was played without it ever deciding the win.
+        /// </summary>
+        void NoteQuality(bool cleared)
+        {
+            var series = manager != null ? manager.Series : null;
+            if (series != null) series.NoteEmergency(cleared);
         }
 
         void DespawnCurrent()
