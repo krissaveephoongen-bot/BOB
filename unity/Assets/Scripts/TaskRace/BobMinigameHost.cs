@@ -14,7 +14,9 @@
 // only at the station level; the card restarts its current step.
 using System;
 using System.Collections.Generic;
+using Bob.Art;
 using Bob.Game;
+using Bob.Rules;
 using Bob.UI;
 using TMPro;
 using UnityEngine;
@@ -23,7 +25,7 @@ using UnityEngine.UI;
 
 namespace Bob.TaskRace
 {
-    public enum MiniKind { Timed, Trace, Scrub, Tap, Sort, Hold, Fill, Sequence }
+    public enum MiniKind { Timed, Trace, Scrub, Tap, Sort, Hold, Fill, Sequence, Cart }
 
     [DisallowMultipleComponent]
     public class BobMinigameHost : MonoBehaviour
@@ -100,6 +102,30 @@ namespace Bob.TaskRace
         float holdSeconds = 2f;
         int turnRequired = 6;
         float pourSpeed = 0.3f;
+
+        // ---- T04 cart (docs 16 section 4): pick three parts off the shelf, stack them on the cart, hold to lock the
+        // formula. The stack is judged by the shipped Bob.Rules reactions, the same file the server scores with.
+        readonly List<string> cartShelf = new List<string>();
+        readonly List<string> cartTray = new List<string>();
+        readonly List<string> cartStack = new List<string>();
+        readonly List<Item> cartChips = new List<Item>();
+        readonly List<Item> cartLayers = new List<Item>();
+        readonly List<Image> cartBars = new List<Image>();
+        Item cartChipHeld;
+        Image cartLock, cartLockFill;
+        TMP_Text cartLockLabel, cartRecipe;
+        Dictionary<string, int> cartNeed = new Dictionary<string, int>();
+        readonly int[] cartStats = new int[4];
+        float cartHold;
+        bool cartLocked;
+
+        /// <summary>T04: the four stats of the locked cart (clean, gentle, speed, shine), zero before the lock.</summary>
+        public int[] CartStats => cartStats;
+        /// <summary>T04: how many worksheet conditions the locked cart met, 0-4 (see BobTaskRaceRules.CartNeed).</summary>
+        public int CartPassCount { get; private set; }
+        /// <summary>T04: did the formula pass (the buff) or only the lock (the step)?</summary>
+        public bool CartPassed { get; private set; }
+
 
         System.Random rng = new System.Random(7);
 
@@ -294,6 +320,7 @@ namespace Bob.TaskRace
                 case MiniKind.Hold: TickHold(dt); break;
                 case MiniKind.Fill: TickFill(dt); break;
                 case MiniKind.Sequence: TickSequence(dt); break;
+                case MiniKind.Cart: TickCart(dt); break;
                 case MiniKind.Scrub: PaintScrub(); break;
                 case MiniKind.Sort: break;
                 case MiniKind.Trace: break;
@@ -529,6 +556,7 @@ namespace Bob.TaskRace
                 case MiniKind.Sequence: PadAt(p); break;
                 case MiniKind.Trace: CoverAt(p); break;
                 case MiniKind.Scrub: BobMinigameSfx.Scrub(true); ScrubAt(0f, p); break;
+                case MiniKind.Cart: CartDown(p); break;
             }
         }
 
@@ -545,6 +573,7 @@ namespace Bob.TaskRace
                 case MiniKind.Scrub: ScrubAt(delta.magnitude, p); break;
                 case MiniKind.Sort: DragHeld(p); break;
                 case MiniKind.Hold: TurnAt(p); break;
+                case MiniKind.Cart: CartDrag(p); break;
             }
         }
 
@@ -555,6 +584,7 @@ namespace Bob.TaskRace
 
             if (stepKind == MiniKind.Scrub) BobMinigameSfx.Scrub(false);
             if (stepKind == MiniKind.Sort) DropHeld(p);
+            if (stepKind == MiniKind.Cart) CartUp(p);
             if (stepKind == MiniKind.Hold) holding = false;
             if (stepKind == MiniKind.Fill && holding)
             {
@@ -592,6 +622,15 @@ namespace Bob.TaskRace
             if (taskId == "T06") rotate = true;
             Hint = HintFor(taskId, step);
 
+            // T04: the shelf and the stack survive the step change; the lock and the drag do not.
+            cartChipHeld = null; cartHold = 0f; cartLocked = false; CartPassCount = 0; CartPassed = false;
+            if (taskId == "T04" && step == 0)
+            {
+                cartShelf.Clear(); cartTray.Clear(); cartStack.Clear();
+                cartChips.Clear(); cartLayers.Clear(); cartBars.Clear();
+                cartNeed = BobTaskRaceRules.CartNeed(spot != null ? spot.SpotId.GetHashCode() : 1975, difficulty);
+            }
+
             slimeVariant = 0;
             if (stage3d != null && stage3d.Ready) stage3d.Show(taskId); // also drops last step's twins
             AddContext();
@@ -604,6 +643,7 @@ namespace Bob.TaskRace
                 case MiniKind.Hold: SetupHold(); break;
                 case MiniKind.Fill: SetupFill(); break;
                 case MiniKind.Sequence: SetupSequence(); break;
+                case MiniKind.Cart: SetupCart(); break;
             }
         }
 
@@ -961,6 +1001,294 @@ namespace Bob.TaskRace
             flashTimer = 0.5f;
         }
 
+        // ---------------------------------------------------------------- T04 cart (docs 16 section 4)
+
+        static readonly string[] CartBarLabels = { "ขจัดคราบ", "ถนอม", "เร็ว", "เงา" };
+
+        static Color FamilyColour(Family f) => f switch
+        {
+            Family.Tool => new Color(0.55f, 0.68f, 0.90f, 1f),
+            Family.Chem => new Color(0.55f, 0.82f, 0.62f, 1f),
+            Family.Energy => new Color(0.96f, 0.72f, 0.42f, 1f),
+            _ => new Color(0.72f, 0.62f, 0.90f, 1f),
+        };
+
+        /// <summary>Step 1 picks three parts off the shelf; step 2 stacks them on the cart and holds the lock.</summary>
+        void SetupCart()
+        {
+            Bg(new Vector2(0f, 262f), new Vector2(AreaW, 96f), new Color(0.72f, 0.60f, 0.42f, 1f)); // shelf board
+            Bg(new Vector2(0f, -310f), new Vector2(AreaW, 16f), new Color(0.74f, 0.58f, 0.37f, 1f));
+            if (step == 0) SetupCartShelf(); else SetupCartBuild();
+        }
+
+        void SetupCartShelf()
+        {
+            // Six seeded parts, at least three of them real layers (a stack of methods alone cannot clean anything).
+            var pool = new List<string>(BobRules.Parts.Keys);
+            for (int i = pool.Count - 1; i > 0; i--)
+            {
+                int j = rng.Next(i + 1);
+                (pool[i], pool[j]) = (pool[j], pool[i]);
+            }
+            cartShelf.Clear();
+            for (int i = 0; i < pool.Count && cartShelf.Count < 6; i++)
+            {
+                if (BobRules.IsMethod(pool[i]) && cartShelf.Count >= 4) continue;
+                cartShelf.Add(pool[i]);
+            }
+
+            for (int i = 0; i < cartShelf.Count; i++)
+            {
+                var part = BobRules.Parts[cartShelf[i]];
+                var box = MakeBox(new Vector2(-450f + i * 180f, 258f), new Vector2(162f, 118f),
+                    FamilyColour(part.Family), part.Name, 28);
+                box.bin = i; // index into cartShelf: the tap reads it back
+            }
+            cartRecipe = BobUi.Label(layer, "แตะหยิบ 3 อย่าง · ชั้นวางของในห้อง", 34, T.inkMuted,
+                TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Pin(cartRecipe.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                new Vector2(0f, 150f), new Vector2(900f, 60f));
+            Track(cartRecipe.gameObject);
+        }
+
+        void SetupCartBuild()
+        {
+            // The cart: a bordered panel with five layer slots (docs 16: 5 layers max, BobRules.MaxLayers).
+            var cart = BobUi.Panel(layer, new Color(0.97f, 0.94f, 0.87f, 1f), "ui_panel", "Cart");
+            cart.raycastTarget = false;
+            BobUi.Pin((RectTransform)cart.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                new Vector2(360f, -10f), new Vector2(300f, 430f));
+            Track(cart.gameObject);
+            var cartTitle = BobUi.Label(cart.transform, "รถเข็น", 34, T.inkMuted, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Pin(cartTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -28f), new Vector2(260f, 44f));
+            for (int i = 0; i < BobRules.MaxLayers; i++)
+            {
+                var slot = BobUi.Panel(cart.transform, new Color(0.90f, 0.86f, 0.77f, 0.75f), null, "LayerSlot");
+                slot.raycastTarget = false;
+                BobUi.Pin((RectTransform)slot.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                    new Vector2(0f, 22f + i * 66f), new Vector2(250f, 56f));
+            }
+
+            for (int i = 0; i < cartTray.Count; i++) CartAddChip(i);
+            BuildCartBars();
+
+            // The lock: hold 0.6 s (docs 16 step 2). A short hold, so a mis-tap cannot lock the wrong stack.
+            cartLock = BobUi.Panel(layer, T.secondary, "ui_panel", "CartLock");
+            cartLock.raycastTarget = false;
+            BobUi.Pin(cartLock.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                new Vector2(120f, -232f), new Vector2(300f, 96f));
+            Track(cartLock.gameObject);
+            cartLockFill = BobUi.Rect("LockFill", cartLock.transform).gameObject.AddComponent<Image>();
+            cartLockFill.raycastTarget = false;
+            var lf = (RectTransform)cartLockFill.transform;
+            lf.anchorMin = new Vector2(0f, 0f); lf.anchorMax = new Vector2(0f, 1f);
+            lf.pivot = new Vector2(0f, 0.5f);
+            lf.anchoredPosition = Vector2.zero;
+            lf.sizeDelta = new Vector2(0f, -8f);
+            cartLockFill.color = new Color(1f, 1f, 1f, 0.45f);
+            cartLockLabel = BobUi.Label(cartLock.transform, "กดค้าง ล็อกสูตร", 34, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Stretch(cartLockLabel.rectTransform);
+
+            cartRecipe = BobUi.Label(layer, "", 30, T.inkMuted, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Pin(cartRecipe.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                new Vector2(-150f, 218f), new Vector2(1100f, 48f));
+            Track(cartRecipe.gameObject);
+
+            CartApply();
+        }
+
+        /// <summary>One draggable part in the tray: the shelf pick, ready to go on the cart.</summary>
+        void CartAddChip(int trayIndex)
+        {
+            var part = BobRules.Parts[cartTray[trayIndex]];
+            var chip = MakeBox(CartChipHome(trayIndex), new Vector2(146f, 104f), FamilyColour(part.Family),
+                part.Name, 26);
+            chip.bin = trayIndex;
+            cartChips.Add(chip);
+        }
+
+        static Vector2 CartChipHome(int i) => new Vector2(-560f + i * 146f, -258f);
+
+        /// <summary>The four stat bars: fill = the stack's value, the tick = this round's worksheet number.</summary>
+        void BuildCartBars()
+        {
+            const float max = 12f;
+            for (int i = 0; i < BobTaskRaceRules.CartKeys.Length; i++)
+            {
+                float y = 150f - i * 78f;
+                var label = BobUi.Label(layer, CartBarLabels[i], 28, T.ink, TextAnchor.MiddleLeft, FontStyle.Bold);
+                BobUi.Pin(label.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 0.5f),
+                    new Vector2(-600f, y), new Vector2(150f, 40f));
+                Track(label.gameObject);
+
+                var track = BobUi.Panel(layer, new Color(0.90f, 0.86f, 0.77f, 1f), null, "BarTrack");
+                track.raycastTarget = false;
+                BobUi.Pin(track.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 0.5f),
+                    new Vector2(-440f, y), new Vector2(280f, 26f));
+                Track(track.gameObject);
+
+                var fill = BobUi.Rect("BarFill", track.transform).gameObject.AddComponent<Image>();
+                fill.raycastTarget = false;
+                var fr = (RectTransform)fill.transform;
+                fr.anchorMin = new Vector2(0f, 0f); fr.anchorMax = new Vector2(0f, 1f);
+                fr.pivot = new Vector2(0f, 0.5f); fr.offsetMin = Vector2.zero; fr.offsetMax = Vector2.zero;
+                fr.sizeDelta = new Vector2(0f, -6f);
+                fill.color = T.primary;
+                cartBars.Add(fill);
+
+                var need = BobUi.Panel(layer, T.brandRed, null, "BarNeed");
+                need.raycastTarget = false;
+                BobUi.Pin((RectTransform)need.transform, new Vector2(0.5f, 0.5f), new Vector2(0f, 0.5f),
+                    new Vector2(-440f + 280f * Mathf.Clamp01(Need(i) / max), y), new Vector2(6f, 40f));
+                Track(need.gameObject);
+            }
+        }
+
+        int Need(int i) => cartNeed != null && cartNeed.TryGetValue(BobTaskRaceRules.CartKeys[i], out var v) ? v : 5;
+
+        /// <summary>Re-score the stack and repaint the bars (called after every add and remove).</summary>
+        void CartApply()
+        {
+            var ev = BobRules.EvalStack(cartStack);
+            for (int i = 0; i < 4; i++) cartStats[i] = ev.Stats[i];
+            const float max = 12f;
+            for (int i = 0; i < cartBars.Count && i < 4; i++)
+            {
+                var rt = (RectTransform)cartBars[i].transform;
+                float w = 280f * Mathf.Clamp01(cartStats[i] / max);
+                rt.sizeDelta = new Vector2(w, -6f);
+                bool ok = cartStats[i] >= Need(i);
+                cartBars[i].color = ok ? T.success : cartStats[i] > 0 ? T.primary : new Color(T.ink.r, T.ink.g, T.ink.b, 0.25f);
+            }
+            if (cartRecipe != null)
+            {
+                int passes = BobTaskRaceRules.CartPassCount(cartStats, cartNeed);
+                cartRecipe.text = cartStack.Count == 0
+                    ? "ลากอุปกรณ์ลงรถเข็น แล้วกดค้างล็อกสูตร"
+                    : $"กองแล้ว {BobRules.CountLayers(cartStack)} ชั้น · ผ่าน {passes}/4 · D{difficulty} ต้อง {Mathf.Min(3, difficulty)}";
+            }
+        }
+
+        void CartDown(Vector2 p)
+        {
+            if (step == 0)
+            {
+                var box = Nearest(p, 110f);
+                if (box == null || box.bin < 0 || box.bin >= cartShelf.Count) return;
+                string id = cartShelf[box.bin];
+                cartTray.Add(id);
+                box.bin = -1;
+                Pop(box, T.primaryLight);
+                BobSfx.Play("pass_part", 0.8f);
+                stepProgress = cartTray.Count / 3f;
+                Hint = $"หยิบแล้ว {cartTray.Count}/3";
+                return;
+            }
+
+            // Step 2: the lock takes a hold, a tray chip takes a drag, a stacked layer taps off the cart.
+            if (cartLock != null && Vector2.Distance(((RectTransform)cartLock.transform).anchoredPosition, p) < 170f)
+            {
+                holding = true;
+                return;
+            }
+            var layer = Nearest(p, 90f);
+            if (layer != null && cartLayers.Contains(layer) && cartStack.Count > 0)
+            {
+                int last = cartStack.Count - 1;
+                if (cartLayers.Count > 0 && cartLayers[cartLayers.Count - 1] == layer)
+                {
+                    cartStack.RemoveAt(last);
+                    cartLayers.RemoveAt(cartLayers.Count - 1);
+                    Pop(layer, T.danger);
+                    BobSfx.Play("lift_layer", 0.8f);
+                    CartApply();
+                }
+                return;
+            }
+            var chip = Nearest(p, 90f);
+            if (chip != null && cartChips.Contains(chip))
+            {
+                cartChipHeld = chip;
+                chip.punch = PunchTime;
+                BobSfx.Play("pickup", 0.7f);
+            }
+        }
+
+        void CartDrag(Vector2 p)
+        {
+            if (cartChipHeld == null) return;
+            cartChipHeld.home = p;
+            cartChipHeld.rect.anchoredPosition = p;
+        }
+
+        void CartUp(Vector2 p)
+        {
+            holding = false;
+            if (step == 0 || cartChipHeld == null) return;
+            var chip = cartChipHeld;
+            cartChipHeld = null;
+            bool inCart = Mathf.Abs(p.x - 360f) < 170f && Mathf.Abs(p.y + 10f) < 240f;
+            int trayIndex = cartChips.IndexOf(chip);
+            if (!inCart || trayIndex < 0 || cartStack.Count >= BobRules.MaxLayers)
+            {
+                chip.home = CartChipHome(trayIndex < 0 ? 0 : trayIndex);
+                chip.rect.anchoredPosition = chip.home;
+                chip.shake = ShakeTime;
+                if (!inCart) BobMinigameSfx.Wrong("drop_invalid");
+                return;
+            }
+            // Into the cart: the chip becomes the next layer and the tray loses the slot.
+            string id = cartTray[trayIndex];
+            cartTray.RemoveAt(trayIndex);
+            cartStack.Add(id);
+            cartChips.Remove(chip);
+            DestroyNow(chip.rect.gameObject);
+            var part = BobRules.Parts[id];
+            var layer = MakeBox(new Vector2(360f, -175f + (cartStack.Count - 1) * 66f), new Vector2(250f, 56f),
+                FamilyColour(part.Family), part.Name, 26);
+            layer.bin = -1;
+            cartLayers.Add(layer);
+            BobSfx.Play("place_layer", 0.85f);
+            // The tray closes its gaps so the next drag always starts from a full row.
+            for (int i = 0; i < cartChips.Count; i++)
+            {
+                cartChips[i].bin = i;
+                cartChips[i].home = CartChipHome(i);
+                cartChips[i].rect.anchoredPosition = cartChips[i].home;
+            }
+            CartApply();
+        }
+
+        void TickCart(float dt)
+        {
+            if (step != 1 || cartLocked) return;
+            if (!holding) { cartHold = Mathf.Max(0f, cartHold - dt * 2f); }
+            else cartHold = Mathf.Clamp01(cartHold + dt / 0.6f);
+            if (cartLockFill != null) ((RectTransform)cartLockFill.transform).sizeDelta = new Vector2(292f * cartHold, -8f);
+            if (cartHold >= 1f) CartLock();
+        }
+
+        /// <summary>Lock the stack: score it against the worksheet, then let Tick's Advance bank the step.</summary>
+        void CartLock()
+        {
+            if (cartLocked) return;
+            cartLocked = true;
+            holding = false;
+            CartPassCount = BobTaskRaceRules.CartPassCount(cartStats, cartNeed);
+            CartPassed = BobTaskRaceRules.CartPassed(CartPassCount, difficulty);
+            if (cartLockLabel != null) cartLockLabel.text = CartPassed ? "ผ่านสูตร!" : "ล็อกแล้ว";
+            BobSfx.Play(CartPassed ? "reaction_good" : "reaction_bad", 0.9f);
+            Ring(new Vector2(120f, -232f), CartPassed ? T.success : T.warn, 320f);
+            Hint = CartPassed
+                ? $"ผ่านสูตร {CartPassCount}/4 · ทีมได้บัฟ"
+                : $"ล็อกได้ แต่ผ่าน {CartPassCount}/4 · ยังไม่ได้บัฟ";
+            Debug.Log($"[BobMinigameHost] T04 lock: {string.Join("+", cartStack)} -> " +
+                      $"clean {cartStats[0]} gentle {cartStats[1]} speed {cartStats[2]} shine {cartStats[3]} · " +
+                      $"{CartPassCount}/4 (D{difficulty}) pass={CartPassed}");
+            stepProgress = 1f;
+        }
+
         // ---------------------------------------------------------------- per-kind tick / input
 
         void TickTap(float dt)
@@ -1263,19 +1591,20 @@ namespace Bob.TaskRace
 
         static MiniKind KindOf(string id) => id switch
         {
-            "T01" => MiniKind.Trace, "T02" => MiniKind.Scrub, "T03" => MiniKind.Tap, "T05" => MiniKind.Sort,
-            "T06" => MiniKind.Hold, "T07" => MiniKind.Scrub, "T08" => MiniKind.Scrub, "T09" => MiniKind.Hold,
-            "T10" => MiniKind.Tap, "T11" => MiniKind.Fill, "T13" => MiniKind.Hold, "T14" => MiniKind.Trace,
-            "T15" => MiniKind.Sequence, _ => MiniKind.Timed,
+            "T01" => MiniKind.Trace, "T02" => MiniKind.Scrub, "T03" => MiniKind.Tap, "T04" => MiniKind.Cart,
+            "T05" => MiniKind.Sort, "T06" => MiniKind.Hold, "T07" => MiniKind.Scrub, "T08" => MiniKind.Scrub,
+            "T09" => MiniKind.Hold, "T10" => MiniKind.Tap, "T11" => MiniKind.Fill, "T13" => MiniKind.Hold,
+            "T14" => MiniKind.Trace, "T15" => MiniKind.Sequence, _ => MiniKind.Timed,
         };
 
-        static int StepsOf(string id) => id switch { "T07" => 3, "T08" => 2, "T09" => 2, "T14" => 3, _ => 1 };
+        static int StepsOf(string id) => id switch { "T04" => 2, "T07" => 3, "T08" => 2, "T09" => 2, "T14" => 3, _ => 1 };
 
         static string HintFor(string id, int step) => id switch
         {
             "T01" => "ลากนิ้วตามเส้นฝุ่น",
             "T02" => "ถูวนบนคราบ",
             "T03" => "แตะสไลม์ให้หมด",
+            "T04" => step == 0 ? "แตะหยิบอุปกรณ์ 3 อย่างจากชั้น" : "ลากลงรถเข็นให้ผ่านสูตร แล้วกดค้างล็อก",
             "T05" => "ลากขยะลงถังให้ตรง",
             "T06" => "กดค้างแล้วหมุนครึ่งวง",
             "T07" => step == 0 ? "ถูจานจนสะอาด" : step == 1 ? "กดค้างล้างฟอง" : "แตะเพื่อวางจาน",
@@ -1390,6 +1719,12 @@ namespace Bob.TaskRace
             holdButton = null;
             bandLit = false;
             meterTrack = meterFill = bottleFill = band = null;
+            // T04: the data lists survive (the tray is handed from step 1 to step 2); only the widgets die here.
+            cartChips.Clear();
+            cartLayers.Clear();
+            cartBars.Clear();
+            cartChipHeld = null; cartLock = null; cartLockFill = null; cartLockLabel = null; cartRecipe = null;
+            cartHold = 0f;
         }
 
         GameObject Track(GameObject go) { decor.Add(go); return go; }

@@ -98,6 +98,8 @@ namespace Bob.TaskRace
 
         /// <summary>The minigame that banks two passes on a stage 4 map (docs 16: ถูคราบวน).</summary>
         public const string StainId = "T02";
+        /// <summary>The chair card (docs 16 section 5): played in the world, never in the S28 card.</summary>
+        public const string ChairId = "T12";
 
         public int Players => players;
         public int Difficulty => difficulty;
@@ -124,6 +126,14 @@ namespace Bob.TaskRace
         public IReadOnlyList<TaskSpot> StationsOf(TeamId team) => team == TeamId.TeamB ? sideB.Spots : sideA.Spots;
         /// <summary>Bumps when a row changes: new round, a task moves to a station, a lock opens or closes, a task is done.</summary>
         public int Version { get; private set; }
+
+        /// <summary>T04 worksheet of this round (docs 16 section 4): the four numbers the cart must reach.</summary>
+        public IDictionary<string, int> CartNeed { get; private set; } = new Dictionary<string, int>();
+        /// <summary>Null until the cart is locked; then whether the formula passed. The station still banks the step.</summary>
+        public bool? CartPassed { get; private set; }
+        public int CartPassCount { get; private set; }
+        /// <summary>Buff keys the cart won for the whole team this round (empty when the formula failed).</summary>
+        public IReadOnlyList<string> CartBuffs => cartBuffs;
 
         public event Action<TaskRaceRound> RoundWon;
 
@@ -153,6 +163,7 @@ namespace Bob.TaskRace
         readonly Side sideB = new Side();
         bool wonNotified;
         int penaltySerial;
+        readonly List<string> cartBuffs = new List<string>();
 
         void OnDisable() => UnsubscribeAll();
 
@@ -216,6 +227,7 @@ namespace Bob.TaskRace
             CurrentSeed = newSeed;
             wonNotified = false;
             GatherSides();
+            ResetCart();
 
             var categories = sideA.Spots.Select(s => s.Category).Distinct().ToList();
             plan.Clear();
@@ -375,6 +387,11 @@ namespace Bob.TaskRace
             spot.SetTaskActive(true);
             assigned[spot] = spec.Value;
             if (entryOf.TryGetValue(spec.Value.Id, out var entry)) entry.Spot = spot;
+            // T12 lives in the world, not in the S28 card (docs 16 section 5): the chairs and their slots are built
+            // next to this station and the hero drags them home by hand. Only the local island gets the prompt: the
+            // rival's chairs are the rival's business.
+            if (spec.Value.Id == ChairId && Application.isPlaying && spot.OwnerTeam == TaskSpot.LocalTeam)
+                BobChairTask.Attach(spot, players);
             Version++;
         }
 
@@ -472,10 +489,49 @@ namespace Bob.TaskRace
             return true;
         }
 
+        /// <summary>
+        /// T04 (docs 16 section 4): the cart was locked in the S28 card. The step is already banked by the station;
+        /// this only decides the team buff from the four stats against this round's worksheet, and applies the one
+        /// buff the world can show today (speed high = walk +10% for the rest of the round).
+        /// </summary>
+        public void NoteCartResult(IList<int> stats)
+        {
+            if (CartPassed.HasValue) return; // one formula per round: the first lock is the one that counts
+            if (CartNeed == null || CartNeed.Count == 0) CartNeed = Bob.Rules.BobTaskRaceRules.CartNeed(CurrentSeed, difficulty);
+            cartBuffs.Clear();
+            cartBuffs.AddRange(Bob.Rules.BobTaskRaceRules.CartBuffs(stats, CartNeed));
+            CartPassCount = cartBuffs.Count;
+            bool passed = Bob.Rules.BobTaskRaceRules.CartPassed(CartPassCount, difficulty);
+            CartPassed = passed;
+            if (passed && cartBuffs.Contains("speed")) ApplySpeedBuff(1.1f);
+            string buffs = cartBuffs.Count > 0 ? string.Join("+", cartBuffs) : "ไม่มี";
+            Debug.Log($"[TaskRaceRound] T04 cart locked: passes {CartPassCount}/4 (D{difficulty} needs " +
+                      $"{Mathf.Min(3, difficulty)}) · pass={passed} · buffs {buffs}");
+        }
+
+        /// <summary>The walk buff of the cart (T04 "เร็วสูง -> เดิน +10%"); reset at the next round.</summary>
+        void ApplySpeedBuff(float scale)
+        {
+            var hero = FindAnyObjectByType<BobTaskRaceHero>();
+            if (hero == null) return;
+            hero.speedScale = Mathf.Clamp(scale, 0.5f, 1.5f);
+            Debug.Log($"[TaskRaceRound] hero walk x{hero.speedScale:0.##} for the rest of the round.");
+        }
+
+        /// <summary>A new round steps back to the base walk speed and forgets last round's cart.</summary>
+        void ResetCart()
+        {
+            CartPassed = null;
+            CartPassCount = 0;
+            cartBuffs.Clear();
+            CartNeed = Bob.Rules.BobTaskRaceRules.CartNeed(CurrentSeed > 0 ? CurrentSeed : seed, difficulty);
+            var hero = Application.isPlaying ? FindAnyObjectByType<BobTaskRaceHero>() : null;
+            if (hero != null) { hero.speedScale = 1f; hero.dragFactor = 1f; }
+        }
+
         void Update()
         {
-            if (restocks.Count == 0) return;
-            float now = Time.time;
+            if (restocks.Count == 0) return;            float now = Time.time;
             for (int i = restocks.Count - 1; i >= 0; i--)            {
                 var restock = restocks[i];
                 if (restock.Spot == null) { restocks.RemoveAt(i); continue; }

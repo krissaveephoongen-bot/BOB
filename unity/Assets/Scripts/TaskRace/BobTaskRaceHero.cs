@@ -15,6 +15,10 @@ namespace Bob.TaskRace
         [Tooltip("Walk speed in world units per second.")] public float speed = 3.2f;
         [Tooltip("How fast the body turns to face the walk direction.")] public float turnSpeed = 12f;
         public float gravity = -20f;
+        [Tooltip("Round buffs (T04 cart: speed high = walk +10%). Multiplies the walk speed for the rest of the round.")]
+        public float speedScale = 1f;
+        [Tooltip("Temporary drag (T12: a chair in hand walks 20% slower). Set by the task, reset when it lets go.")]
+        public float dragFactor = 1f;
 
         [Header("Tap to walk")]
         [Tooltip("The hero stops this close to a tapped point.")]
@@ -83,7 +87,7 @@ namespace Bob.TaskRace
             if (controller.isGrounded && fall < 0f) fall = -2f;
             fall += gravity * Time.deltaTime;
 
-            var delta = new Vector3(step.x, 0f, step.y) * (speed * Time.deltaTime) + Vector3.up * (fall * Time.deltaTime);
+            var delta = new Vector3(step.x, 0f, step.y) * (speed * Mathf.Clamp(speedScale * dragFactor, 0.1f, 3f) * Time.deltaTime) + Vector3.up * (fall * Time.deltaTime);
             controller.Move(delta);
 
             if (controller.isGrounded) lastSafe = transform.position;

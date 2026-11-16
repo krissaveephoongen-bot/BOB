@@ -144,6 +144,59 @@ namespace Bob.Rules
             return ids[(int)(rng.Next() * ids.Length) % ids.Length];
         }
 
+        /// <summary>The four stat keys of BobRules.EvalStack, in the order the S28 cart bars draw them.</summary>
+        public static readonly string[] CartKeys = { "clean", "gentle", "speed", "shine" };
+
+        /// <summary>
+        /// The T04 worksheet of docs 16 section 4: what the cart must reach in each stat. One stat is the round's star
+        /// condition, the rest sit a step lower, and D2/D3 raise every number. Three parts is all the shelf gives, so
+        /// the values stay inside what a three-layer stack can reach — a card nobody can pass is not a hard card.
+        /// </summary>
+        public static Dictionary<string, int> CartNeed(int seed, int difficulty)
+        {
+            var rng = new Rng(seed ^ unchecked((int)0xc2b2ae35u));
+            int d = Math.Max(1, Math.Min(3, difficulty));
+            int star = (int)(rng.Next() * 4) % 4;
+            var need = new Dictionary<string, int>();
+            for (int i = 0; i < CartKeys.Length; i++)
+            {
+                int value = (i == star ? 7 : 5) + (d - 1) + (rng.Next() < 0.5 ? 0 : 1);
+                need[CartKeys[i]] = Math.Max(3, value);
+            }
+            return need;
+        }
+
+        /// <summary>How many of the four worksheet conditions the built cart meets (0-4).</summary>
+        public static int CartPassCount(IList<int> stats, IDictionary<string, int> need)
+        {
+            int pass = 0;
+            for (int i = 0; i < CartKeys.Length; i++)
+            {
+                int have = stats != null && i < stats.Count ? stats[i] : 0;
+                if (have >= need[CartKeys[i]]) pass++;
+            }
+            return pass;
+        }
+
+        /// <summary>T04 pass rule: D1 needs one condition, D2 two, D3 three. A lock below that still counts as step 2.</summary>
+        public static bool CartPassed(int passCount, int difficulty) =>
+            passCount >= Math.Max(1, Math.Min(3, difficulty));
+
+        /// <summary>
+        /// The buff keys the cart hands the whole team for the rest of the round when it passes: the same four stats,
+        /// mapped onto the systems that read them (docs 16 section 4).
+        /// </summary>
+        public static List<string> CartBuffs(IList<int> stats, IDictionary<string, int> need)
+        {
+            var keys = new List<string>();
+            for (int i = 0; i < CartKeys.Length; i++)
+            {
+                int have = stats != null && i < stats.Count ? stats[i] : 0;
+                if (have >= need[CartKeys[i]]) keys.Add(CartKeys[i]);
+            }
+            return keys;
+        }
+
         /// <summary>
         /// The browser/server pairs this file must match. Returns one line per broken case; empty = in sync.
         /// The expected lists were produced by taskPlan() in the shared rules.
@@ -170,6 +223,21 @@ namespace Bob.Rules
             if (EmergencyEnemy(777) != "stain") bad.Add("enemy 777: " + EmergencyEnemy(777) + " != stain");
             if (EmergencyEnemy(123456) != "dust") bad.Add("enemy 123456: " + EmergencyEnemy(123456) + " != dust");
             if (MinMs("T07", 3) != 0 || MinMs("T13", 1) != 2000) bad.Add("MinMs table drifted");
+
+            // T04 worksheet: deterministic per seed, in range, and the pass rule counts conditions.
+            var need = CartNeed(1975, 1);
+            var again = CartNeed(1975, 1);
+            foreach (var k in CartKeys)
+            {
+                if (need[k] != again[k]) bad.Add("cart need not seeded for " + k);
+                if (need[k] < 3 || need[k] > 10) bad.Add($"cart need out of range {k}={need[k]}");
+                if (CartNeed(1975, 3)[k] < need[k]) bad.Add($"cart need shrinks with difficulty: {k}");
+            }
+            if (CartPassCount(new[] { 0, 0, 0, 0 }, need) != 0) bad.Add("cart pass count on an empty cart");
+            if (CartPassCount(new[] { 99, 99, 99, 99 }, need) != 4) bad.Add("cart pass count on a perfect cart");
+            if (CartPassed(1, 1) == false || CartPassed(1, 3) || CartPassed(2, 2) == false || CartPassed(2, 3))
+                bad.Add("cart pass rule drifted");
+            if (CartBuffs(new[] { 99, 0, 0, 0 }, need).Count != 1) bad.Add("cart buffs drifted");
             return bad;
         }
 

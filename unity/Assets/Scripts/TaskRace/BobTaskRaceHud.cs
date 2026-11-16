@@ -185,6 +185,13 @@ namespace Bob.TaskRace
             stains = BobEmergencyStains.Ensure(round, manager);
             stains.Message -= ShowToast;
             stains.Message += ShowToast;
+            // T12 chair toasts (grab / put down / all home) come through a static event: the component is created
+            // and destroyed with the station's card, while the HUD exists for the whole round.
+            if (Application.isPlaying)
+            {
+                BobChairTask.AnyMessage -= ShowToast;
+                BobChairTask.AnyMessage += ShowToast;
+            }
         }
 
         void Awake()
@@ -204,6 +211,7 @@ namespace Bob.TaskRace
             }
             hooked = null;
             if (stains != null) stains.Message -= ShowToast;
+            BobChairTask.AnyMessage -= ShowToast;
         }
 
         void Hook()
@@ -653,9 +661,22 @@ namespace Bob.TaskRace
         {
             if (mainButton == null) return;
             var near = TaskSpot.ActiveNear;
-            bool show = near != null;
+            // T12: the chairs are carried in the world, further out than a station's own reach, so the button can be
+            // up with no station near at all.
+            var chairTask = BobChairTask.Current;
+            string chairLabel = null; bool chairCan = false;
+            bool chairPrompt = chairTask != null && chairTask.PromptFor(near, out chairLabel, out chairCan);
+            bool show = near != null || chairPrompt;
             if (mainButton.gameObject.activeSelf != show) mainButton.gameObject.SetActive(show);
             if (!show) return;
+
+            if (chairPrompt)
+            {
+                mainLabel.text = chairLabel;
+                PaintMain(chairCan ? T.secondary : T.surfaceCream, chairCan ? Color.white : T.inkMuted);
+                mainButton.interactable = chairCan;
+                return;
+            }
 
             if (near.IsOpen)
             {
@@ -701,6 +722,11 @@ namespace Bob.TaskRace
 
         void OnMain()
         {
+            // T12 takes the press before the card path: grab the chair at his feet or put the one in hand into a slot.
+            // It runs before the "no station near" return because the chairs stand outside the station's reach.
+            var chairTask = BobChairTask.Current;
+            if (chairTask != null && chairTask.TryPress(TaskSpot.ActiveNear)) return;
+
             var near = TaskSpot.ActiveNear;
             if (near == null) return;
 
@@ -883,6 +909,14 @@ namespace Bob.TaskRace
                 if (cardStep != null) cardStep.text = mini.StepText;
                 if (cardHint != null) cardHint.text = mini.Hint;
                 if (!done) return;
+                // T04: hand the locked stack to the round, which decides the team buff (docs 16 section 4).
+                if (cardSpot.TaskId == "T04" && round != null)
+                {
+                    round.NoteCartResult(mini.CartStats);
+                    ShowToast(mini.CartPassed
+                        ? $"รถเข็นผ่านสูตร {mini.CartPassCount}/4 · ทีมได้บัฟ"
+                        : $"รถเข็นล็อกแล้ว แต่ผ่าน {mini.CartPassCount}/4 · ยังไม่ได้บัฟ");
+                }
                 cardSpot.Close(true);
                 HideCard();
                 return;
