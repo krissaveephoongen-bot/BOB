@@ -127,11 +127,15 @@ namespace Bob.Rules
             return sum;
         }
 
-        /// <summary>The second the emergency stain spawns: the same 2-3 moments for both islands.</summary>
-        public static List<int> EmergencyTimes(int seed)
+        /// <summary>
+        /// The seconds the emergency stains spawn: docs 16 section 5 row T16 asks for 2 / 2 / 3 enemies per round at
+        /// D1 / D2 / D3, at fixed moments of the reference round so both islands meet them at the same second. The
+        /// seed stays in the signature because the server replay and the browser mirror call it the same way.
+        /// </summary>
+        public static List<int> EmergencyTimes(int seed, int difficulty)
         {
-            var rng = new Rng(seed ^ unchecked((int)0x9e3779b9u));
-            int n = 2 + (rng.Next() < 0.5 ? 0 : 1);
+            int d = Math.Max(1, Math.Min(3, difficulty));
+            int n = d >= 3 ? 3 : 2;
             var at = new[] { 40, 75, 100 };
             return Enumerable.Range(0, n).Select(i => at[i]).ToList();
         }
@@ -210,14 +214,18 @@ namespace Bob.Rules
                 string got = string.Join(" ", plan.Select(g => g.Id));
                 if (got != ids) bad.Add($"plan seed {seed} players {players} D{difficulty}: {got} != {ids}");
                 if (TotalWeight(plan) != weight) bad.Add($"weight seed {seed} players {players} D{difficulty}: {TotalWeight(plan)} != {weight}");
-                string em = string.Join(",", EmergencyTimes(seed));
-                if (em != emerg) bad.Add($"emergency seed {seed}: {em} != {emerg}");
+                string em = string.Join(",", EmergencyTimes(seed, difficulty));
+                if (em != emerg) bad.Add($"emergency seed {seed} D{difficulty}: {em} != {emerg}");
             }
-            Case(1975, 1, 1, "T04 T09 T03 T05 T08 T10", 8, "40,75,100");
+            Case(1975, 1, 1, "T04 T09 T03 T05 T08 T10", 8, "40,75");
             Case(1975, 4, 3, "T04 T09 T07 T13 T03 T05 T08 T10 T15", 16, "40,75,100");
             Case(777, 2, 2, "T04 T14 T13 T01 T06 T15 T03", 13, "40,75");
             Case(42, 3, 1, "T04 T09 T13 T11 T05 T08 T02 T01 T15", 14, "40,75");
             Case(123456, 4, 1, "T04 T07 T09 T12 T02 T15 T08 T11 T01 T05 T06", 16, "40,75");
+
+            // docs 16 section 5 row T16: 2 / 2 / 3 stains per round as difficulty rises.
+            if (EmergencyTimes(1975, 1).Count != 2 || EmergencyTimes(1975, 2).Count != 2 || EmergencyTimes(1975, 3).Count != 3)
+                bad.Add("emergency count per difficulty drifted");
 
             if (EmergencyEnemy(1975) != "scale") bad.Add("enemy 1975: " + EmergencyEnemy(1975) + " != scale");
             if (EmergencyEnemy(777) != "stain") bad.Add("enemy 777: " + EmergencyEnemy(777) + " != stain");

@@ -1074,3 +1074,17 @@ build แรกหลังงาน pure UGS + SFX — สั่งด้วย
 - **เสียง:** `cart_grab` ตอนจับ, `cart_roll_loop` loop ระหว่างลาก, `table_put` ตอนเข้าที่, `drop_invalid` ตอนวางไม่ลงช่อง (ทุกไฟล์มีอยู่ใน `Assets/Audio/SFX`)
 - **ตรวจ:** `bash unity-typecheck/check.sh` = `typecheck ok: 40 known Unity-6 gap kind(s), no new errors`; `bob-check` = `BOB-CHECK PASSED`; `cd unity-check && dotnet run` = `UNITY-CHECK PASSED` (SelfTest ที่เพิ่มครอบ `CartNeed`/`CartPassCount`/`CartPassed`/`CartBuffs`)
 - **ยังไม่ทำ:** ขั้นเดินไปหยิบของที่ชั้นวางในห้องจริงของ T04 (หยิบใน card), งบ 100 ของ S20, บัฟอีกสามตัวที่ยังไม่มีระบบอ่าน, ภาพหน้าฮีโร่บนเก้าอี้, ของรกขวางทางตาม D, ช่องเส้นประสี่เหลี่ยม, ระยะลากตาม D, server ถือตำแหน่งเก้าอี้/ตรวจด้วย `bob_score_stack`, สถิติ `sample` ของทั้งสองงาน, และยังไม่ได้เปิด Unity ถ่ายการ์ด T04 หรือฉากเก้าอี้ T12
+
+### 15.27 T16 เติมเต็ม — จำนวนตาม D + ลูกศรขอบจอ (16 พ.ย. 2026)
+
+ที่มา: v1 ของ §15.25 ยังขาดสองข้อที่ docs 16 ข้อ 4 / แถว T16 เขียนไว้ชัด — "จำนวนศัตรูต่อรอบ 2/2/3 ตาม D" และ "ลูกศรขอบจอ". รอบนี้ปิดทั้งสองข้อ **โดยไม่แตะฉาก** และแก้ `server/` เท่าที่เป็น mirror ของกฎเดียวกัน
+
+- **จำนวนตาม D:** `BobTaskRaceRules.EmergencyTimes(seed, difficulty)` — D1/D2 คืน 2 จังหวะ, D3 คืน 3 จังหวะ ที่ 40 / 75 / 100 วิ ของรอบ 120 วิ (รอบสั้นย่อตามสัดส่วนเหมือนเดิม). ค่าที่เคยมาจาก `rng` ในฟังก์ชันถูกถอดออก เพราะสเปกกำหนดจำนวนตายตัวตาม D; seed ยังอยู่ในลายเซ็นเพื่อให้ server replay และ browser mirror เรียกด้วยอาร์กิวเมนต์เดียวกัน
+- **SelfTest:** เพิ่มเช็ก `EmergencyTimes(1975, 1|2|3).Count` = 2 / 2 / 3 และเคสตารางถูกแก้ให้ตรง (seed 1975 D1 = `40,75` แล้ว)
+- **mirror ฝั่ง JS:** `prototype/index.html` `taskEmergencyTimes(seed, difficulty)` (D≥3 → 3), `server/match.js` ส่ง `s.difficulty` เข้าไป, `node server/build-module.js` สร้าง `modules/index.js` ใหม่ (ไฟล์ gen — ห้ามแก้มือ)
+- **สัญญา server มีเทสต์:** `server/task-race-test.js` export `taskEmergencyTimes` ออกจาก sandbox แล้วเช็กตรง ๆ ว่า D2 ยังได้ 2 และ D3 ได้ 3 (เพิ่มจากเช็กเดิม "2-3 จังหวะ") → `41/41 checks passed`
+- **ลูกศรขอบจอ (`BobTaskRaceHud`):** `BuildEmergency` สร้าง `EmergencyArrow` 88×88 บน `page` พร้อม sprite สามเหลี่ยมที่สร้างตอนรัน (`ArrowSprite`, `Texture2D` 64×64) เพราะโปรเจกต์ไม่มีไอคอนลูกศรและฟอนต์ TMP ไม่มีอักขระลูกศร — เลี่ยงปัญหาช่องว่างใน static glyph เหมือน §15.10
+- **การวาง:** `RenderEmergencyArrow(show)` อ่าน `BobEmergencyStains.TargetPosition` (=`current.Body.transform.position`) → `Camera.WorldToViewportPoint` → ถ้าอยู่ในกรอบปลอดภัย (`|dx| ≤ 0.40`, `|dy| ≤ 0.38`, z > 0) ซ่อน; ถ้าอยู่นอก/หลังกล้อง (`z < 0` กลับทิศ) คำนวณ `t = min(halfW/|dx|, halfH/|dy|)` โดย `halfW = 960 − 76`, `halfH = 540 − 100` แล้ววางที่ `dir * t` หมุน `atan2 − 90°` ให้ยอดลูกศรชี้ทางคราบ
+- **สถานะการซ่อน:** ใช้เงื่อนไขเดียวกับแบนเนอร์ (`stains.Active && !ResultOpen && !PauseOpen && !CardOpen`) จึงไม่ทับการ์ด S28 การ์ดหยุด หรือหน้าผล; กระพริบ alpha 0.72–1.0 ที่ 7 rad/s และเปลี่ยนสีเป็น `danger` เมื่อเหลือ ≤ 8 วิ
+- **ตรวจ:** `bash unity-typecheck/check.sh` = `typecheck ok: 40 known Unity-6 gap kind(s), no new errors`; `bob-check` = `BOB-CHECK PASSED` (modules sync, task-race **41/41**, LINE, typecheck); `cd unity-check && dotnet run` = `UNITY-CHECK PASSED`
+- **ยังค้าง:** บอสคราบยักษ์ (2 คน T02+T03), ภาพศัตรูในการ์ด, ดาวคุณภาพ "จัดการฉุกเฉินทันทุกตัว", แถวรายการแบบขอบแดง + วงนับถอยหลังในแถวของ docs 11 (ยังใช้แบนเนอร์), การซิงก์ออนไลน์ (`bob.emergency`), ไฟล์ `sting_emergency.wav` และยังไม่ได้เปิด Unity ถ่ายลูกศร/จำนวน 3 ตัวที่ D3

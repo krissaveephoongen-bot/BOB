@@ -336,9 +336,10 @@ function taskPlan(seed,players,difficulty,cats){
 function taskTotalWeight(plan){let s=0;for(let i=0;i<plan.length;i++) s+=plan[i].w;return s}
 // Weight-based progress of docs 16 section 2.1: a finished step of a 3-step card is worth w/3.
 function taskWeightDone(plan,steps){let s=0;for(let i=0;i<plan.length;i++){const g=plan[i];s+=g.w*Math.max(0,Math.min(g.st,steps[i]|0))/g.st}return s}
-// The moments the emergency stain spawns: 2-3 times in a round, the same for both teams.
-function taskEmergencyTimes(seed){
-  const r=mulberry((seed|0)^0x9e3779b9), n=2+(r()<0.5?0:1), out=[];
+// The moments the emergency stain spawns: 2 at D1/D2 and 3 at D3 (docs 16 section 5 row T16), the same for both
+// teams. The seed stays in the signature so the browser and the server call it the same way.
+function taskEmergencyTimes(seed,difficulty){
+  const d=Math.max(1,Math.min(3,difficulty|0||1)), n=d>=3?3:2, out=[];
   const base=[40,75,100];
   for(let i=0;i<n;i++) out.push(base[i]);
   return out;

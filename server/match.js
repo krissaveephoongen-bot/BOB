@@ -144,7 +144,7 @@ function trStartRace(s) {
     t.entries = plan.map(function (g) { return { id: g.id, w: g.w, st: g.st, step: 0, done: false }; });
     t.locks = {};
   });
-  s.emergencies = taskEmergencyTimes(s.seed).map(function (at, i) {
+  s.emergencies = taskEmergencyTimes(s.seed, s.difficulty).map(function (at, i) {
     return { id: TASK_EMERGENCY, enemy: taskEmergencyEnemy(s.seed + i), spot: 'S' + (1 + i), at: at, graceSec: TR_GRACE, sent: false };
   });
   s.time = s.raceTime;

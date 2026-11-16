@@ -7,12 +7,13 @@
 // so the progress bar steps back the way docs 16 section 2.4 asks.
 //
 // v1 scope, stated in docs 16 section 4 and docs 24 section 15.25:
-//   - two or three enemies per round, at the seeded moments the shared rules already draw (40 / 75 / 100 s of a
-//     120 s round; a shorter chapter round scales them to its own clock).
+//   - two enemies per round at D1 and D2, three at D3 (docs 16 section 5 row T16), at the moments the shared rules
+//     draw (40 / 75 / 100 s of a 120 s round; a shorter chapter round scales them to its own clock).
 //   - the weakness pool follows the chapter: เจ้าคราบ (T02) from round one, สไลม์ (T03) from chapter 2 or the second
 //     round of a chapter, ขยะปีศาจ (T05) from chapter 2.
-//   - not in v1: the boss stain (two players, T02 + T03 at once), the screen-edge arrow and the enemy portrait in
-//     the card. The HUD banner names the station and the enemy model stands at it instead.
+//   - the screen-edge arrow is drawn by the HUD (BobTaskRaceHud.RenderEmergencyArrow) while the station is off-camera.
+//   - not in v1: the boss stain (two players, T02 + T03 at once) and the enemy portrait in the card. The HUD banner
+//     names the station and the enemy model stands at it instead.
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -71,9 +72,12 @@ namespace Bob.TaskRace
         public string MinigameId => current != null ? current.MinigameId : "";
         public int Difficulty => current != null ? current.Difficulty : 1;
         public float GraceSeconds => graceSeconds;
+        /// <summary>Where the stain stands, so the HUD can draw its screen-edge arrow. False when nothing is up.</summary>
+        public bool HasTarget => current != null && current.Body != null;
+        public Vector3 TargetPosition => current != null && current.Body != null ? current.Body.transform.position : Vector3.zero;
         /// <summary>Seconds left in the 25 s grace, 0 when no stain is up.</summary>
         public float Remaining => current != null ? Mathf.Max(0f, current.EndsAt - elapsed) : 0f;
-        /// <summary>Enemies planned for this round: two or three, as the shared rules draw them from the seed.</summary>
+        /// <summary>Enemies planned for this round: 2 at D1/D2, 3 at D3, from the shared rules.</summary>
         public int PlannedSpawns => plan.Count;
         public int SpawnedCount => spawned;
 
@@ -154,9 +158,10 @@ namespace Bob.TaskRace
             foreach (var spot in round.StationsOf(TaskSpot.LocalTeam)) stations.Add(spot);
             if (stations.Count == 0) return;
 
-            // The moments are the shared rules' own seeded draw (40 / 75 / 100 s, two or three of them), so a server
-            // replaying the seed names the same seconds. A shorter chapter round scales them to its own clock.
-            var times = Bob.Rules.BobTaskRaceRules.EmergencyTimes(round.CurrentSeed);
+            // The moments are the shared rules' own draw (40 / 75 / 100 s of the reference round; 2 of them at D1 and
+            // D2, all 3 at D3 — docs 16 section 5 row T16), so a server replaying the seed names the same seconds.
+            // A shorter chapter round scales them to its own clock.
+            var times = Bob.Rules.BobTaskRaceRules.EmergencyTimes(round.CurrentSeed, round.Difficulty);
             float scale = roundSeconds / ReferenceRoundSeconds;
             var rng = new System.Random(round.CurrentSeed * 997 + 17);
             var pool = WeaknessPool();

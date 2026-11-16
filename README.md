@@ -111,12 +111,12 @@ Unity screen consumes it after the pure-UGS migration. Full setup and limits: `a
   reference.
 - **Story content gaps:** chapters 2-6 reuse the chapter-1 island skin; rule cards and Cart Rush from the GDD
   are not enforced. Chapter unlock levels are being rebalanced against the current XP rewards.
-- **Emergency stains (T16) are partial.** Since 16 Nov 2026 a round spawns 2–3 seeded stains
-  (`BobTaskRaceRules.EmergencyTimes`, scaled to the round length) next to a station; a red banner counts a
-  25 s grace and the S28 card plays an easy minigame (T02/T03/T05, one difficulty step down). Clearing one is
+- **Emergency stains (T16) are partial.** Since 16 Nov 2026 a round spawns 2 stains at D1/D2 and 3 at D3
+  (`BobTaskRaceRules.EmergencyTimes(seed, difficulty)`, at 40/75/100 s scaled to the round length) next to a
+  station; a red banner counts a 25 s grace, a screen-edge arrow points at the stain while its station is
+  off-camera, and the S28 card plays an easy minigame (T02/T03/T05, one difficulty step down). Clearing one is
   free; letting it run out adds one short `คราบลาม` task to the victims' queue. Still missing from the T16
-  spec: the boss stain, the edge arrow, a portrait on the card, per-difficulty spawn counts, the quality star
-  and online sync.
+  spec: the boss stain, a portrait on the card, the quality star and online sync.
 - **T04 and T12 are playable but not complete.** The cart is a two-step card (pick three parts off the shelf, stack
   them, hold 0.6 s to lock) judged by `BobTaskRaceRules.CartNeed`; only the speed buff lands (walk +10% for the
   round). The chairs are dragged in the world by the context button; the owner portrait, the per-difficulty clutter

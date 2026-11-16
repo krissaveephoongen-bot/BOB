@@ -26,7 +26,7 @@ function load() {
   const ctx = { console };
   vm.createContext(ctx);
   vm.runInContext(SRC + ';this.API={matchInit,matchJoin,matchJoinAttempt,matchLoop,matchTerminate,taskPlan,taskMinMs,' +
-    'taskComposition,taskTotalWeight,TASK_MINIGAMES,TASK_ROUND_TIME,OP};', ctx);
+    'taskComposition,taskTotalWeight,taskEmergencyTimes,TASK_MINIGAMES,TASK_ROUND_TIME,OP};', ctx);
   const A = ctx.API;
   A.matchLoop = A.matchLoop;
   return A;
@@ -164,7 +164,10 @@ A.matchJoin({}, logger, fakeNk(), d, 0, st2.s, [q0.presence, q1.presence]);
 st2.s.players = { v0: q0, v1: q1 };
 tick(st2, [msg(q0, OP.READY, { ready: true }), msg(q1, OP.READY, { ready: true })]);
 const times = st2.s.emergencies.map(e => e.at);
-check('emergency: 2-3 moments from the seed', times.length >= 2 && times.length <= 3, times.join(','));
+check('emergency: two moments at D1', times.length === 2 && times[0] === 40 && times[1] === 75, times.join(','));
+// docs 16 section 5 row T16: the per-round count rises with difficulty (2 / 2 / 3).
+check('emergency: D2 still plans two stains', A.taskEmergencyTimes(777, 2).length === 2, A.taskEmergencyTimes(777, 2).join(','));
+check('emergency: D3 plans three stains', A.taskEmergencyTimes(777, 3).length === 3, A.taskEmergencyTimes(777, 3).join(','));
 // Jump the clock to just past the first moment: the tick that crosses it must be the one that spawns the stain.
 st2.s.time = A.TASK_ROUND_TIME - times[0] - 0.05;
 const b3 = tick(st2, []);

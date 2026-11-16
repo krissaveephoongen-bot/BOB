@@ -94,6 +94,8 @@ namespace Bob.TaskRace
         // T16 emergency stain banner (docs 16 section 4): a red card at the bottom-left, clear of the task list and
         // the action button, with the 25 s grace bar. It never covers the main button or the joystick.
         RectTransform emergencyRoot, emergencyFill;
+        RectTransform emergencyArrow;
+        Image emergencyArrowImg;
         TMP_Text emergencyTitle, emergencySub;
         Button emergencyButton;
         BobEmergencyStains stains;
@@ -298,7 +300,8 @@ namespace Bob.TaskRace
             mini = null; cardInteractive = false;
             touch = null; resultRoot = null; hasShownResult = false;
             pauseButton = null; pauseRoot = null;
-            emergencyRoot = emergencyFill = null; emergencyTitle = emergencySub = null; emergencyButton = null;
+            emergencyRoot = emergencyFill = null; emergencyArrow = null; emergencyArrowImg = null;
+            emergencyTitle = emergencySub = null; emergencyButton = null;
             stains = null; cardEmergency = false;
             debugModeLabel = null;
         }
@@ -1336,7 +1339,91 @@ namespace Bob.TaskRace
             img.color = T.brandRed;
             img.raycastTarget = false;
 
+            // The screen-edge arrow of docs 16 section 5 (art row T16): when the stain's station is off-camera the
+            // player gets a direction instead of a hunt. Built here, shown by RenderEmergency, never on the bar.
+            emergencyArrow = BobUi.Rect("EmergencyArrow", page);
+            emergencyArrow.anchorMin = emergencyArrow.anchorMax = new Vector2(0.5f, 0.5f);
+            emergencyArrow.pivot = new Vector2(0.5f, 0.5f);
+            emergencyArrow.anchoredPosition = Vector2.zero;
+            emergencyArrow.sizeDelta = new Vector2(88f, 88f);
+            emergencyArrowImg = emergencyArrow.gameObject.AddComponent<Image>();
+            emergencyArrowImg.sprite = ArrowSprite();
+            emergencyArrowImg.color = T.brandRed;
+            emergencyArrowImg.raycastTarget = false;
+            emergencyArrow.gameObject.SetActive(false);
+
             emergencyRoot.gameObject.SetActive(false);
+        }
+
+        static Sprite arrowSprite;
+
+        /// <summary>
+        /// A triangle pointing up, built once at runtime: the project ships no arrow icon and the TMP faces carry no
+        /// arrow glyph, so the marker is a texture like the minigame FX sprites rather than a character.
+        /// </summary>
+        static Sprite ArrowSprite()
+        {
+            if (arrowSprite != null) return arrowSprite;
+            const int n = 64;
+            var tex = new Texture2D(n, n, TextureFormat.RGBA32, false);
+            tex.wrapMode = TextureWrapMode.Clamp;
+            tex.filterMode = FilterMode.Bilinear;
+            var px = new Color32[n * n];
+            for (int y = 0; y < n; y++)
+            {
+                float up = (float)y / (n - 1);              // 0 at the bottom row, 1 at the tip
+                float half = 0.54f * (1f - up);             // the body widens towards the bottom
+                for (int x = 0; x < n; x++)
+                {
+                    float d = Mathf.Abs(x - (n - 1) * 0.5f) / (n - 1);
+                    px[y * n + x] = d <= half ? new Color32(255, 255, 255, 255) : new Color32(0, 0, 0, 0);
+                }
+            }
+            tex.SetPixels32(px);
+            tex.Apply();
+            arrowSprite = Sprite.Create(tex, new Rect(0f, 0f, n, n), new Vector2(0.5f, 0.5f), 100f);
+            return arrowSprite;
+        }
+
+        /// <summary>Point the arrow at the stain while its station is off-camera; hide it once the stain is in frame.</summary>
+        void RenderEmergencyArrow(bool show)
+        {
+            if (emergencyArrow == null) return;
+            bool edge = false;
+            Vector2 pos = Vector2.zero;
+            float angle = 0f;
+            if (show && stains != null && stains.HasTarget)
+            {
+                var cam = canvas != null && canvas.worldCamera != null ? canvas.worldCamera : Camera.main;
+                if (cam != null)
+                {
+                    Vector3 vp = cam.WorldToViewportPoint(stains.TargetPosition);
+                    var dir = new Vector2(vp.x - 0.5f, vp.y - 0.5f);
+                    if (vp.z < 0f) dir = -dir; // behind the camera: point the long way round
+                    bool inView = vp.z > 0f && Mathf.Abs(dir.x) <= 0.40f && Mathf.Abs(dir.y) <= 0.38f;
+                    if (!inView && dir.sqrMagnitude > 0.0001f)
+                    {
+                        var area = page != null && page.rect.width > 1f ? page.rect.size : new Vector2(1920f, 1080f);
+                        float halfW = area.x * 0.5f - 76f, halfH = area.y * 0.5f - 100f;
+                        float t = Mathf.Min(halfW / Mathf.Max(0.0001f, Mathf.Abs(dir.x)),
+                                            halfH / Mathf.Max(0.0001f, Mathf.Abs(dir.y)));
+                        pos = dir * t;
+                        angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg - 90f;
+                        edge = true;
+                    }
+                }
+            }
+            if (emergencyArrow.gameObject.activeSelf != edge) emergencyArrow.gameObject.SetActive(edge);
+            if (!edge) return;
+            emergencyArrow.anchoredPosition = pos;
+            emergencyArrow.localEulerAngles = new Vector3(0f, 0f, angle);
+            if (emergencyArrowImg != null)
+            {
+                float pulse = 0.72f + 0.28f * Mathf.Sin(Time.time * 7f);
+                var c = stains.Remaining <= 8f ? T.danger : T.brandRed;
+                c.a = Mathf.Clamp01(pulse);
+                emergencyArrowImg.color = c;
+            }
         }
 
         void RenderEmergency()
@@ -1344,6 +1431,7 @@ namespace Bob.TaskRace
             if (emergencyRoot == null) return;
             bool show = stains != null && stains.Active && !ResultOpen && !PauseOpen && !CardOpen;
             if (emergencyRoot.gameObject.activeSelf != show) emergencyRoot.gameObject.SetActive(show);
+            RenderEmergencyArrow(show);
             if (!show) return;
 
             emergencyTitle.text = "คราบฉุกเฉิน · " + stains.EnemyName;
