@@ -375,7 +375,7 @@ spot.Close(completed: true);      // จบงาน → รอบนับน�
 - เกาะสองฝั่งเหมือนกันทุกจุดรวมถึงลายหญ้า/หิน/decor — ถ้าอนาคตเพิ่ม variation ต่อฝั่ง ต้องทำแบบ symmetric (เช่นสะท้อนรอบแกน X) ไม่ใช่ seed ต่างกัน ซึ่งจะทำให้ฝั่งหนึ่งดูได้เปรียบ
 - ตัวละคร rig ใหม่ 3 ตัว (`bob_hero_sweep/spray/press` ใน Rig) มี skin แต่ **ไม่มี animation clip** และไม่มี rig ของ bubble — ฮีโร่ในซีนใช้ `SK_hero_sweep` แบบนิ่ง ยังไม่มีแอนิเมชันเดิน
 - **การ์ดมินิเกม S28 ทำแล้ว 8 mechanic** (`BobMinigameHost`): trace (T01/T14), scrub (T02/T07-1/T08-2/T09-2), tap (T03/T10/T07-3/T08-1), sort (T05), hold (T06/T07-2/T09-1/T13), fill (T11), sequence (T15) — T04 (cart) และ T12 (chairs) อยู่ในโลกพร้อมแถบเวลาตาม doc 16, การ์ดป่วนเป็นแบบจับเวลา; `Tick` คืน `true` เมื่อจบแล้ว HUD เรียก `spot.Close(completed: true)` จุดเดียว (ข้อ 10.2) ยังเหลือ **ฉาก prop 3D (RenderTexture)** ที่ใช้ `SM_*`/`SK_*` จริงแทนรูปทรง 2D
-- `TaskRaceRound` ยังไม่มีคราบฉุกเฉิน T16 และยังไม่รับ seed จาก server — ทั้งสองเกาะใช้ seed เดียวกันในเครื่องเดียว (ข้อ 14); แถบคู่แข่งบน HUD ทำแล้ว (ข้อ 10.3)
+- `TaskRaceRound` ยังไม่มีคราบฉุกเฉิน T16 และยังไม่รับ seed จาก server — ทั้งสองเกาะใช้ seed เดียวกันในเครื่องเดียว (ข้อ 14); แถบคู่แข่งบน HUD ทำแล้ว (ข้อ 10.3); เสียงของการ์ดมินิเกมทำแล้ว 16 พ.ย. 2026 (ข้อ 15.18)
 - ยังไม่มี server contract ของ Task Race map (`TASK_BEGIN`/`TASK_LOCK` ตาม doc 16) — TASK_LOCK รอบนี้เป็นฝั่ง client
 - คู่แข่งเป็น **โมเดลจังหวะ** (`BobTaskRaceRival`, ข้อ 10.3) ไม่ใช่ agent ที่เดินบน NavMesh: ยังไม่มีการเดินข้ามสะพานไปป่วนจุดฝั่งเราให้เห็น และยังไม่ตอบโต้การป่วน (เมื่อมี server/AI จริง ให้แทน `ForceComplete` ด้วย action ที่เดินและเปิดการ์ดจริง — HUD และกติกาไม่ต้องแก้)
 
@@ -613,8 +613,8 @@ result overlay: open=True draw 0:0 points · tasks 0/6 vs 0/6 · reward 45 coins
 | 2 | P1 skin 6 บท: material tint พื้น + prop 6–8 ชิ้น/บท จาก `Assets/Resources/Props` ผ่าน `BobFieldDressing`; ภาพการ์ด S13 ถ่ายจาก skin ใหม่ (ไม่ต้อง gen) | แต่ละบทเห็นความต่างชัด, ไม่แตะ spot/gameplay, trio verify ผ่าน |
 | 3 | P2 **บังคับใช้การ์ดกติกาครบทั้ง 8 ใบ** (`ruleCards` → `TaskRaceRound`/`BobMinigameHost`): เงื่อนไข 1–3, แหล่งแรง, งบจำกัด, วิธีเฉพาะทาง, ผิวบอบบาง, คราบซ้อน, ถนอมของเดิม, เวลาสั้นลง, ชิ้นส่วนสุ่ม, การ์ดพิเศษ | การ์ดบน S13 ตรงกับสิ่งที่เกมบังคับจริงทุกใบ |
 | 4 | P4 Cart Rush เป็น**ภารกิจที่ 2 ของบท 2** (ไม่เพิ่มเมนู Home) | เล่นครบ loop เดิน–หยิบ 2 ชิ้น–ซ้อน–ส่งต่อ, มี HUD/ผล |
-| 5 | `BobMinigameSfx` ผูก 8 mini kind กับ WAV 38 ไฟล์ที่มี + T16 emergency stain + rival bar (#47) ขับด้วย seed ท้องถิ่นใน solo | ทุก kind มีเสียง tick/สำเร็จ/พลาด, T16 เกิดตาม seed |
-| 6 | ต่อ `BobOnline.CreateTaskRaceAsync` (ยังไม่มี caller) ส่ง `difficulty`/seed ต่อบท, ทดสอบ 2 client — **หลัง APK v1** | PvP ข้ามเครื่องเล่นได้ |
+| 5 | `BobMinigameSfx` ผูก 8 mini kind กับ WAV 38 ไฟล์ที่มี + T16 emergency stain + rival bar (#47) ขับด้วย seed ท้องถิ่นใน solo | ทุก kind มีเสียง tick/สำเร็จ/พลาด → ✅ 16 พ.ย. 2026 (ข้อ 15.18); rival bar ✅ ทำแล้ว; **T16 ยังไม่ทำ** |
+| 6 | ต่อ online PvP บน pure UGS (`UgsRelayLobbyManager` + Netcode ตาม `27`) ส่ง `difficulty`/seed ต่อบท, ทดสอบ 2 client — **หลัง APK v1**. ของเดิม (`BobOnline` / `BobServer` + Nakama client) ถูกลบออกจาก Unity 16 พ.ย. 2026 เหลือสัญญา opcode ฝั่ง `server/` เท่านั้น | PvP ข้ามเครื่องเล่นได้ |
 | 7 | APK + Firebase App Distribution **หลังเฟส 0–1**, sync docs, ตอบ #44; S28 3D stage (#46) เลื่อนไปหลัง APK | APK บนเครื่องจริงผ่าน, เอกสารตรงโค้ด |
 
 ### 15.4 P0 ที่ทำแล้ว (15 พ.ย. 2026)
@@ -706,7 +706,7 @@ result overlay: open=True draw 0:0 points · tasks 0/6 vs 0/6 · reward 45 coins
 - **`TaskRaceModeManager`**: `Paused` (get), `CanPause => !Paused && !CardOpen && !LastResult.HasValue`, `SetPaused(bool)` คืน false เมื่อถูกปฏิเสธ, `TogglePause()`; การหยุดใช้ `Time.timeScale = 0` เป็นตัวพา — ทุกกฎที่อ่าน `deltaTime` (นาฬิกา, บอท, ฮีโร่) หยุดพร้อมกันโดยไม่ต้องรู้จัก pause. `Update` ข้ามการอ่านจอยเมื่อ pause (กัน `CancelOpenSessions` ยิงตอนหยุด), `BeginMatch` / `EndMatch` / `OnDestroy` คืน `timeScale = 1` เสมอ (ฉาก Game ต้องไม่ถูกโหลดมาแบบแช่แข็ง)
 - **`BobTaskRaceHud`**: ปุ่ม `หยุด` 104 × 56u มุมขวาบน (`BuildPause`, `BobTaskRaceHud.cs:539`) + การ์ด 900 × 560u `หยุดเกม` / "นาฬิกาและคู่แข่งหยุดชั่วคราว" / `เล่นต่อ` (primary) / `ออกจากการแข่งขัน` → `ResumeMatch()` แล้ว `BackToLobby()` (`LoadScene("Game")`); Esc / Android back (`OnBackPressed`) = ปิดการ์ด S28 ก่อน (ผ่าน `TaskSpot.CancelOpenSessions`) → toggle pause; ปุ่มซ่อนเมื่อ `PauseOpen || CardOpen || ResultOpen || LastResult` (`RenderPause`)
 - **เหตุผลที่ pause ไม่ทับการ์ด S28/ผลแมตช์:** การ์ดมินิเกมเดินด้วย `Time.unscaledDeltaTime` (ตั้งใจ — ต้องเดินได้แม้เกมหน่วง) ถ้าหยุดกลางการ์ดได้จะเกิดการ์ดที่เดินต่อบนนาฬิกาที่หยุด; ผลแมตช์ก็ปลดล็อกปุ่มไปเองอยู่แล้ว
-- **ยังไม่ทำ:** แท็บ `ตั้งค่า` ในแผง (ตาม `11` S24), P01 ถามซ้ำก่อนออก, กรณีแมตช์ออนไลน์ "เวลาไม่หยุด" (ยังไม่มี caller ของ `BobOnline`)
+- **ยังไม่ทำ:** แท็บ `ตั้งค่า` ในแผง (ตาม `11` S24), P01 ถามซ้ำก่อนออก, กรณีแมตช์ออนไลน์ "เวลาไม่หยุด" (ไม่มี caller ของระบบออนไลน์แล้ว — client Nakama เดิมถูกลบ 16 พ.ย. 2026, ดู `27`)
 - **ตรวจ (2 ชั้น):**
   - `TaskRaceVerify.RenderPause` (edit mode, log `Logs/verify-pause-solo.log`): `pause card: open=True paused=True timeScale=0.00 button visible=False` → ปิดแล้ว `timeScale=1.00`, ภาพ `Logs/taskrace-pause-2400x1080.png`
   - `Editor/PauseCheck.cs` (เมนู **Bob > Run Pause Check**, รันโดยไม่ใส่ `-batchmode -quit`): Play จริง → `start` 94.07 วิ, pause 0.8 วิจริงแล้วนาฬิกา **94.07 เท่าเดิม**, resume แล้ว 93.56 วิ, เปิดสถานีถือ `TASK_LOCK` แล้ว `SetPaused(true)` ถูกปฏิเสธ (`timeScale 1.00`) → `[PauseCheck] PAUSE CHECK PASSED` (log `Logs/pausecheck-solo.log`, ภาพ `Logs/pausecheck-1-button.png`, `pausecheck-2-paused.png`)
@@ -936,3 +936,42 @@ owner สั่ง "เทส e2e ของแอพ" — ของเดิม 
 - **คืนกระเป๋า:** `BobE2E` snapshot `bob.guest/coins/xp/taskRace.*/story.lossStreak/story.stars.1–6` ก่อนรัน แล้วเซ็ตคืนตอนจบ (`bob.guest` ถูกบังคับเป็น 0 เพื่อให้ S02 ถูกทดสอบทุกครั้ง)
 - **ยังไม่ครอบ:** โหมดดูโอ/ทีม, การข้ามสะพานไปก่อกวนฝั่งคู่แข่ง, ปุ่ม `เล่นอีกครั้ง` / `บทถัดไป`, การซื้อของในร้าน, และการเล่นด้วยนิ้วจริง (ตัวขับใช้ API เดียวกับที่ touch เรียก ไม่ได้ผ่าน pointer event)
 - **ไม่แตะ:** กติกา/opcode/`server/`/ซีน/`TaskSpot`/layout HUD · **ยังไม่ commit/push**
+
+### 15.18 เสียงของการ์ดมินิเกม + audio player ที่ boot เอง (16 พ.ย. 2026)
+
+งานเฟส 5 ของ #47 (ข้อ 15.3) ส่วนเสียง — ของเดิม `BobMinigameHost` เงียบสนิท และ**ซีน Task Race ทั้งสามไม่มี audio player อยู่ในฉากเลย** (GUID ของ `Assets/Art/BobAudio.prefab` ไม่ถูกอ้างใน `TaskRace{,_Duo,_Team}.unity`; `BobRaceCountdown` มี guard `FindAnyObjectByType<BobSfx>() == null` ไว้แล้วจึงไม่มีเสียงนับถอยหลัง) การเรียก `BobSfx.Play` ตรง ๆ จะได้แค่ `Debug.LogWarning`
+
+- **`BobSfx` boot ตัวเอง** (`Assets/Scripts/Art/BobSfx.cs`): `[RuntimeInitializeOnLoadMethod(AfterSceneLoad)]` — ถ้า `inst` ยังว่าง (แปลว่าซีนไม่มี prefab หรือ prefab ยังไม่ Awake) จะ `Resources.Load<GameObject>("Audio/BobAudio")` แล้ว `Instantiate` ครั้งเดียว; ตั้ง `AudioListener.volume` ตาม `bob.sound` ด้วย (เดิมค่านี้ถูกใช้แค่ตอนกดสวิตช์ใน Settings → เปิดแอปใหม่แล้วเสียงกลับมาเต็มแม้ผู้เล่นปิดไว้)
+- **`Assets/Resources/Audio/BobAudio.prefab`**: สำเนา byte-identical ของ `Assets/Art/BobAudio.prefab` (คลิปทั้ง 38 ไฟล์ชี้ GUID เดิม, meta ใหม่) ให้ `Resources.Load` เห็น — ฉาก `Game` ที่มี prefab อยู่แล้วยังใช้ของเดิม ไม่มี instance ซ้ำ เพราะ `Awake` ของ prefab ในซีนรันก่อน boot hook
+- **`TaskRace/BobMinigameSfx.cs`** (ใหม่): map 8 `MiniKind` → ชื่อคลิปที่มีจริงใน `Assets/Audio/SFX`
+  | kind | แตะสำเร็จ | ผิด/พลาด | ต่อเนื่อง |
+  | --- | --- | --- | --- |
+  | Trace | `broom_sweep` (throttle 0.12 วิ) | — | — |
+  | Scrub | เงียบ (สัมผัสคือ loop) | — | `scrub_loop` เริ่มที่กด หยุดที่ปล่อย/ปิดการ์ด |
+  | Tap | `pickup` · T03 `mud_splat` | — | — |
+  | Sort | `ui_tap` ตอนหยิบ, `pass_part` ตอนลงถังถูก | `drop_invalid` (ลงถังผิด) | — |
+  | Hold | `lift_layer` | — | — |
+  | Fill | `bubble_pop` ตอนถึงขีดเขียว | `drop_invalid` (ล้น) | `water_pour` ระหว่างกดค้าง |
+  | Sequence | `ui_confirm` | `ui_cancel` | `ui_tap` ตอนแพดกะพริบ (throttle 0.1 วิ) |
+  | Timed | ไม่มี (การ์ดจับเวลาไม่ใช่การ์ดมินิเกม) | — | — |
+  ทุกขั้นที่มีหลายขั้น: `reaction_good` ตอนจบขั้น · จบการ์ด: `round_win` + `score_count` · เปิดการ์ด: `ui_card_flip`
+- **hook:** `BobMinigameHost` เรียกที่ `Begin/SetupStep/Advance/Hide/Cancel/PointerDown/PointerUp` และจุดสำเร็จ/พลาดของแต่ละ kind เท่านั้น — **ไม่มีเสียงต่อ tick** และ loop ทุกตัวถูกปิดใน `SetupStep/Hide/Cancel/PointerUp`
+- **ตรวจ:** typecheck offline = baseline เดิม (ไม่มี error นอก `CS0246/CS0234`); Unity batchmode compile **0 error** ในสำเนาโปรเจกต์ (`Logs/compile-minigame-sfx.log`, exit 0); `SfxCheck` (`-executeMethod` เปิด `Resources.Load` จริง) = `[SFXCHK] clips=38 missing=0 tracks=4 music=True` → `SFX CHECK PASSED` (`Logs/sfx-check.log`)
+- **ยังไม่ได้ยินเสียงจริงใน Play Mode** — editor เดิมยังถูกล็อกโดย Unity PID 14820 (ต้องปิดตัวนั้นก่อนจึงจะรัน play-mode check ได้)
+- **ยังเหลือของเฟส 5 (#47):** คราบฉุกเฉิน **T16** — ต้องมี enemy row ใน HUD, นาฬิกา 25 วิ, มินิเกมย่อ D−1 และกติกา "ไม่ทัน = ลาม +short 1" ซึ่งยังไม่มีโครงใน `TaskRaceRound` เลย (แถบคู่แข่งทำแล้ว)
+
+### 15.19 APK ที่มีทั้งเสียงและ Task Race (16 พ.ย. 2026)
+
+build แรกหลังงาน pure UGS + SFX — สั่งด้วย `Bob.EditorTools.BobAndroidBuild.BuildApk` จาก**สำเนาโปรเจกต์** `compile-check/` เพราะ editor ตัวจริงถูกล็อกโดย Unity PID 14820 (batchmode ค้างตั้งแต่ 03:53) ทั้งที่ไฟล์สคริปต์/asset ชุดเดียวกัน
+
+- **ผล build:** `Bob: APK build Succeeded, 0 errors, 886 MB -> C:\Users\Jakgrits\BOB-repo\Builds\BOB-prototype-v1.apk` (log `compile-check/Logs/apk-build.log`, exit 0, 21 นาที — IL2CPP 1,738 objects + link + Gradle)
+- **aapt2 badging:** `package com.bob.battleofthebrooms versionCode=2 versionName=0.1.0`, `targetSdk 36`, `native-code arm64-v8a`, `INTERNET` permission, label `Battle of the Brooms`, launchable `com.unity3d.player.UnityPlayerGameActivity`; ขนาดไฟล์ 93,393,738 bytes (89.1 MiB) จากเดิม 78,642,203 bytes (75.0 MiB)
+- **ลายเซ็น:** `CN=Android Debug` (SHA-256 `91a710ef…71e0`) — debug keystore ตามที่ `BobAndroidBuild` ตั้งไว้ ใช้กับ App Distribution ได้ แต่ Play Store ไม่ได้
+- **ทำไมโตจาก 75 MB:** `libil2cpp.so` 34.8 → 54.4 MB และมี `global-metadata.dat` 10.1 MB เพิ่มมา — โค้ดที่เพิ่มจากชุด pure UGS (Netcode/Relay/Lobby/Cloud Save/Authentication) ไม่ใช่ asset หลุดเข้ามา (ไม่มีไฟล์เดี่ยว > 8 MB อื่นเลย)
+- **สำรองของเก่า:** `Builds/BOB-prototype-v1-prev.apk` (75 MB, 15 พ.ย. 21:09) — `Builds/` ถูก gitignore
+- **อัปโหลด Firebase App Distribution สำเร็จ (16 พ.ย. 2026):** auth ของ CLI ตายเพราะ refresh token หมดอายุ (`apps:list` = 401 `invalid_grant`) — แก้ด้วย `firebase -i login --reauth` (flag `-i` จำเป็นเมื่อ stdin ไม่ใช่ TTY, token ใหม่มาแล้ว) แล้ว `bash distribute-android.sh --upload-only` ได้ release **`0.1.0 (2)`** id `1df3mfumitkpo` (ไม่ชนกฎห้ามซ้ำ versionCode เพราะ v2 ยังไม่เคยขึ้น)
+  - console: `https://console.firebase.google.com/project/bob-preprod/appdistribution/app/android:com.bob.battleofthebrooms/releases/1df3mfumitkpo`
+  - tester app: `https://appdistribution.firebase.google.com/testerapps/1:438462393037:android:76c94b4645660e52e69784/releases/1df3mfumitkpo`
+  - ลิงก์โหลดตรง (หมดอายุ 1 ชม.): `.../releases/1df3mfumitkpo/binaries/df6d7dae.../app.apk` — ตรวจแล้ว `http 200`, 93,393,738 bytes ตรงกับไฟล์ใน `Builds/`
+  - **ขั้นส่งถึง tester group ยัง 404:** โปรเจกต์ `bob-preprod` ยังไม่มี tester/group เลย (`appdistribution:testers:list` ว่าง) แต่ `.env` ระบุชื่อ group ไว้ → ต้องสร้าง group ใน Console ก่อน หรือปล่อย `FIREBASE_GROUPS` ว่างจนกว่าจะมี tester
+  - ทางสำรองที่ยังใช้ได้: service account key ที่ `BOB-repo/firebase-key.json` (gitignored) + Docker path ของสคริปต์

@@ -21,7 +21,7 @@ namespace Bob.Game
         public const float RoundTime = 100f, FreezeTime = 8f;
         public const int Hand = BobRules.HandSolo;
 
-        enum Phase { Title, Loading, Intro, Countdown, Build, Scoring, Test, Result, Lobby, Splash, Modes, Heroes, Shop, Chapters }
+        enum Phase { Title, Loading, Intro, Countdown, Build, Scoring, Test, Result, Splash, Modes, Heroes, Shop, Chapters }
 
         sealed class LastRound
         {

@@ -1,6 +1,6 @@
 # 27 · Pure UGS — โปรไฟล์คลาวด์ อันดับ คะแนน และห้องผู้เล่น (Unity Gaming Services)
 
-สถานะ: **โครง pure UGS พร้อมทดสอบ** (16 พ.ย. 2026) — ตัด Nakama ออกจากฝั่ง Unity ทั้งหมดแล้ว
+สถานะ: **โครง pure UGS พร้อมทดสอบ** (16 พ.ย. 2026) — ตัด Nakama ออกจากฝั่ง Unity ทั้งหมดแล้ว, **compile ใน Unity ผ่าน 0 error** (`Logs/compile-pure-ugs2.log`)
 สคริปต์ทั้งชุดอยู่ที่ `unity/Assets/Scripts/UGS/` และไม่ผูกกับกติกาในเกม (คะแนนการเล่นยังคิดบนเครื่อง)
 
 ## 1. ขอบเขต
@@ -102,3 +102,9 @@ Unity.exe -projectPath . -logFile Logs/ugs-check.log -executeMethod Bob.EditorTo
 
 `Assets/Scripts/Net/` (BobServer, BobOnline, BobLineLogin), `Assets/Scripts/Coop/`, `Assets/Scripts/Networking/` (ชุด UGS รุ่นแรก), `BobGame.Online.cs`, `BobGame.OnlineDev.cs`, `BobSmokeTest.cs`, `BobAutoSmoke.cs`, `BobCoopScene.cs`, ฉาก `Coop.unity` / `SmokeTest.unity` (เอาออกจาก Build Settings แล้ว), package `com.heroiclabs.nakama-unity`
 ที่ยังเหลือ: โฟลเดอร์ `server/` ฝั่งเซิร์ฟเวอร์ (ของ session ขนาน) — ไม่ถูกอ้างจาก Unity แล้ว
+
+## 9. ตรวจ compile ตอนมี Unity เปิดโปรเจกต์ค้างอยู่
+
+Unity เปิดโปรเจกต์เดียวกันสองตัวไม่ได้ (ตัวที่สองจะออกทันทีด้วย return code 1 ไม่ได้คอมไพล์) ถ้าเจอ `Temp/UnityLockfile` ค้าง:
+ก๊อป `Assets/`, `Packages/`, `ProjectSettings/` และ `Library/PackageCache/` ไปโฟลเดอร์แยก (เช่น `compile-check/` ที่ถูก `git/info/exclude` ไว้) แล้วรัน
+`Unity.exe -projectPath compile-check -batchmode -quit -logFile Logs/compile.log` — ผลคอมไพล์เชื่อถือได้เท่ากัน (asset เดียวกัน, GUID เดิม) และไม่ต้องปิด editor ที่ owner เปิดอยู่

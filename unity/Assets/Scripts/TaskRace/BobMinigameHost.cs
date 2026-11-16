@@ -164,6 +164,7 @@ namespace Bob.TaskRace
             play.gameObject.SetActive(true);
             SetupStep();
             BobTutorialClip.Play(play, taskId);
+            BobMinigameSfx.Open();
             return true;
         }
 
@@ -183,6 +184,7 @@ namespace Bob.TaskRace
         public void Hide()
         {
             playing = false;
+            BobMinigameSfx.Scrub(false); BobMinigameSfx.Pour(false);
             HideItems();
             if (stage3d != null) stage3d.Hide();
             if (play != null) play.gameObject.SetActive(false);
@@ -194,6 +196,7 @@ namespace Bob.TaskRace
         public void Cancel()
         {
             playing = false; complete = false;
+            BobMinigameSfx.Scrub(false); BobMinigameSfx.Pour(false);
             HideItems();
             if (stage3d != null) stage3d.Hide();
             if (brush != null) brush.gameObject.SetActive(false);
@@ -287,6 +290,7 @@ namespace Bob.TaskRace
             }
             if (step + 1 < stepCount)
             {
+                BobMinigameSfx.StepDone();
                 step++;
                 SetupStep();
                 // T09: the soak wait sits between the pour and the scrub, exactly as docs 16 section 5 asks.
@@ -299,6 +303,7 @@ namespace Bob.TaskRace
                 return;
             }
             complete = true; playing = false;
+            BobMinigameSfx.Finished();
             Hint = "เสร็จแล้ว";
             if (spot != null) spot.SetProgress(1f);
         }
@@ -492,10 +497,10 @@ namespace Bob.TaskRace
                 case MiniKind.Tap: TapAt(p); break;
                 case MiniKind.Sort: PickUp(p); break;
                 case MiniKind.Hold: StartHold(p); break;
-                case MiniKind.Fill: holding = true; break;
+                case MiniKind.Fill: holding = true; BobMinigameSfx.Pour(true); break;
                 case MiniKind.Sequence: PadAt(p); break;
                 case MiniKind.Trace: CoverAt(p); break;
-                case MiniKind.Scrub: ScrubAt(0f, p); break;
+                case MiniKind.Scrub: BobMinigameSfx.Scrub(true); ScrubAt(0f, p); break;
             }
         }
 
@@ -520,17 +525,20 @@ namespace Bob.TaskRace
             if (!playing) return;
             if (brush != null) brush.gameObject.SetActive(false);
 
+            if (stepKind == MiniKind.Scrub) BobMinigameSfx.Scrub(false);
             if (stepKind == MiniKind.Sort) DropHeld(p);
             if (stepKind == MiniKind.Hold) holding = false;
             if (stepKind == MiniKind.Fill && holding)
             {
                 holding = false;
+                BobMinigameSfx.Pour(false);
                 if (Mathf.Abs(fillLevel - bandCentre) <= bandHalf) { stepProgress = 1f; Hint = "ระดับพอดี"; }
                 else if (fillLevel > bandCentre + bandHalf)
                 {
                     fillLevel = 0.5f;
                     Hint = "ล้น! ลองใหม่";
                     bandLit = false;
+                    BobMinigameSfx.Wrong();
                     Ring(FillBottleAt, T.danger, 300f);
                 }
             }
@@ -541,6 +549,7 @@ namespace Bob.TaskRace
         void SetupStep()
         {
             HideItems();
+            BobMinigameSfx.Scrub(false); BobMinigameSfx.Pour(false);
             stepProgress = 0f; holdFill = 0f; waitTimer = 0f; fillLevel = 0f;
             turnAccum = 0f; lastAngle = float.NaN; held = null; holding = false;
             seqIndex = 0; playIndex = 0; flashTimer = 0.35f; flashPad = -1; stage = taskId == "T15" ? 0 : 1;
@@ -976,6 +985,7 @@ namespace Bob.TaskRace
             {
                 bandLit = true;
                 bandFlash = 0.4f;
+                BobMinigameSfx.Touch(MiniKind.Fill, taskId);
                 Ring(FillBottleAt, T.success, 260f); // the band blinks the moment the liquid reaches it
                 Fx(fxSplash, FillBottleAt, 300f, 0.35f);
             }
@@ -1005,6 +1015,7 @@ namespace Bob.TaskRace
             var hit = Nearest(p, 150f);
             if (hit == null) return;
             Remove(hit);
+            BobMinigameSfx.Touch(MiniKind.Tap, taskId);
             int gone = 0;
             foreach (var it in items) if (it.removed) gone++;
             stepProgress = items.Count == 0 ? 1f : gone / (float)items.Count;
@@ -1012,7 +1023,7 @@ namespace Bob.TaskRace
 
         void CoverAt(Vector2 p)
         {
-            int covered = 0;
+            int covered = 0; bool touched = false;
             foreach (var it in items)
             {
                 if (!it.alive) { covered++; continue; }
@@ -1020,9 +1031,10 @@ namespace Bob.TaskRace
                 {
                     it.alive = false;
                     Pop(it, T.primaryLight);
-                    covered++;
+                    covered++; touched = true;
                 }
             }
+            if (touched) BobMinigameSfx.Touch(MiniKind.Trace, taskId);
             stepProgress = items.Count == 0 ? 1f : covered / (float)items.Count;
         }
 
@@ -1073,6 +1085,7 @@ namespace Bob.TaskRace
             if (Vector2.Distance(p, holdCentre) > 180f) return;
             holding = true; lastAngle = float.NaN;
             if (holdButton != null) holdButton.punch = PunchTime;
+            BobMinigameSfx.Touch(MiniKind.Hold, taskId);
             Ring(holdCentre, T.primaryLight, 340f);
         }
 
@@ -1100,6 +1113,7 @@ namespace Bob.TaskRace
             held = Nearest(p, 120f);
             if (held == null) return;
             heldOffset = p - held.home;
+            BobMinigameSfx.Touch(MiniKind.Sort, taskId);
         }
 
         void DragHeld(Vector2 p)
@@ -1124,6 +1138,7 @@ namespace Bob.TaskRace
                     bin.punch = PunchTime;
                     Ring(bin.home, T.success, 260f);
                     Fx(fxSparkle, bin.home, 360f, 0.5f, 30f);
+                    BobMinigameSfx.Sorted(true);
                     Hint = HintFor(taskId, step);
                     int sorted = 0;
                     foreach (var it in items) if (!it.alive) sorted++;
@@ -1133,6 +1148,7 @@ namespace Bob.TaskRace
                 {
                     StartFly(card, card.slotHome, false); // wrong bin: slide home and shake, never teleport
                     Ring(p, T.danger, 200f);
+                    BobMinigameSfx.Sorted(false);
                     Hint = "ผิดถัง! ลองอีกที";
                 }
                 return;
@@ -1151,12 +1167,14 @@ namespace Bob.TaskRace
                     seqIndex++;
                     stepProgress = seqIndex / (float)sequence.Count;
                     pads[i].punch = PunchTime;
+                    BobMinigameSfx.Touch(MiniKind.Sequence, taskId);
                     Ring(pads[i].home, PadBase(pads[i]), 230f);
                 }
                 else
                 {
                     seqIndex = 0; playIndex = 0; stage = 0; flashTimer = 0.5f; flashPad = -1;
                     Hint = "ผิด! ดูอีกรอบ";
+                    BobMinigameSfx.Wrong("ui_cancel");
                     pads[i].shake = ShakeTime;
                     Ring(pads[i].home, T.danger, 230f);
                 }
@@ -1170,6 +1188,7 @@ namespace Bob.TaskRace
             var pad = pads[index];
             pad.img.color = lit ? T.primary : PadBase(pad);
             pad.rect.localScale = Vector3.one * (lit ? 1.06f : 1f);
+            if (lit) BobMinigameSfx.Flash();
             if (pad.twin != null && stage3d != null) stage3d.Tint(pad.twin, pad.img.color);
         }
 

@@ -529,7 +529,6 @@ namespace Bob.Game
                 case Phase.Intro: RoomTicket(); break;
                 case Phase.Test: if (SplitActive) SplitView(); else RoundResult(); break;
                 case Phase.Result: MatchResult(); break;
-                case Phase.Lobby: Lobby(); break;
             }
         }
 

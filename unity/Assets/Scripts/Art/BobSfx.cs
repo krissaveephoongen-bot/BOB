@@ -54,6 +54,21 @@ namespace Bob.Art
             else if (!on) src.Stop();
         }
 
+        // The Task Race scenes carry no BobAudio prefab, so the player boots itself once from Resources the
+        // first time a scene loads. A scene that already has one wins: its Awake ran before this and set inst.
+        static bool bootTried;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        static void Boot()
+        {
+            if (bootTried) return;
+            bootTried = true;
+            AudioListener.volume = PlayerPrefs.GetInt("bob.sound", 1) == 1 ? 1f : 0f;
+            if (inst != null) return;
+            var prefab = Resources.Load<GameObject>("Audio/BobAudio");
+            if (prefab != null) Object.Instantiate(prefab);
+        }
+
         public static void Music(bool on)
         {
             if (inst == null) return;

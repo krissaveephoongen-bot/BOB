@@ -1,6 +1,7 @@
 # 28 · LINE Login (บัญชีจริงบนมือถือ)
 
-สถานะ: **โค้ดเสร็จ 16 พ.ย. 2026 — ยังไม่ทดสอบกับ LINE จริง** (เซิร์ฟเวอร์ยังเป็น local, ไม่มีเครื่อง Android ต่อ adb ในรอบนี้)
+สถานะ: **ฝั่งเซิร์ฟเวอร์ยังอยู่ — ฝั่ง Unity ถูกถอดออกแล้ว 16 พ.ย. 2026** (ตอนตัด Nakama ออกทั้งโปรเจกต์ เหลือ pure UGS ตาม `27_UGS_Multiplayer.md`)
+RPC `line_status` / `line_login` ใน `server/` ยังใช้ได้ (session ขนานถืออยู่) แต่ `BobServer` / `BobLineLogin` / ปุ่ม LINE บนหน้า Login และ deep link ในแอป **ถูกลบออกจากบิลด์ Unity แล้ว** — ถ้าจะเอากลับ ต้องต่อ RPC ผ่าน UGS Cloud Code หรือเรียก Nakama จากฝั่งแอปใหม่ (ไม่ใช่ผ่าน `Bob.Net` เดิม)
 Channel: LINE Login channel `2012623256` (Channel ID เป็นข้อมูลสาธารณะ ปรากฏใน authorize URL อยู่แล้ว)
 
 ## 1. ภาพรวมการไหล
@@ -34,11 +35,11 @@ Channel: LINE Login channel `2012623256` (Channel ID เป็นข้อมู
 | `server/line-auth-test.js` | เทสต์ออฟไลน์ (fake `nk`): status, happy path, โค้ดหมดอายุ, fallback sha256 — `node line-auth-test.js` |
 | `server/.env.example`, `server/deploy/.env.example` | `LINE_CHANNEL_ID`, `LINE_CHANNEL_SECRET`, `LINE_REDIRECT_URI` (ค่าจริงอยู่ใน `.env` ที่ถูก ignore) |
 | `server/docker-compose.yml`, `server/deploy/docker-compose.yml` | ส่ง env สามตัวเข้า container `nakama` |
-| `unity/Assets/Scripts/Net/BobLineLogin.cs` | PKCE S256, state, เปิด authorize URL, รับ deep link, รอสูงสุด 180 วิ, แลกโค้ดผ่าน RPC, เก็บ prefs, ปุ่มวางลิงก์จากคลิปบอร์ด |
-| `unity/Assets/Scripts/Net/BobServer.cs` | `SignInCustomAsync(customId)`, `LineStatusAsync()`, `LineLoginAsync(code, verifier)` |
-| `unity/Assets/Scripts/Game/BobGame.Menus.cs` | ปุ่มเขียว `#06C755` "เข้าสู่ระบบด้วย LINE" บนหน้า Login + บรรทัดสถานะ + ปุ่ม "วางลิงก์ที่ LINE ส่งกลับ" |
-| `unity/Assets/Scripts/Game/BobGame.cs` | `Connect()` เลือก `SignInCustomAsync(bob.line.custom)` เมื่อมีบัญชี LINE และโชว์ชื่อใน netNote |
-| `unity/Assets/Scripts/Editor/BobAndroidDeepLinks.cs` | `IPostGenerateGradleAndroidProject` เติม `<intent-filter>` `VIEW/DEFAULT/BROWSABLE` scheme `bob` host `line-login` ลง manifest ที่ Unity สร้าง |
+| `unity/Assets/Scripts/Net/BobLineLogin.cs` | ~~PKCE S256, state, เปิด authorize URL, รับ deep link, รอสูงสุด 180 วิ, แลกโค้ดผ่าน RPC, เก็บ prefs, ปุ่มวางลิงก์~~ **ถอดออก 16 พ.ย. 2026** — สำเนาอยู่ที่ `unity/Logs/removed-nakama/` |
+| `unity/Assets/Scripts/Net/BobServer.cs` | ~~`SignInCustomAsync(customId)`, `LineStatusAsync()`, `LineLoginAsync(code, verifier)`~~ **ถอดออกพร้อมทั้ง `Net/` 16 พ.ย. 2026** |
+| `unity/Assets/Scripts/Game/BobGame.Menus.cs` | ~~ปุ่มเขียว `#06C755` "เข้าสู่ระบบด้วย LINE" + ปุ่มวางลิงก์~~ **ถอดออก 16 พ.ย. 2026** (หน้า Login เหลือ Guest) |
+| `unity/Assets/Scripts/Game/BobGame.cs` | ~~`Connect()` เลือก `SignInCustomAsync(...)`~~ **ถอดออก 16 พ.ย. 2026** (ไม่มีเน็ตในแอปแล้ว) |
+| `unity/Assets/Scripts/Editor/BobAndroidDeepLinks.cs` | `IPostGenerateGradleAndroidProject` เติม `<intent-filter>` `VIEW/DEFAULT/BROWSABLE` scheme `bob` host `line-login` ลง manifest ที่ Unity สร้าง — ไฟล์ยังอยู่ แต่ไม่มีตัวรับ deep link ในเกมแล้ว |
 
 ## 3. ตั้งค่าครั้งแรก (ทำครั้งเดียว)
 
