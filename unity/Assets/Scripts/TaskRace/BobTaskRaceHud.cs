@@ -1093,15 +1093,17 @@ namespace Bob.TaskRace
         }
 
         /// <summary>
-        /// The tagline chip of docs 29 section 6 item 7 ("งานสะอาดต้องสามยก", settled by the owner on 16 Nov 2026).
-        /// It explains best-of-three in four words, so it rides on both result cards; the caller decides where the
-        /// free band is, because the match card and the chapter card have different ones.
+        /// The tagline chip of docs 29 section 6 item 7 ("งานสะอาดต้องทำสามรอบ", settled by the owner on 16 Nov 2026).
+        /// It explains best-of-three in one line, so it rides on both result cards; the caller decides where the
+        /// free band is, because the match card and the chapter card have different ones. Auto-sized down to 18pt:
+        /// the chapter chip is only 300u wide and the settled line is twenty Thai glyphs, so a fixed 24pt could clip.
         /// </summary>
         void SloganChip(RectTransform p, Vector2 anchor, Vector2 pivot, Vector2 pos, float width)
         {
             var chip = BobUi.Panel(p, T.surfaceCream, null, "Slogan");
             BobUi.Pin((RectTransform)chip.transform, anchor, pivot, pos, new Vector2(width, 52f));
             var text = BobUi.Label(chip.transform, BobChapters.Slogan, 24, T.inkMuted, TextAnchor.MiddleCenter);
+            text.enableAutoSizing = true; text.fontSizeMin = 18; text.fontSizeMax = 24;
             BobUi.Stretch(text.rectTransform, 10f, 4f, 10f, 4f);
         }
 

@@ -9,7 +9,7 @@ namespace Bob.Rules
         /// The tagline (docs 29 section 6 item 7, settled by the owner on 16 Nov 2026): the shortest true explanation
         /// of best-of-three. Kept in Thai only on purpose — the font set carries no emoji and no star glyph.
         /// </summary>
-        public const string Slogan = "งานสะอาดต้องสามยก";
+        public const string Slogan = "งานสะอาดต้องทำสามรอบ";
 
         /// <summary>End-of-story card, shown once chapter 6 is passed (docs 29 section 5).</summary>
         public const string FinaleTitle = "ตลาดท่าศาลาเปิดแล้ว";
