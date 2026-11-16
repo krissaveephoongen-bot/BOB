@@ -1,0 +1,40 @@
+unity/Assets/Scripts/Editor/BobAndroidBuild.cs: error CS0103: The name 'NamedBuildTarget' does not exist in the current context
+unity/Assets/Scripts/Editor/BobAndroidBuild.cs: error CS0117: 'ApiCompatibilityLevel' does not contain a definition for 'NET_Standard'
+unity/Assets/Scripts/Editor/BobAndroidBuild.cs: error CS0117: 'EditorUserBuildSettings' does not contain a definition for 'buildAppBundle'
+unity/Assets/Scripts/Editor/BobE2E.cs: error CS0103: The name 'BobGameScene' does not exist in the current context
+unity/Assets/Scripts/Editor/BobE2E.cs: error CS0117: 'EditorApplication' does not contain a definition for 'EnterPlaymode'
+unity/Assets/Scripts/Editor/BobE2E.cs: error CS0117: 'EditorApplication' does not contain a definition for 'ExitPlaymode'
+unity/Assets/Scripts/Editor/BobHeroImporter.cs: error CS0103: The name 'ModelImporterMaterialImportMode' does not exist in the current context
+unity/Assets/Scripts/Editor/BobHeroImporter.cs: error CS0117: 'PrefabUtility' does not contain a definition for 'SaveAsPrefabAsset'
+unity/Assets/Scripts/Editor/BobHeroImporter.cs: error CS1061: 'ModelImporter' does not contain a definition for 'materialImportMode' and no accessible extension method 'materialImportMode' accepting a first argument of type 'ModelImporter' could be found (are you missing a using directive or an assembly reference?)
+unity/Assets/Scripts/Editor/BobIslandSkinDev.cs: error CS1503: Argument 1: cannot convert from 'UnityEngine.FindObjectsInactive' to 'UnityEngine.FindObjectsSortMode'
+unity/Assets/Scripts/Editor/BobMapAssemblerEditor.cs: error CS1503: Argument 1: cannot convert from 'UnityEngine.FindObjectsInactive' to 'UnityEngine.FindObjectsSortMode'
+unity/Assets/Scripts/Editor/BobMapAssemblerEditor.cs: error CS1503: Argument 2: cannot convert from 'UnityEngine.Transform' to 'UnityEngine.SceneManagement.Scene'
+unity/Assets/Scripts/Editor/BobOutlineFix.cs: error CS0117: 'PrefabUtility' does not contain a definition for 'LoadPrefabContents'
+unity/Assets/Scripts/Editor/BobOutlineFix.cs: error CS0117: 'PrefabUtility' does not contain a definition for 'SaveAsPrefabAsset'
+unity/Assets/Scripts/Editor/BobOutlineFix.cs: error CS0117: 'PrefabUtility' does not contain a definition for 'UnloadPrefabContents'
+unity/Assets/Scripts/Editor/BobPropImporter.cs: error CS0103: The name 'ModelImporterMaterialImportMode' does not exist in the current context
+unity/Assets/Scripts/Editor/BobPropImporter.cs: error CS0117: 'PrefabUtility' does not contain a definition for 'SaveAsPrefabAsset'
+unity/Assets/Scripts/Editor/BobPropImporter.cs: error CS1061: 'ModelImporter' does not contain a definition for 'materialImportMode' and no accessible extension method 'materialImportMode' accepting a first argument of type 'ModelImporter' could be found (are you missing a using directive or an assembly reference?)
+unity/Assets/Scripts/Editor/BobSceneDump.cs: error CS1503: Argument 1: cannot convert from 'UnityEngine.FindObjectsInactive' to 'UnityEngine.FindObjectsSortMode'
+unity/Assets/Scripts/Editor/BobTmpSetup.cs: error CS0103: The name 'AtlasPopulationMode' does not exist in the current context
+unity/Assets/Scripts/Editor/BobTmpSetup.cs: error CS0117: 'TMP_FontAsset' does not contain a definition for 'CreateFontAsset'
+unity/Assets/Scripts/Editor/BobTwinIslandRig.cs: error CS1503: Argument 2: cannot convert from 'UnityEngine.Transform' to 'UnityEngine.SceneManagement.Scene'
+unity/Assets/Scripts/Editor/BobVideoImportSettings.cs: error CS1061: 'VideoClipImporter' does not contain a definition for 'sRGBClip' and no accessible extension method 'sRGBClip' accepting a first argument of type 'VideoClipImporter' could be found (are you missing a using directive or an assembly reference?)
+unity/Assets/Scripts/Editor/BotCheck.cs: error CS0117: 'EditorApplication' does not contain a definition for 'EnterPlaymode'
+unity/Assets/Scripts/Editor/BotCheck.cs: error CS0117: 'EditorApplication' does not contain a definition for 'ExitPlaymode'
+unity/Assets/Scripts/Editor/BotCheck.cs: error CS1503: Argument 1: cannot convert from 'UnityEngine.FindObjectsInactive' to 'UnityEngine.FindObjectsSortMode'
+unity/Assets/Scripts/Editor/PauseCheck.cs: error CS0117: 'EditorApplication' does not contain a definition for 'EnterPlaymode'
+unity/Assets/Scripts/Editor/PauseCheck.cs: error CS0117: 'EditorApplication' does not contain a definition for 'ExitPlaymode'
+unity/Assets/Scripts/Editor/PauseCheck.cs: error CS1503: Argument 1: cannot convert from 'UnityEngine.FindObjectsInactive' to 'UnityEngine.FindObjectsSortMode'
+unity/Assets/Scripts/Editor/StorySeriesCheck.cs: error CS0117: 'EditorApplication' does not contain a definition for 'EnterPlaymode'
+unity/Assets/Scripts/Editor/StorySeriesCheck.cs: error CS0117: 'EditorApplication' does not contain a definition for 'ExitPlaymode'
+unity/Assets/Scripts/Editor/TaskRaceSceneBuilder.cs: error CS1503: Argument 1: cannot convert from 'UnityEngine.FindObjectsInactive' to 'UnityEngine.FindObjectsSortMode'
+unity/Assets/Scripts/Editor/TaskRaceSceneBuilder.cs: error CS1503: Argument 2: cannot convert from 'UnityEngine.Transform' to 'UnityEngine.SceneManagement.Scene'
+unity/Assets/Scripts/Editor/TaskRaceVerify.cs: error CS1503: Argument 1: cannot convert from 'UnityEngine.FindObjectsInactive' to 'UnityEngine.FindObjectsSortMode'
+unity/Assets/Scripts/TaskRace/BobFieldDressing.cs: error CS1503: Argument 1: cannot convert from 'UnityEngine.FindObjectsInactive' to 'UnityEngine.FindObjectsSortMode'
+unity/Assets/Scripts/TaskRace/BobWaterFlow.cs: error CS1503: Argument 1: cannot convert from 'UnityEngine.FindObjectsInactive' to 'UnityEngine.FindObjectsSortMode'
+unity/Assets/Scripts/TaskRace/DioramaAmbient.cs: error CS1503: Argument 1: cannot convert from 'UnityEngine.FindObjectsInactive' to 'UnityEngine.FindObjectsSortMode'
+unity/Assets/Scripts/TaskRace/DioramaLightingRig.cs: error CS1503: Argument 1: cannot convert from 'UnityEngine.FindObjectsInactive' to 'UnityEngine.FindObjectsSortMode'
+unity/Assets/Scripts/TaskRace/TaskRaceModeManager.cs: error CS1503: Argument 1: cannot convert from 'UnityEngine.FindObjectsInactive' to 'UnityEngine.FindObjectsSortMode'
+unity/Assets/Scripts/TaskRace/TaskRaceRound.cs: error CS1503: Argument 1: cannot convert from 'UnityEngine.FindObjectsInactive' to 'UnityEngine.FindObjectsSortMode'

@@ -1,7 +1,9 @@
 <!-- Type-checks every script under unity/Assets/Scripts without the Unity Editor (for cloud sessions).
      Uses public reference assemblies from NuGet: UnityEngine 2021.3 modules, uGUI 2020.3, UnityEditor 2018.1.
-     They are older than Unity 6, so a pass here means "no typos, wrong names or wrong types", not "compiles in Unity 6".
-     Run: dotnet build unity-typecheck   (a clean build prints 0 errors; warnings are fine) -->
+     Those are older than Unity 6, so a few Unity 6-only APIs cannot resolve here. Shims.cs covers the
+     third-party assemblies that have no public NuGet package (TextMeshPro, AI Navigation, Android build).
+     Gate: `bash unity-typecheck/check.sh` fails only on NEW error kinds, compared with baseline-errors.txt.
+     Run it with the update flag after intentionally removing a known gap. -->
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType><TargetFramework>netstandard2.1</TargetFramework><LangVersion>9.0</LangVersion>

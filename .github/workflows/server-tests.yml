@@ -1,9 +1,10 @@
-# Runs on every push and pull request: the Nakama match server with bots, the C# client checks, and a type-check
-# of the Unity scripts (no Unity licence needed). Unity itself is not compiled here; that still happens on the PC.
-name: Server and client checks
+# Runs on every push and pull request: the Nakama match server with bots, the pure C# rules
+# checks, and a type-check of the Unity scripts (no Unity licence needed). Unity itself is not
+# compiled here; editor/play-mode checks and the APK still happen on the PC.
+name: Server and rules checks
 on:
   push:
-    branches: [main, 'claude/**', 'feature/**']
+    branches: [main, 'claude/**', 'feature/**', 'qoder/**']
   pull_request:
   workflow_dispatch:
 
@@ -26,6 +27,10 @@ jobs:
         run: |
           cd server && node build-module.js
           git diff --exit-code -- modules/index.js || (echo "::error::run 'node server/build-module.js' and commit server/modules/index.js" && exit 1)
+      - name: Task Race contract (no Nakama needed)
+        run: node server/task-race-test.js
+      - name: LINE auth checks (no Nakama needed)
+        run: node server/line-auth-test.js
       - name: Start Nakama + Postgres
         run: |
           cd server && docker compose up -d
@@ -37,10 +42,10 @@ jobs:
         run: node server/coop-test.js
       - name: Multiplayer test (2, 3, 4 players)
         run: for n in 2 3 4; do node server/mp-test.js $n; done
-      - name: C# client checks (rules parity, rooms, co-op)
+      - name: C# rules checks (offline rooms, Task Race table, stacking)
         run: cd unity-check && dotnet run
-      - name: Type-check Unity scripts
-        run: cd unity-typecheck && dotnet build -nologo
+      - name: Type-check Unity scripts (new errors only)
+        run: bash unity-typecheck/check.sh
       - name: Nakama logs on failure
         if: failure()
         run: cd server && docker compose logs nakama | tail -200

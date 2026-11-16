@@ -1,2 +1,121 @@
-// Kept for the type-check project layout. The old Nakama-only shims are gone with the Nakama stack;
-// the remaining scripts type-check against the public Unity reference assemblies alone.
+// Offline type-check shims for Unity packages that have no public NuGet reference assembly.
+// They are only compiled by unity-typecheck (never by Unity), so two rules apply:
+//   1. Mirror the API surface that the game scripts actually touch — nothing more.
+//   2. Keep the members faithful enough that a typo or a wrong type still fails the build.
+// Packages covered: TextMeshPro, AI Navigation (Unity.AI.Navigation), UnityEditor.Android.
+using UnityEngine;
+using UnityEngine.AI;
+using UnityEngine.UI;
+
+namespace TMPro
+{
+    public enum TextAlignmentOptions
+    {
+        TopLeft, Top, TopRight, TopJustified, TopFlush, TopGeoAligned,
+        Left, Center, Right, Justified, Flush, CenterGeoAligned,
+        BottomLeft, Bottom, BottomRight, BottomJustified, BottomFlush, BottomGeoAligned,
+        BaselineLeft, Baseline, BaselineRight, BaselineJustified, BaselineFlush, BaselineGeoAligned,
+        MidlineLeft, Midline, MidlineRight, MidlineJustified, MidlineFlush, MidlineGeoAligned,
+        CaplineLeft, Capline, CaplineRight, CaplineJustified, CaplineFlush, CaplineGeoAligned
+    }
+
+    [System.Flags]
+    public enum FontStyles
+    {
+        Normal = 0, Bold = 1, Italic = 2, Underline = 4, LowerCase = 8, UpperCase = 16,
+        SmallCaps = 32, Strikethrough = 64, Superscript = 128, Subscript = 256, Highlight = 512
+    }
+
+    public enum TextWrappingModes { NoWrap, Normal, PreserveWhitespace, PreserveWhitespaceNoWrap }
+
+    public enum TextOverflowModes { Overflow, Ellipsis, Masking, Truncate, ScrollRect, Page, Linked }
+
+    public class TMP_FontAsset : Object { }
+
+    /// <summary>Base of every TMP label. Derives from MaskableGraphic so GetComponent/AddComponent and the
+    /// Graphic members (color, raycastTarget, rectTransform) behave like they do in Unity.</summary>
+    public class TMP_Text : MaskableGraphic
+    {
+        public string text { get; set; }
+        public TMP_FontAsset font { get; set; }
+        public float fontSize { get; set; }
+        public TextAlignmentOptions alignment { get; set; }
+        public FontStyles fontStyle { get; set; }
+        public TextWrappingModes textWrappingMode { get; set; }
+        public TextOverflowModes overflowMode { get; set; }
+        public bool richText { get; set; }
+        public float lineSpacing { get; set; }
+        public float characterSpacing { get; set; }
+        public float outlineWidth { get; set; }
+        public Color outlineColor { get; set; }
+        public bool enableAutoSizing { get; set; }
+        public float fontSizeMin { get; set; }
+        public float fontSizeMax { get; set; }
+        public float alpha { get; set; }
+        public Material fontMaterial { get { return null; } }
+    }
+
+    public class TextMeshProUGUI : TMP_Text { }
+    public class TextMeshPro : TMP_Text { }
+}
+
+namespace Unity.AI.Navigation
+{
+    public enum CollectObjects { All, Volume, Children, MarkedWithModifier }
+
+    public class NavMeshSurface : MonoBehaviour
+    {
+        public NavMeshData navMeshData { get; set; }
+        public CollectObjects collectObjects { get; set; }
+        public NavMeshCollectGeometry useGeometry { get; set; }
+        public int agentTypeID { get; set; }
+        public int defaultArea { get; set; }
+        public void BuildNavMesh() { }
+        public void RemoveData() { }
+        public void AddData() { }
+        public void UpdateNavMesh(bool asyncUpdate = false) { }
+    }
+
+    public class NavMeshLink : MonoBehaviour
+    {
+        public Vector3 startPoint { get; set; }
+        public Vector3 endPoint { get; set; }
+        public float width { get; set; }
+        public bool bidirectional { get; set; }
+        public float costModifier { get; set; }
+        public bool activated { get; set; }
+        public int area { get; set; }
+        public int agentTypeID { get; set; }
+        public bool autoUpdate { get; set; }
+    }
+
+    public class NavMeshModifier : MonoBehaviour
+    {
+        public bool ignoreFromBuild { get; set; }
+        public bool overrideArea { get; set; }
+        public int area { get; set; }
+        public bool applyToChildren { get; set; }
+        public bool overrideGenerateLinks { get; set; }
+        public bool generateLinks { get; set; }
+    }
+}
+
+namespace UnityEditor.Android
+{
+    /// <summary>Gradle post-processor interface (com.unity.mobile.android). The game only needs the one callback.</summary>
+    public interface IPostGenerateGradleAndroidProject
+    {
+        int callbackOrder { get; }
+        void OnPostGenerateGradleAndroidProject(string path);
+    }
+}
+
+namespace UnityEngine
+{
+    /// <summary>Device vibration lives in UnityEngine.VibrationModule, which the public reference
+    /// assemblies do not ship. Only the call the game makes is mirrored.</summary>
+    public static class Handheld
+    {
+        public static void Vibrate() { }
+    }
+}

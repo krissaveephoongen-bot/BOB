@@ -5,35 +5,41 @@ Playable prototype: https://claude.ai/artifact/M9orSH3LFGbYboRm7QAkHn
 
 > **หลาย branch ทำงานพร้อมกัน:** กระดานจองงาน/สถานะอยู่ที่ [COORDINATION.md](COORDINATION.md) — จองงานก่อนลงมือ, แจ้งก่อนแก้ไฟล์ hot, และต่อคิว rebuild ซีนทีละคน
 
+> **Current state (16 Nov 2026): the Unity client is offline + pure UGS.** The playable path is
+> Game → Home → chapter select (6 chapters) → TaskRace story (3 rounds × 100 s, stars, next chapter).
+> `Scripts/Net/` and `Scripts/Coop/` were deleted with the Nakama → UGS migration; the Nakama/LINE/
+> Co-op material below is kept as server-side reference only. APK v2 (`0.1.0 (2)`) is on Firebase.
+> Checks: `bash unity-typecheck/check.sh`, `cd unity-check && dotnet run`, `node server/task-race-test.js`.
+
 ## What is here
 
 | Folder | What | State |
 | --- | --- | --- |
 | `prototype/index.html` | Browser prototype, solo vs a simulated rival. Holds the rules (parts, reactions, enemies, scoring). | Tested with `node prototype/test.js` |
-| `server/` | Nakama 3.22.0 + Postgres 16 in Docker. `modules/index.js` is generated from the prototype rules by `build-module.js`; `rpc.js` holds the RPCs. | Tested with `server/smoke-test.sh` |
-| `unity/` | Unity 6000.6.8f1 project (open this folder in Unity Hub). Nakama SDK + uGUI in `Packages/manifest.json`; sprites/audio in `Assets/Art`, `Assets/Audio`. | Play-mode smoke test passes (Bob > Run Smoke Test) |
-| `unity/Assets/Scripts/` | `Rules/BobRules.cs` (client copy of the rules, pure C#), `Net/BobServer.cs` (Nakama wrapper: sign in, socket, match, RPCs), `Dev/BobSmokeTest.cs` (Play-mode end-to-end check). | Compiled and checked against the server by `unity-check/` |
-| `unity/Assets/Scenes/Game.unity` | **Playable single-player scene**: room, 4 stations, cart, sofa, hero (tap / WASD), pick up, stack 5 layers + 2 methods, live stat bars, abilities, 3 rounds vs the simulated rival. Room and our score come from the local Nakama (`bob_make_round`, `bob_score_stack`); offline it uses the same rules locally. Code in `Scripts/Game/`, rival + rooms in `Rules/BobMatch.cs`. | Bot plays a full match: menu **Bob > Run Game Test** |
-| `server/match.js` + `unity/Assets/Scripts/Net/BobOnline.cs` | **Real-time multiplayer** (`bob_coop`): server-authoritative match for 2-4 players in two teams, one shared cart per team, best of 3. See [Multiplayer](#multiplayer). | Bots play full matches: `node server/mp-test.js 4` |
+| `server/` | Nakama 3.22.0 + Postgres 16 in Docker. `modules/index.js` is generated from the prototype rules by `build-module.js`; `rpc.js` holds the RPCs. Kept for server tests and as the protocol reference; the Unity client no longer calls it. | Tested with `server/smoke-test.sh` |
+| `unity/` | Unity 6000.6.8f1 project (open this folder in Unity Hub). uGUI + TextMeshPro + Unity Gaming Services in `Packages/manifest.json`; sprites/audio in `Assets/Art`, `Assets/Audio`. | Editor check: **Bob > Run Game Test** |
+| `unity/Assets/Scripts/` | `Rules/` (pure C# rules, offline rooms, Task Race plan), `Game/` (menus + solo match), `TaskRace/` (island map, story series, minigames, HUD), `UGS/` (auth, cloud save, leaderboard, Relay/Lobby scaffold), `Dev/` (bot/E2E drivers), `Editor/` (scene builders + checks). | Type-checked by `unity-typecheck/`; editor checks run in Unity |
+| `unity/Assets/Scenes/Game.unity` | **Playable single-player scene**: room, 4 stations, cart, sofa, hero (tap / WASD), pick up, stack 5 layers + 2 methods, live stat bars, abilities, 3 rounds vs the simulated rival. Rooms and scores are local (`Rules/BobMatch.cs`, `Rules/BobRules.cs`); no server is needed. Code in `Scripts/Game/`. | Bot plays a full match: menu **Bob > Run Game Test** |
+| `server/match.js` | **Real-time protocol reference** (`bob_coop`): server-authoritative match for 2-4 players in two teams, one shared cart per team, best of 3. The Unity client for it was removed with the pure-UGS migration. See [Multiplayer](#multiplayer). | Bots play full matches: `node server/mp-test.js 4` |
 | `dashboard/index.html` | Balance dashboard: reads `bob_analytics` from the local Nakama and charts part, character, round and room stats. | Checked in Chromium, light and dark |
-| `unity-check/` | .NET console app: spot checks + C#-vs-server parity on random stacks + the co-op moves with three `BobOnline` clients (`CoopCheck.cs`). | 275 stacks, 0 mismatches; co-op check PASS |
-| `unity-typecheck/` | Type-checks every script in `unity/Assets/Scripts` without the Unity Editor (NuGet reference assemblies), for cloud sessions. | 0 errors |
-| `unity/Assets/Scripts/Coop/` + `UI/` | **Online co-op scene** (`Assets/Scenes/Coop.unity`, menu **Bob > Build Coop Scene**): menu, lobby, other players, shared cart, push / pass / parking table, hold-to-send vote, split-screen test. UI kit from the UX spec: `BobUiTheme`, `BobSafeArea`, `BobHitArea`, `BobHoldButton`. | Compiled in Unity 6000.6.8f1 and played by a bot against 2 bot players: **Bob > Run Coop Test** (`COOP TEST PASSED`). Not played by real people yet; HUD layout checked by screenshots at 1920x1080, 2400x1080 and 2560x1440 |
+| `unity-check/` | .NET console app: stacking spot checks, the Task Race plan/emergency table (`BobTaskRaceRules.SelfTest`), offline room + rival invariants. Runs without Unity or the server. | `UNITY-CHECK PASSED` |
+| `unity-typecheck/` | Type-checks every script in `unity/Assets/Scripts` without the Unity Editor (NuGet reference assemblies + shims for TMP/AI Navigation/Android). Gate compares against `baseline-errors.txt` so only new error kinds fail. | `bash unity-typecheck/check.sh` passes |
+| `unity/Assets/Scripts/UGS/` | **Unity Gaming Services scaffold**: anonymous auth, cloud save, leaderboard, Relay/Lobby manager and debug UI. Not wired into the story UI yet. | Compiles in Unity; not exercised end-to-end |
 | `art/` | Official concept boards and production docs (`docs/`, including the full UX/UI spec `docs/11_UX_UI_Spec.md` and wireframes `docs/ux/BOB_UX_Wireframes.html`, the minigame card wireframes `docs/ux/BOB_Minigame_Screens.html`, and the 3/4 cafeteria play screen `docs/ux/BOB_Play_Screen_Cafeteria.html`), sprite sources (`source/`) and generator tools (`tools/`). Unity-ready copies live in `unity/Assets`. | Concept / placeholder |
 
 ## Run
 
-```bash
-./start-server.sh
-```
+Play (no server): open `unity/` in Unity 6000.6.8f1, load `Assets/Scenes/Game.unity`, press Play.
+
+Checks without Unity:
 
 ```bash
-./server/smoke-test.sh
+bash unity-typecheck/check.sh
+cd unity-check && dotnet run
+node server/task-race-test.js
 ```
 
-```bash
-cd unity-check && NO_PROXY=127.0.0.1,localhost dotnet run
-```
+The Nakama server is optional and only used by its own tests (`./start-server.sh`, `./server/smoke-test.sh`).
 
 ## Analytics (play data for balancing)
 
@@ -57,10 +63,11 @@ created by the Nakama module on start. Code: `server/analytics.js`.
   `http://127.0.0.1:7350` and the development key `defaulthttpkey`.
 - Raw SQL: `docker compose exec postgres psql -U postgres -d nakama -c "select event, count(*) from bob_events group by 1"`.
 
-## LINE Login (docs 28)
+## LINE Login (server reference, docs 28)
 
-The green button on the login screen signs a player in with LINE. The browser does the OAuth dance and the Nakama RPC
-`line_login` exchanges the code, because LINE requires the channel secret even with PKCE — so the secret lives in
+**The Unity client no longer offers LINE login** — the pure-UGS migration left the guest path only, and the
+`line_login` RPC is kept server-side for reference. The design: the browser does the OAuth dance and the
+Nakama RPC exchanges the code, because LINE requires the channel secret even with PKCE — so the secret lives in
 `server/.env` (git-ignored, copy `server/.env.example`) and never in the APK:
 
 ```
@@ -71,56 +78,51 @@ LINE_REDIRECT_URI=bob://line-login
 
 Then `node build-module.js && docker compose restart nakama`, and check the server sees it:
 `curl -s -X POST "http://127.0.0.1:7350/v2/rpc/line_status?http_key=defaulthttpkey&unwrap=true" -d '{}'`.
-The Android build adds the `bob://line-login` intent filter (`Editor/BobAndroidDeepLinks.cs`): an APK built before this
-change cannot be returned to by the browser. The login screen also accepts a pasted redirect URL when the browser does
-not come back by itself. Full setup and limits: `art/docs/28_LINE_Login.md`.
+The Android build still declares the `bob://line-login` intent filter (`Editor/BobAndroidDeepLinks.cs`), but no
+Unity screen consumes it after the pure-UGS migration. Full setup and limits: `art/docs/28_LINE_Login.md`.
 
 ## One rule set, three places
 
 `prototype/index.html` is the source of truth. After changing a rule there:
-1. `node server/build-module.js` and `docker compose restart nakama` (in `server/`).
-2. Mirror the change by hand in `unity/Assets/Scripts/Rules/BobRules.cs`.
-3. Run `unity-check`; any drift shows as a MISMATCH.
+1. `node server/build-module.js` (and `docker compose restart nakama` if the server is running).
+2. Mirror the change by hand in `unity/Assets/Scripts/Rules/BobRules.cs` (or `BobTaskRaceRules.cs` for Task Race).
+3. Run `cd unity-check && dotnet run` and `node server/task-race-test.js`; the Task Race table self-tests against
+   the seed values the browser/server produce.
 
 ## Unity on your Windows PC
 
-1. **Docker Desktop** (WSL 2 backend). Start it and wait for "Engine running".
-2. **Server:** in PowerShell, from this folder: `powershell -ExecutionPolicy Bypass -File .\start-server.ps1`,
-   then `powershell -ExecutionPolicy Bypass -File .\server\smoke-test.ps1`. The last call must say REFUSED.
-3. **Unity Hub** (`winget install Unity.UnityHub`), sign in, and install **Unity 6 LTS** with Android Build Support
-   (iOS needs a Mac).
-4. In Unity Hub: New project > Universal 3D (URP), name `BobClient`.
-5. Copy `unity/Assets/Scripts` into `BobClient/Assets/` (so you get `Assets/Scripts/Rules`, `Net`, `Dev`).
-6. Window > Package Manager > + > Add package from git URL:
-   `https://github.com/heroiclabs/nakama-unity.git?path=/Packages/Nakama`
-   (or import `Nakama.unitypackage` from the nakama-unity GitHub releases page). Then set
-   Edit > Project Settings > Player > Other Settings > Api Compatibility Level to **.NET Standard 2.1**.
-   If you also import the art scripts, add `"com.unity.ugui"` in Package Manager (the Unity 6.6 template lacks it).
-7. Menu **Bob > Run Smoke Test** (or add the **BobSmokeTest** component to a GameObject and press Play).
-   Pass = Console shows `match created: ...`, a server score, and `SMOKE TEST PASSED`.
-   On a phone, set the component's Host to the PC's LAN IP and allow port 7350 in Windows Firewall.
-
-`unity-check/` (needs the .NET 8 SDK: `cd unity-check; dotnet run`) runs the same match + score flow and
-275-stack client/server parity check without Unity.
+1. Install **Unity Hub** and **Unity 6000.6.8f1** with Android Build Support (iOS needs a Mac).
+2. In Unity Hub open this repository's `unity/` folder directly — do **not** create a new project or copy
+   `Assets/Scripts`. Package restore brings uGUI, TextMeshPro, AI Navigation and Unity Gaming Services.
+3. Open `Assets/Scenes/Game.unity` and press Play. No Docker, Nakama server or account is needed for the
+   offline story path. If the scene is missing after an art change, run **Bob > Build Game Scene**.
+4. Checks that run in the Editor: **Bob > Run Game Test**, **Bob > Run Story Series Check**, **Bob > Run Pause
+   Check**, **Bob > Run Countdown Check**, **Bob > Run Bot Check**, **Bob > Run E2E**.
+5. Android: **Bob > Android > Build APK** (see [Android APK](#android-apk-prototype-v1)).
+6. Without Unity (cloud sessions): `bash unity-typecheck/check.sh` and `cd unity-check && dotnet run`
+   (needs the .NET 8 SDK). These check C# only; scene builds, play-mode checks and the APK stay on the PC.
 
 ## Not done yet
 
-- Two online front-ends exist: the **Game scene's online mode** (`Game/BobGame.Online.cs`, compiled and bot-tested in Unity,
-  quick match only) and the **Co-op scene** (`Coop/`, written in the cloud, type-checked only) which also has the private room
-  screen, team switch, push / pass / table, hold-to-send vote and the split-screen test. Plan: port those features into the
-  Game scene's online mode on the PC and keep the Co-op scene as the reference (see "Needs the PC").
-- Online: abilities run on the server and in both front-ends. Reconnect after the app is closed works in the Co-op scene only
-  (`BobOnline.RejoinAsync`); the Game scene's online mode does not rejoin yet. No Quick Ping or voice chat.
+- **Online PvP is not playable.** The Unity Nakama client and the Co-op scene were removed on 16 Nov 2026;
+  `Scripts/UGS/` has auth, cloud save, leaderboard and a Relay/Lobby/Netcode scaffold, but no game screen
+  calls it. The Nakama protocol in [Multiplayer](#multiplayer) is kept as a server-side reference.
+- **Story content gaps:** emergency stains (T16) have no client implementation yet; chapters 2-6 reuse the
+  chapter-1 island skin; rule cards and Cart Rush from the GDD are not enforced. Chapter unlock levels are
+  being rebalanced against the current XP rewards.
 - Scrub and Wash abilities, obstacles other than the sofa, the shelves and the table, the other 7 scenes; Party / Community modes.
 - Balance: every number is an untested starting value. `node server/balance-sim.js` compares the hero abilities
   (results and suggested tweaks: `art/docs/13_Balance_Sim.md`); nothing has been changed from it yet.
 - Development passwords, the `defaultkey` server key and the `defaulthttpkey` HTTP key must be replaced before any deployment.
-- Analytics: no retention or archiving yet. Unity sends match_start, round_result, ability_used and match_end through `bob_log_event`;
-  online matches are also logged by the server (match_start, round_result, ability_used with `mode: mp`).
+- Analytics is server-side: `prototype/index.html?server=...` sends `bob_log_event` events. The Unity client no longer
+  calls the server, so it logs nothing; online match logging (`mode: mp`) still exists in `server/match.js` for the
+  protocol reference.
 
 ## Multiplayer
 
-The server owns a multiplayer match: phones send intents, the server checks them and broadcasts the state. Code: `server/match.js` (bundled into `modules/index.js` by `build-module.js`), client layer `unity/Assets/Scripts/Net/BobOnline.cs`.
+**Server-side reference only since the pure-UGS migration (the Unity client was removed).** The server owns a
+multiplayer match: phones send intents, the server checks them and broadcasts the state. Code: `server/match.js`
+(bundled into `modules/index.js` by `build-module.js`).
 
 - 2-4 players, auto-split into two teams (players can switch side in the lobby while the other side has room).
   One seed per match, so both teams get the same room each round; each team plays in its own copy of the room.
@@ -135,9 +137,9 @@ The server owns a multiplayer match: phones send intents, the server checks them
   bad reaction, Spray gets a private score preview (op 15, only to that player), Press stops the team's clock for 8 s.
 - Each team has its own 100 s clock (Press can stop it). When it runs out the cart goes as it is. The round ends when both teams have
   sent; best of 3, ties go to the team with more budget left.
-- **Reconnect**: a dropped player keeps their seat. `BobOnline` stores the match id on the phone until the match ends, and the Co-op
-  scene joins it again on connect (`BobOnline.RejoinAsync`).
-- Join by matchmaker (`BobOnline.FindAsync`, 2-4 players) or a private room (`bob_create_match` RPC, `BobOnline.CreateAsync` / `JoinAsync` with the match id).
+- **Reconnect**: a dropped player keeps their seat until the match ends; the server holds the seat and the client
+  would rejoin with the stored match id (no Unity client today).
+- Join by matchmaker (2-4 players) or a private room (`bob_create_match` RPC, then join with the match id).
 
 | Op | Direction | Payload |
 | --- | --- | --- |
@@ -149,50 +151,33 @@ The server owns a multiplayer match: phones send intents, the server checks them
 | 10 STATE | server → clients | phase, round, room, players[] (with `vote`, `ab` = ability used), teams[] (stack, `cx,cy` cart, `pusher`, `table`, `time`, `freeze`, `shield`) |
 | 11 POS | server → clients | `{time,tt:[t0,t1],p:[{id,x,y}],c:[{x,y}]}` team clocks, players and both carts, every tick (10 Hz) during build |
 | 12 RESULT / 13 ERROR | server → clients | per-round scores and winner / Thai refusal text for one player |
-| 15 PEEK | server → one client | `{total,pass,stats}` Spray's preview of the team's cart (`BobOnline.OnPeek` / `OnPreview`) |
+| 15 PEEK | server → one client | `{total,pass,stats}` Spray's preview of the team's cart |
 
-Room layout (world units, y up; both server and Unity): stations tool `[0.3,4.06,2.0,4.7]`, chem `[6.0,4.06,7.7,4.7]`,
+Room layout (world units, y up; server only now): stations tool `[0.3,4.06,2.0,4.7]`, chem `[6.0,4.06,7.7,4.7]`,
 energy `[0.3,0.3,2.0,0.94]`, method `[6.0,0.3,7.7,0.94]`; table `[3.5,4.2,4.5,4.7]`; sofa `[3.0,0.85,5.0,1.15]`; cart 0.9 × 0.64 starting at (4.0, 2.53).
 
 Tests: start the server, then `cd server && node mp-test.js 4` (bots walk, pick, place, submit) and `node coop-test.js`
 (4 bots: solid shelves, pass, table, push, place on the moved cart, a dropped player's parts, the four abilities, the team clock, reconnect; 26 checks). Both must print PASS.
-GitHub Actions (`.github/workflows/server-tests.yml`) runs all of these, plus the Unity type-check, on every push and PR.
-`cd unity-check && dotnet run` runs the same co-op moves through the C# client.
+GitHub Actions (`.github/workflows/server-tests.yml`) runs all of these, plus the offline Task Race/LINE checks
+and the Unity type-check gate, on every push and PR. `cd unity-check && dotnet run` checks the pure C# rules
+(offline rooms, Task Race table) without Unity.
 
 Note for server code: Nakama keeps match state as Go values between ticks, so `array.push` / `splice` on state can be
 lost. Always assign a new array (`t.table = t.table.concat([x])`, `without(a, i)`).
 
-**In the Unity scene** (`Scripts/Game/BobGame.Online.cs`): title button **ออนไลน์ 2-4 คน** → matchmaker → lobby (both teams, heroes, Ready) → rounds. The scene copies the server state into the normal game fields, so the HUD, cart card and result screens are the same as solo. Team-mates walk in your room with what they carry; the other team plays the same room in its own copy, and its layer count and submit show in the top bar. The server runs each team's clock (pause does not stop it) and ends the round when both teams submit.
-
 More tests:
 - Server only: `cd server && node mp-test.js 4` (bots walk, pick, place, use their ability, submit; must print PASS).
-- To test a branch without touching the main server: `docker compose -p bobtest -f docker-compose.yml -f docker-compose.test.yml up -d` (Nakama on 7360), then `BOB_HOST=127.0.0.1:7360 node mp-test.js 4`; the Editor follows `BOB_PORT=7360`.
-- Unity + bots: `cd server && node mp-host.js 2 ../unity/Logs/bob-mp-match.txt`, then menu **Bob > Run Online Test** (or `-executeMethod Bob.EditorTools.BobGameScene.RunOnlineTest`). The Unity bot joins with one bot team-mate against one bot, must print GAME TEST PASSED; screenshots `unity/Logs/bob-game-online-*.png`.
+- To test a branch without touching the main server: `docker compose -p bobtest -f docker-compose.yml -f docker-compose.test.yml up -d` (Nakama on 7360), then `BOB_HOST=127.0.0.1:7360 node mp-test.js 4`.
 
-## Co-op scene (Unity)
+## Co-op scene (removed 16 Nov 2026)
 
-`Assets/Scripts/Coop/` (game) and `Assets/Scripts/UI/` (UI kit), built into `Assets/Scenes/Coop.unity` by **Bob > Build Coop Scene**.
-Written in a cloud session: type-checked with `dotnet build unity-typecheck` (0 errors) but **not yet compiled or played in Unity**.
-
-1. Menu: quick match (2-4 players), create a private room, or join with a room code; server IP field (shared with the Game scene).
-2. Lobby (UX S14): two team columns with hero and ✓ พร้อม, room code + copy, hero picker, **ย้ายทีม**, **พร้อม**. Starts when everyone is ready and both teams have a player.
-3. Match: walk with WASD, the left-side joystick, or a tap on the floor. Near a station the right column lists its parts (tap to pick).
-   Tap a part in the hand to put it where it fits from where you stand: **cart** (place) → **table** (park) → **team-mate within reach** (pass).
-   Near the cart: lift the top layer, **จับเข็นรถ / ปล่อยรถเข็น**. Near the table: take parts back. Send = **hold 0.6 s** (a team vote).
-   The order ticket shows the 4 live stats vs the spec; the cart card lists the shared stack.
-   The hero's ability button (yellow, once a round) sits in the right column; Sweep's shows one button per pair of layers at the cart.
-   The clock is the team's own (it turns green while Press holds it). If the app closes mid-match, connecting again rejoins the same seat.
-4. Test (UX S25): the screen splits, left = our room, right = theirs, each with its final cart, score, pass ✓/✗ and the dirt wiped as far as the score.
-5. Result after 3 rounds; Esc / Android back leaves from the lobby or result.
-Two players on one PC: run one copy in the Editor and one as a Windows build (or Unity's Multiplayer Play Mode), both pointing at 127.0.0.1.
-
-Sounds: 6 new co-op sounds (`pass_part`, `table_put`, `cart_grab`, `lobby_join`, `ready_on`, `vote_tick`) made by
-`python3 art/tools/make_sfx.py`; the full list, CC0 sources to replace placeholders and import settings are in
-`art/docs/12_Sound_Manifest.md`.
+`Assets/Scripts/Coop/`, `Assets/Scripts/Net/` and `Assets/Scenes/Coop.unity` were deleted with the
+Nakama → pure-UGS migration. The design and UX notes stay in `art/docs/` and the Nakama protocol above;
+`Scripts/UGS/` holds the Relay/Lobby scaffold that would carry this mode next.
 
 ## Play the Unity scene
 
-1. Start the server (above), open `unity/` in Unity 6000.6.8f1 and open `Assets/Scenes/Game.unity`.
+1. Open `unity/` in Unity 6000.6.8f1 and open `Assets/Scenes/Game.unity` — no server needed.
    If the scene is missing or the art changed, run **Bob > Build Game Scene** (rebuilds `Assets/Art/BobArtLibrary.asset`).
 2. Press Play. The main menu shows the hero; pick one of the four portraits, then **เล่น**. Each round opens with the
    room brief (enemies, spec, budget), a 3-2-1 countdown, then the round. Landscape mobile layout:
@@ -203,37 +188,31 @@ Sounds: 6 new co-op sounds (`pass_part`, `table_put`, `cart_grab`, `lobby_join`,
    Walk with the joystick, a tap on the floor, or WASD / arrows. Near a station its shelf pops up: tap a part to pick it.
    Near the cart, tap or drag a hand part onto the cart (or press 1-3); drag the top layer back to the hand (or Q) to
    lift it. F uses the ability, Enter submits, Esc / Android back pauses. Settings: sound, music, server address.
-3. The main menu shows `● ออนไลน์` when the room and our score come from Nakama. Without a server it says `○ ออฟไลน์`
-   and scores locally with the same rules. On a phone, enter the PC's LAN IP in Settings (http is allowed in the player
-   settings). Coins, hero, sound and server address are saved on the device.
+3. Coins, hero choice, sound settings and the chapter pick are saved on the device (`PlayerPrefs`). The game
+   runs fully offline; `Scripts/UGS/` is not wired into the menus yet.
 4. **Bob > Run Game Test** lets a bot play a full match in Play mode (Console: `GAME TEST PASSED`, screenshots in
    `unity/Logs/bob-game-*.png`). Command line, with the Editor closed on this project:
    `Unity.exe -projectPath unity -executeMethod Bob.EditorTools.BobGameScene.RunTest -logFile game-test.log`
 
-Known gaps: Thai text uses the OS font (Leelawadee UI on Windows, Noto Sans Thai on Android) through legacy uGUI Text,
-so tone marks can sit slightly off; shipping Mitr / IBM Plex Sans Thai as a TextMeshPro asset fixes that. The art is
-the 2D placeholder set; the 3D toon pipeline in `art/docs/03_Unity_Spec.md` replaces it later. Touch controls (joystick,
-drag) are written for phones but so far tested only in the Editor; the bot test does not cover drag. The split-screen
-test view, cart pushing, passing and the parking table (GDD 9, 20) live in the online co-op scene (above), not in this
-single-player scene.
+Known gaps: all UI text is TextMeshPro with Mitr / IBM Plex Sans Thai SDF fonts; the art is still the placeholder
+set in places; touch controls (joystick, drag) are written for phones but mostly exercised in the Editor. Emergency
+stains (T16) and the per-chapter island skins are not built yet.
 
-Solo scene extras (`Game/BobGame.Extras.cs`): walk into the cart to push it, an item rest table on the left (tap a hand slot near it to stash, tap the table or press T to take back) and a 4.5 s split-screen test view before the score cards (tap to skip). The online versions of these live in the co-op scene.
+Solo scene extras (`Game/BobGame.Extras.cs`): walk into the cart to push it, an item rest table on the left (tap a hand slot near it to stash, tap the table or press T to take back) and a 4.5 s split-screen test view before the score cards (tap to skip).
 
-## Needs the PC (one sitting)
+## Needs the owner machine
 
-Everything above was done in the cloud; these steps need Unity, Docker Desktop or a phone. Do them in order:
+The cloud checks (`unity-typecheck/check.sh`, `unity-check`, the Node server tests) cover C# and protocol only.
+These steps need Unity or a phone:
 
-1. `git pull` this branch, start Docker Desktop, then `start-server.ps1` (`server/modules/index.js` is already rebuilt).
-2. Open `unity/` in Unity 6000.6.8f1 and let it import. Done on 2026-11-12: `Scripts/Coop/` and `Scripts/UI/` compile with no errors in Unity 6, and the `.meta` files, `Coop.unity`, `BobAudio.prefab` and Build Settings are committed.
-3. **Bob > Build Coop Scene**. Automatic check: start the other players with `cd server && node mp-host.js 2 ../unity/Logs/bob-mp-match.txt`, then **Bob > Run Coop Test** (or `-executeMethod Bob.EditorTools.BobCoopScene.RunTest`, no `-batchmode`); screenshots go to `unity/Logs/bob-coop-*.png`. By hand: play two copies (Editor + a Windows build, or Multiplayer Play Mode): create a room,
-   join with the code, ready up, and try push / pass / table / hold-to-send, each hero's ability, closing and reopening one copy
-   mid-round (it must rejoin), and the split-screen test.
-4. ~~Commit what Unity made~~ (done).
-   **UX review fixes (2026-11-13):** menu fits the screen; hand cards show the icon beside the name; cart card lists each layer with its icon and a up/down marker where it reacts; result screen lists every round's score; pause button (top right) opens a pause card and a leave confirm (Esc / Android Back too; the server clock keeps running); lobby hero buttons have portraits; text in the match HUD is >= 36u, player names above heads are larger. Still missing from the spec: team-mate item tray, Quick Ping, TextMeshPro + Mitr / IBM Plex Sans Thai fonts, left-hand mode.
-   **Layout (fixed 2026-11-12):** in a match the room camera now sits between the side columns (order ticket + team cart card on the left, action buttons + send on the right), under the top bar and above the hand row (`BobCoopGame.FitRoomCamera`); menus, lobby and result get a solid background; a backdrop camera clears the screen so nothing stale shows; the split-screen test keeps the rooms between the score boxes and the result line. To check another screen size: `BOB_VIEW=2400x1080` before starting Unity, then **Bob > Run Coop Test**.
-5. TextMeshPro: import TMP Essentials and make Mitr / IBM Plex Sans Thai font assets (UX spec 2.2); then switch `BobUi.Label` to TMP.
-6. Optional: swap placeholder sounds for CC0 ones (`art/docs/12_Sound_Manifest.md`), art for the parking table (asset C07).
-7. Android: build an APK, install it, set the server IP to the PC's LAN IP, play one online match phone vs PC.
+1. Open `unity/` in Unity 6000.6.8f1 and let the packages import.
+2. Run the Editor checks: **Bob > Run Game Test**, **Run Story Series Check**, **Run Pause Check**, **Run Countdown
+   Check**, **Run Bot Check**, **Run E2E**. Rebuild the Task Race scenes only after touching a builder/spot (queue in
+   `COORDINATION.md` §5).
+3. Build the APK (**Bob > Android > Build APK**) and distribute through Firebase; the `bob-preprod` tester group still
+   has to be created in the console.
+4. Device pass: fresh install, airplane mode (offline), guest login, chapter 1 → chapter card, pause / Android back,
+   audio, 20:9 and 16:9 safe areas.
 
 ## Leonardo art (12 Nov 2026)
 Background-removed cutouts live in `bob-art/cutouts*` (project files, see `docs/12_RAW_Cutouts.md`). Imported so far: 8 parts, 10 items and the cart (`unity/Assets/Art/Sprites`). Needs the Unity Editor licence (Hub sign-in) to reimport and run `Bob > Run Game Test`.
@@ -247,17 +226,18 @@ Build: `Unity.exe -batchmode -quit -projectPath unity -executeMethod Bob.EditorT
 Install: copy the APK to the phone and open it (allow "install unknown apps"), or `adb install -r BOB-prototype-v1.apk`.
 
 **Firebase App Distribution (project `bob-preprod`)**: `bash distribute-android.sh` bumps `AndroidBundleVersionCode`, builds and uploads in one go (`FIREBASE_GROUPS=<group> ...` releases to testers straight away, `--no-bump` rebuilds at the current code). One-time: `npm i -g firebase-tools && firebase login`, and create the tester group in the Firebase console. The packaged app is `1:438462393037:android:76c94b4645660e52e69784` for package `com.bob.battleofthebrooms`; `unity/Assets/google-services.json` holds the same client (keep it out of public forks, and restrict the key in Google Cloud Console to this package name + the release keystore's SHA-1). Firebase rejects a repeated version code, which is why the bump is part of the script and not a manual step. A build was verified and uploaded on 16 Nov 2026 (`versionCode 2`, 89.1 MiB, debug-signed, arm64; release `0.1.0 (2)`, docs 24 §15.19). If the CLI answers 401, run `firebase -i login --reauth` — the `-i` flag is required when stdin is not a TTY — then `bash distribute-android.sh --upload-only` ships the existing APK without rebuilding. Distributing to a tester group only works once that group exists in the console (`bob-preprod` had none on 16 Nov, so the group step returned 404 while the release itself uploaded fine).
-Server: the game plays offline without a server. For online, start Docker + `start-server.ps1` on the PC, put the phone on the same Wi-Fi, allow port 7350 in Windows Firewall, then in the game open Settings and enter the PC's LAN IP (`ipconfig`, e.g. 192.168.x.x).
+Server: the game plays fully offline and has no server address UI. The Nakama/Co-op multiplayer path was removed from
+the client on 16 Nov 2026; the server remains a reference for a future online mode.
 
 Each round now sits on a GDD-themed room picture (round 1 rental room, round 2 condo, round 3 coffee shop; kitchen is ready for round 4). The pause button has a 144u touch area (`BobHitArea`).
 
-The solo scene is full-screen landscape: the camera fills the safe area, the themed room picture fills the screen and the HUD (order ticket, cart card, hand, buttons) floats over it (`FitCamera` in `BobGame.World.cs`). The Coop scene still uses its own split layout.
+The solo scene is full-screen landscape: the camera fills the safe area, the themed room picture fills the screen and the HUD (order ticket, cart card, hand, buttons) floats over it (`FitCamera` in `BobGame.World.cs`).
 
 UX spec 5A in the solo scene (`BobGame.Extras.cs`): a contextual main button (วาง / ยก / พักของ / หยิบคืน / มือเต็ม) at bottom right with a bobbing star over its target, hold-to-send and the ability button beside it, team ring + hero name under the feet, the cart card shows only when standing at the cart, a numbered spawn ring during the briefing and the countdown, and enemies appear 2.5 s after "ลุย!". Not done yet: the 55-degree camera and 3/4 art (F21-F24 are not drawn), spawn rotation for 2-4 players (online), passing to a team-mate and the Quick Ping wheel.
 
 Modular scripts (`unity/Assets/Scripts/Modular/`: IInteractable, StationProp, InteractionDetector, PlayerController, TaskManager, MobileHUDController) now drive movement, what-is-near, the round clock and the HUD in the solo scene. Inspector setup guide: `art/docs/14_Modular_HUD_Setup.md`. The HUD also has the cart slot bar (5 icon slots, top right).
 
-All UI text is TextMeshPro now (`BobUi.Label`, fonts `Assets/Resources/Fonts/TMP`); set up with menu **Bob > TextMeshPro** (see `art/docs/14_Modular_HUD_Setup.md`). The server-address input keeps a legacy `Text` (InputField needs it).
+All UI text is TextMeshPro now (`BobUi.Label`, fonts `Assets/Resources/Fonts/TMP`); set up with menu **Bob > TextMeshPro** (see `art/docs/14_Modular_HUD_Setup.md`).
 
 ## 2.5D play scene (branch feature/scene-3d)
 The solo room is now a real 3D room (wood floor from the Leonardo tile, walls, the themed room picture as a back-wall mural, sun light) seen by a perspective camera pitched 55 degrees with a gentle follow; heroes, enemies, props and FX are the Leonardo sprites standing as camera-facing billboards with soft blob shadows. Walking leans and bounces the hero and leaves dust puffs. Game logic is unchanged (room coordinates x / y = depth); switch back with `World3D = false` in `BobGame.World.cs`.
