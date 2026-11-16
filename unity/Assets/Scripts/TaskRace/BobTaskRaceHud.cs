@@ -990,9 +990,9 @@ namespace Bob.TaskRace
         /// </summary>
         void BuildChapterCard(RectTransform p, MatchResult r, StorySeries s)
         {
-            // 80 taller than the match card: the next-chapter line needs its own band above the buttons, or it
-            // lands inside the reward panel.
-            p.sizeDelta = new Vector2(1080f, 840f);
+            // 60 taller than before (900): a passed chapter closes with its own line of story, and the last chapter
+            // closes the whole story in three lines (docs 29 section 5), which needs its own band above the buttons.
+            p.sizeDelta = new Vector2(1080f, 900f);
 
             var chapter = BobChapters.Saved;
             var next = BobChapters.Next(chapter);
@@ -1026,10 +1026,36 @@ namespace Bob.TaskRace
 
             RewardBlock(p, r, -400f);
 
-            var note = BobUi.Label(p, NextNote(next, nextOpen, level), 24,
-                next == null || nextOpen ? T.inkMuted : T.danger, TextAnchor.MiddleCenter);
-            BobUi.Pin(note.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0f, -600f), new Vector2(1020f, 36f));
+            // Docs 29 section 5: a passed chapter says what it left behind. The last chapter replaces the next-chapter
+            // line with the three closing lines of the story, so the ladder ends on an ending and not on a dead note.
+            bool finale = next == null && won;
+            if (won && !string.IsNullOrEmpty(chapter.ClearedLine))
+            {
+                var cleared = BobUi.Label(p, chapter.ClearedLine, 24, T.inkMuted, TextAnchor.MiddleCenter);
+                cleared.enableAutoSizing = true; cleared.fontSizeMin = 20; cleared.fontSizeMax = 26;
+                BobUi.Pin(cleared.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                    new Vector2(0f, -596f), new Vector2(1020f, 52f));
+            }
+
+            if (finale)
+            {
+                var endTitle = BobUi.Label(p, BobChapters.FinaleTitle, 30, T.success, TextAnchor.MiddleCenter, FontStyle.Bold);
+                BobUi.Pin(endTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                    new Vector2(0f, -596f), new Vector2(1020f, 40f));
+                var endLine = BobUi.Label(p, BobChapters.FinaleLine, 26, T.ink, TextAnchor.MiddleCenter);
+                BobUi.Pin(endLine.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                    new Vector2(0f, -642f), new Vector2(1020f, 34f));
+                var endNote = BobUi.Label(p, BobChapters.FinaleNote, 21, T.inkMuted, TextAnchor.MiddleCenter);
+                BobUi.Pin(endNote.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                    new Vector2(0f, -684f), new Vector2(1020f, 28f));
+            }
+            else
+            {
+                var note = BobUi.Label(p, NextNote(next, nextOpen, level), 24,
+                    next == null || nextOpen ? T.inkMuted : T.danger, TextAnchor.MiddleCenter);
+                BobUi.Pin(note.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                    new Vector2(0f, -662f), new Vector2(1020f, 36f));
+            }
 
             var home = BobUi.Button(p, "กลับเมนู", T.surfaceCream, BackToLobby, 36, T.ink);
             BobUi.Pin((RectTransform)home.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
@@ -1039,7 +1065,7 @@ namespace Bob.TaskRace
             BobUi.Pin((RectTransform)again.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
                 new Vector2(next != null ? 0f : 170f, 36f), new Vector2(next != null ? 300f : 340f, 132f));
 
-            if (next == null) return; // chapter 6: the end-of-story line already sits above the two buttons
+            if (next == null) return; // chapter 6: the closing lines of docs 29 already sit above the two buttons
             var onward = BobUi.Button(p, "บทถัดไป", nextOpen ? T.primary : T.surfaceCream,
                 nextOpen ? (UnityAction)(() => GoToNextChapter(next)) : null, 36, nextOpen ? T.ink : T.inkMuted);
             BobUi.Pin((RectTransform)onward.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),

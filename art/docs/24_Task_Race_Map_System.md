@@ -1034,3 +1034,14 @@ build แรกหลังงาน pure UGS + SFX — สั่งด้วย
 - **การ์ดผล:** `TaskRace/BobTaskRaceHud.cs` — ออนไลน์ซ่อน `เล่นอีกครั้ง` และขึ้น `ออนไลน์ · กลับเมนูแล้วสร้างห้องใหม่เพื่อเล่นอีกครั้ง`; `BackToLobby` เรียก `room.LeaveAsync()` ก่อนกลับ · ไม่มีการส่งผลจบข้ามเครื่อง แต่ละเครื่องจบเมื่อรายการฝั่งตัวเองครบ/หมดเวลา
 - **ตรวจ:** `bash unity-typecheck/check.sh` = `typecheck ok: 40 known Unity-6 gap kind(s), no new errors` (`UGS/**` ถูกตัดจาก csproj อยู่แล้ว; `BobOnlineRoom` มี shim ใน `unity-typecheck/Shims.cs`) และ `bob-check` = `BOB-CHECK PASSED`; ยังไม่ได้เปิด Unity ถ่ายหน้าจอ S15/สองเครื่อง
 - **ยังไม่ทำ:** สองทีมจริง/คะแนนรวมบนเซิร์ฟเวอร์ (ตอนนี้ co-op บนเกาะ host แข่งคู่แข่งจำลอง), แอนิเมชัน/สกิลของฮีโร่คนอื่น, reconnect / host migration / late join, ผลแมตช์ข้ามเครื่อง, และ S16 เลือกตัวละครในแมตช์ (ออนไลน์ใช้ฮีโร่จาก S14)
+
+### 15.24 ถ้อยคำเนื้อเรื่องบนการ์ดด่านและการ์ดจบบท (16 พ.ย. 2026)
+
+ที่มา: `art/docs/29_Story_Premise.md` ร่างเนื้อเรื่อง 6 บทไว้แล้ว แต่ยังไม่ลงเกม — ข้อ 7 ของไฟล์นั้นระบุงานเล็กสามข้อ (บรรทัดเรื่องใต้ชื่อบท / บรรทัดจบบท / บรรทัดจบเกม) รอบนี้ลงทั้งสามข้อเป็นข้อความล้วน ไม่แตะกติกา ไม่แตะฉาก
+
+- **`Rules/ChapterDefinition.cs`:** เพิ่ม `storyLine` + `clearedLine` (มี getter `StoryLine`/`ClearedLine`, คืน `""` เมื่อยังไม่เติม) — asset 6 ไฟล์ใน `Resources/Chapters/` เติมตามข้อ 5 ของ docs 29 (มือ, ไม่มี builder)
+- **S13 (`Menus.cs` `ChapterSelect`):** `storyLine` เป็นบรรทัดที่ 2 ใต้ชื่อบท (22pt, `enableAutoSizing` 18–22, สีจางเมื่อบทล็อก) · การ์ดสูง 330 → **366** และแถว place/แท็ก/การ์ดกติกาขยับลงตาม (366 ยังเว้นจาก TopBar 19u และเส้นโน้ตล่างจอ)
+- **การ์ดจบบท (`BobTaskRaceHud.BuildChapterCard`):** การ์ด 840 → **900**; ถ้าผ่านบทจะแสดง `clearedLine` ของบทนั้นที่ band ใหม่เหนือบรรทัดบทถัดไป (ไม่แสดงเมื่อแพ้/เสมอ) · บท 6 (ไม่มีบทถัดไป) ใช้ band นั้นกับสามบรรทัดจบเรื่อง `BobChapters.FinaleTitle` / `FinaleLine` / `FinaleNote` แทน "จบเนื้อเรื่องหลักแล้ว"
+- **กันการ์ดว่าง:** `BobChapters.Validate()` เพิ่มข้อผิดพลาดเมื่อบทไหนไม่มี `storyLine`/`clearedLine` และ `Bob/Chapters/Check Ladder` พิมพ์ทั้งสองบรรทัดใน log
+- **ตรวจ:** `bash unity-typecheck/check.sh` = `typecheck ok: 40 known Unity-6 gap kind(s), no new errors`, `bob-check` = `BOB-CHECK PASSED`, `unity-check` = `UNITY-CHECK PASSED`; ยังไม่ได้เปิด Unity ถ่าย S13/การ์ดจบบท/การ์ดจบเกม
+- **ยังค้าง:** คำถาม 7 ข้อใน docs 29 §6 (ชื่อย่าน, คุณนภ, ป้าแหวว, ราชาคราบพูด, ใบ้ซีซัน 2, ความยาวข้อความ, คำขวัญ "งานสะอาดต้องสามยก") — ถ้อยคำที่ลงคือร่าง แก้ได้ที่ asset; บทพูด 2–3 บรรทัดแบบการ์ดบทสนทนายังไม่ทำ (ต้องหน้าจอใหม่)

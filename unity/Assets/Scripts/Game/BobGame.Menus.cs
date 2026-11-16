@@ -389,7 +389,9 @@ namespace Bob.Game
             TopBar(screenRoot, "เลือกด่าน", true);
 
             var all = BobChapters.All;
-            float gap = 20f, cw = CardW(3, gap, 560), ch = 330f;
+            // 366 tall: the story line of docs 29 section 5 sits under the title, so the card carries one more row
+            // (the grid still clears the top bar by 19 u and the note under it).
+            float gap = 20f, cw = CardW(3, gap, 560), ch = 366f;
             for (int i = 0; i < all.Count; i++)
             {
                 var chapter = all[i];
@@ -422,18 +424,25 @@ namespace Bob.Game
                 BobUi.Stretch(bn.rectTransform);
 
                 BobUi.Pin(BobUi.Label(card.transform, chapter.Title, 34, unlocked ? BobUi.Ink : BobUi.Muted, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform,
-                    new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -164), new Vector2(cw - 24, 44));
-                BobUi.Pin(BobUi.Label(card.transform, $"{chapter.Place} · ดีสุด {Bob.TaskRace.BobTaskRaceProfile.BestPoints}", 20, BobUi.Muted, TextAnchor.MiddleCenter).rectTransform,
-                    new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -202), new Vector2(cw - 24, 32));
+                    new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -160), new Vector2(cw - 24, 38));
+                // Docs 29 section 5: the chapter's story in one line. Empty assets simply skip the row.
+                if (!string.IsNullOrEmpty(chapter.StoryLine))
+                {
+                    var line = BobUi.Label(card.transform, chapter.StoryLine, 22, unlocked ? BobUi.Ink : BobUi.Muted, TextAnchor.MiddleCenter);
+                    line.enableAutoSizing = true; line.fontSizeMin = 18; line.fontSizeMax = 22;
+                    BobUi.Pin(line.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -200), new Vector2(cw - 32, 32));
+                }
+                BobUi.Pin(BobUi.Label(card.transform, $"{chapter.Place} · ดีสุด {Bob.TaskRace.BobTaskRaceProfile.BestPoints}", 19, BobUi.Muted, TextAnchor.MiddleCenter).rectTransform,
+                    new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -234), new Vector2(cw - 24, 30));
                 bool levelOk = Level >= chapter.UnlockLevel;
                 BobUi.Pin(BobUi.Label(card.transform,
                         unlocked ? $"{chapter.Tag} · {stageCfg.Tag}"
                         : levelOk ? "ล็อก · ดาวบทก่อนไม่ครบ"
                         : $"ล็อก LV {chapter.UnlockLevel}",
-                    22, unlocked ? BobUi.Teal : BobUi.Bad, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform,
-                    new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -236), new Vector2(cw - 24, 32));
+                    21, unlocked ? BobUi.Teal : BobUi.Bad, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform,
+                    new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -266), new Vector2(cw - 24, 30));
                 BobUi.Pin(BobUi.Label(card.transform, string.Join(" · ", chapter.RuleCards), 18, BobUi.Muted, TextAnchor.MiddleCenter).rectTransform,
-                    new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -270), new Vector2(cw - 24, 46));
+                    new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -298), new Vector2(cw - 24, 44));
 
                 if (isSel) BobUi.Pin(BobUi.Img(card.transform, "icon_check", 42, BobUi.Good).rectTransform, Vector2.one, Vector2.one, new Vector2(-16, -16), new Vector2(42, 42));
                 if (unlocked) continue;

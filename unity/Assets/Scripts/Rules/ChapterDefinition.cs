@@ -27,6 +27,10 @@ namespace Bob.Rules
         [Tooltip("Art id from the art library (art/docs/23); the lobby shows it behind Home and on the S13 card.")]
         [SerializeField] string backdrop = "lobby_rental_room";
         [TextArea(2, 4)] [SerializeField] string blurb = "";
+        [Tooltip("The story in one line under the chapter title on the S13 card (docs 29 section 5).")]
+        [TextArea(1, 2)] [SerializeField] string storyLine = "";
+        [Tooltip("The line the chapter card closes with once the chapter is passed (docs 29 section 5).")]
+        [TextArea(1, 2)] [SerializeField] string clearedLine = "";
         [Tooltip("Rule cards of the GDD, listed in S13. Enforcing them is P2 of docs 24 section 15.3, not this asset.")]
         [SerializeField] string[] ruleCards = new string[0];
 
@@ -38,6 +42,10 @@ namespace Bob.Rules
         public float RoundTime => Mathf.Max(30f, roundTime);
         public string Backdrop => string.IsNullOrEmpty(backdrop) ? "lobby_rental_room" : backdrop;
         public string Blurb => blurb ?? "";
+        /// <summary>One story line for the S13 card (docs 29); empty when the asset has not been filled yet.</summary>
+        public string StoryLine => storyLine ?? "";
+        /// <summary>The closing line of the chapter card; empty when the asset has not been filled yet.</summary>
+        public string ClearedLine => clearedLine ?? "";
         public IReadOnlyList<string> RuleCards => ruleCards ?? System.Array.Empty<string>();
 
         /// <summary>Best-score band of this chapter: 1 = chapters 1-2, 2 = 3-4, 3 = 5-6 (the 4.6 bands).</summary>

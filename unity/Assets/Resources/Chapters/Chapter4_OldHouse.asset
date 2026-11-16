@@ -20,6 +20,8 @@ MonoBehaviour:
   roundTime: 120
   backdrop: lobby_kitchen
   blurb: "3 เงื่อนไข คราบซ้อนหลายชนิด และต้องถนอมของเดิม"
+  storyLine: "บางทีคราบก็เก็บความจำไว้ข้างใต้"
+  clearedLine: "รูปถ่ายวันเปิดตลาดถูกติดไว้ที่ HQ"
   ruleCards:
   - "3 เงื่อนไข"
   - "คราบซ้อนหลายชนิด"

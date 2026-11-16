@@ -22,6 +22,10 @@ namespace Bob.Rules
         public const int StarsToOpen = 2;
         /// <summary>Key of "this chapter was closed at least once": the first-clear XP bonus is paid once.</summary>
         public const string ClearedPrefix = "bob.story.cleared.";
+        /// <summary>End-of-story card, shown once chapter 6 is passed (docs 29 section 5).</summary>
+        public const string FinaleTitle = "ตลาดท่าศาลาเปิดแล้ว";
+        public const string FinaleLine = "ย่านหนึ่งจะไม่ตาย ตราบใดที่ยังมีคนกวาดมัน";
+        public const string FinaleNote = "สไลม์จิ๋วมงกุฎเอียงกำลังนอนอยู่ในโหลที่ HQ";
         const string ResourcePath = "Chapters";
 
         static ChapterDefinition[] all;
@@ -166,6 +170,8 @@ namespace Bob.Rules
                 if (i > 0 && all[i].UnlockLevel < all[i - 1].UnlockLevel) problems.Add($"chapter {all[i].Order} unlocks before chapter {all[i - 1].Order}");
                 if (all[i].UnlockLevel > MaxLevel) problems.Add($"chapter {all[i].Order} unlocks at LV {all[i].UnlockLevel}, above the LV {MaxLevel} ladder");
                 if (all[i].RoundTime < 30f) problems.Add($"chapter {all[i].Order} round time {all[i].RoundTime:0} s is below the 30 s floor");
+                if (string.IsNullOrEmpty(all[i].StoryLine)) problems.Add($"chapter {all[i].Order} has no story line (docs 29 section 5)");
+                if (string.IsNullOrEmpty(all[i].ClearedLine)) problems.Add($"chapter {all[i].Order} has no cleared line (docs 29 section 5)");
             }
             if (Count > 0 && all[0].Order != 1) problems.Add("the ladder does not start at chapter 1");
             return problems;

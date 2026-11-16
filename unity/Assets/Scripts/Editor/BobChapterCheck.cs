@@ -16,7 +16,7 @@ namespace Bob.EditorTools
             var all = BobChapters.All;
             foreach (var c in all)
                 Debug.Log($"[Chapters] {c.Order}. {c.Title} · {c.Place} · {c.Tag} · {c.RoundTime:0} s · band {c.Band} · " +
-                          $"{c.Backdrop} · cards: {string.Join(" / ", c.RuleCards)}");
+                          $"{c.Backdrop} · cards: {string.Join(" / ", c.RuleCards)} · story: {c.StoryLine} · cleared: {c.ClearedLine}");
 
             var problems = BobChapters.Validate();
             if (problems.Count == 0) { Debug.Log($"[Chapters] {all.Count} chapters, ladder ok (chapter 1 at level 1)."); return; }

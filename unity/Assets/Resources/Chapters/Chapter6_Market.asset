@@ -20,6 +20,8 @@ MonoBehaviour:
   roundTime: 120
   backdrop: lobby_condo
   blurb: "การ์ดกติกาพิเศษ รวมทุกกลไก และโหมด Community"
+  storyLine: "ตลาดไม่ได้ตาย มันแค่รอคนมากวาด"
+  clearedLine: "ตลาดท่าศาลาเปิดอีกครั้ง · ป้ายถูกขูดจนอ่านออก"
   ruleCards:
   - "การ์ดกติกาพิเศษ"
   - "รวมทุกกลไก"
