@@ -61,6 +61,22 @@ namespace Bob.TaskRace
         public string JobName => (job == Job.Walk ? pending : job) == Job.None
             ? "idle" : $"{(job == Job.Walk ? pending : job)} {(target != null ? target.SpotId : "-")}";
 
+        /// <summary>The four things a team-mate can be seen doing, for the HUD mate tray (docs 11 HUD-MateTray).</summary>
+        public enum MateState { Idle, Walking, Working, Sabotaging, Carrying }
+
+        /// <summary>Read-only view of the current job: the tray says "walking to S3" instead of guessing.</summary>
+        public MateState State => job switch
+        {
+            Job.Walk => MateState.Walking,
+            Job.Work => MateState.Working,
+            Job.Sabotage => MateState.Sabotaging,
+            Job.Courier => MateState.Carrying,
+            _ => MateState.Idle,
+        };
+
+        /// <summary>The station this mate is walking to or working on; null while idle, raiding blind or couriering.</summary>
+        public TaskSpot Spot => target;
+
         void Start()
         {
             manager = TaskRaceModeManager.Instance;

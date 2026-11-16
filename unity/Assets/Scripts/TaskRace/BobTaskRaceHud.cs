@@ -120,6 +120,18 @@ namespace Bob.TaskRace
         Vector2 pingOrigin;
         float pingBubbleUntil;
 
+        // docs 11 HUD-MateTray: one chip per offline team-mate on the free right column, saying what that mate is doing
+        // ("walking to S3", "cleaning", "carrying a chair"). Tapping a chip calls the mates to the job beside the
+        // player. An online room draws the real bodies instead, so the tray is offline-only.
+        const float MateChipW = 300f, MateChipH = 92f, MateChipGap = 8f, MateTrayTop = 500f;
+        RectTransform mateTray;
+        TMP_Text mateHint;
+        readonly List<RectTransform> mateChips = new List<RectTransform>();
+        readonly List<TMP_Text> mateLines = new List<TMP_Text>();
+        readonly List<TaskRaceBotController> mateOrder = new List<TaskRaceBotController>();
+        TaskRaceBotController[] mateScan;
+        float mateScanAt;
+
         int builtVersion = -1;
         float shownPercent = -1f;
         float toastUntil;
@@ -184,6 +196,7 @@ namespace Bob.TaskRace
             BuildMinigameCard();
             BuildToast();
             BuildPing();
+            BuildMateTray();
             BuildEmergency();
             BuildDebugBar();
             RenderRows();
@@ -263,6 +276,7 @@ namespace Bob.TaskRace
             RenderMain();
             RenderEmergency();
             RenderPing();
+            RenderMateTray();
             RenderCard();
             RenderPause();
             if (manager != null)
@@ -326,6 +340,8 @@ namespace Bob.TaskRace
             pingButtonImg = null; pingHubLabel = pingBubbleLabel = null; pingBubbleGroup = null;
             pingDiscs.Clear(); pingDiscLabels.Clear(); pingHero = null;
             pingWheelOpen = pingHolding = false; pingHover = -1; pingBubbleUntil = 0f;
+            mateTray = null; mateHint = null; mateScan = null; mateScanAt = 0f;
+            mateChips.Clear(); mateLines.Clear(); mateOrder.Clear();
         }
 
         void BuildTouch(Camera cam)
@@ -1806,6 +1822,150 @@ namespace Bob.TaskRace
             return pingWheelOpen;
         }
         public void DebugClosePing() => ClosePingWheel();
+
+        // ---------------------------------------------------------------- mate tray (docs 11 HUD-MateTray)
+
+        /// <summary>The right column between the top bar and the ping button is empty: the tray lives there.</summary>
+        void BuildMateTray()
+        {
+            mateTray = BobUi.Rect("MateTray", page);
+            BobUi.Pin(mateTray, new Vector2(1f, 1f), new Vector2(1f, 1f),
+                new Vector2(-cardInset.x, -MateTrayTop), new Vector2(MateChipW, MateChipH));
+
+            mateHint = BobUi.Label(mateTray, "แตะเพื่อเรียกมาช่วยงานใกล้ตัว", 20, T.inkMuted, TextAnchor.MiddleRight);
+            BobUi.Pin(mateHint.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f),
+                new Vector2(0f, 34f), new Vector2(MateChipW, 26f));
+
+            mateTray.gameObject.SetActive(false);
+        }
+
+        /// <summary>A chip exists where an offline team-mate exists; an online room draws the real bodies instead.</summary>
+        bool MateTrayAllowed => round != null && round.Players > 1 &&
+                                !(Bob.Game.MatchRequest.Has && Bob.Game.MatchRequest.Online);
+
+        static bool IsMate(TaskRaceBotController mate) =>
+            mate != null && mate.isActiveAndEnabled && !mate.raidEnemy && mate.team == TaskSpot.LocalTeam;
+
+        void RenderMateTray()
+        {
+            if (mateTray == null) return;
+
+            if (Time.unscaledTime >= mateScanAt)
+            {
+                mateScanAt = Time.unscaledTime + 0.75f;
+                mateScan = FindObjectsByType<TaskRaceBotController>(FindObjectsSortMode.None);
+                System.Array.Sort(mateScan, (a, b) => string.CompareOrdinal(a != null ? a.name : "", b != null ? b.name : ""));
+                mateOrder.Clear();
+                foreach (var m in mateScan) if (IsMate(m)) mateOrder.Add(m);
+            }
+
+            if (mateChips.Count != mateOrder.Count) RebuildMateChips(mateOrder.Count);
+
+            bool show = MateTrayAllowed && mateOrder.Count > 0 && !PauseOpen && !ResultOpen;
+            if (mateTray.gameObject.activeSelf != show) mateTray.gameObject.SetActive(show);
+            if (!show) return;
+
+            for (int i = 0; i < mateOrder.Count && i < mateLines.Count; i++)
+            {
+                var line = MateLine(mateOrder[i]);
+                if (mateLines[i].text != line) mateLines[i].text = line;
+            }
+            // the hint hangs under the last chip, so one and two mates both read as a stack
+            BobUi.Pin(mateHint.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f),
+                new Vector2(0f, -(mateOrder.Count * (MateChipH + MateChipGap)) - 4f), new Vector2(MateChipW, 26f));
+        }
+
+        void RebuildMateChips(int count)
+        {
+            // rebuild only the chips: the hint label is the one child that stays
+            for (int i = mateTray.childCount - 1; i >= 0; i--)
+            {
+                var go = mateTray.GetChild(i).gameObject;
+                if (mateHint != null && go == mateHint.gameObject) continue;
+                go.SetActive(false);
+                if (Application.isPlaying) Destroy(go); else DestroyImmediate(go);
+            }
+            mateChips.Clear(); mateLines.Clear();
+
+            for (int i = 0; i < count; i++)
+            {
+                var chip = (RectTransform)BobUi.Panel(mateTray, T.surface, null, "Mate_" + (i + 1)).transform;
+                BobUi.Pin(chip, new Vector2(1f, 1f), new Vector2(1f, 1f),
+                    new Vector2(0f, -i * (MateChipH + MateChipGap)), new Vector2(MateChipW, MateChipH));
+
+                var avatar = BobUi.Disc(chip, i == 0 ? T.primary : T.secondary, 64f, "Avatar");
+                BobUi.Pin((RectTransform)avatar.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
+                    new Vector2(14f, 0f), new Vector2(64f, 64f));
+                var number = BobUi.Label(avatar.transform, (i + 1).ToString(), 30, Color.white,
+                    TextAnchor.MiddleCenter, FontStyle.Bold);
+                BobUi.Stretch(number.rectTransform);
+
+                var who = BobUi.Label(chip, $"เพื่อน {i + 1}", 26, T.ink, TextAnchor.MiddleLeft, FontStyle.Bold);
+                who.textWrappingMode = TextWrappingModes.NoWrap;
+                who.overflowMode = TextOverflowModes.Ellipsis;
+                BobUi.Pin(who.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                    new Vector2(90f, -12f), new Vector2(MateChipW - 104f, 30f));
+
+                var line = BobUi.Label(chip, "", 20, T.inkMuted, TextAnchor.MiddleLeft);
+                line.textWrappingMode = TextWrappingModes.NoWrap;
+                line.overflowMode = TextOverflowModes.Ellipsis;
+                BobUi.Pin(line.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                    new Vector2(90f, -46f), new Vector2(MateChipW - 104f, 34f));
+
+                chip.gameObject.AddComponent<MateChip>().Init(this);
+                mateChips.Add(chip);
+                mateLines.Add(line);
+            }
+        }
+
+        /// <summary>One line of "what is that mate doing", straight from the bot's job (never guessed from position).</summary>
+        string MateLine(TaskRaceBotController mate)
+        {
+            if (mate == null) return "";
+            switch (mate.State)
+            {
+                case TaskRaceBotController.MateState.Carrying: return "กำลังยกเก้าอี้ไปช่อง";
+                case TaskRaceBotController.MateState.Working: return "กำลังทำ: " + SpotName(mate.Spot);
+                case TaskRaceBotController.MateState.Walking: return "ไป: " + SpotName(mate.Spot);
+                case TaskRaceBotController.MateState.Sabotaging: return "ป่วนจุดงานคู่แข่ง";
+                default: return "ว่าง";
+            }
+        }
+
+        static string SpotName(TaskSpot spot) =>
+            spot == null ? "-" : string.IsNullOrEmpty(spot.TaskName) ? spot.SpotId : spot.TaskName;
+
+        /// <summary>
+        /// Tapping a chip is the co-op verb of docs 11 HUD-MateTray: "come help with this". It pings the job beside the
+        /// player, and the ping is what the bots obey (TaskRaceRound.PingSpot), so the tap moves a real body.
+        /// </summary>
+        void CallMateHelp()
+        {
+            var spot = PingTarget();
+            if (spot == null)
+            {
+                ShowToast("ยืนใกล้จุดงานก่อน แล้วค่อยเรียกเพื่อน");
+                Bob.Art.BobSfx.Play("drop_invalid", 0.5f);
+                return;
+            }
+            if (round != null) round.PingSpot(spot);
+            ShowToast($"เรียกเพื่อนมาช่วย: {SpotName(spot)}");
+            Bob.Art.BobSfx.Play("ui_confirm", 0.7f);
+            Debug.Log($"[TaskRaceMateTray] call for help at {spot.SpotId} · {TaskSpot.LocalTeam}");
+        }
+
+        /// <summary>Verify: the tray is up with N chips (0 when solo or online).</summary>
+        public bool DebugMateTray => mateTray != null && mateTray.gameObject.activeSelf;
+        public int DebugMateChips => mateChips.Count;
+        /// <summary>Verify: tap a chip without a finger.</summary>
+        public void DebugCallMateHelp() => CallMateHelp();
+
+        sealed class MateChip : MonoBehaviour, IPointerClickHandler
+        {
+            BobTaskRaceHud owner;
+            public void Init(BobTaskRaceHud hud) => owner = hud;
+            public void OnPointerClick(PointerEventData e) => owner.CallMateHelp();
+        }
 
         sealed class PingPad : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler
         {
