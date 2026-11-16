@@ -109,9 +109,14 @@ Unity screen consumes it after the pure-UGS migration. Full setup and limits: `a
   every device through the host. There is no two-team match, no server-scored points, and no reconnect,
   host migration or late join. The Nakama protocol in [Multiplayer](#multiplayer) is kept as a server-side
   reference.
-- **Story content gaps:** emergency stains (T16) have no client implementation yet; chapters 2-6 reuse the
-  chapter-1 island skin; rule cards and Cart Rush from the GDD are not enforced. Chapter unlock levels are
-  being rebalanced against the current XP rewards.
+- **Story content gaps:** chapters 2-6 reuse the chapter-1 island skin; rule cards and Cart Rush from the GDD
+  are not enforced. Chapter unlock levels are being rebalanced against the current XP rewards.
+- **Emergency stains (T16) are partial.** Since 16 Nov 2026 a round spawns 2–3 seeded stains
+  (`BobTaskRaceRules.EmergencyTimes`, scaled to the round length) next to a station; a red banner counts a
+  25 s grace and the S28 card plays an easy minigame (T02/T03/T05, one difficulty step down). Clearing one is
+  free; letting it run out adds one short `คราบลาม` task to the victims' queue. Still missing from the T16
+  spec: the boss stain, the edge arrow, a portrait on the card, per-difficulty spawn counts, the quality star
+  and online sync.
 - Scrub and Wash abilities, obstacles other than the sofa, the shelves and the table, the other 7 scenes; Party / Community modes.
 - Balance: every number is an untested starting value. `node server/balance-sim.js` compares the hero abilities
   (results and suggested tweaks: `art/docs/13_Balance_Sim.md`); nothing has been changed from it yet.

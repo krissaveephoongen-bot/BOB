@@ -91,6 +91,14 @@ namespace Bob.TaskRace
         Button pauseButton;
         RectTransform pauseRoot;
 
+        // T16 emergency stain banner (docs 16 section 4): a red card at the bottom-left, clear of the task list and
+        // the action button, with the 25 s grace bar. It never covers the main button or the joystick.
+        RectTransform emergencyRoot, emergencyFill;
+        TMP_Text emergencyTitle, emergencySub;
+        Button emergencyButton;
+        BobEmergencyStains stains;
+        bool cardEmergency;
+
         RectTransform debugBar, debugToggle;
         TMP_Text debugModeLabel;
 
@@ -107,7 +115,7 @@ namespace Bob.TaskRace
         public Canvas UiCanvas => canvas;
         /// <summary>Rows drawn in the task list; the verify log reads this.</summary>
         public int RowCount { get; private set; }
-        public bool CardOpen => cardSpot != null;
+        public bool CardOpen => cardSpot != null || cardEmergency;
         /// <summary>The result overlay (S27) is up.</summary>
         public bool ResultOpen => resultRoot != null;
         /// <summary>The pause card is up: the manager holds the clock at zero.</summary>
@@ -157,12 +165,26 @@ namespace Bob.TaskRace
             BuildMainButton();
             BuildMinigameCard();
             BuildToast();
+            BuildEmergency();
             BuildDebugBar();
             RenderRows();
             RenderTopBar();
             RenderMain();
             HideCard();
             HideResult();
+            HookEmergency();
+        }
+
+        /// <summary>
+        /// T16 (docs 16 section 4) lives in play mode only: an edit-mode build must not add a scene object, and the
+        /// verify shots never spawn a stain. The component owns the schedule; the HUD owns the red banner and the card.
+        /// </summary>
+        void HookEmergency()
+        {
+            if (!Application.isPlaying || round == null || manager == null) return;
+            stains = BobEmergencyStains.Ensure(round, manager);
+            stains.Message -= ShowToast;
+            stains.Message += ShowToast;
         }
 
         void Awake()
@@ -181,6 +203,7 @@ namespace Bob.TaskRace
                 hooked.MatchEnded -= OnMatchEnded;
             }
             hooked = null;
+            if (stains != null) stains.Message -= ShowToast;
         }
 
         void Hook()
@@ -211,6 +234,7 @@ namespace Bob.TaskRace
             RenderBar();
             RenderTopBar();
             RenderMain();
+            RenderEmergency();
             RenderCard();
             RenderPause();
             if (manager != null)
@@ -266,6 +290,8 @@ namespace Bob.TaskRace
             mini = null; cardInteractive = false;
             touch = null; resultRoot = null; hasShownResult = false;
             pauseButton = null; pauseRoot = null;
+            emergencyRoot = emergencyFill = null; emergencyTitle = emergencySub = null; emergencyButton = null;
+            stains = null; cardEmergency = false;
             debugModeLabel = null;
         }
 
@@ -782,6 +808,7 @@ namespace Bob.TaskRace
         void BeginCard(TaskSpot spot, bool sabotage)
         {
             if (spot == null || cardPanel == null) return;
+            cardEmergency = false;
             cardSpot = spot;
             cardSabotage = sabotage;
             cardElapsed = 0f;
@@ -793,6 +820,7 @@ namespace Bob.TaskRace
                 cardChipUntil = Time.unscaledTime + 2f;
                 cardChipRoot.gameObject.SetActive(true);
             }
+            if (cardChip != null) cardChip.text = "กด × เพื่อปิด · งานค้างไว้ 10 วิ";
 
             if (cardInteractive)
             {
@@ -831,6 +859,7 @@ namespace Bob.TaskRace
         /// <summary>One card tick, also used by the verify shot so the frame can be captured in the editor.</summary>
         void TickCard(float dt)
         {
+            if (cardEmergency) { TickEmergencyCard(dt); return; }
             if (cardSpot == null) return;
             if (!cardSpot.IsOpen) { HideCard(); return; } // joystick cancel / another close path
             // The round is over (or the next one is counting down): no work, no card, no silent completion.
@@ -901,6 +930,7 @@ namespace Bob.TaskRace
             if (cardSpot != null && cardSpot.IsOpen) cardSpot.Close(false);
             cardSpot = null;
             cardSabotage = false;
+            cardEmergency = false;
             cardInteractive = false;
             if (mini != null) mini.Cancel();
             if (cardChipRoot != null) cardChipRoot.gameObject.SetActive(false);
@@ -1227,6 +1257,132 @@ namespace Bob.TaskRace
             toast.gameObject.SetActive(true);
             toast.transform.SetAsLastSibling();
             toastUntil = Time.unscaledTime + toastSeconds;
+        }
+
+        // ---------------------------------------------------------------- emergency stain (T16)
+
+        /// <summary>
+        /// The red banner of docs 16 section 4: who showed up, at which station, and the 25 s grace. It sits at the
+        /// bottom centre — the one strip the task list, the action button and the joystick all leave free — and it is
+        /// the second way into the card (the world model is the first). Hidden until a stain is up.
+        /// </summary>
+        void BuildEmergency()
+        {
+            emergencyRoot = (RectTransform)BobUi.Panel(page, T.surface, null, "Emergency").transform;
+            BobUi.Pin(emergencyRoot, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(0f, 24f), new Vector2(720f, 132f));
+
+            var stripe = BobUi.Panel(emergencyRoot, T.brandRed, null, "EmergencyStripe");
+            BobUi.Pin((RectTransform)stripe.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
+                Vector2.zero, new Vector2(8f, 132f));
+            stripe.raycastTarget = false;
+
+            emergencyTitle = BobUi.Label(emergencyRoot, "คราบฉุกเฉิน", 34, T.brandRed, TextAnchor.MiddleLeft, FontStyle.Bold);
+            BobUi.Pin(emergencyTitle.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(28f, -12f), new Vector2(520f, 44f));
+
+            emergencySub = BobUi.Label(emergencyRoot, "", 26, T.inkMuted, TextAnchor.MiddleLeft);
+            emergencySub.textWrappingMode = TextWrappingModes.NoWrap;
+            emergencySub.overflowMode = TextOverflowModes.Ellipsis;
+            BobUi.Pin(emergencySub.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(28f, -58f), new Vector2(490f, 34f));
+
+            emergencyButton = BobUi.Button(emergencyRoot, "ปราบ", T.brandRed, OpenEmergencyCard, 32, Color.white);
+            BobUi.Pin((RectTransform)emergencyButton.transform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f),
+                new Vector2(-18f, 8f), new Vector2(160f, 86f));
+
+            var track = BobUi.Panel(emergencyRoot, T.surfaceCream, null, "EmergencyTrack");
+            BobUi.Pin((RectTransform)track.transform, new Vector2(0f, 0f), new Vector2(0f, 0f),
+                new Vector2(28f, 14f), new Vector2(632f, 10f));
+            emergencyFill = BobUi.Rect("EmergencyFill", track.transform);
+            emergencyFill.anchorMin = new Vector2(0f, 0f);
+            emergencyFill.anchorMax = new Vector2(1f, 1f);
+            emergencyFill.offsetMin = emergencyFill.offsetMax = Vector2.zero;
+            var img = emergencyFill.gameObject.AddComponent<Image>();
+            img.color = T.brandRed;
+            img.raycastTarget = false;
+
+            emergencyRoot.gameObject.SetActive(false);
+        }
+
+        void RenderEmergency()
+        {
+            if (emergencyRoot == null) return;
+            bool show = stains != null && stains.Active && !ResultOpen && !PauseOpen && !CardOpen;
+            if (emergencyRoot.gameObject.activeSelf != show) emergencyRoot.gameObject.SetActive(show);
+            if (!show) return;
+
+            emergencyTitle.text = "คราบฉุกเฉิน · " + stains.EnemyName;
+            emergencySub.text = $"เหลือ {Mathf.CeilToInt(stains.Remaining)} วิ · {stains.TaskName}";
+            if (emergencyFill != null)
+            {
+                var anchor = emergencyFill.anchorMax;
+                anchor.x = stains.GraceSeconds > 0f ? Mathf.Clamp01(stains.Remaining / stains.GraceSeconds) : 0f;
+                emergencyFill.anchorMax = anchor;
+                var img = emergencyFill.GetComponent<Image>();
+                if (img != null) img.color = stains.Remaining <= 8f ? T.danger : T.brandRed;
+            }
+        }
+
+        /// <summary>Open the T16 card: the weakness minigame of the stain, at one difficulty step below the round.</summary>
+        void OpenEmergencyCard()
+        {
+            if (stains == null || !stains.Active || mini == null || CardOpen) return;
+            cardEmergency = true;
+            cardSpot = null;
+            cardSabotage = false;
+            cardElapsed = 0f;
+            cardStartProgress = 0f;
+            cardDuration = 0f;
+            cardInteractive = mini.BeginEmergency(stains.MinigameId, stains.Difficulty);
+
+            if (cardChipRoot != null)
+            {
+                cardChipUntil = Time.unscaledTime + 2f;
+                cardChipRoot.gameObject.SetActive(true);
+            }
+            if (cardChip != null) cardChip.text = "กด × เพื่อปิด · คราบรอถึงหมดเวลา";
+
+            cardTitle.text = "ปราบคราบ: " + stains.EnemyName;
+            if (cardInteractive)
+            {
+                SetCardFill(0f);
+                if (cardStep != null) cardStep.text = mini.StepText;
+                if (cardHint != null) cardHint.text = mini.Hint;
+            }
+            else
+            {
+                mini.ShowPlaceholder("ปราบคราบ");
+            }
+            UpdateCardClock();
+            cardDim.gameObject.SetActive(true);
+            cardPanel.gameObject.SetActive(true);
+            cardPanel.transform.SetAsLastSibling();
+            if (toast != null) toast.transform.SetAsLastSibling();
+        }
+
+        /// <summary>The emergency card ticks on the same unscaled clock, but the 25 s keeps running underneath it.</summary>
+        void TickEmergencyCard(float dt)
+        {
+            if (stains == null || !stains.Active) { HideCard(); return; } // the grace ran out while the card was open
+            if (manager != null && (manager.IsMatchOver || manager.LastResult.HasValue || manager.IsCountingDown))
+            {
+                HideCard();
+                return;
+            }
+
+            cardElapsed += dt;
+            UpdateCardClock();
+            if (cardChipRoot != null && cardChipRoot.gameObject.activeSelf && Time.unscaledTime >= cardChipUntil)
+                cardChipRoot.gameObject.SetActive(false);
+
+            bool done = mini.Tick(dt);
+            SetCardFill(mini.Progress);
+            if (cardStep != null) cardStep.text = mini.StepText;
+            if (cardHint != null) cardHint.text = mini.Hint;
+            if (!done) return;
+            stains.Clear();
+            HideCard();
         }
 
         // ---------------------------------------------------------------- debug test bar

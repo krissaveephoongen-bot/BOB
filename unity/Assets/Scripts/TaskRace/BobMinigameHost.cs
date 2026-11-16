@@ -64,6 +64,7 @@ namespace Bob.TaskRace
         string taskId = "";
         MiniKind kind = MiniKind.Timed, stepKind = MiniKind.Timed;
         int difficulty = 1, step, stepCount = 1;
+        bool emergency; // T16: no station, the stain itself is the task
         float stepProgress, holdFill, waitTimer, fillLevel, bandCentre, bandHalf;
         bool playing, complete, holding;
         Vector2 lastPointer, holdCentre;
@@ -152,11 +153,36 @@ namespace Bob.TaskRace
         /// <summary>HUD: start the minigame for this station. False when the task is a timed (world) card.</summary>
         public bool Begin(TaskSpot station, string id, int roundDifficulty)
         {
-            kind = KindOf(id);
-            taskId = id ?? "";
+            taskId = BaseId(id);
+            kind = KindOf(taskId);
             if (kind == MiniKind.Timed) { Hide(); return false; }
 
+            emergency = false;
             spot = station;
+            difficulty = Mathf.Clamp(roundDifficulty, 1, 3);
+            stepCount = StepsOf(taskId);
+            step = 0; stepProgress = 0f; complete = false; playing = true;
+            placeholder.gameObject.SetActive(false);
+            play.gameObject.SetActive(true);
+            SetupStep();
+            BobTutorialClip.Play(play, taskId);
+            BobMinigameSfx.Open();
+            return true;
+        }
+
+        /// <summary>
+        /// HUD: the T16 emergency card (docs 16 section 4). There is no station: the enemy is the task, so the same
+        /// play area runs the weakness minigame of the stain at the difficulty the caller chose. False when the id is
+        /// a world card, which T16 never deals.
+        /// </summary>
+        public bool BeginEmergency(string id, int roundDifficulty)
+        {
+            taskId = BaseId(id);
+            kind = KindOf(taskId);
+            if (kind == MiniKind.Timed) { Hide(); return false; }
+
+            emergency = true;
+            spot = null;
             difficulty = Mathf.Clamp(roundDifficulty, 1, 3);
             stepCount = StepsOf(taskId);
             step = 0; stepProgress = 0f; complete = false; playing = true;
@@ -184,6 +210,7 @@ namespace Bob.TaskRace
         public void Hide()
         {
             playing = false;
+            emergency = false;
             BobMinigameSfx.Scrub(false); BobMinigameSfx.Pour(false);
             HideItems();
             if (stage3d != null) stage3d.Hide();
@@ -196,6 +223,7 @@ namespace Bob.TaskRace
         public void Cancel()
         {
             playing = false; complete = false;
+            emergency = false;
             BobMinigameSfx.Scrub(false); BobMinigameSfx.Pour(false);
             HideItems();
             if (stage3d != null) stage3d.Hide();
@@ -246,7 +274,7 @@ namespace Bob.TaskRace
             TickJuice(dt); // feedback keeps moving even when the card is already solved
             Sync3D();
             if (complete) return true;
-            if (!playing || spot == null) return false;
+            if (!playing || (spot == null && !emergency)) return false;
 
             if (waitTimer > 0f)
             {
@@ -805,7 +833,8 @@ namespace Bob.TaskRace
 
         void SetupSort()
         {
-            int count = 6 + (difficulty - 1) * 2;
+            // T16: the trash enemy is dealt the short four-card version of docs 16 section 4, not the six-card job.
+            int count = emergency && taskId == "T05" ? 4 + (difficulty - 1) * 2 : 6 + (difficulty - 1) * 2;
             string[] names = { "ขวด", "กระดาษ", "เศษ" };
             Color[] colours = { T.secondary, T.primary, T.success };
             for (int i = 0; i < 3; i++)
@@ -1220,6 +1249,17 @@ namespace Bob.TaskRace
         }
 
         // ---------------------------------------------------------------- helpers
+
+        /// <summary>
+        /// T16's คราบลาม rows carry a "~n" suffix so the round list keeps unique ids ("T03~1"). Everything the card
+        /// draws is the real minigame, so strip the suffix before the id reaches the kind tables.
+        /// </summary>
+        static string BaseId(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return "";
+            int cut = id.IndexOf('~');
+            return cut < 0 ? id : id.Substring(0, cut);
+        }
 
         static MiniKind KindOf(string id) => id switch
         {

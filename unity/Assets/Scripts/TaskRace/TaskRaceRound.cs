@@ -152,6 +152,7 @@ namespace Bob.TaskRace
         readonly Side sideA = new Side();
         readonly Side sideB = new Side();
         bool wonNotified;
+        int penaltySerial;
 
         void OnDisable() => UnsubscribeAll();
 
@@ -447,12 +448,35 @@ namespace Bob.TaskRace
                       $"{side.done}/{TaskCount} tasks, weight {side.doneWeight}/{TotalWeight}.");
         }
 
+        /// <summary>
+        /// T16 (docs 16 sections 2.4 and 4): the emergency stain spread, so one short task joins this team's list.
+        /// The queue takes it on the next restock; the row appears at once as รอคิว. The weight denominator grows
+        /// with it, so the progress bar steps back instead of jumping — exactly what docs 16 section 2.4 describes.
+        /// The row id gets a "~n" suffix so it stays unique: the minigame host strips it (BaseId) and plays the real
+        /// card. Returns false only when the round is gone.
+        /// </summary>
+        public bool AddPenaltyTask(MinigameSpec baseSpec, TeamId team, string name = "คราบลาม")
+        {
+            var side = team == TeamId.TeamB ? sideB : sideA;
+            var spec = new MinigameSpec(baseSpec.Id + "~" + (++penaltySerial), name,
+                baseSpec.Category, TaskSpan.Short, 1, baseSpec.Seconds);
+            var entry = new TaskEntry(spec);
+            tasks.Add(entry);
+            entryOf[spec.Id] = entry;
+            side.Remaining.Add(spec);
+            TaskCount = tasks.Count;
+            TotalWeight += spec.Weight;
+            Version++;
+            Debug.Log($"[TaskRaceRound] {name}: +1 task ({spec.Id}) for {team} — " +
+                      $"weight {TotalWeight}, {side.done}/{TaskCount} tasks done.");
+            return true;
+        }
+
         void Update()
         {
             if (restocks.Count == 0) return;
             float now = Time.time;
-            for (int i = restocks.Count - 1; i >= 0; i--)
-            {
+            for (int i = restocks.Count - 1; i >= 0; i--)            {
                 var restock = restocks[i];
                 if (restock.Spot == null) { restocks.RemoveAt(i); continue; }
                 if (now < restock.At) continue;
