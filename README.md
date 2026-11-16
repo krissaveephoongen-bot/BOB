@@ -9,7 +9,8 @@ Playable prototype: https://claude.ai/artifact/M9orSH3LFGbYboRm7QAkHn
 > Game → Home → chapter select (6 chapters) → TaskRace story (3 rounds × 100 s, stars, next chapter).
 > `Scripts/Net/` and `Scripts/Coop/` were deleted with the Nakama → UGS migration; the Nakama/LINE/
 > Co-op material below is kept as server-side reference only. APK v2 (`0.1.0 (2)`) is on Firebase.
-> Checks: `bash unity-typecheck/check.sh`, `cd unity-check && dotnet run`, `node server/task-race-test.js`.
+> Checks: `bash unity-typecheck/check.sh`, `cd unity-check && dotnet run`, `node server/task-race-test.js`,
+> `bash ready-check/check.sh`.
 
 ## What is here
 
@@ -37,7 +38,11 @@ Checks without Unity:
 bash unity-typecheck/check.sh
 cd unity-check && dotnet run
 node server/task-race-test.js
+bash ready-check/check.sh      # play-readiness: scenes, EventSystem, Resources, art/audio names
 ```
+
+`art/docs/30_Play_Ready_And_Test_Plan.md` is the full-system test plan (four layers: offline gates → editor
+checks → device matrix → UGS) with the acceptance criteria for "ready to play".
 
 The Nakama server is optional and only used by its own tests (`./start-server.sh`, `./server/smoke-test.sh`).
 
