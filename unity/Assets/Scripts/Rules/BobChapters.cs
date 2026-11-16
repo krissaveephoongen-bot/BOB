@@ -16,6 +16,12 @@ namespace Bob.Rules
         public const string StarsPrefix = "bob.story.stars.";
         /// <summary>XP per level: the lobby's level gate and the match's next-chapter check share this one number.</summary>
         public const int XpPerLevel = 200;
+        /// <summary>Top of the ladder (docs 24 section 15.1): XP keeps counting but the level stops here.</summary>
+        public const int MaxLevel = 50;
+        /// <summary>Stars the previous chapter needs before the next one opens (A3: level alone is not enough).</summary>
+        public const int StarsToOpen = 2;
+        /// <summary>Key of "this chapter was closed at least once": the first-clear XP bonus is paid once.</summary>
+        public const string ClearedPrefix = "bob.story.cleared.";
         const string ResourcePath = "Chapters";
 
         static ChapterDefinition[] all;
@@ -31,7 +37,10 @@ namespace Bob.Rules
             return all.FirstOrDefault(c => c.Order == order) ?? all[0];
         }
 
-        public static bool Unlocked(ChapterDefinition chapter, int level) => chapter != null && level >= chapter.UnlockLevel;
+        /// <summary>A chapter opens on its level AND on two stars of the chapter before it; the first one is free.</summary>
+        public static bool Unlocked(ChapterDefinition chapter, int level) =>
+            chapter != null && level >= chapter.UnlockLevel &&
+            (chapter.Order <= 1 || Stars(chapter.Order - 1) >= StarsToOpen);
 
         /// <summary>Highest chapter opened at this level (chapter 1 at level 1, since it unlocks at 1).</summary>
         public static ChapterDefinition LastUnlocked(int level)
@@ -77,7 +86,24 @@ namespace Bob.Rules
         public static int Band(ChapterDefinition chapter) => chapter == null ? 1 : chapter.Band;
 
         /// <summary>Player level of an XP total; the lobby and the TaskRace scene both gate chapters with it.</summary>
-        public static int LevelFromXp(int xp) => 1 + Mathf.Max(0, xp) / XpPerLevel;
+        public static int LevelFromXp(int xp) => Mathf.Clamp(1 + Mathf.Max(0, xp) / XpPerLevel, 1, MaxLevel);
+
+        /// <summary>True once this chapter was won at least once (the first-clear bonus hangs off it).</summary>
+        public static bool Cleared(int order)
+        {
+            try { return PlayerPrefs.GetInt(ClearedPrefix + Mathf.Max(1, order), 0) != 0; }
+            catch (Exception) { return false; }
+        }
+
+        /// <summary>Remember a chapter win; returns true when this call is the first clear.</summary>
+        public static bool MarkCleared(int order)
+        {
+            int chapter = Mathf.Max(1, order);
+            if (Cleared(chapter)) return false;
+            try { PlayerPrefs.SetInt(ClearedPrefix + chapter, 1); PlayerPrefs.Save(); }
+            catch (Exception) { return false; }
+            return true;
+        }
 
         /// <summary>Best 0-3 star count this chapter has earned on this device.</summary>
         public static int Stars(ChapterDefinition chapter) => chapter == null ? 0 : Stars(chapter.Order);
@@ -138,6 +164,8 @@ namespace Bob.Rules
                 if (all[i] == null) { problems.Add("null entry at index " + i); continue; }
                 if (i > 0 && all[i].Order <= all[i - 1].Order) problems.Add($"chapter order {all[i].Order} is not after {all[i - 1].Order}");
                 if (i > 0 && all[i].UnlockLevel < all[i - 1].UnlockLevel) problems.Add($"chapter {all[i].Order} unlocks before chapter {all[i - 1].Order}");
+                if (all[i].UnlockLevel > MaxLevel) problems.Add($"chapter {all[i].Order} unlocks at LV {all[i].UnlockLevel}, above the LV {MaxLevel} ladder");
+                if (all[i].RoundTime < 30f) problems.Add($"chapter {all[i].Order} round time {all[i].RoundTime:0} s is below the 30 s floor");
             }
             if (Count > 0 && all[0].Order != 1) problems.Add("the ladder does not start at chapter 1");
             return problems;

@@ -15,7 +15,7 @@ MonoBehaviour:
   order: 4
   title: "บ้านเก่ามีเรื่องเล่า"
   place: "บ้านไม้ 2 ชั้น มีบันได ตู้น้ำยาชั้นบน"
-  unlockLevel: 21
+  unlockLevel: 4
   difficulty: 2
   roundTime: 120
   backdrop: lobby_kitchen

@@ -15,7 +15,7 @@ MonoBehaviour:
   order: 3
   title: "ร้านค้าในซอย"
   place: "ร้านกาแฟ 3 เคาน์เตอร์"
-  unlockLevel: 13
+  unlockLevel: 3
   difficulty: 2
   roundTime: 120
   backdrop: lobby_coffee_shop

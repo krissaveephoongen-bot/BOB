@@ -417,7 +417,7 @@ namespace Bob.TaskRace
 
         string NameText(TaskEntry entry) =>
             entry.Done ? $"<color=#{Hex(T.success)}>✓</color> <s>{entry.Spec.Name}</s>"
-            : entry.Locked ? $"<color=#{Hex(T.accent)}>⋯</color> {entry.Spec.Name}"
+            : entry.Locked ? $"<color=#{Hex(T.accent)}>…</color> {entry.Spec.Name}"
             : entry.Spec.Name;
 
         string StatusText(TaskEntry entry) =>
@@ -725,11 +725,11 @@ namespace Bob.TaskRace
 
             cardClock = BobUi.Label(panel, "02:00 · 0", 34, T.inkMuted, TextAnchor.MiddleRight, FontStyle.Bold);
             BobUi.Pin(cardClock.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f),
-                new Vector2(-156f, -16f), new Vector2(400f, 54f));
+                new Vector2(-196f, -16f), new Vector2(400f, 54f));
 
-            cardClose = BobUi.Button(panel, "×", T.surfaceCream, CloseCard, 48, T.ink);
+            cardClose = BobUi.Button(panel, "×", T.surfaceCream, CloseCard, 56, T.ink);
             BobUi.Pin((RectTransform)cardClose.transform, new Vector2(1f, 1f), new Vector2(1f, 1f),
-                new Vector2(-20f, -20f), new Vector2(120f, 120f));
+                new Vector2(-20f, -20f), new Vector2(160f, 160f));
 
             // The 1240 x 620 play area and the pointer surface (docs 11 S28, docs 16 section 5).
             mini = cardPanel.gameObject.AddComponent<BobMinigameHost>();
@@ -767,11 +767,11 @@ namespace Bob.TaskRace
             // container because a uGUI child draws over its parent's text (the plate used to bury the label).
             cardChipRoot = BobUi.Rect("CardChip", panel);
             BobUi.Pin(cardChipRoot, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 100f), new Vector2(508f, 48f));
+                new Vector2(0f, 100f), new Vector2(620f, 48f));
             var chipBg = BobUi.Panel(cardChipRoot, T.ink, null, "ChipBg");
             BobUi.Stretch((RectTransform)chipBg.transform);
             chipBg.raycastTarget = false;
-            cardChip = BobUi.Label(cardChipRoot, "ลากจอยเพื่อปิดการ์ด", 26, T.surface, TextAnchor.MiddleCenter, FontStyle.Bold);
+            cardChip = BobUi.Label(cardChipRoot, "กด × เพื่อปิด · งานค้างไว้ 10 วิ", 26, T.surface, TextAnchor.MiddleCenter, FontStyle.Bold);
             BobUi.Stretch((RectTransform)cardChip.transform, 12f, 0f, 12f, 0f);
             cardChipRoot.gameObject.SetActive(false);
 
@@ -833,6 +833,12 @@ namespace Bob.TaskRace
         {
             if (cardSpot == null) return;
             if (!cardSpot.IsOpen) { HideCard(); return; } // joystick cancel / another close path
+            // The round is over (or the next one is counting down): no work, no card, no silent completion.
+            if (manager != null && (manager.IsMatchOver || manager.LastResult.HasValue || manager.IsCountingDown))
+            {
+                HideCard();
+                return;
+            }
 
             cardElapsed += dt;
             UpdateCardClock();
@@ -890,6 +896,9 @@ namespace Bob.TaskRace
 
         void HideCard()
         {
+            // Leaving the panel without the × (result, quit, round handover) must release the station's TASK_LOCK,
+            // otherwise the ring keeps saying "กำลังทำ" with no card to finish.
+            if (cardSpot != null && cardSpot.IsOpen) cardSpot.Close(false);
             cardSpot = null;
             cardSabotage = false;
             cardInteractive = false;
@@ -998,7 +1007,7 @@ namespace Bob.TaskRace
             string Halo(bool on) => on ? $"<color=#{ColorUtility.ToHtmlStringRGB(T.success)}>✓</color>"
                                        : $"<color=#{ColorUtility.ToHtmlStringRGB(T.inkMuted)}>✕</color>";
             var asks = BobUi.Label(p,
-                $"{Halo(won)} ชนะบท      {Halo(s.CleanSweep)} ไม่เสียรอบ      {Halo(s.ChallengeOffered)} ชนะขาด ≥ 3 งาน",
+                $"{Halo(won)} ชนะบท      {Halo(s.CleanSweep)} ไม่เสียรอบ      {Halo(s.ChallengeOffered)} ชนะขาด 3 งานขึ้นไป",
                 26, T.inkMuted, TextAnchor.MiddleCenter);
             BobUi.Pin(asks.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0f, -352f), new Vector2(1020f, 40f));
@@ -1026,12 +1035,16 @@ namespace Bob.TaskRace
             onward.interactable = nextOpen;
         }
 
-        /// <summary>The line above the chapter buttons: the next chapter's level gate, or the end of the story.</summary>
+        /// <summary>The line above the chapter buttons: the next chapter's gate (level, then stars), or the end of the story.</summary>
         static string NextNote(ChapterDefinition next, bool open, int level)
         {
             if (next == null) return "จบเนื้อเรื่องหลักแล้ว · เล่นซ้ำเพื่อเก็บดาวให้ครบ";
             if (open) return $"{next.Title} · LV {next.UnlockLevel}";
-            return $"บทถัดไปปลดที่ LV {next.UnlockLevel} · คุณ LV {level} — เล่นซ้ำเพื่อเก็บ XP";
+            if (level < next.UnlockLevel)
+                return $"บทถัดไปปลดที่ LV {next.UnlockLevel} · คุณ LV {level} — เล่นซ้ำเพื่อเก็บ XP";
+            // The level is there but the previous chapter has not earned its opening stars yet.
+            int have = BobChapters.Stars(next.Order - 1);
+            return $"ต้องมีดาวบท {next.Order - 1} ครบ {BobChapters.StarsToOpen} ดวง · ตอนนี้ {have}/{BobChapters.StarsToOpen} — เล่นซ้ำบทก่อนหน้า";
         }
 
         /// <summary>

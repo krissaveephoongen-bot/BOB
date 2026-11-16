@@ -204,7 +204,7 @@ namespace Bob.Game
                 new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(96f, -18f), new Vector2(190f, 46f));
             BobUi.Pin(BobUi.Label(mb.transform, chapter.Title, 26, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform,
                 new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -78f), new Vector2(280f, 40f));
-            BobUi.Pin(BobUi.Label(mb.transform, $"D{chapter.Difficulty} · {BobStages.Get(chapter.Order).ClockSeconds:0} วิ · ดีสุด {TaskBest(chapter.Band)}", 22, BobUi.Muted, TextAnchor.MiddleCenter).rectTransform,
+            BobUi.Pin(BobUi.Label(mb.transform, $"D{chapter.Difficulty} · 3 รอบ · ดีสุด {Bob.TaskRace.BobTaskRaceProfile.BestPoints}", 22, BobUi.Muted, TextAnchor.MiddleCenter).rectTransform,
                 new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -120f), new Vector2(280f, 34f));
             BobUi.Pin(BobUi.Label(mb.transform, "แตะเพื่อเลือกด่าน", 20, BobUi.Teal, TextAnchor.MiddleCenter).rectTransform,
                 new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -154f), new Vector2(280f, 30f));
@@ -283,9 +283,13 @@ namespace Bob.Game
 
                 BobUi.Pin(BobUi.Label(card.transform, chapter.Title, 34, unlocked ? BobUi.Ink : BobUi.Muted, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform,
                     new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -164), new Vector2(cw - 24, 44));
-                BobUi.Pin(BobUi.Label(card.transform, $"{chapter.Place} · ดีสุด {TaskBest(chapter.Band)}", 20, BobUi.Muted, TextAnchor.MiddleCenter).rectTransform,
+                BobUi.Pin(BobUi.Label(card.transform, $"{chapter.Place} · ดีสุด {Bob.TaskRace.BobTaskRaceProfile.BestPoints}", 20, BobUi.Muted, TextAnchor.MiddleCenter).rectTransform,
                     new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -202), new Vector2(cw - 24, 32));
-                BobUi.Pin(BobUi.Label(card.transform, unlocked ? $"{chapter.Tag} · {stageCfg.Tag}" : $"ล็อก LV {chapter.UnlockLevel}",
+                bool levelOk = Level >= chapter.UnlockLevel;
+                BobUi.Pin(BobUi.Label(card.transform,
+                        unlocked ? $"{chapter.Tag} · {stageCfg.Tag}"
+                        : levelOk ? "ล็อก · ดาวบทก่อนไม่ครบ"
+                        : $"ล็อก LV {chapter.UnlockLevel}",
                     22, unlocked ? BobUi.Teal : BobUi.Bad, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform,
                     new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -236), new Vector2(cw - 24, 32));
                 BobUi.Pin(BobUi.Label(card.transform, string.Join(" · ", chapter.RuleCards), 18, BobUi.Muted, TextAnchor.MiddleCenter).rectTransform,
@@ -295,7 +299,10 @@ namespace Bob.Game
                 if (unlocked) continue;
                 var veil = BobUi.Rect("Lock", card.transform); BobUi.Stretch(veil);
                 veil.gameObject.AddComponent<Image>().color = new Color(0.10f, 0.11f, 0.17f, 0.42f);
-                BobUi.Stretch(BobUi.Label(veil, "ต้องมี LV " + chapter.UnlockLevel, 30, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform);
+                string need = levelOk
+                    ? $"ต้องมีดาวบท {(chapter.Order - 1)} ครบ {BobChapters.StarsToOpen} ดวง"
+                    : $"ต้องมี LV {chapter.UnlockLevel}";
+                BobUi.Stretch(BobUi.Label(veil, need, 30, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform);
             }
 
             var note = BobUi.Label(screenRoot, "ด่านกำหนดความยาก (D) นาฬิกา และเวลาสะพาน · กฎพิเศษของด่านบังคับใช้แล้ว (ผิวบอบบาง คราบสองรอบ ชิ้นส่วนสุ่ม โบนัสปิดด่าน)", 22, BobUi.Surface, TextAnchor.MiddleLeft);
@@ -309,7 +316,14 @@ namespace Bob.Game
 
         void PickChapter(ChapterDefinition chapter)
         {
-            if (!BobChapters.Unlocked(chapter, Level)) { Toast("ปลดบทนี้ที่ระดับ " + chapter.UnlockLevel); Sfx("drop_invalid"); return; }
+            if (!BobChapters.Unlocked(chapter, Level))
+            {
+                Toast(Level < chapter.UnlockLevel
+                    ? "ปลดบทนี้ที่ระดับ " + chapter.UnlockLevel
+                    : $"ต้องมีดาวบท {chapter.Order - 1} ครบ {BobChapters.StarsToOpen} ดวงก่อน");
+                Sfx("drop_invalid");
+                return;
+            }
             BobChapters.Select(chapter, Level);
             band = chapter.Band;
             SaveProfile(); Sfx("ui_confirm"); RenderAll();

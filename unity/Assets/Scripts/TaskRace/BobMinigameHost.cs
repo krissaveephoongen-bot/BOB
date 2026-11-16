@@ -649,7 +649,7 @@ namespace Bob.TaskRace
                 BobUi.Pin((RectTransform)display.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
                     new Vector2(0f, 210f), new Vector2(420f, 76f));
                 display.raycastTarget = false;
-                var text = BobUi.Label(display.transform, "ซัก 40°", 40, T.primaryLight, TextAnchor.MiddleCenter, FontStyle.Bold);
+                var text = BobUi.Label(display.transform, "ซัก 40 องศา", 40, T.primaryLight, TextAnchor.MiddleCenter, FontStyle.Bold);
                 BobUi.Stretch(text.rectTransform);
             }
         }
@@ -920,7 +920,7 @@ namespace Bob.TaskRace
 
         void SetupSequence()
         {
-            string[] labels = { "▲ น้ำ", "● ผง", "■ ปั่น", "▼ อุณหภูมิ" };
+            string[] labels = { "▲ น้ำ", "● ผง", "· ปั่น", "▼ อุณหภูมิ" };
             Color[] colours = { T.sky, T.success, T.primary, T.accent };
             for (int i = 0; i < 4; i++)
             {

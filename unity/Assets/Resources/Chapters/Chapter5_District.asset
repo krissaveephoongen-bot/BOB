@@ -15,7 +15,7 @@ MonoBehaviour:
   order: 5
   title: "งานใหญ่ของย่าน"
   place: "โรงเรียนทางเดินยาว / ศาลาชุมชน 4 มุม"
-  unlockLevel: 31
+  unlockLevel: 5
   difficulty: 3
   roundTime: 120
   backdrop: lobby_coffee_shop

@@ -15,7 +15,7 @@ MonoBehaviour:
   order: 6
   title: "ฟื้นตลาดเก่า"
   place: "ตลาดหลายโซนเชื่อมกัน"
-  unlockLevel: 41
+  unlockLevel: 6
   difficulty: 3
   roundTime: 120
   backdrop: lobby_condo

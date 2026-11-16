@@ -24,9 +24,14 @@ GROUPS="${FIREBASE_GROUPS:-${FIREBASE_TESTER_GROUP:-}}"
 KEY="${FIREBASE_KEY_PATH:-./firebase-key.json}"
 case "$KEY" in /*|[A-Za-z]:*) ;; *) KEY="$REPO/${KEY#./}" ;; esac
 BUMP=1
-[ "${1:-}" = "--no-bump" ] && BUMP=0
 UPLOAD_ONLY=0
-[ "${1:-}" = "--upload-only" ] && UPLOAD_ONLY=1
+for arg in "$@"; do
+  case "$arg" in
+    --no-bump) BUMP=0 ;;
+    --upload-only) UPLOAD_ONLY=1 ;;
+    *) echo "unknown option: $arg (use --no-bump / --upload-only)" >&2; exit 2 ;;
+  esac
+done
 
 say() { printf '\n== %s\n' "$*"; }
 die() { printf '\n!! %s\n' "$*" >&2; exit 1; }
@@ -44,29 +49,27 @@ else
     die "Unity has the project open - close the Editor first (Temp/UnityLockfile exists)"
   fi
 
-  if [ "$BUMP" = 1 ]; then
-    CODE="$(grep -m1 '^  AndroidBundleVersionCode:' "$PS" | tr -dc '0-9')"
-    [ -n "$CODE" ] || die "AndroidBundleVersionCode not found in $PS"
-    NEXT=$((CODE + 1))
-    # Replace the digits only, so the file keeps its CRLF line endings.
-    sed -i "s/^  AndroidBundleVersionCode: [0-9]*/  AndroidBundleVersionCode: $NEXT/" "$PS"
-    say "versionCode $CODE -> $NEXT"
-  else
-    NEXT="$(grep -m1 '^  AndroidBundleVersionCode:' "$PS" | tr -dc '0-9')"
-    say "versionCode kept at $NEXT"
-  fi
+  # The build script owns the versionCode: it bumps by one, writes ProjectSettings, and restores the old
+  # number when the build fails. Bumping here as well would burn a release number on every failed run.
+  CODE="$(grep -m1 '^  AndroidBundleVersionCode:' "$PS" | tr -dc '0-9')"
+  [ -n "$CODE" ] || die "AndroidBundleVersionCode not found in $PS"
+  BUILD_ARGS=()
+  [ "$BUMP" = 1 ] && say "versionCode $CODE -> $((CODE + 1)) (set by the build)" || BUILD_ARGS+=(-bobNoBump)
+  [ "$BUMP" = 0 ] && say "versionCode kept at $CODE"
 
   say "building $APK"
   "$UNITY" -batchmode -quit -projectPath "$PROJECT" \
     -executeMethod Bob.EditorTools.BobAndroidBuild.BuildApk \
-    -logFile "$PROJECT/Logs/apk-build-$NEXT.log" \
-    || die "Unity exited non-zero - see unity/Logs/apk-build-$NEXT.log"
+    "${BUILD_ARGS[@]+"${BUILD_ARGS[@]}"}" \
+    -logFile "$PROJECT/Logs/apk-build.log" \
+    || die "Unity exited non-zero - see unity/Logs/apk-build.log"
   [ -f "$APK" ] || die "build reported success but $APK is missing"
+  NEXT="$(grep -m1 '^  AndroidBundleVersionCode:' "$PS" | tr -dc '0-9')"
+  say "built versionCode $NEXT"
 fi
 
 NOTES="$(git -C "$REPO" log -1 --pretty='%h %s')"
 APK_REL="${APK#$REPO/}"
-KEY_REL="${KEY#$REPO/}"
 
 if [ -z "$APP_ID" ]; then
   die "FIREBASE_APP_ID is empty - put the bob-preprod android app id in .env"
@@ -76,12 +79,19 @@ if [ -f "$KEY" ]; then
   command -v docker >/dev/null || die "service account key found but docker is missing (install Docker Desktop)"
   say "uploading to Firebase App Distribution ($APP_ID) from node:20-alpine"
   # The release notes travel as a positional parameter so quoting survives the container shell.
+  # The key may live outside the repo, so its own folder is mounted instead of assuming ./firebase-key.json.
+  KEY_DIR="$(cd "$(dirname "$KEY")" && pwd)"
+  KEY_FILE="$(basename "$KEY")"
   docker run --rm \
-    -v "$REPO:/work" -w /work \
-    -e GOOGLE_APPLICATION_CREDENTIALS="/work/$KEY_REL" \
+    -v "$REPO:/work" -w /work -v "$KEY_DIR:/keys:ro" \
+    -e GOOGLE_APPLICATION_CREDENTIALS="/keys/$KEY_FILE" \
+    -e APK="$APK_REL" -e APP="$APP_ID" -e NOTES="v0.1.0 ($NEXT) $NOTES" -e GROUPS="$GROUPS" \
     node:20-alpine sh -c \
-    'npx -y firebase-tools appdistribution:distribute "$1" --app "$2" --project bob-preprod --release-notes "$3" ${4:+--groups "$4"}' \
-    _ "$APK_REL" "$APP_ID" "v0.1.0 ($NEXT) $NOTES" "$GROUPS"
+    'if [ -n "$GROUPS" ]; then \
+       npx -y firebase-tools@13.35.0 appdistribution:distribute "$APK" --app "$APP" --project bob-preprod --release-notes "$NOTES" --groups "$GROUPS"; \
+     else \
+       npx -y firebase-tools@13.35.0 appdistribution:distribute "$APK" --app "$APP" --project bob-preprod --release-notes "$NOTES"; \
+     fi'
 elif command -v firebase >/dev/null; then
   say "no service account key - uploading with the logged-in firebase CLI"
   ARGS=(appdistribution:distribute "$APK" --app "$APP_ID" --project bob-preprod

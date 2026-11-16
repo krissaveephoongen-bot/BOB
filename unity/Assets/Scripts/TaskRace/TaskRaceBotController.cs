@@ -142,7 +142,7 @@ namespace Bob.TaskRace
 
         void FinishClean()
         {
-            target.ForceComplete();
+            if (!target.ForceComplete()) { NextPick(1.2f); return; } // the card is held by the player right now
             CleanCount++;
             Debug.Log($"[TaskRaceBot] clean {CleanCount} on {target.SpotId}; Team B {round?.DoneCountOf(TeamId.TeamB)}/{round?.TaskCount}.");
 

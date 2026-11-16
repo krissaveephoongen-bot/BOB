@@ -30,7 +30,8 @@ namespace Bob.TaskRace
         Vector2 move;
         float fall;
         float stunUntil;
-        Vector3 lastSafe;
+        Vector3 lastSafe, home;
+        bool ready; // Start has captured the spawn: an earlier GoHome would teleport to (0,0,0)
         Vector3? destination;
 
         /// <summary>Current stick input as x = right, y = forward (Z). The mode manager reads its magnitude for S28 cancel.</summary>
@@ -38,7 +39,8 @@ namespace Bob.TaskRace
         public bool IsMoving => move.sqrMagnitude > 0.0001f;
         public bool HasDestination => destination.HasValue;
         /// <summary>The card or the result overlay holds the body; the stick still reads for the cancel gesture.</summary>
-        public bool IsFrozen => manager != null && (manager.CardOpen || manager.LastResult.HasValue);
+        public bool IsFrozen => manager != null &&
+            (manager.CardOpen || manager.LastResult.HasValue || manager.IsCountingDown);
         /// <summary>Stage 3 "fragile": the body stands still for a moment after a card is abandoned.</summary>
         public bool IsStunned => Time.unscaledTime < stunUntil;
         public float StunRemaining => Mathf.Max(0f, stunUntil - Time.unscaledTime);
@@ -56,7 +58,8 @@ namespace Bob.TaskRace
         void Start()
         {
             manager = TaskRaceModeManager.Instance;
-            lastSafe = transform.position;
+            lastSafe = home = transform.position;
+            ready = true;
         }
 
         /// <summary>Tap-to-walk: the touch layer hands over the world point under the finger.</summary>
@@ -106,6 +109,18 @@ namespace Bob.TaskRace
                 ? Mathf.Clamp01((dist - arriveRadius) / (slowRadius - arriveRadius))
                 : 1f;
             return new Vector2(dir.x, dir.z) * Mathf.Max(0.2f, ramp);
+        }
+
+        /// <summary>Back to this island's start: a new round or a restart must never begin across the bridge.</summary>
+        public void GoHome()
+        {
+            if (!ready) return; // the manager may begin the match before this body has captured its spawn
+            destination = null;
+            fall = -2f;
+            if (controller != null) controller.enabled = false;
+            transform.position = home;
+            if (controller != null) controller.enabled = true;
+            lastSafe = home;
         }
 
         /// <summary>Put the body back on the last ground it stood on, facing the same way; the camera follows.</summary>

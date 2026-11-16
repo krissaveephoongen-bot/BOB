@@ -66,6 +66,12 @@ namespace Bob.EditorTools
             Expect(draws.Over && !draws.LocalTookSeries, "three draws still close the chapter");
             Expect(draws.Stars == 0, $"a drawn chapter is 0 stars (got {draws.Stars})");
 
+            // A chapter is taken by two round wins, not by "losing less": 1-0 with two draws closed out as a loss.
+            var oneWin = Play(6, 5, 5, 5, 5, 5);
+            Expect(oneWin.Over && oneWin.Score == "1-0" && !oneWin.LocalTookSeries,
+                $"one win and two draws do not take the chapter (got {oneWin.Score})");
+            Expect(oneWin.Stars == 0, $"a chapter not taken pays no stars (got {oneWin.Stars})");
+
             var bigButLost = Play(10, 2, 1, 5, 1, 5);
             Expect(bigButLost.ChallengeOffered && !bigButLost.LocalTookSeries, "a big win inside a lost series still offers the challenge");
             Expect(bigButLost.Stars == 0, $"the challenge win alone does not pay a star (got {bigButLost.Stars})");
@@ -93,11 +99,40 @@ namespace Bob.EditorTools
             Expect(BobChapters.LevelFromXp(0) == 1 && BobChapters.LevelFromXp(199) == 1, "0-199 XP is level 1");
             Expect(BobChapters.LevelFromXp(200) == 2, $"200 XP is level 2 (got {BobChapters.LevelFromXp(200)})");
             Expect(BobChapters.LevelFromXp(-50) == 1, "a negative XP total never drops below level 1");
-            Expect(BobChapters.LevelFromXp(200 * 40) == 41, $"8000 XP reaches level 41, the last chapter (got {BobChapters.LevelFromXp(8000)})");
+            Expect(BobChapters.LevelFromXp(BobChapters.XpPerLevel * (BobChapters.MaxLevel - 1)) == BobChapters.MaxLevel,
+                $"the ladder tops out at LV {BobChapters.MaxLevel}");
+            Expect(BobChapters.LevelFromXp(BobChapters.XpPerLevel * 60) == BobChapters.MaxLevel,
+                $"XP past the cap still reads LV {BobChapters.MaxLevel} (got {BobChapters.LevelFromXp(BobChapters.XpPerLevel * 60)})");
 
             var chapter2 = BobChapters.Get(2);
-            Expect(!BobChapters.Unlocked(chapter2, 5) && BobChapters.Unlocked(chapter2, 6),
-                $"chapter 2 opens exactly at LV 6 (unlock {chapter2.UnlockLevel})");
+            Expect(chapter2.UnlockLevel == 2, $"chapter 2 opens at LV 2 (unlock {chapter2.UnlockLevel})");
+
+            // The level alone is not enough: chapter 2 also wants two stars of chapter 1. PlayerPrefs is the store, so
+            // the stars of chapter 1 are saved, probed and put back exactly as they were.
+            string key = BobChapters.StarsPrefix + 1;
+            bool had = PlayerPrefs.HasKey(key);
+            int old = had ? PlayerPrefs.GetInt(key) : 0;
+            try
+            {
+                PlayerPrefs.SetInt(key, 0);
+                Expect(!BobChapters.Unlocked(chapter2, chapter2.UnlockLevel),
+                    "zero stars in chapter 1 keeps chapter 2 shut at its own level");
+                PlayerPrefs.SetInt(key, BobChapters.StarsToOpen - 1);
+                Expect(!BobChapters.Unlocked(chapter2, chapter2.UnlockLevel),
+                    $"one star below the gate ({BobChapters.StarsToOpen - 1}) is still not enough");
+                PlayerPrefs.SetInt(key, BobChapters.StarsToOpen);
+                Expect(BobChapters.Unlocked(chapter2, chapter2.UnlockLevel),
+                    $"{BobChapters.StarsToOpen} stars of chapter 1 open chapter 2 at LV {chapter2.UnlockLevel}");
+                Expect(!BobChapters.Unlocked(chapter2, chapter2.UnlockLevel - 1),
+                    "the level gate still applies once the stars are there");
+                Expect(BobChapters.Stars(1) == BobChapters.StarsToOpen && !BobChapters.Cleared(2),
+                    "the star probe leaves the clear flag alone");
+            }
+            finally
+            {
+                if (had) PlayerPrefs.SetInt(key, old); else PlayerPrefs.DeleteKey(key);
+                PlayerPrefs.Save();
+            }
         }
 
         static void CheckStarStore()

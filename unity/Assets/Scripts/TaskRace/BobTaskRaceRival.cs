@@ -62,7 +62,12 @@ namespace Bob.TaskRace
                 return;
             }
 
-            spot.ForceComplete();
+            if (!spot.ForceComplete())
+            {
+                // The player is holding this card: come back for another station instead of wiping their progress.
+                nextAt = Time.time + retrySeconds;
+                return;
+            }
             cleanCount++;
             if (Application.isPlaying)
                 Debug.Log($"[TaskRaceRival] clean {cleanCount} on {spot.SpotId} ({spot.TaskName}); " +

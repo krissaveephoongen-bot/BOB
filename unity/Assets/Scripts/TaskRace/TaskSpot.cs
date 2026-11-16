@@ -243,8 +243,23 @@ namespace Bob.TaskRace
                 Blocked?.Invoke(this, message);
                 return false;
             }
+            // The 3-2-1 countdown and the result hold the clock: work started there would be free time.
+            var m = TaskRaceModeManager.Instance;
+            if (m != null && (m.IsCountingDown || m.LastResult.HasValue))
+            {
+                message = "รอสัญญาณ ลุย! ก่อน";
+                Blocked?.Invoke(this, message);
+                return false;
+            }
+            // Stations of the other island belong to the rival: only a sabotage may touch them.
+            if (ownerTeam != TeamId.None && LocalTeam != TeamId.None && ownerTeam != LocalTeam)
+            {
+                message = "จุดนี้ของฝั่งคู่แข่ง";
+                Blocked?.Invoke(this, message);
+                return false;
+            }
 
-            IsOpen = true; LockedBy = who; sabotageSession = false; message = null;
+            IsOpen = true; LockedBy = who; sabotageSession = false; LastCardCompleted = false; message = null;
             Opened?.Invoke(this); AnyOpened?.Invoke(this);
             RefreshRing();
             return true;
@@ -290,9 +305,11 @@ namespace Bob.TaskRace
         /// The AI rival's clean: the same state change as a completed card, without a TASK_LOCK or a card. Points and
         /// the round's count both run through the normal Closed path, so nothing else has to know who cleaned.
         /// </summary>
-        public void ForceComplete()
+        public bool ForceComplete()
         {
-            if (!hasTask || state == SpotState.Clean) return;
+            // A station somebody is working on is theirs: the rival waits for another one instead of wiping the card.
+            if (IsOpen) return false;
+            if (!hasTask || state == SpotState.Clean) return false;
             IsOpen = false; LockedBy = null; sabotageSession = false;
             LastCardCompleted = true;
             if (RequiredPasses > 1 && passesDone + 1 < RequiredPasses)
@@ -302,13 +319,14 @@ namespace Bob.TaskRace
                 TaskRaceModeManager.Instance?.OnTaskPass(this);
                 Closed?.Invoke(this, false); AnyClosed?.Invoke(this);
                 RefreshRing();
-                return;
+                return true;
             }
             passesDone = 0;
             state = SpotState.Clean; Progress = 1f; retained = false;
             TaskRaceModeManager.Instance?.OnTaskCleaned(this);
             Closed?.Invoke(this, true); AnyClosed?.Invoke(this);
             RefreshRing();
+            return true;
         }
 
         /// <summary>HUD: show whether the opponent may sabotage this station right now (the bridges and the state are
@@ -372,7 +390,7 @@ namespace Bob.TaskRace
                 return false;
             }
 
-            IsOpen = true; LockedBy = who; sabotageSession = true;
+            IsOpen = true; LockedBy = who; sabotageSession = true; LastCardCompleted = false;
             Opened?.Invoke(this); AnyOpened?.Invoke(this);
             RefreshRing();
             return true;
@@ -644,7 +662,7 @@ namespace Bob.TaskRace
                 lockBadge.gameObject.SetActive(IsOpen);
                 if (IsOpen)
                 {
-                    lockBadge.text = "<b>" + Initial(LockedBy) + "</b> ⋯";
+                    lockBadge.text = "<b>" + Initial(LockedBy) + "</b> …";
                     lockBadge.transform.position = LabelPoint(anchor, labelHeight + 0.42f);
                     if (cam != null) lockBadge.transform.rotation = cam.transform.rotation;
                 }

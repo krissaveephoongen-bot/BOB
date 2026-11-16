@@ -50,6 +50,14 @@ namespace Bob.TaskRace
         public int Round { get; private set; } = 1;
         public int LocalWins { get; private set; }
         public int RivalWins { get; private set; }
+        /// <summary>Tasks the local side cleaned across every closed round: the reward counts the whole chapter.</summary>
+        public int TotalLocalTasks { get; private set; }
+        public int TotalRivalTasks { get; private set; }
+        /// <summary>Points the local side scored across every closed round.</summary>
+        public int TotalLocalPoints { get; private set; }
+        public int TotalRivalPoints { get; private set; }
+        /// <summary>Rounds actually closed, 0 before the first result.</summary>
+        public int RoundsPlayed => LastRound.HasValue ? LastRound.Value.Number : 0;
         /// <summary>Clock of a round; the manager starts every round at this length.</summary>
         public float SecondsForRound { get; private set; }
         public bool ChallengeOffered { get; private set; }
@@ -58,9 +66,11 @@ namespace Bob.TaskRace
         /// Counts rounds actually played: `Round` already points at the next one, so it cannot drive this test.</summary>
         public bool Over => LastRound.HasValue &&
                             (LocalWins >= winsToTake || RivalWins >= winsToTake || LastRound.Value.Number >= Rounds);
-        public bool LocalTookSeries => LocalWins > RivalWins;
+        /// <summary>Taking the chapter needs <see cref="winsToTake"/> round wins: one win and two draws is not a win.
+        /// Owns the verdict so a series cannot be "taken" by having merely lost less.</summary>
+        public bool LocalTookSeries => LocalWins >= winsToTake;
         /// <summary>Won without dropping a round: the "never lost a round" star of the chapter card (A3).</summary>
-        public bool CleanSweep => LocalWins > 0 && RivalWins == 0;
+        public bool CleanSweep => LocalTookSeries && RivalWins == 0;
         /// <summary>
         /// 0-3 stars for a closed chapter (A3, docs 11 S27): one for taking the chapter, one for never losing a
         /// round, one for winning a round by the challenge margin. A lost or drawn chapter earns none, so the stars
@@ -73,6 +83,7 @@ namespace Bob.TaskRace
         public void Reset()
         {
             Round = 1; LocalWins = RivalWins = 0;
+            TotalLocalTasks = TotalRivalTasks = TotalLocalPoints = TotalRivalPoints = 0;
             ChallengeOffered = false; LastRound = null; SecondsForRound = roundSeconds;
         }
 
@@ -84,6 +95,11 @@ namespace Bob.TaskRace
                         : localPoints > rivalPoints ? RoundOutcome.Win
                         : localPoints < rivalPoints ? RoundOutcome.Loss
                         : RoundOutcome.Draw;
+
+            TotalLocalTasks += Math.Max(0, localTasks);
+            TotalRivalTasks += Math.Max(0, rivalTasks);
+            TotalLocalPoints += Math.Max(0, localPoints);
+            TotalRivalPoints += Math.Max(0, rivalPoints);
 
             if (outcome == RoundOutcome.Win)
             {

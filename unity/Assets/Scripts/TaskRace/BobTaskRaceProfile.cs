@@ -45,16 +45,21 @@ namespace Bob.TaskRace
         public static int Matches => PlayerPrefs.GetInt(MatchesKey, 0);
         public static int Wins => PlayerPrefs.GetInt(WinsKey, 0);
 
+        /// <summary>The one-off XP for closing a chapter for the first time; a replay pays the normal rate only.</summary>
+        public const int FirstClearBonus = 100;
+
         /// <summary>
         /// Pay one match. `record` false only composes the result: the verify renders the overlay without changing
         /// the developer's wallet.
         /// </summary>
         public static MatchResult Record(bool won, bool draw, int teamAPoints, int teamBPoints,
                                          int tasksA, int tasksB, int taskCount,
-                                         int localPoints, int localTasks, bool record = true)
+                                         int localPoints, int localTasks, bool record = true, int extraXp = 0)
         {
             int coins = 25 + (won ? 50 : draw ? 20 : 10) + localPoints / 20;
-            int xp = 30 + (won ? 25 : 0) + localTasks * 8;
+            int xp = 30 + (won ? 25 : 0) + localTasks * 8 + Mathf.Max(0, extraXp);
+            // A chapter that cleaned nothing must not pay: otherwise three idle rounds are a coin/XP faucet.
+            if (localTasks <= 0) { coins = 0; xp = 0; }
 
             int best = BestPoints;
             bool newBest = localPoints > best;

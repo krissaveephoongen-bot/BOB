@@ -15,7 +15,7 @@ MonoBehaviour:
   order: 2
   title: "รับงานเพื่อนบ้าน"
   place: "คอนโด 2 ห้อง ติดประตูแคบ"
-  unlockLevel: 6
+  unlockLevel: 2
   difficulty: 1
   roundTime: 120
   backdrop: lobby_condo

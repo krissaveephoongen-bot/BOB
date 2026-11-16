@@ -160,7 +160,7 @@ namespace Bob.TaskRace
         /// <summary>The match is held by the pause card: the clock, the bot and the hero all stand still.</summary>
         public bool Paused { get; private set; }
         /// <summary>Pause is refused while a card holds a TASK_LOCK or after the result is decided.</summary>
-        public bool CanPause => !Paused && !CardOpen && !LastResult.HasValue;
+        public bool CanPause => !Paused && !CardOpen && !countingDown && !LastResult.HasValue;
         /// <summary>Set once the match is decided; the HUD draws the result overlay from it.</summary>
         public MatchResult? LastResult { get; private set; }
         /// <summary>The chapter series while storySeries is on; null in a PvP match.</summary>
@@ -336,6 +336,15 @@ namespace Bob.TaskRace
 
         public void TogglePause() => SetPaused(!Paused);
 
+        /// <summary>Every new round starts from the player's own island, whatever the last round left behind.</summary>
+        void SendHeroHome()
+        {
+            var body = cameraRig != null && cameraRig.target != null
+                ? cameraRig.target.GetComponent<BobTaskRaceHero>()
+                : FindAnyObjectByType<BobTaskRaceHero>();
+            if (body != null) body.GoHome();
+        }
+
         // ---------------------------------------------------------------- match
 
         /// <summary>Restart the score and the clock: 120 s PvP, or round one of a three-round story chapter.</summary>
@@ -354,6 +363,7 @@ namespace Bob.TaskRace
             PointsChanged?.Invoke(TeamId.TeamA, teamAPoints);
             PointsChanged?.Invoke(TeamId.TeamB, teamBPoints);
             MatchStarted?.Invoke();
+            SendHeroHome();
             if (series != null && StoryLossStreak >= 2)
             {
                 ToastRequested?.Invoke($"แพ้ติด 2 บท — รอบแรกได้เวลาเพิ่ม {loseStreakBonusSeconds:0} วิ");
@@ -431,16 +441,30 @@ namespace Bob.TaskRace
             }
 
             RemainingSeconds = 0f;
+
+            // A story chapter pays for everything it cleaned: the three rounds add up, and the first clear of a
+            // chapter carries a one-off bonus. A single PvP round keeps its own totals.
+            int rewardTasks = series != null ? series.TotalLocalTasks : mine;
+            int rewardPoints = series != null ? series.TotalLocalPoints : localPool;
+            int bonus = 0;
+            if (series != null && series.Over && series.LocalTookSeries)
+            {
+                var chapter = Bob.Rules.BobChapters.Saved;
+                if (!Bob.Rules.BobChapters.Cleared(chapter.Order)) bonus = BobTaskRaceProfile.FirstClearBonus;
+            }
+
             LastResult = BobTaskRaceProfile.Record(won, draw, teamAPoints, teamBPoints, tasksA, tasksB, total,
-                localPool, mine, record);
+                rewardPoints, rewardTasks, record, bonus);
 
             // A3: a decided story chapter earns 0-3 stars, written before MatchEnded so the card reads the new best.
             if (record && series != null && series.Over)
             {
                 var chapter = Bob.Rules.BobChapters.Saved;
                 int best = Bob.Rules.BobChapters.SaveStars(chapter.Order, series.Stars);
+                if (series.LocalTookSeries) Bob.Rules.BobChapters.MarkCleared(chapter.Order);
                 if (Application.isPlaying)
-                    Debug.Log($"[TaskRace] chapter {chapter.Order} closed {series.Score}: {series.Stars}/3 stars (best {best}).");
+                    Debug.Log($"[TaskRace] chapter {chapter.Order} closed {series.Score}: {series.Stars}/3 stars (best {best}), " +
+                              $"{rewardTasks} tasks over {series.RoundsPlayed} round(s), +{bonus} first-clear xp.");
             }
 
             MatchEnded?.Invoke(LastResult.Value);
@@ -454,6 +478,7 @@ namespace Bob.TaskRace
             BeginMatch();
             if (round == null) round = FindAnyObjectByType<TaskRaceRound>();
             round?.StartRound(UnityEngine.Random.Range(1, 100000));
+            SendHeroHome();
             if (Application.isPlaying) Debug.Log("[TaskRace] restart: score 0, clock reset, gates shut, new round.");
         }
 
@@ -520,6 +545,7 @@ namespace Bob.TaskRace
             if (round == null) round = FindAnyObjectByType<TaskRaceRound>();
             round?.StartRound(UnityEngine.Random.Range(1, 100000));
             MatchStarted?.Invoke();
+            SendHeroHome(); // a round must not open with the hero stranded on the rival island
             ToastRequested?.Invoke($"รอบ {series?.Round ?? 2}/{StorySeries.Rounds} · {seconds:0} วิ");
             if (Application.isPlaying)
                 Debug.Log($"[TaskRace] round {(series?.Round ?? 0)}/{StorySeries.Rounds} start: {seconds:0} s, series {series?.Score}.");

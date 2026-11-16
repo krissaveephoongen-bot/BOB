@@ -46,6 +46,13 @@ namespace Bob.EditorTools
             var won = blowout.Register(9, 5, 900, 500);
             Check("win by 4 opens the challenge", won.Outcome == RoundOutcome.Win && blowout.ChallengeOffered);
 
+            var exactly = new StorySeries(100f, 2);
+            exactly.Register(6, 3, 0, 0);
+            Check("exactly three tasks opens the challenge", exactly.ChallengeOffered);
+            var shortByOne = new StorySeries(100f, 2);
+            shortByOne.Register(6, 4, 0, 0);
+            Check("two tasks do not open the challenge", !shortByOne.ChallengeOffered);
+
             var streak = new StorySeries(100f, 2);
             streak.Register(4, 6, 400, 600);
             var tie = streak.Register(5, 5, 500, 700);
@@ -59,6 +66,25 @@ namespace Bob.EditorTools
             Check("two draws still play round three", !draw.Over && draw.Round == 3);
             var lastDraw = draw.Register(3, 3, 300, 300);
             Check("three draws end the chapter level", draw.Over && lastDraw.Number == 3 && draw.Score == "0-0");
+
+            // The chapter pays for every closed round, so the series has to keep the totals the manager rewards.
+            var totals = new StorySeries(100f, 2);
+            totals.Register(6, 4, 60, 40);
+            totals.Register(5, 7, 50, 70);
+            Check("totals sum every closed round",
+                totals.TotalLocalTasks == 11 && totals.TotalRivalTasks == 11 &&
+                totals.TotalLocalPoints == 110 && totals.TotalRivalPoints == 110);
+            Check("rounds played counts closed rounds", totals.RoundsPlayed == 2 && totals.Round == 3);
+            totals.Reset();
+            Check("reset clears the chapter totals",
+                totals.TotalLocalTasks == 0 && totals.TotalLocalPoints == 0 && totals.RoundsPlayed == 0 && totals.Score == "0-0");
+
+            var oneWin = new StorySeries(100f, 2);
+            oneWin.Register(6, 5, 0, 0);
+            oneWin.Register(5, 5, 0, 0);
+            oneWin.Register(5, 5, 0, 0);
+            Check("one win and two draws do not take the chapter",
+                oneWin.Over && oneWin.Score == "1-0" && !oneWin.LocalTookSeries && oneWin.Stars == 0);
 
             Debug.Log(failures == 0 ? "[SeriesCheck] rules PASSED" : $"[SeriesCheck] rules FAILED ({failures})");
         }

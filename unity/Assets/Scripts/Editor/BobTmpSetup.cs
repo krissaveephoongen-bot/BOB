@@ -65,8 +65,9 @@ namespace Bob.EditorTools
                 AssetDatabase.AddObjectToAsset(fa.material, fa);
                 fa.TryAddCharacters(Glyphs(), out var missing);
                 if (!string.IsNullOrEmpty(missing)) Debug.LogWarning("Bob: " + name + " has no glyph for: " + missing);
-                // freeze the atlas: every glyph the game needs is in it, and a dynamic asset would rewrite itself on disk during play
-                // (the editor then recompiles scripts mid-match and kills the bot test); fonts with unlisted glyphs fall back to the default font
+                // Freeze the atlas: every glyph the game needs is in it, and a dynamic asset would rewrite itself on disk during play
+                // (the editor then recompiles scripts mid-match and kills the bot test). There is NO fallback font asset, so a glyph
+                // missing from Glyphs() renders as nothing: add it here and rebuild before using it in a label.
                 fa.atlasPopulationMode = AtlasPopulationMode.Static;
                 EditorUtility.SetDirty(fa); EditorUtility.SetDirty(fa.material);
                 Debug.Log($"Bob: built {assetPath}: {fa.characterTable.Count} characters, {fa.atlasTextureCount} atlas page(s).");

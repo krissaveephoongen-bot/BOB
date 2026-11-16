@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Bob.Rules;
+using Bob.TaskRace;
 
 static class Program
 {
@@ -47,6 +48,45 @@ static class Program
 
         var rv = BobMatch.Rival(BobMatch.MakeRound(1, 42), 42, BobRules.RoundBudget);
         Check("rival plays a stack", rv != null && BobRules.CountLayers(rv.Stack) > 0);
+
+        // The story chapter verdict (StorySeries): two round wins take the chapter, and the chapter card's stars hang
+        // off the same closed series. The editor check also plays this in Unity; these keep the rules honest offline.
+        var oneWin = new StorySeries(100f, 2);
+        oneWin.Register(6, 5, 0, 0);
+        oneWin.Register(5, 5, 0, 0);
+        oneWin.Register(5, 5, 0, 0);
+        Check("series: one win and two draws do not take the chapter",
+            oneWin.Over && oneWin.Score == "1-0" && !oneWin.LocalTookSeries);
+        Check("series: a chapter not taken pays no stars", oneWin.Stars == 0);
+
+        var sweep = new StorySeries(100f, 2);
+        sweep.Register(6, 3, 0, 0);
+        sweep.Register(6, 4, 0, 0);
+        Check("series: 2-0 with a three-task win is a clean sweep",
+            sweep.Over && sweep.LocalTookSeries && sweep.CleanSweep && sweep.ChallengeOffered && sweep.Stars == 3);
+        Check("series: the decided series does not point past round two", sweep.Round == 2);
+
+        var close = new StorySeries(100f, 2);
+        close.Register(6, 5, 0, 0);
+        close.Register(5, 6, 0, 0);
+        close.Register(6, 5, 0, 0);
+        Check("series: 2-1 takes the chapter with one star", close.LocalTookSeries && !close.CleanSweep && close.Stars == 1);
+
+        var totals = new StorySeries(100f, 2);
+        totals.Register(6, 4, 60, 40);
+        totals.Register(5, 7, 50, 70);
+        Check("series: totals sum every closed round",
+            totals.TotalLocalTasks == 11 && totals.TotalRivalTasks == 11 &&
+            totals.TotalLocalPoints == 110 && totals.TotalRivalPoints == 110 && totals.RoundsPlayed == 2);
+        totals.Reset();
+        Check("series: reset clears the totals",
+            totals.TotalLocalTasks == 0 && totals.TotalLocalPoints == 0 && totals.RoundsPlayed == 0 && totals.Score == "0-0");
+
+        var margin = new StorySeries(100f, 2);
+        margin.Register(6, 4, 0, 0);
+        Check("series: two tasks do not open the challenge", !margin.ChallengeOffered);
+        margin.Register(6, 3, 0, 0);
+        Check("series: exactly three tasks does", margin.ChallengeOffered);
 
         Console.WriteLine(fails == 0 ? "UNITY-CHECK PASSED" : $"UNITY-CHECK FAILED: {fails}");
         return fails == 0 ? 0 : 1;
