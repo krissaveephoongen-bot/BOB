@@ -697,6 +697,9 @@ namespace Bob.TaskRace
             if (round == null) round = FindAnyObjectByType<TaskRaceRound>();
             round?.HandleSabotage(spot);
             ToastRequested?.Invoke($"คราบกลับมา! จุดงาน {spot.TaskName} ถูกคู่แข่งป่วน!");
+            // docs 24 section 15.29 names ping_pop for this moment; the clip only existed from 16 Nov, so the line was
+            // silent until now. It is the same earcon the ping wheel uses, which is how the team learns "someone acted".
+            if (Application.isPlaying) Bob.Art.BobSfx.Play("ping_pop", 0.7f);
             if (Application.isPlaying)
                 Debug.Log($"[TaskRace] sabotage on {spot.SpotId} ({spot.OwnerTeam}): state Dirty again.");
         }

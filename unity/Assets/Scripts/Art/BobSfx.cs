@@ -35,7 +35,13 @@ namespace Bob.Art
 
         public static void Play(string name, float volume = 1f)
         {
-            if (inst == null || !inst.byName.TryGetValue(name, out var c)) { Debug.LogWarning("BobSfx: no clip " + name); return; }
+            if (inst == null) { Debug.LogWarning("BobSfx: no player for " + name); return; }
+            if (!inst.byName.TryGetValue(name, out var c))
+            {
+                // ping_pop ships as code, not as a clip (docs 12 section 6): synthesise it instead of going silent.
+                if (name != "ping_pop") { Debug.LogWarning("BobSfx: no clip " + name); return; }
+                c = inst.byName[name] = BobTone.PingPop();
+            }
             inst.oneShot.pitch = 1f + Random.Range(-inst.pitchJitter, inst.pitchJitter);
             inst.oneShot.PlayOneShot(c, volume * inst.sfxVolume);
         }

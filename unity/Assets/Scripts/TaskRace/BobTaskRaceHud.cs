@@ -1637,7 +1637,20 @@ namespace Bob.TaskRace
             "ช่วยวางอันนี้", "ฉันไปหยิบเอง", "ยกชั้นบนออกที", "ใกล้หมดเวลา!", "เยี่ยม!", "ขอบคุณ",
         };
 
+        /// <summary>
+        /// The F13 icons the wheel was specified with (docs 11 section 5A.5: "วงล้อ 6 ไอคอน"). They are real sprites from
+        /// the UI set rather than new art: check = put it there, lightning = I will fetch it myself, up arrow = take the
+        /// top shelf off, stopwatch = time is short, star = nice, heart = thanks. The words stay underneath, because the
+        /// pictures only carry the meaning once the team has used them a few times.
+        /// </summary>
+        static readonly string[] PingIcons =
+        {
+            "icon_check", "stat_speed", "icon_lift", "icon_timer", "icon_star", "icon_heart",
+        };
+
         const float PingButtonSize = 132f, PingDiscSize = 184f, PingRadius = 258f;
+        /// <summary>Icon size inside a chip, and how far above the words it sits.</summary>
+        const float PingIconSize = 56f, PingIconLift = 34f;
         const float PingFanStart = 195f, PingFanStep = 42f, PingDeadZone = 34f;
         /// <summary>Centre of the fan in page-local units: a thumb-slide up and left of the button, clear of the bar.</summary>
         static readonly Vector2 PingWheelCentre = new Vector2(600f, -110f);
@@ -1688,10 +1701,16 @@ namespace Bob.TaskRace
                 var outline = disc.gameObject.AddComponent<Outline>();
                 outline.effectColor = new Color(T.ink.r, T.ink.g, T.ink.b, 0.22f);
                 outline.effectDistance = new Vector2(2f, -2f);
-                var text = BobUi.Label(disc.transform, PingWords[i], 24, T.ink, TextAnchor.MiddleCenter, FontStyle.Bold);
-                text.enableAutoSizing = true; text.fontSizeMin = 18f; text.fontSizeMax = 24f;
+                // Icon on top, word underneath: the chip is a disc of 184u, so the picture takes the upper half and the
+                // label keeps the lower 80u (two lines at 20pt). A missing sprite tints white and reads as a blank disc,
+                // which is why the words never leave.
+                var icon = BobUi.Img(disc.transform, PingIcons[i], PingIconSize);
+                BobUi.Pin(icon.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                    new Vector2(0f, PingIconLift), new Vector2(PingIconSize, PingIconSize));
+                var text = BobUi.Label(disc.transform, PingWords[i], 20, T.ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+                text.enableAutoSizing = true; text.fontSizeMin = 15f; text.fontSizeMax = 20f;
                 text.textWrappingMode = TextWrappingModes.Normal;
-                BobUi.Stretch(text.rectTransform, 16f, 10f, 16f, 10f);
+                BobUi.Stretch(text.rectTransform, 8f, 12f, 8f, 92f);
                 disc.gameObject.AddComponent<PingOption>().Init(this, i);
                 pingDiscs.Add(disc);
                 pingDiscLabels.Add(text);
@@ -1824,7 +1843,7 @@ namespace Bob.TaskRace
                 pingBubble.SetAsLastSibling();
             }
             pingBubbleUntil = Time.unscaledTime + 2.5f;
-            Bob.Art.BobSfx.Play("bubble_pop", 0.8f);
+            Bob.Art.BobSfx.Play("ping_pop", 0.8f);
             Debug.Log($"[TaskRacePing] \"{PingWords[index]}\"{(spot != null ? " @ " + spot.SpotId : "")} · {TaskSpot.LocalTeam}");
         }
 

@@ -96,6 +96,8 @@
 
 ## 6. เสียงใหม่ของ Task Race (ยังไม่มีไฟล์)
 
+**ทำแล้ว 16 พ.ย. 2026 — `ping_pop` (สังเคราะห์ ไม่มีไฟล์):** ตัวแรกของรายการนี้ที่ดังจริง 0.16 วิ 880→1500 Hz 44.1 kHz mono สร้างด้วย `BobTone.PingPop()` (`Scripts/Art/BobTone.cs`) แล้วแคชเป็น `AudioClip` ระหว่างรัน · ใช้ 2 ที่: ส่งคำในวงล้อ Quick Ping (`BobTaskRaceHud.SendPing`) และตอนถูกป่วน (`TaskRaceModeManager.OnSpotSabotaged` — docs 24 §15.29 เขียนชื่อเสียงนี้ไว้แต่เดิมเงียบ) · **ไม่มีไฟล์ `.wav` ใน repo:** `*.wav` ถูก LFS ครอบไว้ตั้งแต่ 16 พ.ย. และ LFS endpoint ของ session ตอบ HTTP 501 (installation token เขียนไม่ได้) จึงเลือกสังเคราะห์แทนการ commit binary ที่ push ไม่ขึ้น · ถ้าภายหลังใส่ `Assets/Audio/SFX/ping_pop.wav` จริง `BobSfx` จะใช้ไฟล์นั้นก่อน (โค้ดสังเคราะห์เป็นแค่ fallback ตอนชื่อคลิปหาย) · ที่เหลือในตารางยังไม่มีไฟล์
+
 ตั้งชื่อตามนี้เพื่อให้โค้ดเรียกได้ตรง (`BobSfx.Play("…")`, `BobMusicLayers`) ทุกตัวยังไม่มีไฟล์ ใช้ placeholder สังเคราะห์ก่อนได้ หาแหล่ง CC0 ตามข้อ 1 หรือจ้างทำ (เพลง)
 
 | ชื่อ | ใช้ตอน | ยาว (วิ) | ลำดับ | ควรหาเสียงแบบ |
