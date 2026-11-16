@@ -22,10 +22,16 @@ namespace Bob.Rules
         public const int StarsToOpen = 2;
         /// <summary>Key of "this chapter was closed at least once": the first-clear XP bonus is paid once.</summary>
         public const string ClearedPrefix = "bob.story.cleared.";
+        /// <summary>
+        /// The tagline of the story (docs 29 section 6 item 7, settled by the owner on 16 Nov 2026). It is the
+        /// shortest true explanation of best-of-three, so both result cards wear it as a chip. Text only: the Thai
+        /// font set carries no emoji or star glyphs.
+        /// </summary>
+        public const string Slogan = BobStoryText.Slogan;
         /// <summary>End-of-story card, shown once chapter 6 is passed (docs 29 section 5).</summary>
-        public const string FinaleTitle = "ตลาดท่าศาลาเปิดแล้ว";
-        public const string FinaleLine = "ย่านหนึ่งจะไม่ตาย ตราบใดที่ยังมีคนกวาดมัน";
-        public const string FinaleNote = "สไลม์จิ๋วมงกุฎเอียงกำลังนอนอยู่ในโหลที่ HQ";
+        public const string FinaleTitle = BobStoryText.FinaleTitle;
+        public const string FinaleLine = BobStoryText.FinaleLine;
+        public const string FinaleNote = BobStoryText.FinaleNote;
         const string ResourcePath = "Chapters";
 
         static ChapterDefinition[] all;

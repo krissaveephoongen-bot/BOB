@@ -146,6 +146,13 @@ static class Program
         plain.NoteCart(false);
         Check("series: quality stars never move the chapter stars", plain.Stars == starsBefore && plain.Stars == 2);
 
+        // Docs 29 section 6 item 7: the tagline is settled text that both result cards draw. The narrow chip beside
+        // the chapter stars is 300u wide with 24pt Thai, so the line has to stay short, and it has to stay inside the
+        // Thai block: the font set carries no emoji and no star glyph, so anything outside U+0E00-U+0E7F draws boxes.
+        Check("story: the tagline is the settled words", BobStoryText.Slogan == "งานสะอาดต้องสามยก");
+        Check("story: the tagline fits the narrow chip", BobStoryText.Slogan.Length <= 20);
+        Check("story: the tagline uses Thai glyphs only", BobStoryText.Slogan.All(c => c <= '\u0E7F'));
+
         Console.WriteLine(fails == 0 ? "UNITY-CHECK PASSED" : $"UNITY-CHECK FAILED: {fails}");
         return fails == 0 ? 0 : 1;
     }

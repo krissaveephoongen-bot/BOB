@@ -1092,6 +1092,19 @@ namespace Bob.TaskRace
             hasShownResult = true;
         }
 
+        /// <summary>
+        /// The tagline chip of docs 29 section 6 item 7 ("งานสะอาดต้องสามยก", settled by the owner on 16 Nov 2026).
+        /// It explains best-of-three in four words, so it rides on both result cards; the caller decides where the
+        /// free band is, because the match card and the chapter card have different ones.
+        /// </summary>
+        void SloganChip(RectTransform p, Vector2 anchor, Vector2 pivot, Vector2 pos, float width)
+        {
+            var chip = BobUi.Panel(p, T.surfaceCream, null, "Slogan");
+            BobUi.Pin((RectTransform)chip.transform, anchor, pivot, pos, new Vector2(width, 52f));
+            var text = BobUi.Label(chip.transform, BobChapters.Slogan, 24, T.inkMuted, TextAnchor.MiddleCenter);
+            BobUi.Stretch(text.rectTransform, 10f, 4f, 10f, 4f);
+        }
+
         /// <summary>A PvP round or the P3 overlay without a decided series: one round's score and reward.</summary>
         void BuildMatchCard(RectTransform p, MatchResult r)
         {
@@ -1117,6 +1130,9 @@ namespace Bob.TaskRace
                 new Vector2(0f, -252f), new Vector2(1000f, 60f));
 
             RewardBlock(p, r, -326f);
+            // Band between the reward block (-326..-474) and the buttons (-560..-720): the only centred gap on
+            // this card, so the tagline sits there rather than beside the score line.
+            SloganChip(p, new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f), new Vector2(0f, -517f), 460f);
 
             // An online round cannot restart on one device alone (docs 27): the seed is the host's, so the replay is a
             // new room. The card says so instead of leaving a button that would desync the two islands.
@@ -1172,6 +1188,9 @@ namespace Bob.TaskRace
                 new Vector2(0f, -166f), new Vector2(900f, 72f));
 
             StarIcons(p, s.Stars);
+            // Beside the star row, on the left: the stars only take the middle 324u, and the band below the score
+            // line (which ends at -238) belongs to nobody. A centred chip there would have collided with the asks line.
+            SloganChip(p, new Vector2(0f, 1f), new Vector2(0f, 0.5f), new Vector2(48f, -294f), 300f);
 
             string Halo(bool on) => on ? $"<color=#{ColorUtility.ToHtmlStringRGB(T.success)}>✓</color>"
                                        : $"<color=#{ColorUtility.ToHtmlStringRGB(T.inkMuted)}>✕</color>";
