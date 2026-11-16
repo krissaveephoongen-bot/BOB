@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Bob.Art;
 using Bob.Rules;
+using Bob.Ugs;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -95,13 +96,14 @@ namespace Bob.Game
             catch (Exception) { }
         }
 
-        // ---------------------------------------------------------------- boot flow: splash -> home
+        // ---------------------------------------------------------------- boot flow: splash -> (login once) -> home
 
         IEnumerator BootFlow()
         {
             phase = Phase.Splash; RenderAll();
             yield return new WaitForSecondsRealtime(1.6f);
-            phase = Phase.Title; RenderAll();
+            bool guest = false; try { guest = PlayerPrefs.GetInt("bob.guest", 0) == 1; } catch (Exception) { }
+            phase = guest ? Phase.Title : Phase.Login; RenderAll();
         }
 
         void Splash()
@@ -112,6 +114,113 @@ namespace Bob.Game
             var t = H1(screenRoot, "สมรภูมิปัดกวาด", 64, BobUi.Surface); BobUi.OutlineText(t, BobUi.Ink, 0.3f);
             BobUi.Pin(t.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -210), new Vector2(1100, 100));
             Sfx("broom_sweep");
+        }
+
+        // ---------------------------------------------------------------- S02 login (UGS anonymous guest)
+
+        // The screen owns the sign-in (docs 11 S02, docs 24 section 15.21): pressing เล่นเลย asks Unity Gaming Services
+        // for an anonymous player, and a failed network must never lock the offline game away — the same screen offers
+        // an offline entry so solo story play always works.
+        bool signingIn, signInFailed;
+        string signInNote;
+
+        void Login()
+        {
+            ScreenBackdrop("lobby_condo");
+            var panel = Card(screenRoot, "LoginPanel", BobUi.Bg);
+            BobUi.Pin(panel, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(780, 0));
+            VStack(panel, 54, 46, 20);
+            panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            var logo = BobUi.Img(panel, "menu_logo", 190); BobUi.Size(logo, 190, 190, 0, 190);
+            BobUi.Label(panel, "ยินดีต้อนรับนักปัดกวาด", 46, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Label(panel, "เข้าแบบผู้เยี่ยมชม ไม่ต้องสมัคร · ความคืบหน้าเก็บไว้ในเครื่องนี้", 26, BobUi.Muted, TextAnchor.MiddleCenter);
+
+            var primary = BobUi.Button(panel, signingIn ? "กำลังเชื่อมต่อ…" : signInFailed ? "ลองอีกครั้ง" : "เล่นเลย",
+                BobUi.Sun, PressGuest, 44);
+            BobUi.Size(primary, 148, 168);
+            primary.GetComponentInChildren<TMP_Text>().fontStyle = FontStyles.Bold;
+            primary.interactable = !signingIn;
+
+            if (signInFailed)
+            {
+                // The services are down (or the device is offline): the offline game is still complete on its own.
+                var offline = BobUi.Button(panel, "เล่นแบบออฟไลน์", BobUi.Surface, PressOffline, 32, BobUi.Ink);
+                BobUi.Size(offline, 144, 144);
+            }
+
+            if (!string.IsNullOrEmpty(signInNote))
+                BobUi.Label(panel, signInNote, 24, signInFailed ? BobUi.Bad : BobUi.Muted, TextAnchor.MiddleCenter);
+
+            BobUi.Label(panel, "บัญชีจริง (Google / Apple) จะมาในเวอร์ชันถัดไป", 22, BobUi.Muted, TextAnchor.MiddleCenter);
+        }
+
+        void PressGuest()
+        {
+            if (signingIn) return;
+            Sfx("ui_confirm");
+            StartCoroutine(GuestSignIn());
+        }
+
+        IEnumerator GuestSignIn()
+        {
+            signingIn = true; signInFailed = false; signInNote = "กำลังเชื่อมต่อเซิร์ฟเวอร์…"; RenderAll();
+
+            var ugs = UgsBootstrapManager.Instance;
+            if (ugs == null)
+            {
+                var host = new GameObject("UGS");
+                ugs = host.AddComponent<UgsBootstrapManager>();
+                ugs.signInOnAwake = false; // this screen asks for the sign-in; the manager's Start must not race it
+            }
+
+            // A scene-placed manager may already be signing in (signInOnAwake); give it a moment instead of asking twice.
+            float settle = Time.realtimeSinceStartup + 3f;
+            while (!ugs.IsReady && string.IsNullOrEmpty(ugs.LastError) && Time.realtimeSinceStartup < settle) yield return null;
+
+            if (!ugs.IsReady)
+            {
+                var kick = ugs.KickoffAsync();
+                float deadline = Time.realtimeSinceStartup + 10f;
+                while (!kick.IsCompleted && Time.realtimeSinceStartup < deadline) yield return null;
+                if (!kick.IsCompleted) Debug.LogWarning("[Login] UGS sign-in still running after 10 s");
+            }
+
+            signingIn = false;
+            if (ugs.IsReady && !string.IsNullOrEmpty(ugs.PlayerId)) { EnterAsGuest(ugs.PlayerId); yield break; }
+
+            signInFailed = true;
+            signInNote = string.IsNullOrEmpty(ugs.LastError)
+                ? "เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ · เล่นออฟไลน์ได้เลย"
+                : "เชื่อมต่อไม่สำเร็จ (" + Shorten(ugs.LastError) + ") · เล่นออฟไลน์ได้เลย";
+            Debug.LogWarning("[Login] guest sign-in failed: " + (ugs.LastError ?? "timeout"));
+            RenderAll();
+        }
+
+        static string Shorten(string s) => string.IsNullOrEmpty(s) ? "" : s.Length <= 48 ? s : s.Substring(0, 45) + "…";
+
+        void EnterAsGuest(string playerId)
+        {
+            try
+            {
+                PlayerPrefs.SetInt("bob.guest", 1);
+                PlayerPrefs.SetString("bob.playerId", playerId ?? "");
+                PlayerPrefs.Save();
+            }
+            catch (Exception) { }
+            signInFailed = false; signInNote = null;
+            Debug.Log("[Login] guest player " + playerId);
+            Sfx("ui_confirm");
+            phase = Phase.Title; RenderAll();
+        }
+
+        /// <summary>Services unreachable: enter the offline game, and keep the guest flag so the screen is not a gate.</summary>
+        void PressOffline()
+        {
+            try { PlayerPrefs.SetInt("bob.guest", 1); PlayerPrefs.Save(); } catch (Exception) { }
+            signInFailed = false; signInNote = null;
+            Sfx("ui_confirm");
+            phase = Phase.Title; RenderAll();
         }
 
         // ---------------------------------------------------------------- shared pieces

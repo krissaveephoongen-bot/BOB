@@ -59,8 +59,21 @@ namespace Bob.Dev
             Debug.Log(Log + "pressed \"เล่นเลย (Guest)\"");
 
             // ---------------------------------------------------------------- S10 home → play
-            Button play = null;
-            yield return WaitFor(() => (play = FindButton("เล่น", true)) != null, 25f);
+            // The guest sign-in needs the network; a sandboxed editor run falls back to the offline entry the same
+            // screen offers, which is the exact path a phone without connectivity takes.
+            Button play = null, offline = null;
+            bool pressedOffline = false;
+            yield return WaitFor(() =>
+            {
+                if ((play = FindButton("เล่น", true)) != null) return true;
+                if (!pressedOffline && (offline = FindButton("เล่นแบบออฟไลน์", true)) != null)
+                {
+                    pressedOffline = true;
+                    Debug.Log(Log + "UGS unreachable: pressed \"เล่นแบบออฟไลน์\"");
+                    offline.onClick.Invoke();
+                }
+                return false;
+            }, 30f);
             if (play == null) { Fail("S10 never showed the play button"); yield break; }
             yield return new WaitForSecondsRealtime(0.6f);
             Shot("2-home");

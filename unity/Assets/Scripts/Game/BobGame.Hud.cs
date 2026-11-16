@@ -520,6 +520,7 @@ namespace Bob.Game
             {
                 case Phase.Title: Home(); break;
                 case Phase.Splash: Splash(); break;
+                case Phase.Login: Login(); break;
                 case Phase.Modes: ModeSelect(); break;
                 case Phase.Heroes: HeroSelect(); break;
                 case Phase.Shop: Shop(); break;

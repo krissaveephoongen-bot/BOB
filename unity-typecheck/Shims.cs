@@ -2,7 +2,8 @@
 // They are only compiled by unity-typecheck (never by Unity), so two rules apply:
 //   1. Mirror the API surface that the game scripts actually touch — nothing more.
 //   2. Keep the members faithful enough that a typo or a wrong type still fails the build.
-// Packages covered: TextMeshPro, AI Navigation (Unity.AI.Navigation), UnityEditor.Android.
+// Packages covered: TextMeshPro, AI Navigation (Unity.AI.Navigation), UnityEditor.Android,
+// and the Unity Gaming Services bootstrap (Bob.Ugs), whose real folder this project leaves out.
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.UI;
@@ -117,5 +118,21 @@ namespace UnityEngine
     public static class Handheld
     {
         public static void Vibrate() { }
+    }
+}
+
+namespace Bob.Ugs
+{
+    /// <summary>The real bootstrap needs the Unity Gaming Services SDK (unity/Assets/Scripts/UGS is left out of this
+    /// project). Game screens reference it for the S02 guest sign-in, so mirror the members they touch.</summary>
+    public class UgsBootstrapManager : MonoBehaviour
+    {
+        public static UgsBootstrapManager Instance { get; private set; }
+        public bool signInOnAwake = true;
+        public bool IsReady { get; private set; }
+        public string PlayerId { get; private set; }
+        public string LastError { get; private set; }
+        public System.Threading.Tasks.Task KickoffAsync() => null;
+        public System.Threading.Tasks.Task EnsureReadyAsync() => null;
     }
 }
