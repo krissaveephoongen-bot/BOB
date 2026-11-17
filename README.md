@@ -128,7 +128,8 @@ Unity screen consumes it after the pure-UGS migration. Full setup and limits: `a
   them, hold 0.6 s to lock) judged by `BobTaskRaceRules.CartNeed`; only the speed buff lands (walk +10% for the
   round). The chairs are dragged in the world by the context button, with a 3/4/5 unit drag and 0/1/2 pieces of
   clutter (real colliders, carved navmesh) as difficulty rises; the owner portrait and the server-held chair
-  position are missing. Both score on the client (no `bob_score_stack` round trip).
+  position are missing. Both score with the same pure functions the server module generates (`taskCartNeed`/`taskCartScore`, asserted by
+`server/task-race-test.js`), so no RPC round trip is needed and the two sides cannot drift.
 - Scrub and Wash abilities, obstacles other than the sofa, the shelves and the table, the other 7 scenes; Party / Community modes.
 - Balance: every number is an untested starting value. `node server/balance-sim.js` compares the hero abilities
   (results and suggested tweaks: `art/docs/13_Balance_Sim.md`); nothing has been changed from it yet.
