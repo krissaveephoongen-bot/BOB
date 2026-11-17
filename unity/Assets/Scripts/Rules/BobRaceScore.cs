@@ -43,5 +43,17 @@ namespace Bob.Rules
         }
 
         static int Clamp(int v, int lo, int hi) => v < lo ? lo : v > hi ? hi : v;
+
+        /// <summary>
+        /// How long the board row's bar is, relative to the top score: 1 = as long as the leader. A floor of 0.08 keeps a
+        /// low score visible as a bar instead of a sliver, and nothing can draw past the track.
+        /// </summary>
+        public static float BarFraction(double score, double top)
+        {
+            if (score <= 0 || top <= 0) return 0f;
+            double f = score / top;
+            if (f >= 1.0) return 1f;
+            return f < 0.08 ? 0.08f : (float)f;
+        }
     }
 }

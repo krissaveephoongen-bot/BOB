@@ -57,6 +57,16 @@ static class Program
             BobRaceScore.Of(10, 4, true, false, 0, 3) == BobRaceScore.Of(10, 4, true, false, 0, 1) * 14 / 10);
         Console.WriteLine("race score table checked");
 
+        // The board card's bars (docs 31 section 3): length against the leader, a floor so a low score still reads.
+        Check("board: the leader's bar is full", BobRaceScore.BarFraction(2268, 2268) == 1f);
+        Check("board: half the score is half a bar", Math.Abs(BobRaceScore.BarFraction(810, 1620) - 0.5f) < 0.0001f);
+        Check("board: a tiny score keeps a visible sliver", BobRaceScore.BarFraction(10, 2000) == 0.08f);
+        Check("board: no score or no leader draws nothing",
+            BobRaceScore.BarFraction(0, 100) == 0f && BobRaceScore.BarFraction(50, 0) == 0f);
+        Check("board: a score past the leader stops at the track", BobRaceScore.BarFraction(9000, 1620) == 1f);
+        Console.WriteLine("board bars checked");
+
+
         int rooms = 0;
         foreach (var seed in new[] { 1, 2, 3, 7, 42, 999, 123456, 654321, 8388607 })
         for (int round = 1; round <= 3; round++)

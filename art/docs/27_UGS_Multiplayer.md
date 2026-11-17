@@ -32,7 +32,7 @@ com.unity.netcode.gameobjects      2.14.0
 
 > **หมายเหตุ:** `services.lobby` / `services.relay` ถูกประกาศ deprecated (รวมเข้า `com.unity.services.multiplayer` — Sessions API) แต่ยังทำงานได้และ owner สั่งใช้ตัวคลาสสิก `LobbyService` / `RelayService` ก่อน
 
-## 3. สคริปต์ 8 ไฟล์ (`unity/Assets/Scripts/UGS/`)
+## 3. สคริปต์ 9 ไฟล์ (`unity/Assets/Scripts/UGS/`)
 
 | ไฟล์ | หน้าที่ |
 | --- | --- |
@@ -41,6 +41,7 @@ com.unity.netcode.gameobjects      2.14.0
 | `UgsLeaderboardManager.cs` | singleton — `leaderboardId = "global_high_score"`; `SubmitScoreAsync(double)` → `AddPlayerScoreAsync` และเก็บ `LastEntry` (มี `Rank`); `GetTopScoresAsync(limit = 10)` → `GetScoresAsync` |
 | `UgsRelayLobbyManager.cs` | singleton — `CreateRoomAsync(name, maxPlayers)`, `QuickJoinOrJoinByCodeAsync(code = "")`, heartbeat 15 วิ, `LeaveRoomAsync()` |
 | `BobOnlineRoom.cs` | singleton ห้องที่เล่นได้จริง — `HostAsync(heroId, maxPlayers)`, `JoinAsync(heroId, code)`, `LeaveAsync()`, `StartMatch(seed, players)`, `SendPose`, `SendTask`; สร้าง `NetworkManager` + `UnityTransport` เองตอนรัน; ข้อความ Netcode `bob.start` / `bob.pose` / `bob.task` (§10) |
+| `BobBoard.cs` | การ์ดอันดับอ่านข้อมูลผ่าน `BobBoardService.LoadAsync(limit)` → `BobBoardSnapshot` (แถว `Rank`/`Name`/`Score`/`Self`, `SelfRank`, `Error`) — SDK ทั้งหมดอยู่ในไฟล์นี้ UI ไม่ต้องอ้าง `Unity.Services.Leaderboards`; ถ้ายังไม่มี manager ในซีนจะสร้างให้เอง |
 | `BobRaceScoreReporter.cs` | ตัวส่งคะแนนของแมตช์ — `Attach(manager)` ตอน `TaskRaceModeManager.Awake`; ฟัง `MatchEnded` แล้วส่ง `manager.LastScore` เข้า `global_high_score` **ครั้งเดียวต่อแมตช์** เฉพาะเมื่อ `LastMatchRecorded` และเครื่องล็อกอินแล้ว; `LastRank` เก็บอันดับที่บอร์ดตอบกลับ (ยังไม่แสดงบน UI) |
 | `UgsBootstrapManager.cs` | singleton — `UnityServices.InitializeAsync()` + `SignInAnonymouslyAsync()` ตอนเริ่ม แล้วโหลดโปรไฟล์, log `PlayerId`, `EnsureReadyAsync()` เรียกซ้ำได้ |
 | `PureUgsDebugUI.cs` | IMGUI ปุ่มทดสอบ: +100 เหรียญ (Cloud Save), ส่งคะแนนสุ่ม + ดู Top 10, Create Room / Quick Join / Leave — Editor และ Development Build เท่านั้น |

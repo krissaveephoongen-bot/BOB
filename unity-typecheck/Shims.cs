@@ -136,6 +136,30 @@ namespace Bob.Ugs
         public System.Threading.Tasks.Task EnsureReadyAsync() => null;
     }
 
+    /// <summary>The board card (UGS/BobBoard.cs) is SDK code and stays out of this project; mirror the three plain types
+    /// the HUD reads, so the card compiles without the Leaderboards assembly.</summary>
+    public sealed class BobBoardRow
+    {
+        public int Rank;
+        public string Name;
+        public int Score;
+        public bool Self;
+    }
+
+    public sealed class BobBoardSnapshot
+    {
+        public readonly System.Collections.Generic.List<BobBoardRow> Rows = new System.Collections.Generic.List<BobBoardRow>();
+        public bool SignedIn;
+        public int SelfRank = -1;
+        public int SelfScore;
+        public string Error;
+    }
+
+    public static class BobBoardService
+    {
+        public static System.Threading.Tasks.Task<BobBoardSnapshot> LoadAsync(int limit = 10) => null;
+    }
+
     /// <summary>The real reporter (UGS/BobRaceScoreReporter.cs) posts a finished match's score to the leaderboard.
     /// The Task Race manager only needs Attach, so that is all this mirrors.</summary>
     public class BobRaceScoreReporter : MonoBehaviour

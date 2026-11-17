@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Bob.Art;
 using Bob.Modular;
+using Bob.Ugs;
 using Bob.Rules;
 using TMPro;
 using UnityEngine;
@@ -42,8 +43,11 @@ namespace Bob.Game
         RectTransform cartCardRt;
         string popFor;
         int lastTick = -1;
-        enum Overlay { None, Pause, Settings }
+        enum Overlay { None, Pause, Settings, Board }
         Overlay overlay = Overlay.None;
+        // The board card reads a snapshot, never the SDK: LoadBoard fills it in the background and re-renders.
+        BobBoardSnapshot boardSnap;
+        bool boardLoading;
 
         // ================================================================ build once
 
@@ -730,6 +734,8 @@ namespace Bob.Game
         void SetOverlay(Overlay o)
         {
             overlay = o;
+            // Every open of the board asks again: a score may have landed since the last look.
+            if (o == Overlay.Board) { boardSnap = null; boardLoading = false; }
             Time.timeScale = o != Overlay.None && phase == Phase.Build ? 0 : 1;
             joyActive = false;
             Sfx(o == Overlay.None ? "ui_cancel" : "ui_tap");
@@ -754,10 +760,105 @@ namespace Bob.Game
                 BobUi.Size(BobUi.Button(card, "ออกไปหน้าหลัก", BobUi.Surface, () => { SetOverlay(Overlay.None); ToTitle(); }, 34), 104, 104);
                 return;
             }
+            if (overlay == Overlay.Board) { Board(card); return; }
             BobUi.Label(card, "ตั้งค่า", 52, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
             BobUi.Size(BobUi.Button(card, "เสียงเอฟเฟกต์: " + (soundOn ? "เปิด" : "ปิด"), soundOn ? BobUi.Sun : BobUi.Surface, () => { SetSound(!soundOn); RenderOverlay(); }, 34), 104, 104);
             BobUi.Size(BobUi.Button(card, "เพลง: " + (musicOn ? "เปิด" : "ปิด"), musicOn ? BobUi.Sun : BobUi.Surface, () => { SetMusic(!musicOn); RenderOverlay(); }, 34), 104, 104);
             BobUi.Size(BobUi.Button(card, "ปิด", BobUi.Surface, () => SetOverlay(phase == Phase.Build ? Overlay.Pause : Overlay.None), 34), 104, 104);
+        }
+
+        // ---------------------------------------------------------------- board (docs 31 section 3)
+
+        /// <summary>
+        /// The leaderboard card: one bar per row, length against the leader, my own row in sun yellow. No table of digits:
+        /// rank in a disc, the name, a bar and the number at the end. Offline it says so and shows the device best.
+        /// </summary>
+        void Board(RectTransform card)
+        {
+            BobUi.Pin(card, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(980f, 0f));
+            BobUi.Label(card, "อันดับ", 52, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+
+            if (boardLoading)
+            {
+                BobUi.Label(card, "กำลังโหลด…", 30, BobUi.Muted, TextAnchor.MiddleCenter);
+            }
+            else if (boardSnap == null)
+            {
+                LoadBoard();
+                BobUi.Label(card, "กำลังโหลด…", 30, BobUi.Muted, TextAnchor.MiddleCenter);
+            }
+            else if (!boardSnap.SignedIn)
+            {
+                BobUi.Label(card, "ออฟไลน์ · เล่นจบแมตช์เพื่อเก็บคะแนน", 28, BobUi.Muted, TextAnchor.MiddleCenter);
+                BobUi.Label(card, $"ดีสุดในเครื่อง {Bob.TaskRace.BobTaskRaceProfile.BestPoints} แต้ม", 34, BobUi.Ink,
+                    TextAnchor.MiddleCenter, FontStyle.Bold);
+            }
+            else if (boardSnap.Rows.Count == 0 && boardSnap.SelfRank <= 0)
+            {
+                BobUi.Label(card, boardSnap.Error != null ? "อ่านอันดับไม่ได้ · ลองใหม่ภายหลัง" : "ยังไม่มีใครมีคะแนน · เริ่มเลย",
+                    28, BobUi.Muted, TextAnchor.MiddleCenter);
+            }
+            else
+            {
+                int top = 0;
+                for (int i = 0; i < boardSnap.Rows.Count; i++) if (boardSnap.Rows[i].Score > top) top = boardSnap.Rows[i].Score;
+                for (int i = 0; i < boardSnap.Rows.Count; i++) BoardRow(card, boardSnap.Rows[i], top);
+
+                bool shown = false;
+                for (int i = 0; i < boardSnap.Rows.Count; i++) if (boardSnap.Rows[i].Self) shown = true;
+                string mine = boardSnap.SelfRank > 0
+                    ? $"ของคุณ # {boardSnap.SelfRank} · {boardSnap.SelfScore} คะแนน"
+                    : "ยังไม่มีคะแนนของคุณ · เล่นหนึ่งแมตช์";
+                BobUi.Label(card, shown ? "แถวสีเหลืองคือคุณ" : mine, 28,
+                    shown ? BobUi.Muted : BobUi.Teal, TextAnchor.MiddleCenter, shown ? FontStyle.Normal : FontStyle.Bold);
+            }
+
+            BobUi.Size(BobUi.Button(card, "ปิด", BobUi.Surface, () => SetOverlay(phase == Phase.Build ? Overlay.Pause : Overlay.None), 34), 104, 104);
+        }
+
+        /// <summary>One board line: a rank disc, the name, a bar scaled to the leader and the score on the right.</summary>
+        void BoardRow(RectTransform card, BobBoardRow row, int top)
+        {
+            var line = BobUi.Panel(card, row.Self ? BobUi.Sun : new Color(1f, 1f, 1f, 0.62f), "ui_panel", "Row");
+            BobUi.Size(line, 76, 76, 1);
+
+            var disc = BobUi.Disc(line.transform, row.Self ? BobUi.Bg : BobUi.Sun, 52, "Rank");
+            BobUi.Pin((RectTransform)disc.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(12f, 0f), new Vector2(52f, 52f));
+            var rn = BobUi.Label(disc.transform, row.Rank.ToString(), 26, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Stretch(rn.rectTransform);
+
+            var nm = BobUi.Label(line.transform, row.Name, 28, BobUi.Ink, TextAnchor.MiddleLeft,
+                row.Self ? FontStyle.Bold : FontStyle.Normal);
+            BobUi.Pin(nm.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(78f, 0f), new Vector2(290f, 40f));
+
+            var track = BobUi.Rect("Track", line.transform);
+            var timg = track.gameObject.AddComponent<Image>();
+            timg.color = new Color(0.90f, 0.86f, 0.77f, 1f); timg.raycastTarget = false;
+            BobUi.Pin(track, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(380f, 0f), new Vector2(300f, 18f));
+            var fill = BobUi.Rect("Fill", track);
+            var fimg = fill.gameObject.AddComponent<Image>();
+            fimg.color = row.Self ? BobUi.Ink : BobUi.Teal; fimg.raycastTarget = false;
+            fill.anchorMin = Vector2.zero;
+            fill.anchorMax = new Vector2(BobRaceScore.BarFraction(row.Score, top), 1f);
+            fill.offsetMin = fill.offsetMax = Vector2.zero;
+
+            var sc = BobUi.Label(line.transform, row.Score.ToString(), 30, BobUi.Ink, TextAnchor.MiddleRight, FontStyle.Bold);
+            BobUi.Pin(sc.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-16f, 0f), new Vector2(190f, 44f));
+        }
+
+        void LoadBoard()
+        {
+            if (boardLoading) return;
+            boardLoading = true;
+            _ = LoadBoardAsync();
+        }
+
+        async System.Threading.Tasks.Task LoadBoardAsync()
+        {
+            var snap = await BobBoardService.LoadAsync(10);
+            boardLoading = false;
+            boardSnap = snap;
+            if (overlay == Overlay.Board) RenderOverlay();
         }
 
         static string Js(double x) => ((int)System.Math.Floor(x + 0.5)).ToString(); // JavaScript Math.round
