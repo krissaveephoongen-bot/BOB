@@ -9,7 +9,7 @@
 
 1. **เจอบล็อกเกอร์จริง:** ซีน Task Race ทั้งสามไม่มี `EventSystem` และไม่มีโค้ดสร้างให้ → build ที่เปิดซีนนี้ตรง ๆ จะ**แตะอะไรไม่ติดเลย** (HUD, ปุ่มพัก, วงล้อ ping, การ์ดมินิเกม)
 2. **แก้แล้ว** ที่ `TaskRaceModeManager.Awake` → `EnsureEventSystem()` สร้าง `EventSystem` + `StandaloneInputModule` ให้เองถ้ายังไม่มี และ `DontDestroyOnLoad` ตอนเล่นจริง
-3. **เพิ่ม gate `ready-check`** ที่จับ 5 ชนิดความพังเชิง "เล่นไม่ได้" ซึ่ง typecheck มองไม่เห็น (ซีนหาย, GUID ไม่ตรง, `LoadScene` ชื่อผิด, Canvas ไม่มี EventSystem, asset ที่โหลดด้วยชื่อหาย, ชื่อ sprite/เสียงที่โค้ดขอไม่มีจริง)
+3. **เพิ่ม gate `ready-check`** ที่จับ 9 ชนิดความพังเชิง "เล่นไม่ได้" ซึ่ง typecheck มองไม่เห็น (ซีนหาย/GUID ไม่ตรง, `LoadScene` ชื่อผิด, Canvas ไม่มี EventSystem, Resources หาย, `Resources.Load` ชี้ที่ว่าง, script GUID ตาย, GUID ซ้ำ, PlayerSettings ผิด, ชื่อ sprite/เสียงไม่มีจริง) — ทดสอบย้อนกลับครบทุกข้อ
 4. **ของที่ตรวจแล้วครบ:** 4 ซีนใน Build Settings, `Resources/Chapters` 6, `Resources/Stages` 6, audio prefab (38 คลิป), ฟอนต์ไทย 2 ตัว, ชื่อ sprite 18 ตัว, ชื่อเสียง 38 ตัว + tone สำรอง `ping_pop`
 5. **ที่ยังค้างและไม่ใช่โค้ด:** ยังไม่มีภาพ/หลักฐานจาก Unity (ต้องรันบนเครื่อง owner), build entry `TaskRace_Duo/Team` เป็นซีนที่เข้าไม่ถึง, `server/coop-test|mp-test|mp-bots-queue` ยังยิงพอร์ต Nakama 7350 ที่ถูกถอดไปแล้ว, LFS อัปโหลดไม่ได้ (HTTP 501) เหลือไฟล์ธรรมดา 301 ไฟล์
 6. **แผนทดสอบ 4 ชั้น:** ออฟไลน์ (4 คำสั่ง) → editor checks (10 ตัว) → มือถือจริง (S01→S16) → ออนไลน์ UGS พร้อมเกณฑ์ผ่านของแต่ละชั้น (ข้อ 4–5)
@@ -65,25 +65,40 @@ static void EnsureEventSystem()
 
 ใช้ `StandaloneInputModule` ให้ตรงกับ legacy input ของโปรเจกต์ (ถ้าเปลี่ยนไป Input System ทีหลัง ต้องเปลี่ยนเป็น `InputSystemUIInputModule` พร้อมกัน)
 
-**gate ใหม่ `ready-check/`** — `python3 ready-check/check.py` หรือ `bash ready-check/check.sh`, exit 0/1/2, พิมพ์ `READY-CHECK PASSED` ตอนผ่าน. ตรวจ: build scene มีจริง+GUID ตรง · `LoadScene` ชี้ซีนที่มีใน Build Settings · Canvas ทุกซีนมี EventSystem หรือมีตัวสร้าง · Resources ครบ · ชื่อ sprite/เสียงที่โค้ดขอมีจริง · สรุปสถานะ LFS. รอบล่าสุด:
+**gate ใหม่ `ready-check/`** — `python3 ready-check/check.py` หรือ `bash ready-check/check.sh`, exit 0/1/2, พิมพ์ `READY-CHECK PASSED` ตอนผ่าน. รอบล่าสุด:
 
 ```
 scenes: Game, TaskRace, TaskRace_Duo, TaskRace_Team
 art: 18 sprite name(s) checked, audio: 38 clip(s), tone fallback: ping_pop
+loads: 22 Resources.Load path(s) · scripts: 35 guid(s) (12 from packages) · metas: 944 (0 duplicate(s))
+settings: com.bob.battleofthebrooms · 0.1.0 (2) · minSdk 26 · landscape · legacy input
+note: Resources.Load("BobUiTheme") is absent by design - optional: ...
 note: LFS: 0 pointer(s), 301 plain binary file(s) under unity/Assets
 READY-CHECK PASSED
 ```
 
-**พิสูจน์ว่า gate จับได้จริง (ทดสอบย้อนกลับ):** ลองเปลี่ยนชื่อ `EnsureEventSystem` ใน `TaskRaceModeManager.cs` ชั่วคราว แล้วรัน gate → แดง 3 บรรทัดตรงเป้า:
+ตรวจ 9 ข้อ (ทุกข้อทดสอบย้อนกลับแล้วว่าจับได้จริง):
 
-```
-READY-CHECK FAILED:
-  - TaskRace has a Canvas, no EventSystem in the scene, and TaskRaceModeManager.cs does not build one
-  - TaskRace_Duo has a Canvas, no EventSystem in the scene, and TaskRaceModeManager.cs does not build one
-  - TaskRace_Team has a Canvas, no EventSystem in the scene, and TaskRaceModeManager.cs does not build one
-```
+| # | ตรวจ | ถ้าพังจะเห็นอะไร |
+| --- | --- | --- |
+| 1 | ซีนใน Build Settings มีจริง + GUID ตรง `.meta` | เปิดเกมแล้วดำ/โหลดซีนไม่ได้ |
+| 2 | `LoadScene("...")` / `CanStreamedLevelBeLoaded` ชี้ซีนที่มีใน Build Settings | ปุ่มพาไปหน้าว่าง |
+| 3 | Canvas ทุกซีนมี EventSystem **หรือ** มีตัวสร้างของซีนนั้น (TaskRace ↔ `TaskRaceModeManager`, Game ↔ `BobGame.World`) | แตะไม่ติดทั้งจอ |
+| 4 | `Resources/Chapters` 6 · `Stages` 6 · audio prefab · ฟอนต์ 2 | หน้าจอว่าง/ฟอนต์ไทยเป็นกล่อง |
+| 5 | **ทุก `Resources.Load("...")` ที่เป็นข้อความเต็ม** มีไฟล์จริง (`BobUiTheme` ยกเว้นพร้อมเหตุผลในโค้ด) | ได้ `null` เงียบ ๆ |
+| 6 | **script GUID ในทุกซีน/prefab** มี `.cs` จริง + ไม่มี `m_Script: {fileID: 0}` (baseline ของสคริปต์ที่มาจากแพ็กเกจอยู่ใน `ready-check/external-scripts.txt`) | `Missing (Mono Script)` ทั้งคอมโพเนนต์ |
+| 7 | **GUID ซ้ำ** ใน `.meta` | แอสเซตสลับกันเองแบบเงียบ |
+| 8 | **PlayerSettings ตอนส่ง**: package id, versionCode ≥ 1, minSdk ≥ 26, แนวนอนเท่านั้น, `activeInputHandler: 0` ให้ตรงกับ `StandaloneInputModule` | APK ติดตั้งได้แต่เล่นไม่ได้/จอเบี้ยว |
+| 9 | ชื่อ sprite (manifest) และชื่อเสียง (audio prefab + tone) ที่โค้ดขอ | สี่เหลี่ยมขาว/ไม่มีเสียง |
 
-รอบแรกของ gate ผ่านทั้งที่ยังไม่มี EventSystem เพราะยอมรับ "มีตัวสร้างอยู่ในไฟล์ใดก็ได้" — แก้ให้ผูกซีนกับเจ้าของของมัน (TaskRace → `TaskRaceModeManager.cs`, Game → `BobGame.World.cs`) แล้วจึงจับได้จริง
+**พิสูจน์ว่า gate จับได้จริง (ทดสอบย้อนกลับ):** ใส่ของเสียชั่วคราวทีละอย่างแล้วรัน gate → แดงตรงเป้าทุกครั้ง แล้วคืนค่ากลับ → เขียว
+- เปลี่ยนชื่อ `EnsureEventSystem` → แดง 3 บรรทัด: `TaskRace has a Canvas, no EventSystem in the scene, and TaskRaceModeManager.cs does not build one` (×3 ซีน)
+- เพิ่ม `Resources.Load("Props/SM_does_not_exist")` → `Resources.Load("Props/SM_does_not_exist") resolves to nothing under Assets/Resources`
+- เปลี่ยน script GUID ใน `BobAudio.prefab` → `unresolved script GUID 0123…: no .cs in Assets and not in ready-check/external-scripts.txt`
+- วาง `.meta` ที่ใช้ GUID ซ้ำกับ `Stage1_RentalRoom.asset` → `duplicate GUID 9d08…`
+- ตั้ง `AndroidMinSdkVersion: 21` → `AndroidMinSdkVersion is 21, expected 26 or newer`
+
+รอบแรกของ gate ผ่านทั้งที่ยังไม่มี EventSystem เพราะยอมรับ "มีตัวสร้างอยู่ในไฟล์ใดก็ได้" — แก้ให้ผูกซีนกับเจ้าของของมันแล้วจึงจับได้จริง
 
 ---
 
