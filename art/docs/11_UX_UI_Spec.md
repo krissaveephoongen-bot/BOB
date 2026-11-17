@@ -1083,7 +1083,7 @@ wireframe P06 ใน [`ux/BOB_Play_Screen_Cafeteria.html`](ux/BOB_Play_Screen_Ca
 
 แหล่งแบบ: `art/prototype/ui-revision-r1/index.html` (local preview), `exports/` (SVG แยกเฟรม),
 `prepare.cjs` อ่านกติกาเดิมจาก `server/modules/index.js` เพื่อสร้าง `fixtures.js` โดยไม่แก้ไฟล์เกม.
-เป็นแบบแยกจาก Figma ออนไลน์ เพราะ browser ไม่มี visible viewport; **ยังไม่ได้นำลง Unity**.
+เป็นแบบแยกจาก Figma ออนไลน์ เพราะ browser ไม่มี visible viewport; ผลนำลง Unity แยกบันทึกใน §14.2.
 
 - HUD 1920×1080 และ 2400×1080: ใบงาน 376×444u; รวมคะแนนและสะพานในกลุ่มบนเดียว; กันโซนกลาง
   800×486u ที่ y=252 สำหรับตัวละคร/ทางข้างหน้า. HUD ด้านข้างเว้น 156u และปุ่มล่างสิ้นสุด y=996;
@@ -1121,7 +1121,26 @@ wireframe P06 ใน [`ux/BOB_Play_Screen_Cafeteria.html`](ux/BOB_Play_Screen_Ca
   ไม่พบตัวอักษรชนกันในภาพที่ตรวจ ไม่ใช่ผลรับรองทุกสเกลหรือทุกฟอนต์.
   SHA-256 ของ HTML ที่ทดสอบ `55ed9beea65f174c6a1a33775d108fb67bb8e5165b3432ebd52ae277d4e58fa2`.
   ZIP ส่งมอบ `art/prototype/ui-revision-r1/exports/bob-r1-2026-11-17T07-55-09-802Z.zip` (39.13 MiB),
-  ตรวจ CRC ผ่าน; ไม่มี Unity diff และไม่ได้ commit/push.
+  ตรวจ CRC ผ่าน; ชุดแบบ commit/push แล้วที่ `5621332` บน `design/figma-ui-r1-20261117` (ไม่รวม Unity).
+
+### 14.2 Native Unity R1 (17 พ.ย. 2026 — อยู่ระหว่างตรวจ)
+
+- สาขา `ui/unity-r1-20261117`; `BobUiR1` แยกสี cream/mint/navy/yellow, ปุ่มมุมมนและ IBM Plex Sans Thai
+  Regular/Bold ออกจากชุด UI เดิม ไม่เปลี่ยน Home/ร้านค้า/ฉาก/สูตร/คะแนน/UGS.
+- หน้าตัวละครใช้ข้อมูลและภาพเดิมครบสี่ตัว; ตัวที่ใช้งานอยู่ไม่มีปุ่มเลือกซ้ำ; นอกแมตช์จบด้วย `เสร็จสิ้น`.
+- T04 เป็น uGUI จริง: หกตัวเลือก, ถาด, สี่แถบค่าแนวนอน, กองล่างขึ้นบน, ชั้นบนแตะยกออก 144u,
+  ปุ่มกดค้าง 0.6 วินาที. คงงบ 100, วิธีใช้ไม่เกินสอง, ยกออกไม่คืนถาด และล็อกกองว่าง/ไม่ผ่านได้.
+- `BobSafeArea.Create` ใช้ inset ที่ส่งเข้ามาตั้งแต่ครั้งแรก; หน้าจอ R1 ยึด safe area ของอุปกรณ์.
+- การตรวจรอบนี้ใช้สำเนา `compile-check/` เพราะโปรเจกต์หลักเปิดอยู่ใน Editor; สำเนาเก็บไฟล์เดิมไว้ใน
+  `compile-check/Logs/ui-r1-before-sync-*` ก่อน sync. ไม่ปิด Editor ของ owner และไม่ rebuild scene/APK.
+- Compile snapshot แรกผ่าน (`compile-check/Logs/ui-r1-compile-01.log`, exit 0, ไม่มี `error CS`).
+  Native run01 พบกล่องข้อความ HUD/T04 เตี้ยจนตัวอักษรหายเมื่อขยาย 130%; เพิ่มพื้นที่บรรทัดจริงและให้ใบงานเลื่อนได้
+  โดยไม่ลดขนาดฟอนต์; ชื่อใบงานใช้ wrap และคำนวณความสูงแถวเผื่อ 130% แทน auto-size/ellipsis.
+  ไม่ถือว่า compile ผ่านแทนการเห็นภาพหรือทดสอบ interaction.
+- แก้ `SeriesDim` ที่ค้างหลังซ่อนการ์ดจบรอบโดยจัดไว้ใต้ root เดียวกับการ์ด; HUD ใช้ Overlay order 20
+  จึงไม่ผ่าน post-grade ของฉากและไม่ถูกไอคอนสถานี order 12–14 วาดทับ. `TaskRaceVerify.Shot` สลับเป็น
+  camera canvas เฉพาะขณะถ่าย RenderTexture แล้วคืนโหมด/กล้องเดิม; ไม่ปรับสีชดเชยหรือเปลี่ยนแสงฉาก.
+- ภาพ/interaction ของฉบับสุดท้ายยังอยู่ระหว่างตรวจ จึงยังไม่รับรอง mobile touch, notch หรือข้อความไทย 130%.
 
 ## 15. รายการตรวจก่อนส่งหน้าจอใหม่ (Definition of Done)
 

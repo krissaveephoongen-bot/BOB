@@ -7,6 +7,87 @@ using UnityEngine.UI;
 
 namespace Bob.Game
 {
+    public static class BobUiR1
+    {
+        public static readonly Color Ink = BobUi.Hex("#24364B"), Muted = BobUi.Hex("#536575"),
+            Cream = BobUi.Hex("#FFF8E9"), Paper = BobUi.Hex("#FFFDF5"), Mint = BobUi.Hex("#CCE8DC"),
+            Green = BobUi.Hex("#256552"), Sun = BobUi.Hex("#FFDA70"), Sky = BobUi.Hex("#C8EAF3"),
+            Line = BobUi.Hex("#D8DECE"), Red = BobUi.Hex("#A53143"), Pink = BobUi.Hex("#FFE3DF"),
+            Violet = BobUi.Hex("#E4DCF3"), Dim = new Color(36 / 255f, 54 / 255f, 75 / 255f, 0.68f);
+        static Sprite rounded;
+        static TMP_FontAsset regular, bold;
+        static Bob.UI.BobUiTheme theme;
+
+        public static Bob.UI.BobUiTheme Theme
+        {
+            get
+            {
+                if (theme != null) return theme;
+                theme = UnityEngine.Object.Instantiate(Bob.UI.BobUiTheme.Current);
+                theme.ink = Ink; theme.inkMuted = Muted; theme.surface = Paper; theme.surfaceCream = Cream;
+                theme.primary = Sun; theme.primaryLight = Sun; theme.secondary = Green; theme.sky = Sky;
+                theme.success = Green; theme.danger = Red; theme.brandRed = Red; theme.frame = Line; theme.dim = Dim;
+                return theme;
+            }
+        }
+
+        public static Image Panel(Transform parent, Color color, string sprite = null, string name = "Panel")
+        {
+            if (rounded == null)
+            {
+                const int n = 64;
+                const float radius = 24f;
+                var texture = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+                var pixels = new Color32[n * n];
+                for (int y = 0; y < n; y++)
+                    for (int x = 0; x < n; x++)
+                    {
+                        var q = new Vector2(Mathf.Abs(x + 0.5f - n / 2f) - (n / 2f - radius),
+                            Mathf.Abs(y + 0.5f - n / 2f) - (n / 2f - radius));
+                        float d = new Vector2(Mathf.Max(q.x, 0), Mathf.Max(q.y, 0)).magnitude + Mathf.Min(Mathf.Max(q.x, q.y), 0) - radius;
+                        pixels[y * n + x] = new Color32(255, 255, 255, (byte)(255 * Mathf.Clamp01(0.5f - d)));
+                    }
+                texture.SetPixels32(pixels); texture.Apply();
+                rounded = Sprite.Create(texture, new Rect(0, 0, n, n), Vector2.one * 0.5f, 100f, 0,
+                    SpriteMeshType.FullRect, new Vector4(radius, radius, radius, radius));
+            }
+            var image = BobUi.Rect(name, parent).gameObject.AddComponent<Image>();
+            image.sprite = rounded; image.type = Image.Type.Sliced; image.color = color;
+            return image;
+        }
+
+        public static TMP_Text Label(Transform parent, string text, int size = 30, Color? color = null,
+            TextAnchor align = TextAnchor.MiddleLeft, FontStyle style = FontStyle.Normal)
+        {
+            if (regular == null) regular = TMP_FontAsset.CreateFontAsset(Resources.Load<Font>("Fonts/IBMPlexSansThai-Regular"));
+            if (bold == null) bold = TMP_FontAsset.CreateFontAsset(Resources.Load<Font>("Fonts/IBMPlexSansThai-Bold"));
+            var label = BobUi.Label(parent, text, size, color ?? Ink, align);
+            label.font = style == FontStyle.Bold ? bold : regular;
+            label.fontStyle = style == FontStyle.Italic ? FontStyles.Italic : FontStyles.Normal;
+            return label;
+        }
+
+        public static Button Button(Transform parent, string text, Color bg, UnityAction onClick, int size = 34, Color? fg = null)
+        {
+            var image = Panel(parent, bg, name: "Button");
+            var shadow = image.gameObject.AddComponent<Shadow>();
+            shadow.effectColor = new Color(Ink.r, Ink.g, Ink.b, 0.16f);
+            shadow.effectDistance = new Vector2(0, -8);
+            var button = image.gameObject.AddComponent<Button>();
+            var colors = button.colors;
+            colors.normalColor = colors.selectedColor = Color.white;
+            colors.highlightedColor = new Color(0.97f, 0.97f, 0.95f, 1);
+            colors.pressedColor = new Color(0.84f, 0.84f, 0.80f, 1);
+            colors.disabledColor = new Color(0.67f, 0.69f, 0.67f, 1);
+            colors.fadeDuration = 0.07f;
+            button.colors = colors;
+            if (onClick != null) button.onClick.AddListener(onClick);
+            var label = Label(image.transform, text, size, fg ?? Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Stretch(label.rectTransform, 16, 8, 16, 8);
+            return button;
+        }
+    }
+
     public static class BobUi
     {
         // Palette from prototype/index.html (light theme) and art/docs/00_Art_Direction.md.

@@ -1,17 +1,17 @@
 // Battle of the Brooms: the Task Race HUD of docs 16 section 2 and docs 24 sections 10–12 — the team task list
 // ("ใบงาน"), the weight bar, the match clock + "Team Points" bar, the S28 2D minigame card, the main context button
-// and a lightweight debug test bar. Built from code like the other HUDs, with the tokens of docs 11.
+// and a lightweight debug test bar. R1 uses a compact, safe-area-aware layout with the existing round rules.
 //
-// The list follows the round's plan order (T04 first). A row shows the task's category disc, its name and its
-// weight; เสร็จ means done, ทำอยู่ means a player holds the TASK_LOCK, รอคิว means the task is still in the queue
+// The list follows the round's plan order (T04 first). A row shows the task's name, status and weight;
+// เสร็จ means done, ทำอยู่ means a player holds the TASK_LOCK, รอคิว means the task is still in the queue
 // and no station has taken it yet (the restock of docs 24 section 14). The bar and the % use weights, the "3/6"
 // next to the title uses task counts, exactly as docs 16 section 2.2 asks.
 //
 // The main button is context sensitive: ทำงาน on a dirty own station, ป่วนจุดงาน on a clean enemy station while the
 // bridges are open, ติดเกราะป้องกัน (-150 Pts) on a clean own station, and a disabled สะอาดแล้ว otherwise. Any action
 // that takes the TASK_LOCK opens the S28 card. The card is the 1400 x 860 frame of docs 11 with a 1240 x 620 play
-// area filled by BobMinigameHost (docs 16 sections 5–6); T04 (cart), T12 (chairs) and sabotage keep the timed bar,
-// because those two have no card and a sabotage is a 2.5–3.0 s hold. The manager closes any card when the joystick
+// area filled by BobMinigameHost (docs 16 sections 5–6). T04 expands to the R1 frame; world tasks and sabotage
+// keep their existing timed path. The manager closes any card when the joystick
 // passes 70%.
 //
 // Layout is placed by hand instead of layout groups: the card is authored in the editor (no layout pass runs
@@ -41,10 +41,7 @@ namespace Bob.TaskRace
         [Tooltip("Row category icons; the scene builder wires Assets/Art/BobArtLibrary.asset.")]
         [SerializeField] BobArtLibrary art;
 
-        [Header("Layout in canvas units, 1920x1080 match height (docs 11)")]
-        [SerializeField] float cardWidth = 560f;
-        [SerializeField] float rowHeight = 54f;
-        [SerializeField] float rowGap = 4f;
+        [Header("HUD feedback / debug inset (R1 layout follows the safe page)")]
         [SerializeField] Vector2 cardInset = new Vector2(24f, 24f);
         [SerializeField] float toastSeconds = 2.2f;
 
@@ -62,19 +59,23 @@ namespace Bob.TaskRace
         [Tooltip("Build the floating joystick and tap-to-walk zones under the HUD.")]
         [SerializeField] bool buildTouchControls = true;
 
-        const float PadL = 18f, PadR = 18f, PadT = 14f, PadB = 14f;
-        const float HeadH = 56f, BarH = 26f, BlockGap = 10f;
-        const float FooterH = 104f;
-        const float DiscW = 40f, StatusW = 96f, WeightW = 56f, ColGap = 8f;
+        const float TaskCardW = 376f, TaskCardH = 444f, TaskRowsH = 300f;
+        const float CompactRowH = 58f, CurrentRowH = 116f;
 
         Canvas canvas;
-        RectTransform page, card, fill, rowsRoot, footer;
-        TMP_Text title, percent, footerText, toast;
+        RectTransform page, card, fill, rowsRoot, footer, rowsViewport, toastRoot;
+        ScrollRect taskScroll;
+        float rowsHeight;
+        TMP_Text title, taskCount, percent, footerText, toast;
         Button mainButton;
-        TMP_Text mainLabel;
+        TMP_Text mainLabel, mainContext;
 
-        RectTransform topBar, timeFill;
-        TMP_Text timerText, pointsText, rivalText, teamPctText, modeText;
+        RectTransform topBar, timeFill, pausePanel, cardClockPlate, miniPlay;
+        TMP_Text timerText, pointsText, rivalText, modeText;
+        bool cartFrame;
+        Vector2 layoutSize, layoutCanvasSize, layoutAnchorMin, layoutAnchorMax;
+        readonly Vector3[] layoutCorners = new Vector3[4];
+        readonly List<RectTransform> fullCanvasDims = new List<RectTransform>();
 
         Image cardDim, cardPanel, cardTrack;
         RectTransform cardFill;
@@ -123,7 +124,7 @@ namespace Bob.TaskRace
         // docs 11 HUD-MateTray: one chip per offline team-mate on the free right column, saying what that mate is doing
         // ("walking to S3", "cleaning", "carrying a chair"). Tapping a chip calls the mates to the job beside the
         // player. An online room draws the real bodies instead, so the tray is offline-only.
-        const float MateChipW = 300f, MateChipH = 92f, MateChipGap = 8f, MateTrayTop = 500f;
+        const float MateChipW = 332f, MateChipH = 144f, MateChipGap = 12f, MateTrayTop = 630f;
         RectTransform mateTray;
         TMP_Text mateHint;
         readonly List<RectTransform> mateChips = new List<RectTransform>();
@@ -162,7 +163,9 @@ namespace Bob.TaskRace
         public string CardHint => cardHint != null ? cardHint.text : "";
 
         static BobUiTheme T => BobUiTheme.Current;
-        float ContentW => cardWidth - PadL - PadR;
+        float ContentW => TaskCardW - 32f;
+        Vector2 PageSize => page != null && page.rect.width > 1f ? page.rect.size : new Vector2(1920f, 1080f);
+        float SideInset => Mathf.Clamp((PageSize.x - 1608f) * 0.5f, 24f, 156f);
         /// <summary>The debug test bar is authoring-only: a device build never draws it, whatever the scene says.</summary>
         bool DebugBarAllowed => showDebugBar && (Application.isEditor || Debug.isDebugBuild);
 
@@ -209,6 +212,8 @@ namespace Bob.TaskRace
             HideCard();
             HideResult();
             HookEmergency();
+            Canvas.ForceUpdateCanvases();
+            LayoutHud(true);
         }
 
         /// <summary>
@@ -272,6 +277,7 @@ namespace Bob.TaskRace
         void Update()
         {
             if (canvas == null) return;
+            LayoutHud();
             if (Input.GetKeyDown(KeyCode.Escape)) OnBackPressed();
             if (round != null && round.Version != builtVersion)
             {
@@ -291,8 +297,8 @@ namespace Bob.TaskRace
                 if (manager.LastResult.HasValue && !hasShownResult) ShowResult(manager.LastResult.Value);
                 else if (!manager.LastResult.HasValue && resultRoot != null) HideResult();
             }
-            if (toast != null && toast.gameObject.activeSelf && Time.unscaledTime >= toastUntil)
-                toast.gameObject.SetActive(false);
+            if (toastRoot != null && toastRoot.gameObject.activeSelf && Time.unscaledTime >= toastUntil)
+                toastRoot.gameObject.SetActive(false);
         }
 
         void OnMatchEnded(MatchResult result) => ShowResult(result);
@@ -307,12 +313,11 @@ namespace Bob.TaskRace
             var go = new GameObject("Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             go.transform.SetParent(transform, false);
             canvas = go.GetComponent<Canvas>();
-            // Screen-space camera, not overlay: the verify shots render through their own camera into a texture,
-            // and an overlay canvas never appears in those.
-            canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            // Keep interface colors outside world post-processing; camera captures switch modes for their render.
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.planeDistance = 5f;
             canvas.worldCamera = cam != null ? cam : Camera.main;
-            canvas.sortingOrder = 10;
+            canvas.sortingOrder = 20;
 
             var scaler = go.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -320,7 +325,8 @@ namespace Bob.TaskRace
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
             scaler.matchWidthOrHeight = 1f;
 
-            page = BobUi.Stretch(BobUi.Rect("Page", go.transform));
+            page = BobSafeArea.Create(canvas.transform, 0f);
+            page.name = "Page";
         }
 
         void ClearPage()
@@ -333,8 +339,13 @@ namespace Bob.TaskRace
                 if (Application.isPlaying) Destroy(go); else DestroyImmediate(go);
             }
             card = fill = rowsRoot = footer = topBar = timeFill = debugBar = debugToggle = null;
-            mainButton = null; mainLabel = null;
-            timerText = pointsText = rivalText = teamPctText = modeText = null;
+            mainButton = null; mainLabel = mainContext = null;
+            timerText = pointsText = rivalText = modeText = null;
+            title = taskCount = percent = footerText = toast = null;
+            rowsViewport = toastRoot = pausePanel = cardClockPlate = miniPlay = null;
+            taskScroll = null; rowsHeight = 0f; cartFrame = false;
+            layoutSize = Vector2.zero;
+            fullCanvasDims.Clear();
             cardDim = cardPanel = cardTrack = null; cardFill = null;
             cardTitle = cardPercent = cardStep = cardHint = cardClock = cardChip = null; cardClose = null;
             cardChipRoot = null;
@@ -361,43 +372,157 @@ namespace Bob.TaskRace
             touch.Build(page, cam);
         }
 
+        // Reposition existing rects only when the safe page changes; never restart a minigame on resize.
+        void LayoutHud(bool force = false)
+        {
+            if (page == null || canvas == null) return;
+            var size = PageSize;
+            var canvasSize = ((RectTransform)canvas.transform).rect.size;
+            if (!force && size == layoutSize && canvasSize == layoutCanvasSize &&
+                page.anchorMin == layoutAnchorMin && page.anchorMax == layoutAnchorMax) return;
+            layoutSize = size; layoutCanvasSize = canvasSize;
+            layoutAnchorMin = page.anchorMin; layoutAnchorMax = page.anchorMax;
+            float inset = SideInset;
+            if (card != null) card.anchoredPosition = new Vector2(inset, -220f);
+            if (topBar != null)
+                topBar.sizeDelta = new Vector2(Mathf.Min(940f, size.x - 2f * (inset + 168f)), 144f);
+            if (pauseButton != null)
+                BobUi.Pin((RectTransform)pauseButton.transform, Vector2.one, Vector2.one,
+                    new Vector2(-inset, -48f), new Vector2(144f, 144f));
+            if (mainButton != null)
+                BobUi.Pin((RectTransform)mainButton.transform, new Vector2(1f, 0f), new Vector2(1f, 0f),
+                    new Vector2(-inset, 84f), new Vector2(212f, 176f));
+            if (pingButton != null)
+                BobUi.Pin(pingButton, new Vector2(1f, 0f), new Vector2(1f, 0f),
+                    new Vector2(-(inset + 252f), 84f), new Vector2(144f, 144f));
+            if (pausePanel != null)
+                pausePanel.localScale = Vector3.one * Mathf.Min(1f, (size.x - 48f) / 900f, (size.y - 48f) / 616f);
+            LayoutNotifications();
+            LayoutMateTray();
+            LayoutPingWheel();
+            LayoutCardFrame(cartFrame);
+            for (int i = fullCanvasDims.Count - 1; i >= 0; i--)
+            {
+                if (fullCanvasDims[i] == null) fullCanvasDims.RemoveAt(i);
+                else CoverCanvas(fullCanvasDims[i]);
+            }
+        }
+
+        Image FullCanvasDim(Transform parent, string name, Color color)
+        {
+            // The safe content remains a sibling: only this plain, raycast-blocking image reaches the notch.
+            var dim = BobUi.Panel(parent, color, null, name);
+            dim.raycastTarget = true;
+            fullCanvasDims.Add(dim.rectTransform);
+            CoverCanvas(dim.rectTransform);
+            return dim;
+        }
+
+        void CoverCanvas(RectTransform dim)
+        {
+            if (canvas == null || dim == null || !(dim.parent is RectTransform parent)) return;
+            ((RectTransform)canvas.transform).GetWorldCorners(layoutCorners);
+            Vector2 min = parent.InverseTransformPoint(layoutCorners[0]);
+            Vector2 max = parent.InverseTransformPoint(layoutCorners[2]);
+            BobUi.Stretch(dim);
+            dim.offsetMin = min - parent.rect.min;
+            dim.offsetMax = max - parent.rect.max;
+        }
+
+        void LayoutNotifications()
+        {
+            // Reserve the left thumb and both right actions even when those controls are temporarily hidden.
+            float left = SideInset + 240f;
+            float right = PageSize.x - SideInset - 396f - 24f;
+            float width = Mathf.Min(600f, Mathf.Max(240f, right - left));
+            float center = Mathf.Clamp(PageSize.x * 0.5f, left + width * 0.5f, right - width * 0.5f);
+            float x = center - PageSize.x * 0.5f;
+            if (emergencyRoot != null)
+                BobUi.Pin(emergencyRoot, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                    new Vector2(x, 88f), new Vector2(width, 144f));
+            if (toastRoot != null)
+            {
+                // R1's 116u emergency plate becomes a 144u hit target. Lift only a concurrent toast 20u
+                // to leave a 16u gap, rather than allowing its bottom edge to overlap that target.
+                float bottom = emergencyRoot != null && emergencyRoot.gameObject.activeSelf ? 248f : 228f;
+                BobUi.Pin(toastRoot, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                    new Vector2(x, bottom), new Vector2(width, 88f));
+            }
+        }
+
+        void LayoutMateTray()
+        {
+            if (mateTray == null) return;
+            int count = Mathf.Max(1, mateChips.Count);
+            float height = count * MateChipH + (count - 1) * MateChipGap;
+            // One chip starts at 630 on a 1080u page; extra chips grow upward, not into the thumb controls.
+            float bottom = 1080f - MateTrayTop - MateChipH;
+            BobUi.Pin(mateTray, new Vector2(1f, 0f), new Vector2(1f, 0f),
+                new Vector2(-SideInset, bottom), new Vector2(MateChipW, height));
+        }
+
+        void LayoutPingWheel()
+        {
+            if (pingHub == null) return;
+            var half = PageSize * 0.5f;
+            float reach = PingRadius + PingDiscSize * 0.5f + 16f;
+            var center = new Vector2(Mathf.Clamp(half.x - SideInset - 300f, -half.x + reach, half.x - reach),
+                Mathf.Clamp(-110f, -half.y + 176f, half.y - reach));
+            pingHub.anchoredPosition = center;
+            for (int i = 0; i < pingDiscs.Count; i++)
+            {
+                float a = (PingFanStart - i * PingFanStep) * Mathf.Deg2Rad;
+                pingDiscs[i].rectTransform.anchoredPosition = center + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * PingRadius;
+            }
+        }
+
         // ---------------------------------------------------------------- task list
 
         void BuildTaskList()
         {
-            card = (RectTransform)BobUi.Panel(page, T.surface, null, "TaskList").transform;
+            card = (RectTransform)BobUiR1.Panel(page, BobUiR1.Paper, null, "TaskList").transform;
             BobUi.Pin(card, new Vector2(0f, 1f), new Vector2(0f, 1f),
-                new Vector2(cardInset.x, -cardInset.y), new Vector2(cardWidth, 400f));
-
-            title = BobUi.Label(card, "ใบงาน", 46, T.ink, TextAnchor.MiddleLeft, FontStyle.Bold);
+                new Vector2(SideInset, -220f), new Vector2(TaskCardW, TaskCardH));
+            title = BobUiR1.Label(card, "ใบงาน", 34, BobUiR1.Ink, TextAnchor.MiddleLeft, FontStyle.Bold);
             BobUi.Pin(title.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f),
-                new Vector2(PadL, -PadT), new Vector2(ContentW, HeadH));
+                new Vector2(24f, -4f), new Vector2(220f, 80f));
+            taskCount = BobUiR1.Label(card, "0/0", 30, BobUiR1.Ink, TextAnchor.MiddleRight, FontStyle.Bold);
+            BobUi.Pin(taskCount.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f),
+                new Vector2(-24f, -4f), new Vector2(108f, 80f));
 
-            var track = BobUi.Panel(card, T.surfaceCream, null, "Track");
-            BobUi.Pin((RectTransform)track.transform, new Vector2(0f, 1f), new Vector2(0f, 1f),
-                new Vector2(PadL, -(PadT + HeadH + BlockGap)), new Vector2(ContentW - StatusW - ColGap, BarH));
-            fill = BobUi.Rect("Fill", track.transform);
-            fill.anchorMin = new Vector2(0f, 0f);
-            fill.anchorMax = new Vector2(1f, 1f);
-            fill.offsetMin = fill.offsetMax = Vector2.zero;
-            var fillImg = fill.gameObject.AddComponent<Image>();
-            fillImg.color = T.primary;
-            fillImg.raycastTarget = false;
-
-            percent = BobUi.Label(card, "0%", 34, T.ink, TextAnchor.MiddleRight, FontStyle.Bold);
-            BobUi.Pin(percent.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f),
-                new Vector2(-PadR, -(PadT + HeadH + BlockGap)), new Vector2(StatusW, BarH));
-
-            rowsRoot = BobUi.Rect("Rows", card);
+            rowsViewport = BobUi.Rect("TaskViewport", card);
+            BobUi.Pin(rowsViewport, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(16f, -88f), new Vector2(ContentW, TaskRowsH));
+            var catcher = rowsViewport.gameObject.AddComponent<Image>();
+            catcher.color = Color.clear;
+            rowsViewport.gameObject.AddComponent<RectMask2D>();
+            rowsRoot = BobUi.Rect("Rows", rowsViewport);
             BobUi.Pin(rowsRoot, new Vector2(0f, 1f), new Vector2(0f, 1f),
-                new Vector2(PadL, -(RowTop)), new Vector2(ContentW, rowHeight));
+                Vector2.zero, new Vector2(ContentW, TaskRowsH));
+            taskScroll = rowsViewport.gameObject.AddComponent<ScrollRect>();
+            taskScroll.viewport = rowsViewport;
+            taskScroll.content = rowsRoot;
+            taskScroll.horizontal = false;
+            taskScroll.movementType = ScrollRect.MovementType.Clamped;
+            taskScroll.scrollSensitivity = 43f;
 
             footer = BobUi.Rect("Summary", card);
-            footerText = BobUi.Label(footer, "", 26, T.inkMuted, TextAnchor.UpperLeft);
+            BobUi.Pin(footer, new Vector2(0f, 0f), new Vector2(0f, 0f),
+                new Vector2(16f, 4f), new Vector2(ContentW, 48f));
+            var track = BobUiR1.Panel(footer, BobUiR1.Line, null, "Track");
+            BobUi.Pin(track.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
+                Vector2.zero, new Vector2(ContentW - 64f, 6f));
+            track.raycastTarget = false;
+            fill = BobUi.Stretch(BobUi.Rect("Fill", track.transform));
+            var fillImg = fill.gameObject.AddComponent<Image>();
+            fillImg.color = BobUiR1.Green;
+            fillImg.raycastTarget = false;
+            percent = BobUiR1.Label(footer, "0%", 20, BobUiR1.Muted, TextAnchor.MiddleRight);
+            BobUi.Pin(percent.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f),
+                Vector2.zero, new Vector2(60f, 48f));
+            footerText = BobUiR1.Label(rowsViewport, "กำลังเตรียมงาน…", 26, BobUiR1.Muted, TextAnchor.MiddleCenter);
             BobUi.Stretch(footerText.rectTransform);
         }
-
-        float RowTop => PadT + HeadH + BlockGap + BarH + BlockGap;
 
         /// <summary>The one-line hint under the task list: what to do next, never the debug summary.</summary>
         string AdviceLine()
@@ -420,17 +545,19 @@ namespace Bob.TaskRace
                 if (Application.isPlaying) Destroy(go); else DestroyImmediate(go);
             }
 
+            rowsHeight = 0f;
+            footerText.gameObject.SetActive(round == null);
             if (round == null)
             {
                 RowCount = 0;
                 title.text = "ใบงาน";
-                footerText.text = "กำลังเตรียมงาน…";
+                taskCount.text = "0/0";
                 FitCard(0);
                 return;
             }
 
-            title.text = $"ใบงาน · ทีมเรา {round.DoneCount}/{round.TaskCount}";
-            footerText.text = AdviceLine();
+            title.text = "ใบงาน";
+            taskCount.text = $"{round.DoneCount}/{round.TaskCount}";
             NoteRecoveredJobs();
 
             var tasks = round.Tasks;
@@ -467,53 +594,69 @@ namespace Bob.TaskRace
 
         void BuildRow(TaskEntry entry, int index, bool next)
         {
+            float height;
             var row = BobUi.Rect("Task_" + entry.Spec.Id, rowsRoot);
-            BobUi.Pin(row, new Vector2(0f, 1f), new Vector2(0f, 1f),
-                new Vector2(0f, -index * (rowHeight + rowGap)), new Vector2(ContentW, rowHeight));
-
-            if (next) // the eye lands on the one job to do next
+            string statusText = StatusText(entry);
+            if (next)
             {
-                var hi = BobUi.Panel(row, new Color(T.accent.r, T.accent.g, T.accent.b, 0.16f), null, "Next");
-                BobUi.Stretch((RectTransform)hi.transform);
+                var hi = BobUiR1.Panel(row, BobUiR1.Mint, null, "Next");
+                BobUi.Stretch(hi.rectTransform);
                 hi.raycastTarget = false;
-                var stripe = BobUi.Panel(row, T.accent, null, "NextStripe");
-                BobUi.Pin((RectTransform)stripe.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
-                    Vector2.zero, new Vector2(6f, rowHeight));
-                stripe.raycastTarget = false;
+                var name = BobUiR1.Label(row, entry.Spec.Name, 29, BobUiR1.Ink, TextAnchor.MiddleLeft, FontStyle.Bold);
+                float nameHeight = Mathf.Max(64f, RowNameHeight(name, ContentW - 40f));
+                // Keep the 52u status box below the name, with the existing 2u outer insets.
+                height = Mathf.Max(CurrentRowH, nameHeight + 52f + 4f);
+                BobUi.Pin(name.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                    new Vector2(20f, -2f), new Vector2(ContentW - 40f, nameHeight));
+                var status = BobUiR1.Label(row,
+                    $"{(string.IsNullOrEmpty(statusText) ? "ทำต่อไป" : statusText)} · ×{entry.Spec.Weight}",
+                    23, BobUiR1.Green);
+                BobUi.Pin(status.rectTransform, new Vector2(0f, 0f), new Vector2(0f, 0f),
+                    new Vector2(20f, 2f), new Vector2(ContentW - 40f, 52f));
             }
+            else
+            {
+                string suffix = string.IsNullOrEmpty(statusText) ? "" : " · " + statusText;
+                var name = BobUiR1.Label(row, $"{NameText(entry)}{suffix} · ×{entry.Spec.Weight}",
+                    26, NameColour(entry));
+                height = Mathf.Max(CompactRowH, RowNameHeight(name, ContentW - 16f));
+                BobUi.Stretch(name.rectTransform, 8f, 0f, 8f, 0f);
+            }
+            BobUi.Pin(row, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(0f, -rowsHeight), new Vector2(ContentW, height));
+            rowsHeight += height;
+        }
 
-            // category icon instead of a bare colour dot (clear of the 6 px "next" stripe)
-            var icon = BobUi.Img(row, CategoryIcon(entry.Spec.Category), 28, TaskSpot.CategoryColour(entry.Spec.Category));
-            BobUi.Pin(icon.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
-                new Vector2(9f, 0f), new Vector2(28f, 28f));
-
-            float nameW = ContentW - DiscW - ColGap - StatusW - ColGap - WeightW - ColGap;
-            var name = BobUi.Label(row, NameText(entry), 32, NameColour(entry));
-            name.textWrappingMode = TextWrappingModes.NoWrap;
-            name.overflowMode = TextOverflowModes.Ellipsis;
-            BobUi.Pin(name.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
-                new Vector2(DiscW + ColGap, 0f), new Vector2(nameW, rowHeight));
-
-            var status = BobUi.Label(row, StatusText(entry), 26, StatusColour(entry), TextAnchor.MiddleRight);
-            BobUi.Pin(status.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f),
-                new Vector2(-(WeightW + ColGap), 0f), new Vector2(StatusW, rowHeight));
-
-            var weight = BobUi.Label(row, "×" + entry.Spec.Weight, 28,
-                entry.Done ? T.inkMuted : TaskSpot.CategoryColour(entry.Spec.Category),
-                TextAnchor.MiddleRight, FontStyle.Bold);
-            BobUi.Pin(weight.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f),
-                Vector2.zero, new Vector2(WeightW, rowHeight));
+        static float RowNameHeight(TMP_Text label, float width)
+        {
+            label.enableAutoSizing = false;
+            label.textWrappingMode = TextWrappingModes.Normal;
+            label.overflowMode = TextOverflowModes.Overflow;
+            // Reserve wrapped text at 130% without changing the normal display size.
+            float baseSize = label.fontSize;
+            label.fontSize = baseSize * 1.3f;
+            float height = label.GetPreferredValues(label.text, width, Mathf.Infinity).y;
+            label.fontSize = baseSize;
+            return Mathf.Ceil(height);
         }
 
         void FitCard(int rows)
         {
-            float rowsH = rows > 0 ? rows * rowHeight + (rows - 1) * rowGap : rowHeight;
-            float footerTop = RowTop + rowsH + BlockGap;
-            float height = footerTop + FooterH + PadB;
-            card.sizeDelta = new Vector2(cardWidth, height);
+            card.sizeDelta = new Vector2(TaskCardW, TaskCardH);
+            rowsRoot.sizeDelta = new Vector2(ContentW, Mathf.Max(TaskRowsH, rowsHeight));
+            taskScroll.vertical = rowsHeight > TaskRowsH;
+            taskScroll.StopMovement();
+            rowsRoot.anchoredPosition = new Vector2(0f,
+                Mathf.Clamp(rowsRoot.anchoredPosition.y, 0f, Mathf.Max(0f, rowsHeight - TaskRowsH)));
+        }
 
-            BobUi.Pin(footer, new Vector2(0f, 1f), new Vector2(0f, 1f),
-                new Vector2(PadL, -footerTop), new Vector2(ContentW, FooterH));
+        static void FitLabel(TMP_Text label, float minimum)
+        {
+            label.enableAutoSizing = true;
+            label.fontSizeMin = minimum;
+            label.fontSizeMax = label.fontSize;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+            label.overflowMode = TextOverflowModes.Ellipsis;
         }
 
         static string CategoryIcon(TaskCategory c) => c switch
@@ -526,15 +669,13 @@ namespace Bob.TaskRace
         };
 
         string NameText(TaskEntry entry) =>
-            entry.Done ? $"<color=#{Hex(T.success)}>✓</color> <s>{entry.Spec.Name}</s>"
-            : entry.Locked ? $"<color=#{Hex(T.accent)}>…</color> {entry.Spec.Name}"
-            : entry.Spec.Name;
+            entry.Done ? $"<s>{entry.Spec.Name}</s>" : entry.Spec.Name;
 
         string StatusText(TaskEntry entry) =>
             entry.Done ? "เสร็จ" : entry.Locked ? "ทำอยู่" : entry.Spot == null ? "รอคิว" : "";
 
         Color NameColour(TaskEntry entry) =>
-            entry.Done ? T.inkMuted : entry.Locked ? T.accent : entry.Spot == null ? T.inkMuted : T.ink;
+            entry.Done ? BobUiR1.Muted : entry.Locked ? BobUiR1.Green : entry.Spot == null ? BobUiR1.Muted : BobUiR1.Ink;
 
         Color StatusColour(TaskEntry entry) =>
             entry.Done ? T.success : entry.Locked ? T.accent : T.inkMuted;
@@ -552,49 +693,46 @@ namespace Bob.TaskRace
 
             percent.text = Mathf.RoundToInt(shownPercent * 100f) + "%";
             var fillImg = fill.GetComponent<Image>();
-            if (fillImg != null) fillImg.color = Color.Lerp(T.primary, T.success, Mathf.Clamp01(shownPercent));
+            if (fillImg != null) fillImg.color = Color.Lerp(BobUiR1.Sun, BobUiR1.Green, Mathf.Clamp01(shownPercent));
         }
 
         // ---------------------------------------------------------------- match bar (clock + points)
 
         void BuildTopBar()
         {
-            topBar = (RectTransform)BobUi.Panel(page, T.surface, null, "TopBar").transform;
-            // Clear of the task card on the left: drawn at the screen centre the two cream panels overlapped and
-            // the seam read as a rendering slip.
-            BobUi.Pin(topBar, new Vector2(0f, 1f), new Vector2(0f, 1f),
-                new Vector2(cardWidth + cardInset.x + 12f, -cardInset.y), new Vector2(940f, 124f));
-
-            // the clock is the loudest thing on screen (S28/HUD: "see it in half a second")
-            timerText = BobUi.Label(topBar, "เวลา 02:00", 48, T.ink, TextAnchor.MiddleLeft, FontStyle.Bold);
-            BobUi.Pin(timerText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f),
-                new Vector2(PadL, -8f), new Vector2(330f, 54f));
-
-            modeText = BobUi.Label(topBar, "Bridge Raid", 22, T.inkMuted, TextAnchor.MiddleLeft);
-            BobUi.Pin(modeText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f),
-                new Vector2(PadL + 2f, -64f), new Vector2(470f, 26f));
-
-            pointsText = BobUi.Label(topBar, "คะแนนทีม 0", 30, T.ink, TextAnchor.MiddleRight, FontStyle.Bold);
-            BobUi.Pin(pointsText.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f),
-                new Vector2(-PadR, -8f), new Vector2(330f, 40f));
-
-            rivalText = BobUi.Label(topBar, "คู่แข่ง 0", 24, T.inkMuted, TextAnchor.MiddleRight);
+            topBar = (RectTransform)BobUiR1.Panel(page, BobUiR1.Paper, null, "TopBar").transform;
+            BobUi.Pin(topBar, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -48f), new Vector2(940f, 144f));
+            var team = BobUiR1.Label(topBar, "ทีมเรา", 26, BobUiR1.Muted);
+            BobUi.Pin(team.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(32f, -10f), new Vector2(130f, 60f));
+            var rival = BobUiR1.Label(topBar, "คู่แข่ง", 26, BobUiR1.Muted);
+            BobUi.Pin(rival.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f),
+                new Vector2(-174f, -10f), new Vector2(130f, 60f));
+            timerText = BobUiR1.Label(topBar, "02:00", 64, BobUiR1.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Pin(timerText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, 30f), new Vector2(300f, 144f));
+            pointsText = BobUiR1.Label(topBar, "0", 52, BobUiR1.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Pin(pointsText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(170f, 16f), new Vector2(110f, 116f));
+            rivalText = BobUiR1.Label(topBar, "0", 50, BobUiR1.Ink, TextAnchor.MiddleRight, FontStyle.Bold);
             BobUi.Pin(rivalText.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f),
-                new Vector2(-PadR, -50f), new Vector2(380f, 26f));
-
-            teamPctText = BobUi.Label(topBar, "ทีมเรา 0%", 22, T.inkMuted, TextAnchor.MiddleRight, FontStyle.Bold);
-            BobUi.Pin(teamPctText.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f),
-                new Vector2(-PadR, -78f), new Vector2(310f, 26f));
-
-            var track = BobUi.Panel(topBar, T.surfaceCream, null, "ClockTrack");
-            BobUi.Pin((RectTransform)track.transform, new Vector2(0f, 0f), new Vector2(0f, 0f),
-                new Vector2(PadL, 8f), new Vector2(940f - PadL - PadR, 8f));
-            timeFill = BobUi.Rect("ClockFill", track.transform);
-            timeFill.anchorMin = new Vector2(0f, 0f);
-            timeFill.anchorMax = new Vector2(1f, 1f);
-            timeFill.offsetMin = timeFill.offsetMax = Vector2.zero;
+                new Vector2(-32f, 16f), new Vector2(130f, 116f));
+            FitLabel(pointsText, 30f);
+            FitLabel(rivalText, 30f);
+            modeText = BobUiR1.Label(topBar, "", 24, BobUiR1.Muted, TextAnchor.MiddleCenter);
+            BobUi.Stretch(modeText.rectTransform, 32f, 4f, 32f, 84f);
+            FitLabel(modeText, 19f);
+            var track = BobUi.Panel(topBar, BobUiR1.Line, null, "ClockTrack");
+            var trackRect = track.rectTransform;
+            trackRect.anchorMin = new Vector2(0f, 1f);
+            trackRect.anchorMax = Vector2.one;
+            trackRect.offsetMin = new Vector2(32f, -82f);
+            trackRect.offsetMax = new Vector2(-32f, -80f);
+            track.raycastTarget = false;
+            timeFill = BobUi.Stretch(BobUi.Rect("ClockFill", track.transform));
             var timeImg = timeFill.gameObject.AddComponent<Image>();
-            timeImg.color = T.primary;
+            timeImg.color = BobUiR1.Green;
             timeImg.raycastTarget = false;
         }
 
@@ -603,37 +741,29 @@ namespace Bob.TaskRace
             if (topBar == null) return;
             if (manager == null)
             {
-                timerText.text = "เวลา 02:00";
-                pointsText.text = "คะแนนทีม 0";
-                if (rivalText != null) rivalText.text = "คู่แข่ง 0";
-                if (teamPctText != null) teamPctText.text = "ทีมเรา 0%";
+                timerText.text = "02:00";
+                pointsText.text = "0";
+                if (rivalText != null) rivalText.text = "0";
                 modeText.text = "ไม่มี TaskRaceModeManager";
                 return;
             }
 
             float r = manager.RemainingSeconds;
             int secs = Mathf.CeilToInt(r);
-            timerText.text = $"เวลา {secs / 60:00}:{secs % 60:00}";
-            timerText.color = r <= 10f ? T.danger : manager.BridgeRaid && r <= manager.warningAtRemaining ? T.warn : T.ink;
+            timerText.text = $"{secs / 60:00}:{secs % 60:00}";
+            timerText.color = r <= 10f ? BobUiR1.Red : BobUiR1.Ink;
 
-            pointsText.text = "คะแนนทีม " + manager.LocalPoints;
-            if (rivalText != null)
-                rivalText.text = round != null
-                    ? $"คู่แข่ง {manager.RivalPoints} · เสร็จ {round.DoneCountOf(manager.OtherTeam)}/{round.TaskCount}"
-                    : "คู่แข่ง " + manager.RivalPoints;
-            if (teamPctText != null)
-            {
-                float p = round != null && round.TotalWeight > 0 ? round.DoneWeight / (float)round.TotalWeight : 0f;
-                teamPctText.text = "ทีมเรา " + Mathf.RoundToInt(p * 100f) + "%";
-            }
-            if (footerText != null) footerText.text = AdviceLine();
+            pointsText.text = manager.LocalPoints.ToString();
+            if (rivalText != null) rivalText.text = manager.RivalPoints.ToString();
             if (debugModeLabel != null) debugModeLabel.text = manager.BridgeRaid ? "โหมด: Raid" : "โหมด: Pure";
 
             if (!manager.BridgeRaid) modeText.text = "Pure Race · สะพานปิดทั้งแมตช์";
             else if (manager.AreBridgesOpen) modeText.text = "Bridge Raid · สะพานเปิดแล้ว";
             else if (r <= manager.warningAtRemaining)
                 modeText.text = "สะพานจะเปิดใน " + Mathf.Max(0, Mathf.CeilToInt(r - manager.openAtRemaining)) + " วิ";
-            else modeText.text = "Bridge Raid · สะพานเปิดที่ " + Mathf.RoundToInt(manager.openAtRemaining) + " วิ";
+            else modeText.text = "สะพานเปิดอีก " + Mathf.Max(0, Mathf.CeilToInt(r - manager.openAtRemaining)) + " วิ";
+            if (round != null)
+                modeText.text = $"{round.DoneCount}/{round.TaskCount} งาน · {modeText.text} · คู่แข่ง {round.DoneCountOf(manager.OtherTeam)}/{round.TaskCount} งาน";
 
             if (timeFill != null)
             {
@@ -641,7 +771,7 @@ namespace Bob.TaskRace
                 anchor.x = manager.matchDuration > 0f ? Mathf.Clamp01(r / manager.matchDuration) : 0f;
                 timeFill.anchorMax = anchor;
                 var img = timeFill.GetComponent<Image>();
-                if (img != null) img.color = r <= 10f ? T.danger : r <= manager.warningAtRemaining ? T.warn : T.primary;
+                if (img != null) img.color = r <= 10f ? BobUiR1.Red : r <= manager.warningAtRemaining ? BobUiR1.Sun : BobUiR1.Green;
             }
         }
 
@@ -649,36 +779,35 @@ namespace Bob.TaskRace
 
         void BuildPause()
         {
-            // The top-right corner is the one spot no island prop or task row reaches on a 20:9 phone.
-            pauseButton = BobUi.Button(page, "หยุด", T.surfaceCream, PauseMatch, 26, T.ink);
-            BobUi.Pin((RectTransform)pauseButton.transform, new Vector2(1f, 1f), new Vector2(1f, 1f),
-                new Vector2(-cardInset.x, -cardInset.y), new Vector2(104f, 56f));
-
+            pauseButton = BobUiR1.Button(page, "", BobUiR1.Paper, PauseMatch, 34, BobUiR1.Ink);
+            pauseButton.name = "PauseButton";
+            BobUi.Pin((RectTransform)pauseButton.transform, Vector2.one, Vector2.one,
+                new Vector2(-SideInset, -48f), new Vector2(144f, 144f));
+            // Two bars instead of a font-dependent pause glyph.
+            for (int i = 0; i < 2; i++)
+            {
+                var bar = BobUiR1.Panel(pauseButton.transform, BobUiR1.Ink, null, "PauseBar");
+                bar.raycastTarget = false;
+                BobUi.Pin(bar.rectTransform, Vector2.one * 0.5f, Vector2.one * 0.5f,
+                    new Vector2(i == 0 ? -10f : 10f, 0f), new Vector2(5f, 40f));
+            }
             pauseRoot = BobUi.Stretch(BobUi.Rect("Pause", page));
-            var dim = pauseRoot.gameObject.AddComponent<Image>();
-            dim.color = T.dim;
-            dim.raycastTarget = true;
-
-            var panel = BobUi.Panel(pauseRoot, T.surface, null, "PauseCard");
-            var p = (RectTransform)panel.transform;
-            BobUi.Pin(p, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900f, 560f));
-
-            var title = BobUi.Label(p, "หยุดเกม", 72, T.ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+            FullCanvasDim(pauseRoot, "PauseDim", BobUiR1.Dim);
+            pausePanel = BobUiR1.Panel(pauseRoot, BobUiR1.Cream, null, "PauseCard").rectTransform;
+            var p = pausePanel;
+            BobUi.Pin(p, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(900f, 616f));
+            var title = BobUiR1.Label(p, "หยุดเกม", 48, BobUiR1.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
             BobUi.Pin(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0f, -36f), new Vector2(820f, 96f));
-
-            var sub = BobUi.Label(p, "นาฬิกาและคู่แข่งหยุดชั่วคราว", 30, T.inkMuted, TextAnchor.MiddleCenter);
+                new Vector2(0f, -24f), new Vector2(820f, 112f));
+            var sub = BobUiR1.Label(p, "พร้อมกลับไปเก็บงานหรือยัง?", 30, BobUiR1.Muted, TextAnchor.MiddleCenter);
             BobUi.Pin(sub.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0f, -140f), new Vector2(820f, 48f));
-
-            var resume = BobUi.Button(p, "เล่นต่อ", T.primary, ResumeMatch, T.buttonLg, T.ink);
-            BobUi.Pin((RectTransform)resume.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 156f), new Vector2(760f, 140f));
-
-            var quit = BobUi.Button(p, "ออกจากการแข่งขัน", T.surfaceCream, QuitMatch, T.buttonLg, T.ink);
-            BobUi.Pin((RectTransform)quit.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 20f), new Vector2(760f, 120f));
-
+                new Vector2(0f, -132f), new Vector2(820f, 68f));
+            var resume = BobUiR1.Button(p, "เล่นต่อ", BobUiR1.Sun, ResumeMatch, 34, BobUiR1.Ink);
+            BobUi.Pin((RectTransform)resume.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -212f), new Vector2(700f, 144f));
+            var quit = BobUiR1.Button(p, "กลับหน้าหลัก", BobUiR1.Paper, QuitMatch, 34, BobUiR1.Ink);
+            BobUi.Pin((RectTransform)quit.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -404f), new Vector2(700f, 144f));
             pauseRoot.gameObject.SetActive(false);
         }
 
@@ -698,7 +827,7 @@ namespace Bob.TaskRace
             if (!manager.SetPaused(true)) return;
             pauseRoot.gameObject.SetActive(true);
             pauseRoot.SetAsLastSibling();
-            if (toast != null) toast.transform.SetAsLastSibling();
+            if (toastRoot != null) toastRoot.SetAsLastSibling();
             pauseButton.gameObject.SetActive(false);
         }
 
@@ -727,10 +856,20 @@ namespace Bob.TaskRace
 
         void BuildMainButton()
         {
-            mainButton = BobUi.Button(page, "ทำงาน", T.primary, OnMain, T.buttonLg, T.ink);
+            mainButton = BobUiR1.Button(page, "ทำงาน", BobUiR1.Sun, OnMain, 38, BobUiR1.Ink);
+            mainButton.name = "MainAction";
             BobUi.Pin((RectTransform)mainButton.transform, new Vector2(1f, 0f), new Vector2(1f, 0f),
-                new Vector2(-cardInset.x, cardInset.y), new Vector2(460f, 150f));
+                new Vector2(-SideInset, 84f), new Vector2(212f, 176f));
             mainLabel = mainButton.GetComponentInChildren<TMP_Text>();
+            BobUi.Pin(mainLabel.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(0f, 3f), new Vector2(184f, 84f));
+            FitLabel(mainLabel, 26f);
+            mainContext = BobUiR1.Label(mainButton.transform, "", 23, BobUiR1.Ink, TextAnchor.MiddleCenter);
+            BobUi.Pin(mainContext.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -12f), new Vector2(184f, 80f));
+            mainContext.enableAutoSizing = true;
+            mainContext.fontSizeMin = 18f; mainContext.fontSizeMax = 23f;
+            mainContext.overflowMode = TextOverflowModes.Ellipsis;
             mainButton.gameObject.SetActive(false);
         }
 
@@ -749,42 +888,48 @@ namespace Bob.TaskRace
 
             if (chairPrompt)
             {
-                mainLabel.text = chairLabel;
-                PaintMain(chairCan ? T.secondary : T.surfaceCream, chairCan ? Color.white : T.inkMuted);
+                mainLabel.text = chairLabel == "วางเก้าอี้ที่ช่อง" ? "วางเก้าอี้" :
+                    chairLabel == "ส่งเก้าอี้ให้เพื่อน" ? "ส่งต่อ" :
+                    chairLabel == "ลากเก้าอี้ไปที่โต๊ะ" ? "ไปที่โต๊ะ" :
+                    chairLabel == "จับเก้าอี้" ? "จับเก้าอี้" : "ไปที่เก้าอี้";
+                mainContext.text = chairLabel;
+                PaintMain(chairCan ? BobUiR1.Sun : BobUiR1.Line, chairCan ? BobUiR1.Ink : BobUiR1.Muted);
                 mainButton.interactable = chairCan;
                 return;
             }
 
+            mainContext.text = near.TaskName;
             if (near.IsOpen)
             {
                 bool sabotage = near.IsEnemySpot && near.State == SpotState.Clean;
-                mainLabel.text = (sabotage ? "กำลังป่วน: " : "กำลังทำ: ") + near.TaskName;
-                PaintMain(T.primary, T.ink);
+                mainLabel.text = sabotage ? "กำลังป่วน" : "กำลังทำ";
+                PaintMain(sabotage ? BobUiR1.Red : BobUiR1.Sun, sabotage ? BobUiR1.Paper : BobUiR1.Ink);
                 mainButton.interactable = true;
             }
             else if (near.CanSabotageNow)
             {
-                mainLabel.text = "ป่วนจุดงาน: " + near.TaskName;
-                PaintMain(T.brandRed, Color.white);
+                mainLabel.text = "ป่วนจุดงาน";
+                PaintMain(BobUiR1.Red, BobUiR1.Paper);
                 mainButton.interactable = true;
             }
             else if (near.ShowShieldPrompt)
             {
                 int cost = manager != null ? manager.shieldItemCost : 150;
-                mainLabel.text = $"ติดเกราะป้องกัน (-{cost} Pts)";
-                PaintMain(T.secondary, Color.white);
+                mainLabel.text = "ติดเกราะ";
+                mainContext.text = $"ป้องกันจุดงาน\n-{cost} Pts";
+                PaintMain(BobUiR1.Sky, BobUiR1.Ink);
                 mainButton.interactable = near.CanAffordShield;
             }
             else if (near.State == SpotState.Clean)
             {
-                mainLabel.text = "สะอาดแล้ว: " + near.TaskName;
-                PaintMain(T.surfaceCream, T.inkMuted);
+                mainLabel.text = "สะอาดแล้ว";
+                PaintMain(BobUiR1.Line, BobUiR1.Muted);
                 mainButton.interactable = false;
             }
             else
             {
-                mainLabel.text = "ทำงาน: " + near.TaskName;
-                PaintMain(T.primary, T.ink);
+                mainLabel.text = "ทำงาน";
+                PaintMain(BobUiR1.Sun, BobUiR1.Ink);
                 mainButton.interactable = true;
             }
         }
@@ -795,6 +940,7 @@ namespace Bob.TaskRace
             var img = mainButton.targetGraphic as Image ?? mainButton.GetComponent<Image>();
             if (img != null) img.color = bg;
             if (mainLabel != null) mainLabel.color = fg;
+            if (mainContext != null) mainContext.color = fg;
         }
 
         void OnMain()
@@ -835,34 +981,32 @@ namespace Bob.TaskRace
 
         void BuildMinigameCard()
         {
-            cardDim = BobUi.Panel(page, T.dim, null, "S28Dim");
-            BobUi.Stretch((RectTransform)cardDim.transform);
-            cardDim.raycastTarget = true;
+            cardDim = FullCanvasDim(page, "S28Dim", BobUiR1.Dim);
             // The stick stays above the dim so "push it past 70% to close the card" works during a task.
             if (touch != null) touch.KeepJoystickOnTop();
 
-            cardPanel = BobUi.Panel(page, T.surface, null, "S28Card");
+            cardPanel = BobUiR1.Panel(page, BobUiR1.Cream, null, "S28Card");
             var panel = (RectTransform)cardPanel.transform;
             BobUi.Pin(panel, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1400f, 860f));
-            var cardOutline = cardPanel.gameObject.AddComponent<Outline>();
-            cardOutline.effectColor = new Color(T.ink.r, T.ink.g, T.ink.b, 0.28f);
-            cardOutline.effectDistance = new Vector2(4f, -4f);
-
-            cardTitle = BobUi.Label(panel, "ทำงาน", 54, T.ink, TextAnchor.MiddleLeft, FontStyle.Bold);
+            cardTitle = BobUiR1.Label(panel, "ทำงาน", 54, BobUiR1.Ink, TextAnchor.MiddleLeft, FontStyle.Bold);
+            FitLabel(cardTitle, 30f);
             BobUi.Pin(cardTitle.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f),
                 new Vector2(40f, -12f), new Vector2(780f, 62f));
 
-            cardClock = BobUi.Label(panel, "02:00 · 0", 34, T.inkMuted, TextAnchor.MiddleRight, FontStyle.Bold);
+            cardClockPlate = BobUiR1.Panel(panel, BobUiR1.Sky, null, "CardClockPlate").rectTransform;
+            cardClockPlate.GetComponent<Image>().raycastTarget = false;
+            cardClock = BobUiR1.Label(panel, "02:00 · 0", 34, BobUiR1.Ink, TextAnchor.MiddleRight, FontStyle.Bold);
             BobUi.Pin(cardClock.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f),
                 new Vector2(-196f, -16f), new Vector2(400f, 54f));
 
-            cardClose = BobUi.Button(panel, "×", T.surfaceCream, CloseCard, 56, T.ink);
+            cardClose = BobUiR1.Button(panel, "×", BobUiR1.Paper, CloseCard, 56, BobUiR1.Ink);
             BobUi.Pin((RectTransform)cardClose.transform, new Vector2(1f, 1f), new Vector2(1f, 1f),
                 new Vector2(-20f, -20f), new Vector2(160f, 160f));
 
             // The 1240 x 620 play area and the pointer surface (docs 11 S28, docs 16 section 5).
             mini = cardPanel.gameObject.AddComponent<BobMinigameHost>();
             mini.Build(panel);
+            miniPlay = panel.Find("MiniPlay") as RectTransform;
             cardClose.transform.SetAsLastSibling(); // the play area must not swallow the × at its top-right corner
 
             cardTrack = BobUi.Panel(panel, new Color(0.94f, 0.87f, 0.73f), null, "S28Track");
@@ -879,11 +1023,12 @@ namespace Bob.TaskRace
             fillImg.color = T.primary;
             fillImg.raycastTarget = false;
 
-            cardStep = BobUi.Label(panel, "ขั้น 1/1", 30, T.ink, TextAnchor.MiddleLeft, FontStyle.Bold);
+            cardStep = BobUiR1.Label(panel, "ขั้น 1/1", 30, BobUiR1.Muted, TextAnchor.MiddleLeft, FontStyle.Bold);
             BobUi.Pin(cardStep.rectTransform, new Vector2(0f, 0f), new Vector2(0f, 0f),
                 new Vector2(40f, 102f), new Vector2(300f, 40f));
 
-            cardHint = BobUi.Label(panel, "", 30, T.inkMuted, TextAnchor.MiddleCenter);
+            cardHint = BobUiR1.Label(panel, "", 30, BobUiR1.Muted, TextAnchor.MiddleCenter);
+            FitLabel(cardHint, 20f);
             BobUi.Pin(cardHint.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
                 new Vector2(0f, 102f), new Vector2(820f, 40f));
 
@@ -907,7 +1052,61 @@ namespace Bob.TaskRace
             HideCard();
         }
 
-        /// <summary>Open the S28 card: a live minigame for the 13 card tasks, a timed bar for T04/T12 and sabotage.</summary>
+        void LayoutCardFrame(bool cart)
+        {
+            cartFrame = cart;
+            if (cardPanel == null) return;
+            var panel = cardPanel.rectTransform;
+            // Contract with BobMinigameHost: size the frame BEFORE Begin/BeginEmergency builds its play area.
+            float width = cart ? Mathf.Max(640f, PageSize.x - 128f) : 1400f;
+            float height = cart ? 984f : 860f;
+            panel.sizeDelta = new Vector2(width, height);
+            panel.localScale = Vector3.one * Mathf.Min(1f, (PageSize.x - 48f) / width, (PageSize.y - 48f) / height);
+            if (miniPlay != null)
+                BobUi.Pin(miniPlay, Vector2.one * 0.5f, Vector2.one * 0.5f,
+                    new Vector2(0f, cart ? -82f : 30f), new Vector2(cart ? width - 96f : 1240f, cart ? 780f : 620f));
+            if (cardTitle != null)
+            {
+                cardTitle.fontSize = cardTitle.fontSizeMax = cart ? 44f : 54f;
+                BobUi.Pin(cardTitle.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                    cart ? new Vector2(48f, -16f) : new Vector2(40f, 16f),
+                    new Vector2(cart ? width - 536f : 780f, cart ? 100f : 120f));
+            }
+            if (cardClockPlate != null)
+            {
+                cardClockPlate.gameObject.SetActive(cart);
+                BobUi.Pin(cardClockPlate, Vector2.one, Vector2.one, new Vector2(-216f, -24f), new Vector2(224f, 128f));
+            }
+            if (cardClock != null)
+            {
+                cardClock.fontSize = cart ? 52f : 34f;
+                cardClock.alignment = cart ? TextAlignmentOptions.Center : TextAlignmentOptions.Right;
+                BobUi.Pin(cardClock.rectTransform, Vector2.one, Vector2.one,
+                    cart ? new Vector2(-216f, -24f) : new Vector2(-196f, -16f),
+                    cart ? new Vector2(224f, 128f) : new Vector2(400f, 54f));
+            }
+            if (cardClose != null)
+                BobUi.Pin((RectTransform)cardClose.transform, Vector2.one, Vector2.one,
+                    cart ? new Vector2(-48f, -24f) : new Vector2(-20f, -20f),
+                    cart ? new Vector2(144f, 144f) : new Vector2(160f, 160f));
+            if (cardStep != null)
+                BobUi.Pin(cardStep.rectTransform, new Vector2(0f, cart ? 1f : 0f), new Vector2(0f, cart ? 1f : 0f),
+                    cart ? new Vector2(48f, -112f) : new Vector2(40f, 88f),
+                    new Vector2(cart ? 154f : 300f, 68f));
+            if (cardHint != null)
+            {
+                cardHint.alignment = cart ? TextAlignmentOptions.Left : TextAlignmentOptions.Center;
+                BobUi.Pin(cardHint.rectTransform, cart ? new Vector2(0f, 1f) : new Vector2(0.5f, 0f),
+                    cart ? new Vector2(0f, 1f) : new Vector2(0.5f, 0f),
+                    cart ? new Vector2(218f, -112f) : new Vector2(0f, 88f),
+                    new Vector2(cart ? width - 682f : 820f, 68f));
+            }
+            if (cardTrack != null) cardTrack.gameObject.SetActive(!cart);
+            if (cardPercent != null) cardPercent.gameObject.SetActive(!cart);
+            if (cart && cardChipRoot != null) cardChipRoot.gameObject.SetActive(false);
+        }
+
+        /// <summary>Open the S28 card: a live minigame, or the existing timed world-task/sabotage path.</summary>
         void BeginCard(TaskSpot spot, bool sabotage)
         {
             if (spot == null || cardPanel == null) return;
@@ -915,15 +1114,17 @@ namespace Bob.TaskRace
             cardSpot = spot;
             cardSabotage = sabotage;
             cardElapsed = 0f;
+            LayoutCardFrame(!sabotage && spot.TaskId == "T04");
             // The cart's buffs reach every later card, so the round's buff list is handed over before the card builds.
             if (mini != null) mini.SetRoundBuffs(round != null ? round.CartBuffs : null);
             cardInteractive = !sabotage && mini != null &&
                               mini.Begin(spot, spot.TaskId, round != null ? round.Difficulty : 1);
+            if (!cardInteractive && cartFrame) LayoutCardFrame(false);
 
             if (cardChipRoot != null)
             {
                 cardChipUntil = Time.unscaledTime + 2f;
-                cardChipRoot.gameObject.SetActive(true);
+                cardChipRoot.gameObject.SetActive(!cartFrame);
             }
             if (cardChip != null) cardChip.text = "กด × เพื่อปิด · งานค้างไว้ 10 วิ";
 
@@ -931,7 +1132,7 @@ namespace Bob.TaskRace
             {
                 cardStartProgress = 0f;
                 cardDuration = 0f;
-                cardTitle.text = "ทำงาน: " + spot.TaskName;
+                cardTitle.text = cartFrame ? spot.TaskName : "ทำงาน: " + spot.TaskName;
                 SetCardFill(0f);
             }
             else
@@ -956,7 +1157,7 @@ namespace Bob.TaskRace
             cardDim.gameObject.SetActive(true);
             cardPanel.gameObject.SetActive(true);
             cardPanel.transform.SetAsLastSibling();
-            if (toast != null) toast.transform.SetAsLastSibling();
+            if (toastRoot != null) toastRoot.SetAsLastSibling();
         }
 
         void RenderCard() => TickCard(Time.unscaledDeltaTime);
@@ -1021,7 +1222,8 @@ namespace Bob.TaskRace
             if (cardClock == null) return;
             float r = manager != null ? manager.RemainingSeconds : 0f;
             string time = $"{Mathf.FloorToInt(r / 60f):0}:{Mathf.FloorToInt(r % 60f):00}";
-            cardClock.text = manager != null ? $"{time} · {manager.LocalPoints}" : time;
+            cardClock.text = cartFrame ? $"{Mathf.FloorToInt(r / 60f):00}:{Mathf.FloorToInt(r % 60f):00}"
+                : manager != null ? $"{time} · {manager.LocalPoints}" : time;
         }
 
         void SetCardFill(float progress)
@@ -1062,6 +1264,7 @@ namespace Bob.TaskRace
             cardEmergency = false;
             cardInteractive = false;
             if (mini != null) mini.Cancel();
+            LayoutCardFrame(false);
             if (cardChipRoot != null) cardChipRoot.gameObject.SetActive(false);
             if (cardDim != null) cardDim.gameObject.SetActive(false);
             if (cardPanel != null) cardPanel.gameObject.SetActive(false);
@@ -1078,9 +1281,7 @@ namespace Bob.TaskRace
             HideCard();
             Kill(resultRoot);
             resultRoot = BobUi.Stretch(BobUi.Rect("Result", page));
-            var dim = resultRoot.gameObject.AddComponent<Image>();
-            dim.color = T.dim;
-            dim.raycastTarget = true;
+            FullCanvasDim(resultRoot, "ResultDim", T.dim);
 
             var panel = BobUi.Panel(resultRoot, T.surface, null, "ResultCard");
             var p = (RectTransform)panel.transform;
@@ -1467,20 +1668,27 @@ namespace Bob.TaskRace
 
         void BuildToast()
         {
-            toast = BobUi.Label(page, "", 34, T.danger, TextAnchor.MiddleCenter, FontStyle.Bold);
-            BobUi.Pin(toast.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 210f), new Vector2(1100f, 70f));
-            BobUi.OutlineText(toast, T.surface, 0.12f);
-            toast.gameObject.SetActive(false);
+            var plate = BobUiR1.Panel(page, BobUiR1.Cream, null, "Toast");
+            plate.raycastTarget = false;
+            toastRoot = plate.rectTransform;
+            toast = BobUiR1.Label(toastRoot, "", 29, BobUiR1.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Stretch(toast.rectTransform, 24f, 8f, 24f, 8f);
+            toast.enableAutoSizing = true;
+            toast.fontSizeMin = 20f; toast.fontSizeMax = 29f;
+            toast.overflowMode = TextOverflowModes.Ellipsis;
+            LayoutNotifications();
+            toastRoot.gameObject.SetActive(false);
         }
 
         void ShowToast(string message)
         {
             if (toast == null || string.IsNullOrEmpty(message)) return;
             toast.text = message;
-            toast.gameObject.SetActive(true);
-            toast.transform.SetAsLastSibling();
+            toastRoot.gameObject.SetActive(true);
+            toastRoot.SetAsLastSibling();
+            LayoutNotifications();
             toastUntil = Time.unscaledTime + toastSeconds;
+            if (emergencyArrow != null) emergencyArrow.gameObject.SetActive(false);
         }
 
         // ---------------------------------------------------------------- emergency stain (T16)
@@ -1492,32 +1700,23 @@ namespace Bob.TaskRace
         /// </summary>
         void BuildEmergency()
         {
-            emergencyRoot = (RectTransform)BobUi.Panel(page, T.surface, null, "Emergency").transform;
+            // The whole banner is the existing emergency action, with a 144u hit target (no tiny inner button).
+            emergencyButton = BobUiR1.Button(page, "", BobUiR1.Pink, OpenEmergencyCard, 32, BobUiR1.Red);
+            emergencyButton.name = "Emergency";
+            emergencyRoot = (RectTransform)emergencyButton.transform;
             BobUi.Pin(emergencyRoot, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 24f), new Vector2(720f, 132f));
-
-            var stripe = BobUi.Panel(emergencyRoot, T.brandRed, null, "EmergencyStripe");
-            BobUi.Pin((RectTransform)stripe.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
-                Vector2.zero, new Vector2(8f, 132f));
-            stripe.raycastTarget = false;
-
-            emergencyTitle = BobUi.Label(emergencyRoot, "คราบฉุกเฉิน", 34, T.brandRed, TextAnchor.MiddleLeft, FontStyle.Bold);
-            BobUi.Pin(emergencyTitle.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f),
-                new Vector2(28f, -12f), new Vector2(520f, 44f));
-
-            emergencySub = BobUi.Label(emergencyRoot, "", 26, T.inkMuted, TextAnchor.MiddleLeft);
-            emergencySub.textWrappingMode = TextWrappingModes.NoWrap;
-            emergencySub.overflowMode = TextOverflowModes.Ellipsis;
-            BobUi.Pin(emergencySub.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f),
-                new Vector2(28f, -58f), new Vector2(490f, 34f));
-
-            emergencyButton = BobUi.Button(emergencyRoot, "ปราบ", T.brandRed, OpenEmergencyCard, 32, Color.white);
-            BobUi.Pin((RectTransform)emergencyButton.transform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f),
-                new Vector2(-18f, 8f), new Vector2(160f, 86f));
-
-            var track = BobUi.Panel(emergencyRoot, T.surfaceCream, null, "EmergencyTrack");
-            BobUi.Pin((RectTransform)track.transform, new Vector2(0f, 0f), new Vector2(0f, 0f),
-                new Vector2(28f, 14f), new Vector2(632f, 10f));
+                new Vector2(0f, 88f), new Vector2(600f, 144f));
+            emergencyTitle = BobUiR1.Label(emergencyRoot, "คราบฉุกเฉิน", 32, BobUiR1.Red, TextAnchor.MiddleLeft, FontStyle.Bold);
+            BobUi.Stretch(emergencyTitle.rectTransform, 28f, 70f, 28f, 2f);
+            FitLabel(emergencyTitle, 24f);
+            emergencySub = BobUiR1.Label(emergencyRoot, "", 25, BobUiR1.Red, TextAnchor.MiddleLeft);
+            BobUi.Stretch(emergencySub.rectTransform, 28f, 24f, 28f, 64f);
+            FitLabel(emergencySub, 20f);
+            var track = BobUiR1.Panel(emergencyRoot, BobUiR1.Line, null, "EmergencyTrack");
+            var trackRect = track.rectTransform;
+            trackRect.anchorMin = Vector2.zero; trackRect.anchorMax = new Vector2(1f, 0f);
+            trackRect.offsetMin = new Vector2(28f, 14f); trackRect.offsetMax = new Vector2(-28f, 20f);
+            track.raycastTarget = false;
             emergencyFill = BobUi.Rect("EmergencyFill", track.transform);
             emergencyFill.anchorMin = new Vector2(0f, 0f);
             emergencyFill.anchorMax = new Vector2(1f, 1f);
@@ -1535,7 +1734,7 @@ namespace Bob.TaskRace
             emergencyArrow.sizeDelta = new Vector2(88f, 88f);
             emergencyArrowImg = emergencyArrow.gameObject.AddComponent<Image>();
             emergencyArrowImg.sprite = ArrowSprite();
-            emergencyArrowImg.color = T.brandRed;
+            emergencyArrowImg.color = BobUiR1.Red;
             emergencyArrowImg.raycastTarget = false;
             emergencyArrow.gameObject.SetActive(false);
 
@@ -1591,21 +1790,21 @@ namespace Bob.TaskRace
                     if (!inView && dir.sqrMagnitude > 0.0001f)
                     {
                         var area = page != null && page.rect.width > 1f ? page.rect.size : new Vector2(1920f, 1080f);
-                        // 76 px clears the horizontal edges. The vertical edges carry the top bar (24–148 px) and the
-                        // emergency banner (24–156 px); at 100 px the arrow landed on them, so it keeps 210 px clear.
-                        float halfW = area.x * 0.5f - 76f, halfH = area.y * 0.5f - 210f;
-                        float t = Mathf.Min(halfW / Mathf.Max(0.0001f, Mathf.Abs(dir.x)),
-                                            halfH / Mathf.Max(0.0001f, Mathf.Abs(dir.y)));
-                        pos = dir * t;
+                        var bounds = Rect.MinMaxRect(-area.x * 0.5f + 76f, -area.y * 0.5f + 380f,
+                            area.x * 0.5f - 76f, area.y * 0.5f - 264f);
+                        float vertical = dir.y >= 0f ? bounds.yMax : -bounds.yMin;
+                        float t = Mathf.Min(bounds.xMax / Mathf.Max(0.0001f, Mathf.Abs(dir.x)),
+                            vertical / Mathf.Max(0.0001f, Mathf.Abs(dir.y)));
+                        pos = dir * Mathf.Max(0f, t);
+                        edge = FitEmergencyArrow(ref pos, bounds);
                         angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg - 90f;
-                        edge = true;
                     }
                 }
             }
             // The toast picks the same red and lands in the same bottom strip while it is up (2.2 s), and the stain
             // spawns a toast itself, so the two turn red-on-red the moment the arrow appears. The toast already
             // names the station, so the arrow waits it out instead of merging into the text.
-            if (edge && toast != null && toast.gameObject.activeSelf) edge = false;
+            if (edge && toastRoot != null && toastRoot.gameObject.activeSelf) edge = false;
             if (emergencyArrow.gameObject.activeSelf != edge) emergencyArrow.gameObject.SetActive(edge);
             if (!edge) return;
             emergencyArrow.anchoredPosition = pos;
@@ -1613,29 +1812,80 @@ namespace Bob.TaskRace
             if (emergencyArrowImg != null)
             {
                 float pulse = 0.72f + 0.28f * Mathf.Sin(Time.time * 7f);
-                var c = stains.Remaining <= 8f ? T.danger : T.brandRed;
+                var c = BobUiR1.Red;
                 c.a = Mathf.Clamp01(pulse);
                 emergencyArrowImg.color = c;
             }
+        }
+
+        readonly Rect[] arrowObstacles = new Rect[9];
+        int arrowObstacleCount;
+
+        void AddArrowObstacle(RectTransform rect)
+        {
+            if (rect == null || !rect.gameObject.activeInHierarchy) return;
+            rect.GetWorldCorners(layoutCorners);
+            Vector2 min = page.InverseTransformPoint(layoutCorners[0]);
+            Vector2 max = page.InverseTransformPoint(layoutCorners[2]);
+            // The 88u arrow rotates: reserve its diagonal plus a small breathing space.
+            arrowObstacles[arrowObstacleCount++] = Rect.MinMaxRect(min.x - 70f, min.y - 70f, max.x + 70f, max.y + 70f);
+        }
+
+        bool ArrowBlocked(Vector2 pos)
+        {
+            for (int i = 0; i < arrowObstacleCount; i++) if (arrowObstacles[i].Contains(pos)) return true;
+            return false;
+        }
+
+        bool FitEmergencyArrow(ref Vector2 pos, Rect bounds)
+        {
+            if (bounds.width <= 0f || bounds.height <= 0f) return false;
+            arrowObstacleCount = 0;
+            AddArrowObstacle(card); AddArrowObstacle(topBar); AddArrowObstacle(mateTray);
+            AddArrowObstacle(mainButton != null ? (RectTransform)mainButton.transform : null);
+            AddArrowObstacle(pauseButton != null ? (RectTransform)pauseButton.transform : null);
+            AddArrowObstacle(pingButton); AddArrowObstacle(emergencyRoot); AddArrowObstacle(toastRoot);
+            if (!ArrowBlocked(pos)) return true;
+            // Find the nearest free point on the inset perimeter, not a position through the central play field.
+            Vector2 best = pos;
+            float distance = float.PositiveInfinity;
+            for (int side = 0; side < 4; side++)
+                for (int i = 0; i <= 32; i++)
+                {
+                    float u = i / 32f;
+                    var candidate = side < 2
+                        ? new Vector2(side == 0 ? bounds.xMin : bounds.xMax, Mathf.Lerp(bounds.yMin, bounds.yMax, u))
+                        : new Vector2(Mathf.Lerp(bounds.xMin, bounds.xMax, u), side == 2 ? bounds.yMin : bounds.yMax);
+                    if (ArrowBlocked(candidate)) continue;
+                    float d = (candidate - pos).sqrMagnitude;
+                    if (d < distance) { distance = d; best = candidate; }
+                }
+            if (float.IsPositiveInfinity(distance)) return false;
+            pos = best;
+            return true;
         }
 
         void RenderEmergency()
         {
             if (emergencyRoot == null) return;
             bool show = stains != null && stains.Active && !ResultOpen && !PauseOpen && !CardOpen;
-            if (emergencyRoot.gameObject.activeSelf != show) emergencyRoot.gameObject.SetActive(show);
+            if (emergencyRoot.gameObject.activeSelf != show)
+            {
+                emergencyRoot.gameObject.SetActive(show);
+                LayoutNotifications();
+            }
             RenderEmergencyArrow(show);
             if (!show) return;
 
             emergencyTitle.text = "คราบฉุกเฉิน · " + stains.EnemyName;
-            emergencySub.text = $"เหลือ {Mathf.CeilToInt(stains.Remaining)} วิ · {stains.TaskName}";
+            emergencySub.text = $"{Mathf.CeilToInt(stains.Remaining)} วิ · {stains.TaskName} · แตะปราบ";
             if (emergencyFill != null)
             {
                 var anchor = emergencyFill.anchorMax;
                 anchor.x = stains.GraceSeconds > 0f ? Mathf.Clamp01(stains.Remaining / stains.GraceSeconds) : 0f;
                 emergencyFill.anchorMax = anchor;
                 var img = emergencyFill.GetComponent<Image>();
-                if (img != null) img.color = stains.Remaining <= 8f ? T.danger : T.brandRed;
+                if (img != null) img.color = BobUiR1.Red;
             }
         }
 
@@ -1649,6 +1899,7 @@ namespace Bob.TaskRace
             cardElapsed = 0f;
             cardStartProgress = 0f;
             cardDuration = 0f;
+            LayoutCardFrame(false);
             mini.SetRoundBuffs(round != null ? round.CartBuffs : null);
             cardInteractive = mini.BeginEmergency(stains.MinigameId, stains.Difficulty);
 
@@ -1674,7 +1925,7 @@ namespace Bob.TaskRace
             cardDim.gameObject.SetActive(true);
             cardPanel.gameObject.SetActive(true);
             cardPanel.transform.SetAsLastSibling();
-            if (toast != null) toast.transform.SetAsLastSibling();
+            if (toastRoot != null) toastRoot.SetAsLastSibling();
         }
 
         /// <summary>The emergency card ticks on the same unscaled clock, but the 25 s keeps running underneath it.</summary>
@@ -1720,7 +1971,7 @@ namespace Bob.TaskRace
             "icon_check", "stat_speed", "icon_lift", "icon_timer", "icon_star", "icon_heart",
         };
 
-        const float PingButtonSize = 132f, PingDiscSize = 184f, PingRadius = 258f;
+        const float PingButtonSize = 144f, PingDiscSize = 184f, PingRadius = 258f;
         /// <summary>Icon size inside a chip, and how far above the words it sits.</summary>
         const float PingIconSize = 56f, PingIconLift = 34f;
         const float PingFanStart = 195f, PingFanStep = 42f, PingDeadZone = 34f;
@@ -1728,6 +1979,7 @@ namespace Bob.TaskRace
         static readonly Vector2 PingWheelCentre = new Vector2(600f, -110f);
 
         Camera PingCamera => canvas != null && canvas.worldCamera != null ? canvas.worldCamera : Camera.main;
+        Camera UiCamera => canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null;
 
         /// <summary>The ping exists where a team-mate can hear it; solo hides the button instead of offering a dead word.</summary>
         bool PingAllowed => (round != null && round.Players > 1) ||
@@ -1735,13 +1987,13 @@ namespace Bob.TaskRace
 
         void BuildPing()
         {
-            // The button sits on the thumb arc above the main action: right edge, above the stain bar, below the clock.
-            pingButtonImg = BobUi.Disc(page, T.secondary, PingButtonSize, "PingButton");
-            pingButton = (RectTransform)pingButtonImg.transform;
+            // The pointer pad still owns hold/slide/release; Button supplies only R1 pressed/disabled visuals.
+            var button = BobUiR1.Button(page, "เรียก", BobUiR1.Paper, null, 34, BobUiR1.Ink);
+            button.name = "PingButton";
+            pingButtonImg = button.GetComponent<Image>();
+            pingButton = (RectTransform)button.transform;
             BobUi.Pin(pingButton, new Vector2(1f, 0f), new Vector2(1f, 0f),
-                new Vector2(-cardInset.x, cardInset.y + 150f + 14f), new Vector2(PingButtonSize, PingButtonSize));
-            var caption = BobUi.Label(pingButton, "ปิง", 30, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold);
-            BobUi.Stretch(caption.rectTransform);
+                new Vector2(-(SideInset + 252f), 84f), new Vector2(PingButtonSize, PingButtonSize));
             pingButton.gameObject.AddComponent<PingPad>().Init(this);
 
             // A full-page catcher under the chips: a tap anywhere else closes the wheel. It is invisible but blocks the
@@ -1754,12 +2006,12 @@ namespace Bob.TaskRace
 
             // The hub names the hovered word at reading size: the thumb is over the chip it picked, so the words are
             // also written where the eye lands. This is the piece that makes the six chips legible on a phone.
-            pingHub = (RectTransform)BobUi.Panel(pingRoot, T.surface, null, "PingHub").transform;
+            pingHub = BobUiR1.Panel(pingRoot, BobUiR1.Paper, null, "PingHub").rectTransform;
             BobUi.Pin(pingHub, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), PingWheelCentre, new Vector2(300f, 110f));
             var hubOutline = pingHub.gameObject.AddComponent<Outline>();
             hubOutline.effectColor = new Color(T.ink.r, T.ink.g, T.ink.b, 0.25f);
             hubOutline.effectDistance = new Vector2(3f, -3f);
-            pingHubLabel = BobUi.Label(pingHub, "เลื่อนนิ้วไปที่คำ\nแล้วปล่อย", 24, T.inkMuted, TextAnchor.MiddleCenter);
+            pingHubLabel = BobUiR1.Label(pingHub, "เลื่อนนิ้วไปที่คำ\nแล้วปล่อย", 24, BobUiR1.Muted, TextAnchor.MiddleCenter);
             pingHubLabel.enableAutoSizing = true; pingHubLabel.fontSizeMin = 18f; pingHubLabel.fontSizeMax = 26f;
             BobUi.Stretch(pingHubLabel.rectTransform, 12f, 6f, 12f, 6f);
 
@@ -1767,7 +2019,7 @@ namespace Bob.TaskRace
             {
                 float a = (PingFanStart - i * PingFanStep) * Mathf.Deg2Rad;
                 var at = PingWheelCentre + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * PingRadius;
-                var disc = BobUi.Disc(pingRoot, T.surface, PingDiscSize, "Ping_" + i);
+                var disc = BobUi.Disc(pingRoot, BobUiR1.Paper, PingDiscSize, "Ping_" + i);
                 BobUi.Pin((RectTransform)disc.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
                     at, new Vector2(PingDiscSize, PingDiscSize));
                 var outline = disc.gameObject.AddComponent<Outline>();
@@ -1779,7 +2031,7 @@ namespace Bob.TaskRace
                 var icon = BobUi.Img(disc.transform, PingIcons[i], PingIconSize);
                 BobUi.Pin(icon.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
                     new Vector2(0f, PingIconLift), new Vector2(PingIconSize, PingIconSize));
-                var text = BobUi.Label(disc.transform, PingWords[i], 20, T.ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+                var text = BobUiR1.Label(disc.transform, PingWords[i], 20, BobUiR1.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
                 text.enableAutoSizing = true; text.fontSizeMin = 15f; text.fontSizeMax = 20f;
                 text.textWrappingMode = TextWrappingModes.Normal;
                 BobUi.Stretch(text.rectTransform, 8f, 12f, 8f, 92f);
@@ -1789,13 +2041,14 @@ namespace Bob.TaskRace
             }
 
             // The bubble over the hero's head, 2.5 s (docs 11 section 5A.5). It follows the body while it is up.
-            var plate = BobUi.Panel(page, T.surface, null, "PingBubble");
+            var plate = BobUiR1.Panel(page, BobUiR1.Paper, null, "PingBubble");
+            plate.raycastTarget = false;
             pingBubble = (RectTransform)plate.transform;
             BobUi.Pin(pingBubble, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(460f, 84f));
             var bubbleOutline = plate.gameObject.AddComponent<Outline>();
             bubbleOutline.effectColor = new Color(T.ink.r, T.ink.g, T.ink.b, 0.3f);
             bubbleOutline.effectDistance = new Vector2(3f, -3f);
-            pingBubbleLabel = BobUi.Label(pingBubble, "", 30, T.ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+            pingBubbleLabel = BobUiR1.Label(pingBubble, "", 30, BobUiR1.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
             pingBubbleLabel.enableAutoSizing = true; pingBubbleLabel.fontSizeMin = 22f; pingBubbleLabel.fontSizeMax = 30f;
             BobUi.Stretch(pingBubbleLabel.rectTransform, 16f, 6f, 16f, 6f);
             pingBubbleGroup = plate.gameObject.AddComponent<CanvasGroup>();
@@ -1816,10 +2069,11 @@ namespace Bob.TaskRace
         void OpenPingWheel()
         {
             if (pingRoot == null) return;
+            LayoutPingWheel();
             pingWheelOpen = true;
             pingRoot.gameObject.SetActive(true);
             pingRoot.SetAsLastSibling();
-            if (pingButtonImg != null) pingButtonImg.color = T.primary;
+            if (pingButtonImg != null) pingButtonImg.color = BobUiR1.Paper;
             pingHover = -2;   // out of range, so the reset below always repaints the chips left over from last time
             SetPingHover(-1);
         }
@@ -1828,7 +2082,7 @@ namespace Bob.TaskRace
         {
             pingWheelOpen = false;
             pingHolding = false;
-            if (pingButtonImg != null) pingButtonImg.color = T.secondary;
+            if (pingButtonImg != null) pingButtonImg.color = BobUiR1.Paper;
             if (pingHover != -1) { pingHover = -2; SetPingHover(-1); }
             if (pingRoot != null) pingRoot.gameObject.SetActive(false);
         }
@@ -1841,14 +2095,14 @@ namespace Bob.TaskRace
             for (int i = 0; i < pingDiscs.Count; i++)
             {
                 bool on = i == index;
-                if (pingDiscs[i] != null) pingDiscs[i].color = on ? T.secondary : T.surface;
+                if (pingDiscs[i] != null) pingDiscs[i].color = on ? BobUiR1.Mint : BobUiR1.Paper;
                 if (i < pingDiscLabels.Count && pingDiscLabels[i] != null)
-                    pingDiscLabels[i].color = on ? Color.white : T.ink;
+                    pingDiscLabels[i].color = on ? BobUiR1.Green : BobUiR1.Ink;
             }
             if (pingHubLabel == null) return;
             bool named = index >= 0 && index < PingWords.Length;
             pingHubLabel.text = named ? PingWords[index] : "เลื่อนนิ้วไปที่คำ\nแล้วปล่อย";
-            pingHubLabel.color = named ? T.ink : T.inkMuted;
+            pingHubLabel.color = named ? BobUiR1.Ink : BobUiR1.Muted;
         }
 
         int NearestPingDisc(Vector2 local)
@@ -1872,7 +2126,7 @@ namespace Bob.TaskRace
             if (pingWheelOpen) { ClosePingWheel(); return; } // a second press on the button is always "close"
             OpenPingWheel();
             pingHolding = true;
-            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(page, e.position, PingCamera, out var local))
+            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(page, e.position, UiCamera, out var local))
                 pingOrigin = local;
             Bob.Art.BobSfx.Play("ui_tap", 0.6f);
         }
@@ -1880,7 +2134,7 @@ namespace Bob.TaskRace
         void PingDrag(PointerEventData e)
         {
             if (!pingWheelOpen || !pingHolding) return;
-            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(page, e.position, PingCamera, out var local)) return;
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(page, e.position, UiCamera, out var local)) return;
             // The first few units are the press itself, not a pick: the chip nearest the button would otherwise win
             // before the thumb has moved at all.
             if ((local - pingOrigin).magnitude < PingDeadZone) { SetPingHover(-1); return; }
@@ -1962,7 +2216,7 @@ namespace Bob.TaskRace
 
             var screen = cam.WorldToScreenPoint(hero.transform.position + Vector3.up * 2.15f);
             if (screen.z <= 0f ||
-                !RectTransformUtility.ScreenPointToLocalPointInRectangle(page, screen, cam, out var local))
+                !RectTransformUtility.ScreenPointToLocalPointInRectangle(page, screen, UiCamera, out var local))
             {
                 if (pingBubble.gameObject.activeSelf) pingBubble.gameObject.SetActive(false);
                 return;
@@ -1997,12 +2251,10 @@ namespace Bob.TaskRace
         void BuildMateTray()
         {
             mateTray = BobUi.Rect("MateTray", page);
-            BobUi.Pin(mateTray, new Vector2(1f, 1f), new Vector2(1f, 1f),
-                new Vector2(-cardInset.x, -MateTrayTop), new Vector2(MateChipW, MateChipH));
-
-            mateHint = BobUi.Label(mateTray, "แตะเพื่อเรียกมาช่วยงานใกล้ตัว", 20, T.inkMuted, TextAnchor.MiddleRight);
-            BobUi.Pin(mateHint.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f),
-                new Vector2(0f, 34f), new Vector2(MateChipW, 26f));
+            LayoutMateTray();
+            mateHint = BobUiR1.Label(mateTray, "แตะเรียกช่วยงานใกล้ตัว", 20, BobUiR1.Muted, TextAnchor.MiddleRight);
+            BobUi.Pin(mateHint.rectTransform, new Vector2(1f, 0f), new Vector2(1f, 1f),
+                new Vector2(0f, -4f), new Vector2(MateChipW, 44f));
 
             mateTray.gameObject.SetActive(false);
         }
@@ -2029,7 +2281,7 @@ namespace Bob.TaskRace
 
             if (mateChips.Count != mateOrder.Count) RebuildMateChips(mateOrder.Count);
 
-            bool show = MateTrayAllowed && mateOrder.Count > 0 && !PauseOpen && !ResultOpen;
+            bool show = MateTrayAllowed && mateOrder.Count > 0 && !PauseOpen && !ResultOpen && !CardOpen;
             if (mateTray.gameObject.activeSelf != show) mateTray.gameObject.SetActive(show);
             if (!show) return;
 
@@ -2038,9 +2290,7 @@ namespace Bob.TaskRace
                 var line = MateLine(mateOrder[i]);
                 if (mateLines[i].text != line) mateLines[i].text = line;
             }
-            // the hint hangs under the last chip, so one and two mates both read as a stack
-            BobUi.Pin(mateHint.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f),
-                new Vector2(0f, -(mateOrder.Count * (MateChipH + MateChipGap)) - 4f), new Vector2(MateChipW, 26f));
+            // The bottom of the tray stays fixed; only membership/size changes reposition the stack.
         }
 
         void RebuildMateChips(int count)
@@ -2057,33 +2307,30 @@ namespace Bob.TaskRace
 
             for (int i = 0; i < count; i++)
             {
-                var chip = (RectTransform)BobUi.Panel(mateTray, T.surface, null, "Mate_" + (i + 1)).transform;
+                var button = BobUiR1.Button(mateTray, "", BobUiR1.Paper, CallMateHelp, 30, BobUiR1.Ink);
+                button.name = "Mate_" + (i + 1);
+                var chip = (RectTransform)button.transform;
                 BobUi.Pin(chip, new Vector2(1f, 1f), new Vector2(1f, 1f),
                     new Vector2(0f, -i * (MateChipH + MateChipGap)), new Vector2(MateChipW, MateChipH));
-
-                var avatar = BobUi.Disc(chip, i == 0 ? T.primary : T.secondary, 64f, "Avatar");
-                BobUi.Pin((RectTransform)avatar.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
-                    new Vector2(14f, 0f), new Vector2(64f, 64f));
-                var number = BobUi.Label(avatar.transform, (i + 1).ToString(), 30, Color.white,
+                var avatar = BobUi.Disc(chip, BobUiR1.Mint, 48f, "Avatar");
+                avatar.raycastTarget = false;
+                BobUi.Pin(avatar.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
+                    new Vector2(24f, 0f), new Vector2(48f, 48f));
+                var number = BobUiR1.Label(avatar.transform, (i + 1).ToString(), 26, BobUiR1.Green,
                     TextAnchor.MiddleCenter, FontStyle.Bold);
-                BobUi.Stretch(number.rectTransform);
-
-                var who = BobUi.Label(chip, $"เพื่อน {i + 1}", 26, T.ink, TextAnchor.MiddleLeft, FontStyle.Bold);
-                who.textWrappingMode = TextWrappingModes.NoWrap;
-                who.overflowMode = TextOverflowModes.Ellipsis;
+                BobUi.Stretch(number.rectTransform, 0f, -6f, 0f, -6f);
+                var who = BobUiR1.Label(chip, $"เพื่อน {i + 1}", 30, BobUiR1.Ink, TextAnchor.MiddleLeft, FontStyle.Bold);
                 BobUi.Pin(who.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f),
-                    new Vector2(90f, -12f), new Vector2(MateChipW - 104f, 30f));
-
-                var line = BobUi.Label(chip, "", 20, T.inkMuted, TextAnchor.MiddleLeft);
-                line.textWrappingMode = TextWrappingModes.NoWrap;
+                    new Vector2(86f, -4f), new Vector2(MateChipW - 106f, 68f));
+                var line = BobUiR1.Label(chip, "", 25, BobUiR1.Muted, TextAnchor.MiddleLeft);
+                line.enableAutoSizing = true; line.fontSizeMin = 20f; line.fontSizeMax = 25f;
                 line.overflowMode = TextOverflowModes.Ellipsis;
                 BobUi.Pin(line.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f),
-                    new Vector2(90f, -46f), new Vector2(MateChipW - 104f, 34f));
-
-                chip.gameObject.AddComponent<MateChip>().Init(this);
+                    new Vector2(86f, -64f), new Vector2(MateChipW - 106f, 64f));
                 mateChips.Add(chip);
                 mateLines.Add(line);
             }
+            LayoutMateTray();
         }
 
         /// <summary>One line of "what is that mate doing", straight from the bot's job (never guessed from position).</summary>

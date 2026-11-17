@@ -489,15 +489,31 @@ namespace Bob.EditorTools
             QualitySettings.shadowDistance = 45f;
 
             // A screen-space camera canvas follows its own camera: point it at the shot camera for this render.
-            Camera hudWas = null;
-            if (hud != null && hud.UiCanvas != null) { hudWas = hud.UiCanvas.worldCamera; hud.UiCanvas.worldCamera = cam; }
-
+            var hudCanvas = hud != null ? hud.UiCanvas : null;
+            Camera hudWas = hudCanvas != null ? hudCanvas.worldCamera : null;
+            var modeWas = hudCanvas != null ? hudCanvas.renderMode : RenderMode.ScreenSpaceOverlay;
             var rt = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32) { antiAliasing = 2 };
             cam.targetTexture = rt;
-            BobMinigameStage.RenderForCapture(); // the S28 stage draws to its own texture; no engine camera runs here
-            cam.Render();
-
-            if (hud != null && hud.UiCanvas != null) hud.UiCanvas.worldCamera = hudWas;
+            try
+            {
+                if (hudCanvas != null)
+                {
+                    hudCanvas.renderMode = RenderMode.ScreenSpaceCamera;
+                    hudCanvas.worldCamera = cam;
+                    Canvas.ForceUpdateCanvases();
+                }
+                BobMinigameStage.RenderForCapture();
+                cam.Render();
+            }
+            finally
+            {
+                if (hudCanvas != null)
+                {
+                    hudCanvas.worldCamera = hudWas;
+                    hudCanvas.renderMode = modeWas;
+                    Canvas.ForceUpdateCanvases();
+                }
+            }
 
             RenderTexture.active = rt;
             var tex = new Texture2D(w, h, TextureFormat.RGB24, false);

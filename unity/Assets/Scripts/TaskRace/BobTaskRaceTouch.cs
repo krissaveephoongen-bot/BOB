@@ -57,19 +57,21 @@ namespace Bob.TaskRace
             zoneImage.color = new Color(0f, 0f, 0f, 0f);
             zone.gameObject.AddComponent<Pad>().Init(this, true);
 
-            // Ink, not white: the map's sky and grass are both pale, so a white disc disappears against them.
-            var ink = new Color(0.06f, 0.11f, 0.26f, 0.18f);
+            baseSize = 216f; knobSize = 106f;
+            var ink = new Color(BobUiR1.Paper.r, BobUiR1.Paper.g, BobUiR1.Paper.b, 0.15f);
             baseDisc = BobUi.Pin(BobUi.Disc(zone, ink, baseSize, "Base").rectTransform,
                 Vector2.zero, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(baseSize, baseSize));
             baseDisc.GetComponent<Image>().raycastTarget = false;
+            var outline = baseDisc.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(BobUiR1.Paper.r, BobUiR1.Paper.g, BobUiR1.Paper.b, 0.85f);
+            outline.effectDistance = new Vector2(3f, -3f);
             knob = BobUi.Pin(BobUi.Disc(zone, new Color(1f, 1f, 1f, 0.9f), knobSize, "Knob").rectTransform,
                 Vector2.zero, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(knobSize, knobSize));
             knob.GetComponent<Image>().raycastTarget = false;
-            hint = BobUi.Pin(BobUi.Disc(zone, new Color(0.06f, 0.11f, 0.26f, 0.34f), knobSize * 0.5f, "Hint").rectTransform,
-                Vector2.zero, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(knobSize * 0.5f, knobSize * 0.5f));
+            hint = BobUi.Pin(BobUi.Disc(zone, BobUiR1.Paper, knobSize, "Hint").rectTransform,
+                Vector2.zero, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(knobSize, knobSize));
             hint.GetComponent<Image>().raycastTarget = false;
-            // The base stays on screen at rest, so a new player sees where the stick lives; only the knob appears on press.
-            restPos = new Vector2(baseSize * 0.5f + 46f, baseSize * 0.5f + 40f);
+            restPos = new Vector2(264f, 194f);
             baseDisc.anchoredPosition = restPos;
             knob.anchoredPosition = restPos;
             hint.anchoredPosition = restPos;
@@ -110,7 +112,7 @@ namespace Bob.TaskRace
         internal void StickDown(PointerEventData e)
         {
             if (zone == null) return;
-            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(zone, e.position, cam, out origin)) return;
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(zone, e.position, e.pressEventCamera, out origin)) return;
             held = true;
             move = Vector2.zero;
             baseDisc.anchoredPosition = origin;
@@ -121,7 +123,7 @@ namespace Bob.TaskRace
         internal void StickDrag(PointerEventData e)
         {
             if (!held || zone == null) return;
-            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(zone, e.position, cam, out var local)) return;
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(zone, e.position, e.pressEventCamera, out var local)) return;
 
             var delta = local - origin;
             var tilt = delta / Mathf.Max(1f, fullTilt);

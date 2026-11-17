@@ -33,7 +33,9 @@ namespace Bob.UI
             go.transform.SetParent(canvas, false);
             var rt = (RectTransform)go.transform;
             rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one; rt.offsetMin = rt.offsetMax = Vector2.zero;
-            go.AddComponent<BobSafeArea>().inset = inset;
+            var safeArea = go.AddComponent<BobSafeArea>();
+            safeArea.inset = inset;
+            safeArea.Apply();
             return rt;
         }
     }

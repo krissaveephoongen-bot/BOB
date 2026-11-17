@@ -288,6 +288,38 @@ sandbox ของ cloud session ไม่มี Unity — รอบนี้ร�
 
 ---
 
+### 6.2 UI R1 native Unity (17 พ.ย. 2026 — อยู่ระหว่างตรวจ)
+
+- รุ่น source: `ui/unity-r1-20261117` หลังแบบ `5621332`; owner อนุมัติ commit/push checkpoint นี้
+  และให้ทำงานต่อระหว่างรอผล run06–08. ยังไม่สร้าง APK หรือ deploy.
+- กติกา server ผ่าน 80/80 และ E2E 39/39; `python ready-check/check.py` ผ่าน (Windows ไม่มี `python3`).
+  `UNITY-CHECK PASSED` ด้วย `DOTNET_ROLL_FORWARD=Major dotnet run --project unity-check/BobCheck.csproj`
+  เพราะเครื่องมี .NET 10/11 แต่ไม่มี runtime 8; ไม่ติดตั้ง package หรือแก้ project configuration.
+- ใช้สำเนา `compile-check/` เนื่องจาก Editor เปิด `unity/` อยู่; backup ไฟล์ mirror เดิมก่อน sync,
+  ไม่ปิด Editor ของ owner. Compile snapshot แรก exit 0 และไม่พบ `error CS` ใน `Logs/ui-r1-compile-01.log`.
+- `Bob.EditorTools.TaskRaceShots.RunR1` และ `RunR1Heroes` เป็น editor-only checks:
+  fixture จัดฉาก/seed, ส่วนปุ่ม/เลือกของ/ลาก/กดค้างส่ง pointer ผ่าน raycast ของ EventSystem จริง;
+  ภาพใช้ `ScreenCapture` จาก Game view และ JSON ขนาดข้อความ. ไม่ใช่ OS mouse หรือ physical touch.
+- `Logs/ui-r1-heroes-04.log` / `05.log` / `06.log`: **HERO CHECKS PASSED**, exit 0 ที่
+  1920×1080 / 2400×1080 / 1440×1080 ตามลำดับ; เลือกครบสี่ตัว, ข้อความ 130%, เสร็จสิ้นกลับ Home,
+  ปิดกลับ Home และหยุด countdown ผ่าน. ภาพอยู่ `Logs/ui-r1-heroes-04/` ถึง `06/`;
+  ตรวจภาพ Press 130% ทั้งสามสัดส่วนแล้ว ข้อความและปุ่มไม่ถูกตัด; run05/06 เพิ่ม TMP truncation assertions.
+  run02/run03 เคย FAIL เพราะ runner กดก่อนเฟรมของหน้าที่สร้างใหม่วาดเสร็จ; รอ rendered frame แล้ว
+  raycast ของ `HeroDone`/`HeroClose` ตกที่ปุ่มจริง ไม่ใช่ `Screens`.
+- เพิ่ม native checks สำหรับเลื่อนใบงานสิบแถว, joystick, พัก/เล่นต่อ, เรียก, T04 ลาก/ยกชั้นบน/
+  ปล่อย hold ก่อนครบ/ล็อกสำเร็จ/ไม่ผ่าน/กองว่าง, คราบ+toast+ลูกศร และ RenderTexture ของมินิเกมอื่น.
+  `Logs/ui-r1-play-02.log`: T04 และ hold ทั้งสามกรณีผ่าน; emergency fixture FAIL เพราะเรียก debug hook
+  ก่อน Update สร้าง schedule จึงเพิ่มการรอเฟรมและหยุดทันทีเมื่อ fixture ไม่เกิด ไม่แก้ runtime กติกา.
+  ภาพยืนยัน paper/cream/mint/sun กลับตรงค่าสี แต่ชื่อใบงานยาวยังถูกตัดที่ 130% จึงเปลี่ยนเป็น wrap
+  พร้อมความสูงแถวตามข้อความและ scroll; เพิ่ม assertion ตรวจ TMP truncation.
+- `Logs/ui-r1-play-03.log` / `04.log` ผ่านที่ 1920×1080 / 2400×1080 รวม emergency, arrow,
+  ข้อความ 130% และคืน camera/overlay หลัง capture. run05 ที่ 1440×1080 เหลือคำแนะนำ T04 ถูกตัดสองภาพ;
+  ลดคำซ้ำเป็น `ลากให้ผ่านสูตร แล้วกดค้างล็อก` ไม่ลด font. ภาพยังพบ SeriesPill ทับ budget bar และ delta FX
+  ทับหัวข้อ stat จึงแยก pill เป็น canvas order 19 และจำกัด FX ใกล้แถบค่า; กำลังตรวจ run06–08.
+  fixture คราบตั้ง elapsed ตรงเวลา spawn ใน schedule เพื่อถ่าย grace 25 วิจริง ไม่ใช่เร่ง spawn จากอนาคต.
+- การขยาย 130% ใน runner ปิด TMP auto-size และคูณ font size จริง ไม่ใช่ dynamic type ของระบบ.
+  Android Back, รอยบากจริง, dynamic type ของระบบ, performance มือถือ และออนไลน์สองเครื่องยังไม่ยืนยัน.
+
 ## 7. ลำดับลงมือถัดไป
 
 1. ~~owner เปิด Unity รันข้อ 3.2~~ → **เสร็จ 17 พ.ย.** (ตาราง §6.1); ข้อ 13 (UGS) กับข้อ 14 (APK บนเครื่อง) ยังต้องรัน

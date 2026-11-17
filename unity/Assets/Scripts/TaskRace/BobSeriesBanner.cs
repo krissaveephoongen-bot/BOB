@@ -23,7 +23,7 @@ namespace Bob.TaskRace
         }
 
         TaskRaceModeManager manager;
-        RectTransform card;
+        RectTransform card, cardRoot;
         Image pill;
         TMP_Text pillText, cardTitle, cardScore, cardHint, cardTag;
         float cardUntil;
@@ -54,20 +54,20 @@ namespace Bob.TaskRace
 
         void Update()
         {
-            if (card == null || !card.gameObject.activeSelf) return;
+            if (card == null || !cardRoot.gameObject.activeSelf) return;
             float left = Mathf.Max(0f, cardUntil - Time.unscaledTime);
             cardHint.text = $"รอบถัดไปเริ่มใน {Mathf.CeilToInt(left)}…";
-            if (left <= 0f) card.gameObject.SetActive(false);
+            if (left <= 0f) cardRoot.gameObject.SetActive(false);
         }
 
         // ---------------------------------------------------------------- state
 
-        void OnRoundStarted() { if (card != null) card.gameObject.SetActive(false); RefreshPill(); }
+        void OnRoundStarted() { if (card != null) cardRoot.gameObject.SetActive(false); RefreshPill(); }
 
         void OnRoundEnded(SeriesRound line)
         {
             if (card == null) return;
-            card.gameObject.SetActive(true);
+            cardRoot.gameObject.SetActive(true);
             cardUntil = Time.unscaledTime + Mathf.Max(0.5f, manager.nextRoundDelay);
             var outcome = line.Outcome == RoundOutcome.Win ? "เราชนะรอบนี้"
                         : line.Outcome == RoundOutcome.Loss ? "เราแพ้รอบนี้" : "รอบนี้เสมอ";
@@ -82,7 +82,7 @@ namespace Bob.TaskRace
             RefreshPill();
         }
 
-        void OnMatchEnded(MatchResult result) { if (card != null) card.gameObject.SetActive(false); RefreshPill(); }
+        void OnMatchEnded(MatchResult result) { if (card != null) cardRoot.gameObject.SetActive(false); RefreshPill(); }
 
         void RefreshPill()
         {
@@ -112,10 +112,11 @@ namespace Bob.TaskRace
 
             var page = BobUi.Stretch(BobUi.Rect("Page", go.transform));
 
-            var dim = BobUi.Panel(page, new Color(0f, 0f, 0f, 0.35f), null, "SeriesDim");
+            cardRoot = BobUi.Stretch(BobUi.Rect("SeriesOverlay", page));
+            var dim = BobUi.Panel(cardRoot, new Color(0f, 0f, 0f, 0.35f), null, "SeriesDim");
             BobUi.Stretch((RectTransform)dim.transform);
             dim.raycastTarget = false;
-            card = BobUi.Panel(page, BobUi.Surface, null, "SeriesCard").rectTransform;
+            card = BobUi.Panel(cardRoot, BobUi.Surface, null, "SeriesCard").rectTransform;
             BobUi.Pin(card, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(760f, 380f));
             card.GetComponent<Image>().raycastTarget = false;
 
@@ -129,10 +130,14 @@ namespace Bob.TaskRace
             BobUi.Pin(cardHint.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 44f), new Vector2(700f, 44f));
 
             foreach (var text in new[] { cardTitle, cardTag, cardScore, cardHint }) text.raycastTarget = false;
-            card.gameObject.SetActive(false);
+            cardRoot.gameObject.SetActive(false);
 
             // The pill sits between the joystick and the action button, clear of the task card and the top bar.
             pill = BobUi.Panel(page, BobUi.Surface, null, "SeriesPill");
+            // The round strip must stay behind task cards, unlike the between-round overlay.
+            var pillCanvas = pill.gameObject.AddComponent<Canvas>();
+            pillCanvas.overrideSorting = true;
+            pillCanvas.sortingOrder = 19;
             BobUi.Pin((RectTransform)pill.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
                 new Vector2(0f, 34f), new Vector2(560f, 62f));
             pill.raycastTarget = false;

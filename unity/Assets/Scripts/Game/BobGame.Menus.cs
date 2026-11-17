@@ -970,42 +970,92 @@ namespace Bob.Game
 
         void HeroSelect()
         {
-            ScreenBackdrop("lobby_rental_room");
-            TopBar(screenRoot, "เลือกตัวละคร", true);
-            float hw = CardW(4, 18, 380); var row = BobUi.Pin(BobUi.Rect("Heroes", screenRoot), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -10), new Vector2(4 * hw + 3 * 18, 600));
-            var h = row.gameObject.AddComponent<HorizontalLayoutGroup>(); h.spacing = 18; h.childControlWidth = h.childControlHeight = true; h.childForceExpandWidth = h.childForceExpandHeight = true;
-            foreach (var c in BobMatch.Chars)
+            RectTransform Place(RectTransform r, float x, float y, float w, float h) =>
+                BobUi.Pin(r, Vector2.up, Vector2.up, new Vector2(x, -y), new Vector2(w, h));
+            TMP_Text Label(Transform parent, string text, int size, Color color, float x, float y, float w, float h,
+                TextAnchor align = TextAnchor.MiddleLeft, FontStyle style = FontStyle.Normal)
             {
-                var cid = c.Id; bool sel = cid == charId;
-                var card = BobUi.Button(row, "", sel ? BobUi.Hex("#FFF0C2") : BobUi.Surface, () => { SelectChar(cid); }, 24);
-                card.GetComponentInChildren<TMP_Text>().text = "";
-                // B6 (docs 13): the illustrated card fills the whole card. The art is text-free and keeps a calm spotlight
-                // in the middle for the portrait; a cream panel under the text keeps the Thai labels readable.
-                var art = BobUi.Rect("CardArt", card.transform); BobUi.Stretch(art);
-                var ai = art.gameObject.AddComponent<Image>();
-                ai.sprite = BobUi.Art != null && BobUi.Art.Has("card_" + cid) ? BobUi.Art.Get("card_" + cid) : null;
-                ai.preserveAspect = false; ai.raycastTarget = false;
-                var col = BobUi.Hex(c.Color);
-                if (ai.sprite == null) ai.color = new Color(col.r, col.g, col.b, 0.35f); // old tint if the art is missing
-                var panel = BobUi.Rect("TextPanel", card.transform);
-                BobUi.Pin(panel, new Vector2(0.5f, 0), new Vector2(0.5f, 0), Vector2.zero, new Vector2(hw, 272));
-                panel.gameObject.AddComponent<Image>().color = new Color(1f, 0.992f, 0.96f, 0.96f);
-                var pi = BobUi.Img(card.transform, cid + "_portrait", 300); BobUi.Pin(pi.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -30), new Vector2(300, 300));
-                if (sel) BobUi.Pin(BobUi.Img(card.transform, "icon_check", 44, BobUi.Good).rectTransform, Vector2.one, Vector2.one, new Vector2(-14, -14), new Vector2(44, 44));
-                var nm = BobUi.Label(card.transform, c.Name, 50, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold); BobUi.Pin(nm.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -355), new Vector2(340, 66));
-                var ab = BobUi.Label(card.transform, c.Ability, 34, BobUi.Hex(c.Color), TextAnchor.MiddleCenter, FontStyle.Bold); BobUi.Pin(ab.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -420), new Vector2(340, 52));
-                var ds = BobUi.Label(card.transform, c.Desc, 24, BobUi.Muted, TextAnchor.UpperCenter); BobUi.Pin(ds.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -476), new Vector2(330, 110));
-                if (sel) card.transform.localScale = Vector3.one * 1.04f;
+                var label = BobUiR1.Label(parent, text, size, color, align, style);
+                label.enableAutoSizing = false;
+                Place(label.rectTransform, x, y, w, h);
+                return label;
             }
+
+            var backdrop = BobUiR1.Panel(screenRoot, BobUiR1.Ink, name: "HeroBackdrop");
+            BobUi.Stretch(backdrop.rectTransform);
+            // Measure the existing safe root, never the full canvas or physical screen.
+            screenRoot.ForceUpdateRectTransforms();
+            float width = Mathf.Min(1560, screenRoot.rect.width - 96);
+            float height = Mathf.Min(960, screenRoot.rect.height - 64);
+            float innerWidth = width - 96, gap = 16;
+            float cardWidth = (innerWidth - gap * (BobMatch.Chars.Length - 1)) / BobMatch.Chars.Length;
+            float cardHeight = height - 592;
+            float portraitSize = Mathf.Min(160, cardHeight - 216);
+            var dialog = BobUiR1.Panel(screenRoot, BobUiR1.Cream, name: "HeroSelectR1").rectTransform;
+            BobUi.Pin(dialog, Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(width, height));
+
+            float headingWidth = innerWidth - (heroForMatch ? 432 : 168);
+            Label(dialog, heroForMatch ? "เลือกตัวละคร" : "เปลี่ยนตัวละคร", 44, BobUiR1.Ink,
+                48, 16, headingWidth, 104, style: FontStyle.Bold);
+            if (heroForMatch)
+                Label(dialog, "ยืนยันอัตโนมัติเมื่อหมดเวลา", 26, BobUiR1.Muted, 48, 120, headingWidth, 64);
+            var close = BobUiR1.Button(dialog, "×", BobUiR1.Paper, () => { Sfx("ui_cancel"); GoHome(); }, 48);
+            close.gameObject.name = "HeroClose";
+            Place((RectTransform)close.transform, width - 192, 24, 144, 144);
+
+            for (int i = 0; i < BobMatch.Chars.Length; i++)
+            {
+                var c = BobMatch.Chars[i]; var cid = c.Id; bool selected = cid == charId;
+                var frame = BobUiR1.Panel(dialog, selected ? BobUiR1.Green : BobUiR1.Line, name: "Hero_" + cid);
+                frame.raycastTarget = false;
+                Place(frame.rectTransform, 48 + i * (cardWidth + gap), 192, cardWidth, cardHeight);
+                RectTransform card;
+                if (selected)
+                {
+                    var active = BobUiR1.Panel(frame.transform, BobUiR1.Mint, name: "ActiveHero");
+                    active.raycastTarget = false; // No Button, listener, or selection write on the active card.
+                    card = active.rectTransform;
+                }
+                else
+                {
+                    var choose = BobUiR1.Button(frame.transform, "", BobUiR1.Paper, () => SelectChar(cid));
+                    choose.gameObject.name = "Choose_" + cid;
+                    card = (RectTransform)choose.transform;
+                }
+                BobUi.Stretch(card, 2, 2, 2, 2);
+                float contentWidth = cardWidth - 4;
+                Place(BobUi.Img(card, cid + "_portrait", portraitSize).rectTransform,
+                    (contentWidth - portraitSize) / 2, 24, portraitSize, portraitSize);
+                Label(card, c.Name, 44, BobUiR1.Ink, 16, portraitSize + 34, contentWidth - 32, 96,
+                    TextAnchor.MiddleCenter, FontStyle.Bold);
+                Label(card, selected ? "ใช้งานอยู่" : c.Ability, 30, selected ? BobUiR1.Green : BobUiR1.Muted,
+                    16, cardHeight - 82, contentWidth - 32, 72, TextAnchor.MiddleCenter, FontStyle.Bold);
+                if (selected)
+                    Place(BobUi.Img(card, "icon_check", 32, BobUiR1.Green).rectTransform, contentWidth - 48, 16, 32, 32);
+            }
+
+            var hero = BobMatch.Char(charId);
+            float detailY = 192 + cardHeight + 24;
+            var detail = BobUiR1.Panel(dialog, BobUiR1.Paper, name: "HeroAbility");
+            detail.raycastTarget = false;
+            Place(detail.rectTransform, 48, detailY, innerWidth, 180);
+            Label(detail.transform, hero.Name + " · " + hero.Ability, 34, BobUiR1.Ink,
+                24, 8, innerWidth - 48, 80, style: FontStyle.Bold);
+            Label(detail.transform, hero.Desc, 32, BobUiR1.Muted, 24, 88, innerWidth - 48, 88, TextAnchor.UpperLeft);
+
             if (heroForMatch)
             {
-                var tp = Card(screenRoot, "Timer", BobUi.Surface, 1f); BobUi.Pin(tp, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -24), new Vector2(250, 96));
-                BobUi.Pin(BobUi.Img(tp, "icon_timer", 60).rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(20, 0), new Vector2(60, 60));
-                heroTimerText = BobUi.Label(tp, "15", 52, BobUi.Ink, TextAnchor.MiddleRight, FontStyle.Bold); BobUi.Stretch(heroTimerText.rectTransform, 80, 0, 24, 0);
+                var timer = BobUiR1.Panel(dialog, BobUiR1.Sky, name: "HeroTimer");
+                timer.raycastTarget = false;
+                Place(timer.rectTransform, width - 456, 24, 240, 144);
+                Place(BobUi.Img(timer.transform, "icon_timer", 48).rectTransform, 24, 48, 48, 48);
+                // Re-rendering after a different hero is chosen must not visually reset the countdown to 15.
+                heroTimerText = Label(timer.transform, Mathf.CeilToInt(Mathf.Max(0, heroTimer)).ToString(),
+                    52, BobUiR1.Ink, 88, 12, 128, 120, TextAnchor.MiddleCenter, FontStyle.Bold);
             }
-            var go = BobUi.Button(screenRoot, heroForMatch ? "ยืนยัน" : "เลือก", BobUi.Sun, ConfirmHero, 56);
-            BobUi.Pin((RectTransform)go.transform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-40, 30), new Vector2(420, 180));
-            go.GetComponentInChildren<TMP_Text>().fontStyle = FontStyles.Bold;
+            var done = BobUiR1.Button(dialog, heroForMatch ? "ยืนยัน" : "เสร็จสิ้น", BobUiR1.Sun, ConfirmHero, 34);
+            done.gameObject.name = "HeroDone";
+            Place((RectTransform)done.transform, (width - 624) / 2, height - 172, 624, 144);
         }
 
         void ConfirmHero()

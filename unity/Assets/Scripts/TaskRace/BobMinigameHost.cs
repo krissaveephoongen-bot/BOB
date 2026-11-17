@@ -54,7 +54,14 @@ namespace Bob.TaskRace
         sealed class RingFx { public Image img; public float t, life, from, to, spin, aspect = 1f; public Color colour; }
 
         /// <summary>A short-lived "+3" / "-2" pill over a stat bar, so a reaction is seen without a sentence.</summary>
-        sealed class CartBadge { public Image img; public TMP_Text label; public float life, from; public Color colour; }
+        sealed class CartBadge
+        {
+            public Image img;
+            public TMP_Text label;
+            public float life, from, fraction;
+            public int stat;
+            public Color colour;
+        }
 
         // Among Us feedback grammar: every touch answers back inside one frame and the answer is over in < 0.3 s.
         const float PopTime = 0.18f, RingTime = 0.30f, PunchTime = 0.20f, ShakeTime = 0.26f, FlyTime = 0.16f;
@@ -117,7 +124,29 @@ namespace Bob.TaskRace
         readonly List<Image> cartMarks = new List<Image>();   // parallel to cartLayers: the reaction mark, or null
         readonly List<TMP_Text> cartValues = new List<TMP_Text>();
         readonly List<CartBadge> cartBadges = new List<CartBadge>();
-        readonly List<Image> cartMethodPips = new List<Image>();
+        sealed class CartPartView
+        {
+            public RectTransform icon, check;
+            public TMP_Text name, cost;
+        }
+        sealed class CartSlotView
+        {
+            public Item item;
+            public TMP_Text name, cost, hint;
+        }
+        readonly List<Item> cartShelfCards = new List<Item>();
+        readonly Dictionary<Item, CartPartView> cartPartViews = new Dictionary<Item, CartPartView>();
+        readonly List<CartSlotView> cartSlots = new List<CartSlotView>();
+        readonly List<Image> cartPickSlots = new List<Image>();
+        readonly List<TMP_Text> cartPickNames = new List<TMP_Text>();
+        readonly List<TMP_Text> cartMetWords = new List<TMP_Text>();
+        readonly List<Image> cartTargets = new List<Image>();
+        readonly List<Action<float>> cartLayout = new List<Action<float>>();
+        Image cartDropZone, cartInlineHint, cartPickFill;
+        TMP_Text cartPickCount, cartTrayEmpty, cartTrayHint, cartSlotCount;
+        string cartError = "";
+        float cartLayoutWidth = -1f;
+        const float CartHeight = 780f, CartGap = 16f, CartHitMin = 144f;
         readonly bool[] cartBarMet = new bool[4];
         Item cartChipHeld;
         Image cartLock, cartLockFill;
@@ -215,6 +244,7 @@ namespace Bob.TaskRace
         {
             taskId = BaseId(id);
             kind = KindOf(taskId);
+            SetPlayArea(kind == MiniKind.Cart);
             if (kind == MiniKind.Timed) { Hide(); return false; }
 
             emergency = false;
@@ -225,7 +255,7 @@ namespace Bob.TaskRace
             placeholder.gameObject.SetActive(false);
             play.gameObject.SetActive(true);
             SetupStep();
-            BobTutorialClip.Play(play, taskId);
+            if (kind != MiniKind.Cart) BobTutorialClip.Play(play, taskId);
             BobMinigameSfx.Open();
             return true;
         }
@@ -239,6 +269,7 @@ namespace Bob.TaskRace
         {
             taskId = BaseId(id);
             kind = KindOf(taskId);
+            SetPlayArea(kind == MiniKind.Cart);
             if (kind == MiniKind.Timed) { Hide(); return false; }
 
             emergency = true;
@@ -249,7 +280,7 @@ namespace Bob.TaskRace
             placeholder.gameObject.SetActive(false);
             play.gameObject.SetActive(true);
             SetupStep();
-            BobTutorialClip.Play(play, taskId);
+            if (kind != MiniKind.Cart) BobTutorialClip.Play(play, taskId);
             BobMinigameSfx.Open();
             return true;
         }
@@ -257,6 +288,7 @@ namespace Bob.TaskRace
         /// <summary>HUD: the card is a timed one (sabotage / cart / chairs): show one line instead of a play area.</summary>
         public void ShowPlaceholder(string text)
         {
+            SetPlayArea(false);
             playing = false; complete = false;
             HideItems();
             if (stage3d != null) stage3d.Hide();
@@ -331,6 +363,7 @@ namespace Bob.TaskRace
 
         public bool Tick(float dt)
         {
+            RefreshCartLayout();
             TickJuice(dt); // feedback keeps moving even when the card is already solved
             Sync3D();
             if (complete) return true;
@@ -436,7 +469,7 @@ namespace Bob.TaskRace
                 b.life -= dt;
                 if (b.img == null) { cartBadges.RemoveAt(i); continue; }
                 var rt = (RectTransform)b.img.transform;
-                rt.anchoredPosition += new Vector2(0f, 24f * dt);
+                rt.anchoredPosition = CartDeltaPoint(b.stat, b.fraction) + new Vector2(0f, 8f * (b.from - b.life) / b.from);
                 float fade = Mathf.Clamp01(b.life / b.from);
                 var c = b.colour; c.a = fade;
                 b.img.color = c;
@@ -588,7 +621,11 @@ namespace Bob.TaskRace
             stage3d.Place(it.twin, it.rect.anchoredPosition); // after the size, so the contact shadow scales with the body
         }
 
-        void LateUpdate() => Sync3D();
+        void LateUpdate()
+        {
+            RefreshCartLayout();
+            Sync3D();
+        }
 
         // ---------------------------------------------------------------- pointer
 
@@ -691,8 +728,12 @@ namespace Bob.TaskRace
             }
 
             slimeVariant = 0;
-            if (stage3d != null && stage3d.Ready) stage3d.Show(taskId); // also drops last step's twins
-            AddContext();
+            if (stage3d != null && stage3d.Ready)
+            {
+                if (stepKind == MiniKind.Cart) stage3d.Hide(); // R1 is native uGUI, not stage twins with hidden faces.
+                else stage3d.Show(taskId); // other minigames keep their existing stage
+            }
+            if (stepKind != MiniKind.Cart) AddContext();
             switch (stepKind)
             {
                 case MiniKind.Trace: SetupTrace(); break;
@@ -1103,174 +1144,369 @@ namespace Bob.TaskRace
             new Color(0.96f, 0.77f, 0.19f, 1f), // shine  = gold
         };
 
-        static Color FamilyColour(Family f) => f switch
+        // R1 geometry uses top-left coordinates inside MiniPlay (screen y=232 at 1080 reference height).
+        // Keep these local to T04: the other games still use AreaW/AreaH and the original theme/stage.
+        void SetPlayArea(bool cart)
         {
-            Family.Tool => new Color(0.55f, 0.68f, 0.90f, 1f),
-            Family.Chem => new Color(0.55f, 0.82f, 0.62f, 1f),
-            Family.Energy => new Color(0.96f, 0.72f, 0.42f, 1f),
-            _ => new Color(0.72f, 0.62f, 0.90f, 1f),
-        };
+            if (play == null) return;
+            float width = cart ? Mathf.Max(1f, ((RectTransform)play.parent).rect.width - 96f) : AreaW;
+            BobUi.Pin(play, Vector2.one * 0.5f, Vector2.one * 0.5f,
+                new Vector2(0f, cart ? -82f : 30f), new Vector2(width, cart ? CartHeight : AreaH));
+            play.GetComponent<Image>().color = cart ? BobUiR1.Cream
+                : new Color(T.surfaceCream.r, T.surfaceCream.g, T.surfaceCream.b, 0.9f);
+        }
 
-        /// <summary>Step 1 picks four parts off the shelf; step 2 stacks them on the cart and holds the lock.</summary>
+        void RefreshCartLayout()
+        {
+            if (taskId != "T04" || (!playing && !complete) || play == null || !play.gameObject.activeInHierarchy || cartLayout.Count == 0) return;
+            float width = Mathf.Max(1f, ((RectTransform)play.parent).rect.width - 96f);
+            if (Mathf.Abs(cartLayoutWidth - width) <= 0.1f) return;
+            SetPlayArea(true);
+            LayoutCart();
+        }
+
+        // At 1440 safe-page width, MiniPlay is 1216 wide: 189-wide shelf cards and a 2x2 tray.
+        // The six-across shelf needs at least 944 inner pixels (1168 safe-page pixels) for 144-wide hits.
+        static bool CartGrid(float w) => w < 1450f;
+        static void CartPlace(RectTransform rt, Rect bounds)
+        {
+            BobUi.Pin(rt, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(bounds.x, -bounds.y), bounds.size);
+        }
+
+        void CartResponsive(RectTransform rt, Func<float, Rect> bounds)
+        {
+            cartLayout.Add(w => { if (rt != null) CartPlace(rt, bounds(w)); });
+            CartPlace(rt, bounds(play.rect.width));
+        }
+
+        Image CartPanel(string name, Color colour, Func<float, Rect> bounds)
+        {
+            var panel = BobUiR1.Panel(layer, colour, name: name);
+            panel.raycastTarget = false;
+            Track(panel.gameObject);
+            CartResponsive(panel.rectTransform, bounds);
+            return panel;
+        }
+
+        static void CartOutline(Image img, Color colour)
+        {
+            var outline = img.GetComponent<Outline>() ?? img.gameObject.AddComponent<Outline>();
+            outline.effectColor = colour;
+            outline.effectDistance = new Vector2(1f, -1f);
+        }
+
+        static TMP_Text CartLabel(Transform parent, string text, int size, Color colour,
+            TextAnchor align = TextAnchor.MiddleLeft, bool bold = false)
+        {
+            var label = BobUiR1.Label(parent, text, size, colour, align, bold ? FontStyle.Bold : FontStyle.Normal);
+            label.raycastTarget = false;
+            // IBM Plex Thai needs room for stacked vowel marks without shrinking the glyphs.
+            label.enableAutoSizing = false;
+            label.overflowMode = TextOverflowModes.Ellipsis;
+            return label;
+        }
+
+        // A horizontal strip within a parent that follows its width without changing font or hit size.
+        static void CartStrip(RectTransform rt, float left, float top, float right, float height)
+        {
+            rt.anchorMin = new Vector2(0f, 1f); rt.anchorMax = Vector2.one;
+            rt.pivot = new Vector2(0f, 1f);
+            rt.offsetMin = new Vector2(left, -top - height); rt.offsetMax = new Vector2(-right, -top);
+        }
+
+        TMP_Text CartText(string name, string text, int size, Color colour, Func<float, Rect> bounds, bool bold = false)
+        {
+            var label = CartLabel(layer, text, size, colour, bold: bold);
+            label.name = name;
+            Track(label.gameObject);
+            CartResponsive(label.rectTransform, bounds);
+            return label;
+        }
+
+        static Image CartFill(Transform parent, string name, Color colour)
+        {
+            var fill = BobUiR1.Panel(parent, colour, name: name);
+            fill.raycastTarget = false;
+            CartFillAmount(fill, 0f);
+            return fill;
+        }
+
+        static void CartFillAmount(Image fill, float amount)
+        {
+            if (fill == null) return;
+            var rt = fill.rectTransform;
+            rt.anchorMin = Vector2.zero; rt.anchorMax = new Vector2(Mathf.Clamp01(amount), 1f);
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+        }
+
         void SetupCart()
         {
-            Bg(new Vector2(0f, 262f), new Vector2(AreaW, 96f), new Color(0.72f, 0.60f, 0.42f, 1f)); // shelf board
-            Bg(new Vector2(0f, -310f), new Vector2(AreaW, 16f), new Color(0.74f, 0.58f, 0.37f, 1f));
+            SetPlayArea(true);
+            if (brush != null) brush.gameObject.SetActive(false);
+            if (waitLabel != null) waitLabel.gameObject.SetActive(false);
+            var tutorial = play.GetComponentInChildren<BobTutorialClip>(true);
+            if (tutorial != null) tutorial.gameObject.SetActive(false); // do not cover the first shelf card/stat
+            cartError = "";
             if (step == 0) SetupCartShelf(); else SetupCartBuild();
+            CartApply();
         }
 
         void SetupCartShelf()
         {
-            // Six seeded parts, four of them a stack that passes the hardest worksheet (BobTaskRaceRules.CartShelf):
-            // the card is a puzzle of order and choice, never a draw nobody can win.
+            // The six seeded unique parts and automatic fourth-pick transition are unchanged.
             cartShelf.Clear();
             cartShelf.AddRange(BobTaskRaceRules.CartShelf(cartSeed, difficulty));
-
             for (int i = 0; i < cartShelf.Count; i++)
             {
-                var part = BobRules.Parts[cartShelf[i]];
-                var box = MakeBox(new Vector2(-450f + i * 180f, 258f), new Vector2(162f, 118f),
-                    FamilyColour(part.Family), part.Name, 28);
-                box.bin = i; // index into cartShelf: the tap reads it back
-                AddStatPips(box.rect, part, -38f, 30f, 4f, 7f); // what this part gives, without a number
-                AddCost(box.rect, part.Cost, 55f, 40f);
+                var box = CartPart(cartShelf[i], "Shelf-" + cartShelf[i]);
+                box.bin = i;
+                cartShelfCards.Add(box);
             }
-            // The worksheet is visible while picking: four rows, the star row in gold. Zero fill, real targets.
+            var selection = CartPanel("PickedParts", BobUiR1.Paper, w => new Rect(0f, 220f, w * 0.59f, 202f));
+            var title = CartLabel(selection.transform, "อุปกรณ์ที่หยิบ", 30, BobUiR1.Ink, bold: true);
+            CartStrip(title.rectTransform, 24f, 4f, 90f, 66f);
+            cartPickCount = CartLabel(selection.transform, "0/4", 30, BobUiR1.Ink, TextAnchor.MiddleRight, true);
+            CartStrip(cartPickCount.rectTransform, 24f, 4f, 24f, 66f);
+            for (int i = 0; i < BobTaskRaceRules.CartParts; i++)
+            {
+                var slot = BobUiR1.Panel(selection.transform, BobUiR1.Cream, name: "PickedSlot-" + (i + 1));
+                slot.raycastTarget = false;
+                CartOutline(slot, BobUiR1.Line);
+                cartPickSlots.Add(slot);
+                var label = CartLabel(slot.transform, (i + 1).ToString(), 25, BobUiR1.Ink, TextAnchor.MiddleCenter, true);
+                BobUi.Stretch(label.rectTransform, 8f, 2f, 8f, 2f);
+                cartPickNames.Add(label);
+                int index = i;
+                CartResponsive(slot.rectTransform, w => new Rect(24f + index * ((w * 0.59f - 72f) / 4f + 8f), 80f,
+                    (w * 0.59f - 72f) / 4f, 112f));
+            }
+            var budget = CartPanel("PickBudgetInfo", BobUiR1.Paper, w => new Rect(w * 0.59f + 24f, 220f, w * 0.41f - 24f, 202f));
+            var budgetTitle = CartLabel(budget.transform, $"งบจัดกอง {BobRules.RoundBudget} เหรียญ", 30, BobUiR1.Ink, bold: true);
+            CartStrip(budgetTitle.rectTransform, 24f, 2f, 24f, 66f);
+            cartCostText = CartLabel(budget.transform, "", 31, BobUiR1.Ink, bold: true);
+            CartStrip(cartCostText.rectTransform, 24f, 68f, 24f, 68f);
+            var info = CartLabel(budget.transform, "คิดงบเมื่อวางลงรถเข็น", 26, BobUiR1.Muted);
+            CartStrip(info.rectTransform, 24f, 136f, 24f, 58f);
             BuildCartBars();
-            CartApply();
-
-            cartRecipe = BobUi.Label(layer, $"แตะหยิบ {BobTaskRaceRules.CartParts} อย่าง · เลือกให้ครบดาว", 30, T.inkMuted,
-                TextAnchor.MiddleCenter, FontStyle.Bold);
-            BobUi.Pin(cartRecipe.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(0f, 191f), new Vector2(1000f, 44f));
-            Track(cartRecipe.gameObject);
+            cartRecipe = CartText("PickProgress", "", 30, BobUiR1.Ink, w => new Rect(0f, 648f, w, 72f), true);
+            var progress = CartPanel("PickTrack", BobUiR1.Line, w => new Rect(0f, 738f, w, 12f));
+            cartPickFill = CartFill(progress.transform, "PickFill", BobUiR1.Green);
         }
 
         void SetupCartBuild()
         {
-            // The cart: four layer slots, the same number of parts the shelf hands over (BobTaskRaceRules.CartParts).
-            var cart = BobUi.Panel(layer, new Color(0.97f, 0.94f, 0.87f, 1f), "ui_panel", "Cart");
-            cart.raycastTarget = false;
-            BobUi.Pin((RectTransform)cart.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(360f, -10f), new Vector2(300f, 430f));
-            Track(cart.gameObject);
-            var cartTitle = BobUi.Label(cart.transform, "รถเข็น", 30, T.inkMuted, TextAnchor.MiddleCenter, FontStyle.Bold);
-            BobUi.Pin(cartTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0f, -8f), new Vector2(260f, 38f));
+            BuildCartBars();
+            // Grid: heading to 246, two 144-high rows to 554, hint to 626; budget starts at 632.
+            var tray = CartPanel("CartTray", BobUiR1.Paper,
+                w => new Rect(0f, CartGrid(w) ? 180f : 192f, w * 0.57f, CartGrid(w) ? 450f : 366f));
+            var title = CartLabel(tray.transform, "อุปกรณ์ในถาด", 30, BobUiR1.Ink, bold: true);
+            CartStrip(title.rectTransform, 24f, 0f, 244f, 66f);
+            var dragHint = CartLabel(tray.transform, "ลากไปที่รถเข็น", 25, BobUiR1.Muted, TextAnchor.MiddleRight);
+            BobUi.Pin(dragHint.rectTransform, Vector2.one, Vector2.one, new Vector2(-24f, -6f), new Vector2(208f, 56f));
+            cartTrayEmpty = CartLabel(tray.transform, "", 32, BobUiR1.Green, TextAnchor.MiddleCenter, true);
+            CartStrip(cartTrayEmpty.rectTransform, 24f, 92f, 24f, 144f);
+            cartInlineHint = CartPanel("InlineCartHint", BobUiR1.Cream,
+                w => new Rect(24f, CartGrid(w) ? 562f : 482f, w * 0.57f - 48f, 64f));
+            cartTrayHint = CartLabel(cartInlineHint.transform, "", 25, BobUiR1.Muted);
+            BobUi.Stretch(cartTrayHint.rectTransform, 16f, 4f, 16f, 4f);
 
-            // The main rules on one line: 100 budget under the title, plus two method pips that light as they are used.
-            cartCostText = BobUi.Label(cart.transform, "งบ 0/100", 20, T.ink, TextAnchor.MiddleCenter, FontStyle.Bold);
-            BobUi.Pin(cartCostText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0f, -48f), new Vector2(240f, 24f));
-            var budgetTrack = BobUi.Panel(cart.transform, new Color(0.88f, 0.84f, 0.75f, 1f), null, "BudgetTrack");
-            budgetTrack.raycastTarget = false;
-            BobUi.Pin(budgetTrack.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0f, -74f), new Vector2(240f, 12f));
-            cartBudgetFill = BobUi.Rect("BudgetFill", budgetTrack.transform).gameObject.AddComponent<Image>();
-            cartBudgetFill.raycastTarget = false;
-            var bfr = (RectTransform)cartBudgetFill.transform;
-            bfr.anchorMin = new Vector2(0f, 0f); bfr.anchorMax = new Vector2(0f, 1f);
-            bfr.pivot = new Vector2(0f, 0.5f); bfr.offsetMin = Vector2.zero; bfr.offsetMax = Vector2.zero;
-            bfr.sizeDelta = new Vector2(0f, -4f);
-            cartBudgetFill.color = T.primary;
-
-            var methodLabel = BobUi.Label(cart.transform, "วิธี", 18, T.inkMuted, TextAnchor.MiddleRight, FontStyle.Bold);
-            BobUi.Pin(methodLabel.rectTransform, new Vector2(0.5f, 1f), new Vector2(1f, 0.5f),
-                new Vector2(38f, -100f), new Vector2(60f, 24f));
-            for (int i = 0; i < BobRules.MaxMethods; i++)
-            {
-                var pip = BobUi.Disc(cart.transform, new Color(0.80f, 0.76f, 0.68f, 1f), 17f, "MethodPip");
-                pip.raycastTarget = false;
-                BobUi.Pin((RectTransform)pip.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f),
-                    new Vector2(52f + i * 24f, -100f), new Vector2(17f, 17f));
-                cartMethodPips.Add(pip);
-            }
-
+            cartDropZone = CartPanel("CartDropZone", BobUiR1.Paper, w => new Rect(w * 0.57f + 24f, 192f, w * 0.43f - 24f, 428f));
+            CartOutline(cartDropZone, BobUiR1.Line);
+            var cartTitle = CartLabel(cartDropZone.transform, "รถเข็น", 30, BobUiR1.Ink, bold: true);
+            CartStrip(cartTitle.rectTransform, 24f, 0f, 170f, 66f);
+            cartSlotCount = CartLabel(cartDropZone.transform, "", 28, BobUiR1.Ink, TextAnchor.MiddleRight, true);
+            CartStrip(cartSlotCount.rectTransform, 150f, 0f, 24f, 66f);
             for (int i = 0; i < BobTaskRaceRules.CartParts; i++)
             {
-                var slot = BobUi.Panel(cart.transform, new Color(0.90f, 0.86f, 0.77f, 0.75f), null, "LayerSlot");
-                slot.raycastTarget = false;
-                BobUi.Pin((RectTransform)slot.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                    new Vector2(0f, 22f + i * 66f), new Vector2(250f, 56f));
+                var item = CartItem("Stack-layer-" + i, BobUiR1.Cream);
+                item.bin = i;
+                var slot = new CartSlotView
+                {
+                    item = item,
+                    name = CartLabel(item.rect, "", 30, BobUiR1.Ink, bold: true),
+                    cost = CartLabel(item.rect, "", 25, BobUiR1.Muted, TextAnchor.MiddleRight),
+                    hint = CartLabel(item.rect, "", 26, BobUiR1.Green),
+                };
+                cartSlots.Add(slot);
             }
-
             for (int i = 0; i < cartTray.Count; i++) CartAddChip(i);
-            BuildCartBars();
-
-            // The lock: hold 0.6 s (docs 16 step 2). A short hold, so a mis-tap cannot lock the wrong stack.
-            cartLock = BobUi.Panel(layer, T.secondary, "ui_panel", "CartLock");
-            cartLock.raycastTarget = false;
-            BobUi.Pin(cartLock.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(120f, -232f), new Vector2(300f, 96f));
-            Track(cartLock.gameObject);
-            cartLockFill = BobUi.Rect("LockFill", cartLock.transform).gameObject.AddComponent<Image>();
-            cartLockFill.raycastTarget = false;
-            var lf = (RectTransform)cartLockFill.transform;
-            lf.anchorMin = new Vector2(0f, 0f); lf.anchorMax = new Vector2(0f, 1f);
-            lf.pivot = new Vector2(0f, 0.5f);
-            lf.anchoredPosition = Vector2.zero;
-            lf.sizeDelta = new Vector2(0f, -8f);
-            cartLockFill.color = new Color(1f, 1f, 1f, 0.45f);
-            cartLockLabel = BobUi.Label(cartLock.transform, "กดค้าง ล็อกสูตร", 34, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold);
-            BobUi.Stretch(cartLockLabel.rectTransform);
-
-            cartRecipe = BobUi.Label(layer, "", 30, T.inkMuted, TextAnchor.MiddleCenter, FontStyle.Bold);
-            BobUi.Pin(cartRecipe.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(-150f, 232f), new Vector2(1100f, 44f));
-            Track(cartRecipe.gameObject);
+            cartCostText = CartText("StackBudget", "", 30, BobUiR1.Ink,
+                w => new Rect(0f, CartGrid(w) ? 632f : 574f, w * 0.57f, 66f), true);
+            cartRecipe = CartText("PassConditions", "", 28, BobUiR1.Muted,
+                w => new Rect(0f, CartGrid(w) ? 700f : 644f, w * 0.57f, 62f));
             cartRecipeIsBuild = true;
+            var budget = CartPanel("BudgetTrack", BobUiR1.Line,
+                w => new Rect(0f, CartGrid(w) ? 768f : 712f, w * 0.57f, 12f));
+            cartBudgetFill = CartFill(budget.transform, "BudgetFill", BobUiR1.Green);
 
-            CartApply();
+            // Never disabled for an empty/incomplete/unpassed formula: lock completion and buff are distinct.
+            CartPanel("CartLockShadow", new Color(BobUiR1.Ink.r, BobUiR1.Ink.g, BobUiR1.Ink.b, 0.17f),
+                w => new Rect(w * 0.57f + 24f, 633f, w * 0.43f - 24f, CartHitMin));
+            cartLock = CartPanel("CartLock", BobUiR1.Sun,
+                w => new Rect(w * 0.57f + 24f, 624f, w * 0.43f - 24f, CartHitMin));
+            cartLockLabel = CartLabel(cartLock.transform, "กดค้าง ล็อกสูตร", 34, BobUiR1.Ink, TextAnchor.MiddleCenter, true);
+            CartStrip(cartLockLabel.rectTransform, 20f, 4f, 20f, 76f);
+            var holdHint = CartLabel(cartLock.transform, "กดค้าง 0.6 วินาที", 22, BobUiR1.Muted, TextAnchor.MiddleCenter);
+            CartStrip(holdHint.rectTransform, 16f, 80f, 16f, 48f);
+            var holdTrack = BobUi.Rect("LockTrack", cartLock.transform);
+            CartStrip(holdTrack, 16f, 132f, 16f, 8f);
+            cartLockFill = CartFill(holdTrack, "LockFill", BobUiR1.Green);
         }
 
-        /// <summary>One draggable part in the tray: the shelf pick, ready to go on the cart.</summary>
+        // T04 bypasses MakeBox: that helper intentionally hides uGUI images in favour of 3D twins.
+        Item CartItem(string name, Color colour)
+        {
+            var image = BobUiR1.Panel(layer, colour, name: name);
+            image.raycastTarget = false;
+            CartOutline(image, BobUiR1.Line);
+            var item = new Item { rect = image.rectTransform, img = image, bin = -1, size = CartHitMin };
+            items.Add(item);
+            return item;
+        }
+
+        Item CartPart(string id, string name)
+        {
+            var part = BobRules.Parts[id];
+            var item = CartItem(name, BobUiR1.Paper);
+            var view = new CartPartView
+            {
+                icon = CartIcon(item.rect, id, 54f, BobUiR1.Ink),
+                check = CartIcon(item.rect, "check", 28f, BobUiR1.Green),
+                name = CartLabel(item.rect, part.Name, part.Name.Length > 10 ? 25 : 30, BobUiR1.Ink, TextAnchor.MiddleCenter, true),
+                cost = CartLabel(item.rect, $"{part.Cost} เหรียญ", 26, BobUiR1.Muted, TextAnchor.MiddleCenter),
+            };
+            view.check.gameObject.SetActive(false);
+            cartPartViews.Add(item, view);
+            return item;
+        }
+
         void CartAddChip(int trayIndex)
         {
-            var part = BobRules.Parts[cartTray[trayIndex]];
-            var chip = MakeBox(CartChipHome(trayIndex), new Vector2(146f, 104f), FamilyColour(part.Family),
-                part.Name, 26);
+            var chip = CartPart(cartTray[trayIndex], "Tray-" + cartTray[trayIndex]);
             chip.bin = trayIndex;
-            AddStatPips(chip.rect, part, -32f, 27f, 4f, 6f);
-            AddCost(chip.rect, part.Cost, 48f, 34f);
             cartChips.Add(chip);
         }
 
-        static Vector2 CartChipHome(int i) => new Vector2(-560f + i * 146f, -258f);
-
-        /// <summary>Four mini bars on a part: how much it gives each stat, in that stat's colour. No number needed.</summary>
-        void AddStatPips(RectTransform parent, Part part, float y, float barW, float gap, float height)
+        Rect CartChipBounds(int i)
         {
-            float total = 4f * barW + 3f * gap;
-            float x = -total * 0.5f + barW * 0.5f;
-            for (int i = 0; i < 4; i++)
+            float w = play.rect.width, tw = w * 0.57f;
+            bool grid = CartGrid(w);
+            int columns = grid ? 2 : 4;
+            float cw = (tw - 48f - (columns - 1) * CartGap) / columns;
+            return new Rect(24f + (i % columns) * (cw + CartGap), (grid ? 250f : 270f) + (i / columns) * (CartHitMin + CartGap),
+                cw, grid ? CartHitMin : 192f);
+        }
+
+        Vector2 CartCentre(Rect bounds) => new Vector2(-play.rect.width * 0.5f + bounds.center.x, CartHeight * 0.5f - bounds.center.y);
+        Vector2 CartChipHome(int i) => CartCentre(CartChipBounds(i));
+
+        void CartPlaceItem(Item item, Rect bounds)
+        {
+            item.home = CartCentre(bounds);
+            BobUi.Pin(item.rect, Vector2.one * 0.5f, Vector2.one * 0.5f, item.home, bounds.size);
+        }
+
+        void LayoutCartPart(Item item, Rect bounds, bool compact)
+        {
+            // Resizing during a drag keeps the grabbed object and pointer offset, not a rebuilt/re-dealt hand.
+            if (item != cartChipHeld) CartPlaceItem(item, bounds);
+            else item.rect.sizeDelta = bounds.size;
+            var view = cartPartViews[item];
+            float iconSize = compact ? 36f : 54f;
+            var iconAnchor = new Vector2(compact ? 0f : 0.5f, 1f);
+            BobUi.Pin(view.icon, iconAnchor, iconAnchor, new Vector2(compact ? 12f : 0f, compact ? -18f : -8f), new Vector2(54f, 54f));
+            view.icon.localScale = Vector3.one * (iconSize / 54f);
+            // Compact cards use two text rows, with the icon beside the name, not above it.
+            CartStrip(view.name.rectTransform, compact ? 58f : 10f, compact ? 4f : 64f, 10f, 66f);
+            CartStrip(view.cost.rectTransform, 10f, compact ? 78f : 130f, 10f, 58f);
+            BobUi.Pin(view.check, Vector2.one, Vector2.one, new Vector2(-14f, -14f), new Vector2(28f, 28f));
+        }
+
+        void LayoutCart()
+        {
+            float w = play.rect.width;
+            cartLayoutWidth = w;
+            foreach (var layout in cartLayout) layout(w);
+            if (step == 0)
             {
-                var bg = BobUi.Rect("PipBg", parent).gameObject.AddComponent<Image>();
-                bg.raycastTarget = false;
-                bg.color = new Color(1f, 1f, 1f, 0.55f);
-                BobUi.Pin((RectTransform)bg.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                    new Vector2(x, y), new Vector2(barW, height));
-                float u = Mathf.Clamp01(part.S[i] / 4f);
-                if (u > 0f)
-                {
-                    var fill = BobUi.Rect("Pip", bg.transform).gameObject.AddComponent<Image>();
-                    fill.raycastTarget = false;
-                    fill.color = CartStatColour[i];
-                    BobUi.Pin((RectTransform)fill.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
-                        new Vector2(1f, 0f), new Vector2((barW - 2f) * u, height - 2f));
-                }
-                x += barW + gap;
+                float cw = (w - CartGap * 5f) / 6f;
+                for (int i = 0; i < cartShelfCards.Count; i++)
+                    LayoutCartPart(cartShelfCards[i], new Rect(i * (cw + CartGap), 0f, cw, 192f), false);
+                return;
+            }
+            for (int i = 0; i < cartChips.Count; i++)
+            {
+                cartChips[i].bin = i;
+                LayoutCartPart(cartChips[i], CartChipBounds(i), CartGrid(w));
+            }
+            // Four rows fit below the 66-high heading: 144 + 3*66 + 3*4 = 354, from y=262 to 616.
+            float bottom = 616f;
+            for (int i = 0; i < cartSlots.Count; i++)
+            {
+                var slot = cartSlots[i];
+                bool filled = i < cartStack.Count, top = filled && i == cartStack.Count - 1;
+                float h = top ? CartHitMin : 66f;
+                CartPlaceItem(slot.item, new Rect(w * 0.57f + 48f, bottom - h, w * 0.43f - 72f, h));
+                bottom -= h + 4f;
+                slot.item.alive = filled;
+                slot.item.img.color = filled ? BobUiR1.Mint : BobUiR1.Cream;
+                CartOutline(slot.item.img, top ? BobUiR1.Green : BobUiR1.Line);
+                slot.name.text = $"{i + 1}  " + (filled ? BobRules.Parts[cartStack[i]].Name : "ว่าง");
+                slot.cost.text = filled ? BobRules.Parts[cartStack[i]].Cost.ToString() : "";
+                CartStrip(slot.name.rectTransform, 18f, top ? 6f : 0f, 110f, 66f);
+                CartStrip(slot.cost.rectTransform, 18f, top ? 6f : 0f, 18f, 66f);
+                CartStrip(slot.hint.rectTransform, 18f, 80f, 18f, 58f);
+                slot.hint.text = cartLocked ? "ชั้นบนสุด · ล็อกแล้ว" : "แตะยกชั้นบนสุดออก";
+                slot.hint.gameObject.SetActive(top);
             }
         }
 
-        /// <summary>A small coin-like cost tag, so the 100 budget is a number the player can see before spending.</summary>
-        void AddCost(RectTransform parent, int cost, float x, float y)
+        // Small native uGUI strokes, not screenshots or font-dependent icon glyphs. Coordinates are a 24-unit grid.
+        static RectTransform CartIcon(Transform parent, string id, float size, Color colour)
         {
-            var pill = BobUi.Panel(parent, new Color(1f, 0.99f, 0.95f, 0.94f), "ui_panel", "Cost");
-            pill.raycastTarget = false;
-            BobUi.Pin(pill.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(x, y), new Vector2(44f, 24f));
-            var text = BobUi.Label(pill.transform, cost.ToString(), 19, T.ink, TextAnchor.MiddleCenter, FontStyle.Bold);
-            BobUi.Stretch(text.rectTransform);
+            var icon = BobUi.Rect("Icon-" + id, parent);
+            icon.sizeDelta = new Vector2(size, size);
+            void Stroke(params float[] points)
+            {
+                for (int i = 2; i < points.Length; i += 2)
+                {
+                    var a = new Vector2(points[i - 2], -points[i - 1]) * size / 24f;
+                    var b = new Vector2(points[i], -points[i + 1]) * size / 24f;
+                    var line = BobUi.Rect("Stroke", icon).gameObject.AddComponent<Image>();
+                    line.color = colour; line.raycastTarget = false;
+                    BobUi.Pin(line.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 0.5f), a, new Vector2((b - a).magnitude, size * 0.075f));
+                    line.rectTransform.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(b.y - a.y, b.x - a.x) * Mathf.Rad2Deg);
+                }
+            }
+            switch (id)
+            {
+                case "check": Stroke(5, 12, 10, 17, 21, 5); break;
+                case "sponge":
+                    Stroke(4, 5, 20, 5, 20, 19, 4, 19, 4, 5); Stroke(8, 9, 10, 9); Stroke(15, 10, 17, 10); Stroke(11, 15, 13, 15); break;
+                case "brush": case "broom":
+                    Stroke(15, 2, 12, 12); Stroke(7, 12, 17, 12, 20, 21, 4, 21, 7, 12); Stroke(9, 16, 9, 21); Stroke(14, 16, 14, 21); break;
+                case "steam": case "hot":
+                    Stroke(6, 20, 18, 20);
+                    for (int x = 7; x <= 17; x += 5) Stroke(x, 15, x - 2, 12, x + 1, 8, x + 1, 6, x - 1, 3);
+                    break;
+                case "cloth": Stroke(5, 3, 20, 6, 16, 21, 2, 17, 5, 3); Stroke(8, 7, 13, 17); break;
+                case "polish": case "vinegar": case "spray":
+                    Stroke(9, 2, 15, 2, 15, 7, 18, 11, 18, 21, 6, 21, 6, 11, 9, 7, 9, 2); Stroke(9, 14, 15, 14); break;
+                case "soak":
+                    Stroke(3, 11, 21, 11, 19, 21, 5, 21, 3, 11);
+                    for (int x = 7; x <= 17; x += 5) Stroke(x, 3, x, 8);
+                    break;
+                case "soap": case "soda":
+                    Stroke(4, 8, 8, 5, 20, 5, 20, 16, 16, 20, 4, 20, 4, 8, 16, 8, 20, 5); Stroke(16, 8, 16, 20); break;
+                case "air": Stroke(3, 7, 17, 7, 20, 5, 19, 2, 16, 2); Stroke(3, 12, 22, 12); Stroke(3, 17, 16, 17, 19, 20, 17, 22); break;
+                case "circle": Stroke(19, 7, 15, 3, 8, 3, 3, 8, 3, 15, 8, 21, 15, 21, 21, 16); Stroke(14, 7, 20, 8, 20, 2); break;
+                case "gentle": Stroke(12, 21, 3, 12, 2, 8, 4, 4, 8, 3, 12, 7, 16, 3, 20, 4, 22, 8, 21, 12, 12, 21); break;
+                case "speed": case "scrub": Stroke(14, 1, 3, 14, 11, 14, 10, 23, 21, 9, 13, 9, 14, 1); break;
+                case "shine": Stroke(12, 1, 15, 9, 23, 12, 15, 15, 12, 23, 9, 15, 1, 12, 9, 9, 12, 1); break;
+                default: Stroke(12, 2, 15, 8, 22, 9, 17, 14, 18, 21, 12, 18, 6, 21, 7, 14, 2, 9, 9, 8, 12, 2); break;
+            }
+            return icon;
         }
 
         /// <summary>The painted star of the art set, gold, or a plain disc when the texture is missing in the editor.</summary>
@@ -1295,69 +1531,44 @@ namespace Bob.TaskRace
             return img;
         }
 
-        /// <summary>
-        /// The four stat bars, ceiling-scaled: a full bar means the best four parts can do, the tick is this round's
-        /// target and the text beside it is "value/need". The star row is gold and outlined; the other rows recede.
-        /// Built in step 1 too, with zero fill, so the pick has a visible goal.
-        /// </summary>
+        /// <summary>Four horizontal, 164-high R1 stat cards: real ceiling scale, target tick and explicit met word.</summary>
         void BuildCartBars()
         {
             for (int i = 0; i < BobTaskRaceRules.CartKeys.Length; i++)
             {
-                float y = 150f - i * 78f;
+                int index = i;
                 bool star = i == cartStar;
-                var ink = star ? T.ink : new Color(T.inkMuted.r, T.inkMuted.g, T.inkMuted.b, 0.8f);
-
-                if (star)
-                {
-                    var icon = StarSprite(layer, 22f, new Color(1f, 0.80f, 0.16f, 1f));
-                    BobUi.Pin((RectTransform)icon.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                        new Vector2(-602f, y), new Vector2(22f, 22f));
-                    Track(icon.gameObject);
-                }
-
-                var label = BobUi.Label(layer, CartBarLabels[i], 28, ink, TextAnchor.MiddleLeft,
-                    star ? FontStyle.Bold : FontStyle.Normal);
-                BobUi.Pin(label.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 0.5f),
-                    new Vector2(-586f, y), new Vector2(142f, 40f));
-                Track(label.gameObject);
-
-                var track = BobUi.Panel(layer, star ? new Color(0.99f, 0.94f, 0.78f, 1f) : new Color(0.90f, 0.86f, 0.77f, 0.8f),
-                    null, "BarTrack");
+                var card = CartPanel("Stat-" + BobTaskRaceRules.CartKeys[i], star ? BobUi.Hex("#FFF0BB") : BobUiR1.Paper,
+                    w => new Rect(index * ((w - 3f * CartGap) / 4f + CartGap), step == 0 ? 456f : 0f,
+                        (w - 3f * CartGap) / 4f, 164f));
+                var icon = CartIcon(card.transform, star ? "star" : BobTaskRaceRules.CartKeys[i], 34f, BobUiR1.Ink);
+                CartPlace(icon, new Rect(22f, 15f, 34f, 34f));
+                var title = CartLabel(card.transform, CartBarLabels[i], 28, BobUiR1.Ink, bold: true);
+                CartStrip(title.rectTransform, 68f, 0f, 20f, 64f);
+                var track = BobUiR1.Panel(card.transform, BobUiR1.Line, name: "BarTrack");
                 track.raycastTarget = false;
-                BobUi.Pin(track.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 0.5f),
-                    new Vector2(-440f, y), new Vector2(280f, 26f));
-                if (star)
-                {
-                    var outline = track.gameObject.AddComponent<Outline>();
-                    outline.effectColor = T.primaryLight;
-                    outline.effectDistance = new Vector2(2.5f, -2.5f);
-                }
-                Track(track.gameObject);
-
-                var fill = BobUi.Rect("BarFill", track.transform).gameObject.AddComponent<Image>();
-                fill.raycastTarget = false;
-                var fr = (RectTransform)fill.transform;
-                fr.anchorMin = new Vector2(0f, 0f); fr.anchorMax = new Vector2(0f, 1f);
-                fr.pivot = new Vector2(0f, 0.5f); fr.offsetMin = Vector2.zero; fr.offsetMax = Vector2.zero;
-                fr.sizeDelta = new Vector2(0f, -6f);
-                fill.color = CartStatColour[i];
-                cartBars.Add(fill);
-
-                float max = Mathf.Max(1f, BobTaskRaceRules.CartCeiling[i]);
-                float tickX = -440f + 280f * Mathf.Clamp01(Need(i) / max);
-                var need = BobUi.Panel(layer, T.brandRed, null, "BarNeed");
-                need.raycastTarget = false;
-                BobUi.Pin((RectTransform)need.transform, new Vector2(0.5f, 0.5f), new Vector2(0f, 0.5f),
-                    new Vector2(tickX, y), new Vector2(6f, 40f));
-                Track(need.gameObject);
-
-                var value = BobUi.Label(layer, "0/" + Need(i), 22, T.ink, TextAnchor.MiddleLeft, FontStyle.Bold);
-                BobUi.Pin(value.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 0.5f),
-                    new Vector2(-148f, y), new Vector2(92f, 32f));
-                Track(value.gameObject);
+                CartStrip(track.rectTransform, 24f, 76f, 24f, 12f);
+                cartBars.Add(CartFill(track.transform, "BarFill", BobUiR1.Green));
+                var target = BobUiR1.Panel(track.transform, BobUiR1.Ink, name: "BarNeed");
+                target.raycastTarget = false;
+                float u = Mathf.Clamp01(Need(i) / (float)Mathf.Max(1, BobTaskRaceRules.CartCeiling[i]));
+                BobUi.Pin(target.rectTransform, new Vector2(u, 0.5f), Vector2.one * 0.5f, Vector2.zero, new Vector2(4f, 28f));
+                cartTargets.Add(target);
+                var value = CartLabel(card.transform, "", 30, BobUiR1.Ink, bold: true);
+                CartStrip(value.rectTransform, 24f, 96f, 130f, 66f);
                 cartValues.Add(value);
+                var met = CartLabel(card.transform, "เป้าหมาย", 23, BobUiR1.Muted, TextAnchor.MiddleRight);
+                CartStrip(met.rectTransform, 110f, 96f, 24f, 64f);
+                cartMetWords.Add(met);
             }
+        }
+
+        Vector2 CartBarPoint(int stat, float fraction)
+        {
+            if (stat < 0 || stat >= cartBars.Count) return Vector2.zero;
+            var track = (RectTransform)cartBars[stat].transform.parent;
+            var r = track.rect;
+            return play.InverseTransformPoint(track.TransformPoint(new Vector3(Mathf.Lerp(r.xMin, r.xMax, Mathf.Clamp01(fraction)), r.center.y, 0f)));
         }
 
         int Need(int i) => cartNeed != null && cartNeed.TryGetValue(BobTaskRaceRules.CartKeys[i], out var v) ? v : 5;
@@ -1365,107 +1576,148 @@ namespace Bob.TaskRace
         /// <summary>Re-score the stack and repaint the bars (called after every add and remove).</summary>
         void CartApply()
         {
+            LayoutCart();
             var ev = BobRules.EvalStack(cartStack);
             for (int i = 0; i < 4; i++) cartStats[i] = ev.Stats[i];
             for (int i = 0; i < cartBars.Count && i < 4; i++)
             {
                 float max = Mathf.Max(1f, BobTaskRaceRules.CartCeiling[i]);
-                var rt = (RectTransform)cartBars[i].transform;
-                rt.sizeDelta = new Vector2(280f * Mathf.Clamp01(cartStats[i] / max), -6f);
+                CartFillAmount(cartBars[i], cartStats[i] / max);
                 bool ok = cartStats[i] >= Need(i);
                 if (ok && !cartBarMet[i] && cartStack.Count > 0)
-                {
-                    // The tick just went green: a sparkle on the tick marks the condition being met, not a sentence.
-                    Fx(fxSparkle, new Vector2(-440f + 280f * Mathf.Clamp01(Need(i) / max), 150f - i * 78f), 170f, 0.45f, 45f);
-                }
+                    Fx(fxSparkle, CartBarPoint(i, Need(i) / max), 110f, 0.45f, 45f);
                 cartBarMet[i] = ok;
-                cartBars[i].color = ok ? T.success : cartStats[i] > 0 ? CartStatColour[i] : new Color(T.ink.r, T.ink.g, T.ink.b, 0.18f);
-                if (i < cartValues.Count && cartValues[i] != null)
+                cartBars[i].color = ok ? BobUiR1.Green : BobUi.Hex("#34738B");
+                cartTargets[i].color = ok ? BobUiR1.Green : BobUiR1.Ink;
+                cartValues[i].text = $"{cartStats[i]}/{Need(i)}";
+                cartValues[i].color = ok ? BobUiR1.Green : BobUiR1.Ink;
+                cartMetWords[i].text = ok ? "ผ่าน" : "เป้าหมาย";
+                cartMetWords[i].color = ok ? BobUiR1.Green : BobUiR1.Muted;
+            }
+            if (step == 0)
+            {
+                int picked = cartTray.Count;
+                if (cartCostText != null) cartCostText.text = $"ของที่หยิบ {BobRules.StackCost(cartTray)} เหรียญ";
+                if (cartPickCount != null) cartPickCount.text = $"{picked}/{BobTaskRaceRules.CartParts}";
+                for (int i = 0; i < cartPickSlots.Count; i++)
                 {
-                    cartValues[i].text = $"{cartStats[i]}/{Need(i)}";
-                    cartValues[i].color = ok ? T.success : T.ink;
+                    cartPickSlots[i].color = i < picked ? BobUiR1.Mint : BobUiR1.Cream;
+                    cartPickNames[i].text = i < picked ? BobRules.Parts[cartTray[i]].Name : (i + 1).ToString();
                 }
+                foreach (var box in cartShelfCards)
+                {
+                    bool selected = box.bin < 0;
+                    box.img.color = selected ? BobUiR1.Mint : BobUiR1.Paper;
+                    CartOutline(box.img, selected ? BobUiR1.Green : BobUiR1.Line);
+                    cartPartViews[box].check.gameObject.SetActive(selected);
+                }
+                if (cartRecipe != null) cartRecipe.text = picked == BobTaskRaceRules.CartParts
+                    ? "หยิบครบแล้ว · กำลังไปขั้นจัดกอง"
+                    : $"หยิบแล้ว {picked}/4 · ครบสี่ชิ้นไปขั้นต่อไปอัตโนมัติ";
+                CartFillAmount(cartPickFill, picked / (float)BobTaskRaceRules.CartParts);
+                return;
             }
             int spent = BobRules.StackCost(cartStack);
             if (cartCostText != null)
             {
-                cartCostText.text = $"งบ {spent}/{BobRules.RoundBudget}";
-                cartCostText.color = spent > BobRules.RoundBudget ? T.danger : T.ink;
+                cartCostText.text = $"ใช้ {spent}/{BobRules.RoundBudget} เหรียญ · เหลือ {BobRules.RoundBudget - spent}";
+                cartCostText.color = spent > BobRules.RoundBudget ? BobUiR1.Red : BobUiR1.Ink;
             }
-            if (cartBudgetFill != null)
-            {
-                ((RectTransform)cartBudgetFill.transform).sizeDelta =
-                    new Vector2(236f * Mathf.Clamp01(spent / (float)BobRules.RoundBudget), -4f);
-                cartBudgetFill.color = spent > BobRules.RoundBudget ? T.danger : T.primary;
-            }
-            int methods = BobRules.CountMethods(cartStack);
-            for (int i = 0; i < cartMethodPips.Count; i++)
-                cartMethodPips[i].color = i < methods ? new Color(0.62f, 0.49f, 0.87f, 1f) : new Color(0.80f, 0.76f, 0.68f, 1f);
+            CartFillAmount(cartBudgetFill, spent / (float)BobRules.RoundBudget);
+            if (cartBudgetFill != null) cartBudgetFill.color = spent > BobRules.RoundBudget ? BobUiR1.Red : BobUiR1.Green;
             if (cartRecipe != null && cartRecipeIsBuild)
             {
                 int passes = BobTaskRaceRules.CartPassCount(cartStats, cartNeed);
-                cartRecipe.text = cartStack.Count == 0
-                    ? "ลากลงรถ 4 ชิ้น · กดค้างล็อก"
-                    : $"ผ่าน {passes}/4 · ต้อง {Mathf.Min(3, difficulty)}";
+                cartRecipe.text = $"ผ่าน {passes}/4 เงื่อนไข · D{difficulty} ต้องอย่างน้อย {Mathf.Min(3, difficulty)}";
             }
+            if (cartSlotCount != null) cartSlotCount.text = $"{cartStack.Count}/4 ช่อง";
+            if (cartTrayEmpty != null)
+            {
+                cartTrayEmpty.gameObject.SetActive(cartTray.Count == 0);
+                cartTrayEmpty.text = cartStack.Count == BobTaskRaceRules.CartParts
+                    ? "วางครบแล้ว\nกดค้างเพื่อล็อกสูตร" : "ถาดว่างแล้ว\nกดค้างเพื่อล็อกกองที่เหลือ";
+            }
+            if (cartTrayHint != null)
+            {
+                cartTrayHint.text = string.IsNullOrEmpty(cartError)
+                    ? $"วิธีใช้ {BobRules.CountMethods(cartStack)}/{BobRules.MaxMethods} · วางบนของ ไม่ต่อวิธีใช้"
+                    : cartError;
+                cartTrayHint.color = string.IsNullOrEmpty(cartError) ? BobUiR1.Muted : BobUiR1.Red;
+                cartInlineHint.color = string.IsNullOrEmpty(cartError) ? BobUiR1.Cream : BobUiR1.Pink;
+            }
+        }
+
+        bool CartContains(RectTransform rt, Vector2 p)
+        {
+            return rt != null && rt.gameObject.activeInHierarchy &&
+                rt.rect.Contains((Vector2)rt.InverseTransformPoint(play.TransformPoint(p)));
         }
 
         void CartDown(Vector2 p)
         {
+            if (cartLocked) return;
             if (step == 0)
             {
-                var box = Nearest(p, 110f);
-                if (box == null || box.bin < 0 || box.bin >= cartShelf.Count) return;
-                string id = cartShelf[box.bin];
-                cartTray.Add(id);
-                box.bin = -1;
-                Pop(box, T.primaryLight);
-                BobSfx.Play("pass_part", 0.8f);
-                stepProgress = cartTray.Count / (float)BobTaskRaceRules.CartParts;
-                Hint = $"หยิบแล้ว {cartTray.Count}/{BobTaskRaceRules.CartParts}";
+                if (cartTray.Count >= BobTaskRaceRules.CartParts) return;
+                foreach (var box in cartShelfCards)
+                {
+                    if (box.bin < 0 || box.bin >= cartShelf.Count || !CartContains(box.rect, p)) continue;
+                    cartTray.Add(cartShelf[box.bin]);
+                    box.bin = -1;
+                    Ring(box.home, BobUiR1.Mint, 90f);
+                    BobSfx.Play("pass_part", 0.8f);
+                    stepProgress = cartTray.Count / (float)BobTaskRaceRules.CartParts;
+                    Hint = $"หยิบแล้ว {cartTray.Count}/{BobTaskRaceRules.CartParts}";
+                    CartApply(); // selected cards remain readable and mint until Tick advances the fourth pick
+                    return;
+                }
                 return;
             }
-
-            // Step 2: the lock takes a hold, a tray chip takes a drag, a stacked layer taps off the cart.
-            if (cartLock != null && Vector2.Distance(((RectTransform)cartLock.transform).anchoredPosition, p) < 170f)
+            if (cartChipHeld != null || holding) return;
+            // Only the visible, 144-high top is tappable. Test it before the disjoint lock rectangle.
+            if (cartLayers.Count > 0 && CartContains(cartLayers[cartLayers.Count - 1].rect, p))
+            {
+                int last = cartStack.Count - 1;
+                var top = cartLayers[last];
+                Ring(top.home, BobUiR1.Pink, 90f);
+                cartStack.RemoveAt(last); // deliberately NOT returned to the tray
+                cartLayers.RemoveAt(last);
+                if (cartMarks.Count > last)
+                {
+                    if (cartMarks[last] != null) DestroyNow(cartMarks[last].gameObject);
+                    cartMarks.RemoveAt(last);
+                }
+                cartError = "";
+                Hint = "ยกชั้นบนสุดออกแล้ว";
+                BobSfx.Play("lift_layer", 0.8f);
+                CartApply();
+                return;
+            }
+            if (cartLock != null && CartContains(cartLock.rectTransform, p))
             {
                 holding = true;
                 return;
             }
-            var layer = Nearest(p, 90f);
-            if (layer != null && cartLayers.Contains(layer) && cartStack.Count > 0)
+            for (int i = cartChips.Count - 1; i >= 0; i--)
             {
-                int last = cartStack.Count - 1;
-                if (cartLayers.Count > 0 && cartLayers[cartLayers.Count - 1] == layer)
-                {
-                    cartStack.RemoveAt(last);
-                    cartLayers.RemoveAt(cartLayers.Count - 1);
-                    if (cartMarks.Count > 0)
-                    {
-                        var mark = cartMarks[cartMarks.Count - 1];
-                        if (mark != null) DestroyNow(mark.gameObject);
-                        cartMarks.RemoveAt(cartMarks.Count - 1);
-                    }
-                    Pop(layer, T.danger);
-                    BobSfx.Play("lift_layer", 0.8f);
-                    CartApply();
-                }
-                return;
-            }
-            var chip = Nearest(p, 90f);
-            if (chip != null && cartChips.Contains(chip))
-            {
+                var chip = cartChips[i];
+                if (!CartContains(chip.rect, p)) continue;
                 cartChipHeld = chip;
-                chip.punch = PunchTime;
+                chip.shake = 0f;
+                heldOffset = chip.rect.anchoredPosition - p;
+                chip.rect.SetAsLastSibling();
+                chip.img.color = BobUiR1.Sky;
+                CartOutline(chip.img, BobUiR1.Green);
                 BobSfx.Play("pickup", 0.7f);
+                return;
             }
         }
 
         void CartDrag(Vector2 p)
         {
             if (cartChipHeld == null) return;
-            cartChipHeld.home = p;
-            cartChipHeld.rect.anchoredPosition = p;
+            cartChipHeld.home = p + heldOffset;
+            cartChipHeld.rect.anchoredPosition = cartChipHeld.home;
         }
 
         /// <summary>Why this part cannot go on top right now, or null. The card plays by the main stack rules.</summary>
@@ -1487,36 +1739,39 @@ namespace Bob.TaskRace
             if (step == 0 || cartChipHeld == null) return;
             var chip = cartChipHeld;
             cartChipHeld = null;
-            bool inCart = Mathf.Abs(p.x - 360f) < 170f && Mathf.Abs(p.y + 10f) < 240f;
+            chip.img.color = BobUiR1.Paper;
+            CartOutline(chip.img, BobUiR1.Line);
+            bool inCart = cartDropZone != null && CartContains(cartDropZone.rectTransform, p);
             int trayIndex = cartChips.IndexOf(chip);
             string id = trayIndex >= 0 ? cartTray[trayIndex] : null;
             string why = inCart && id != null ? CartWhyCannot(id) : null;
             if (!inCart || trayIndex < 0 || why != null)
             {
+                cartError = why != null ? "วางไม่ได้ · " + why : "ลากอุปกรณ์ไปวางในรถเข็น";
+                Hint = cartError;
+                CartApply();
                 chip.home = CartChipHome(trayIndex < 0 ? 0 : trayIndex);
                 chip.rect.anchoredPosition = chip.home;
                 chip.shake = ShakeTime;
-                if (why != null) Hint = why;
                 if (!inCart || why != null) BobMinigameSfx.Wrong("drop_invalid");
                 return;
             }
-            // Into the cart: the chip becomes the next layer and the tray loses the slot.
+            // Into the cart: only the stack spends budget; no wallet access and no replacement tray part.
             cartTray.RemoveAt(trayIndex);
             cartStack.Add(id);
             cartChips.Remove(chip);
+            cartPartViews.Remove(chip);
+            items.Remove(chip);
+            chip.rect.gameObject.SetActive(false);
             DestroyNow(chip.rect.gameObject);
-            var part = BobRules.Parts[id];
-            var layerPos = new Vector2(360f, -175f + (cartStack.Count - 1) * 66f);
-            var layer = MakeBox(layerPos, new Vector2(250f, 56f), FamilyColour(part.Family), part.Name, 26);
-            layer.bin = -1;
-            cartLayers.Add(layer);
+            int index = cartStack.Count - 1;
+            var top = cartSlots[index].item;
+            cartLayers.Add(top);
+            cartError = "";
+            CartApply(); // reflow bottom-up slots before anchoring the reaction feedback
             BobSfx.Play("place_layer", 0.85f);
 
-            // Reactions are drawn, not written: each stat the reaction moves gets a pill over its bar, the layer gets
-            // a gold or red star, and the pair flashes. The player sees what worked without reading a table.
-            int index = cartStack.Count - 1;
             var ev = BobRules.EvalStack(cartStack);
-            for (int i = 0; i < 4; i++) cartStats[i] = ev.Stats[i]; // so each pill sits at the bar's new end
             bool reacted = false;
             int sum = 0;
             foreach (var f in ev.Fx)
@@ -1530,22 +1785,13 @@ namespace Bob.TaskRace
             if (reacted)
             {
                 bool good = sum >= 0;
-                mark = StarSprite(layer.rect, 22f, good ? new Color(1f, 0.80f, 0.16f, 1f) : T.danger);
-                BobUi.Pin((RectTransform)mark.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                    new Vector2(-104f, 0f), new Vector2(22f, 22f));
-                Fx(good ? fxSparkle : fxDust, layerPos, 230f, 0.4f, good ? 35f : -30f);
+                mark = StarSprite(top.rect, 22f, good ? BobUiR1.Sun : BobUiR1.Red);
+                BobUi.Pin(mark.rectTransform, new Vector2(1f, 0.5f), Vector2.one * 0.5f,
+                    new Vector2(-82f, 0f), new Vector2(22f, 22f));
+                Fx(good ? fxSparkle : fxDust, top.home, 150f, 0.4f, good ? 35f : -30f);
                 BobSfx.Play(good ? "reaction_good" : "reaction_bad", 0.75f);
             }
             cartMarks.Add(mark);
-
-            // The tray closes its gaps so the next drag always starts from a full row.
-            for (int i = 0; i < cartChips.Count; i++)
-            {
-                cartChips[i].bin = i;
-                cartChips[i].home = CartChipHome(i);
-                cartChips[i].rect.anchoredPosition = cartChips[i].home;
-            }
-            CartApply();
         }
 
         /// <summary>One pill per stat a reaction moves, at the bar it moved, coloured by that stat.</summary>
@@ -1559,19 +1805,26 @@ namespace Bob.TaskRace
             }
         }
 
+        Vector2 CartDeltaPoint(int stat, float fraction)
+        {
+            var at = CartBarPoint(stat, fraction);
+            at.x = Mathf.Clamp(at.x, CartBarPoint(stat, 0f).x + 29f, CartBarPoint(stat, 1f).x - 29f);
+            return at;
+        }
+
         void CartDelta(int stat, int delta)
         {
-            var colour = delta > 0 ? CartStatColour[stat] : T.danger;
-            var pill = BobUi.Panel(fx, colour, "ui_panel", "Delta");
+            var colour = delta > 0 ? BobUiR1.Green : BobUiR1.Red;
+            var pill = BobUiR1.Panel(fx, colour, name: "Delta-" + BobTaskRaceRules.CartKeys[stat]);
             pill.raycastTarget = false;
-            float max = Mathf.Max(1f, BobTaskRaceRules.CartCeiling[stat]);
-            float x = Mathf.Clamp(-440f + 280f * Mathf.Clamp01(cartStats[stat] / max), -408f, -206f);
-            BobUi.Pin(pill.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(x, 150f - stat * 78f + 30f), new Vector2(58f, 30f));
-            var text = BobUi.Label(pill.transform, (delta > 0 ? "+" : "") + delta, 22, Color.white,
-                TextAnchor.MiddleCenter, FontStyle.Bold);
+            float fraction = cartStats[stat] / (float)Mathf.Max(1, BobTaskRaceRules.CartCeiling[stat]);
+            BobUi.Pin(pill.rectTransform, Vector2.one * 0.5f, Vector2.one * 0.5f,
+                CartDeltaPoint(stat, fraction), new Vector2(58f, 52f));
+            var text = CartLabel(pill.transform, (delta > 0 ? "+" : "") + delta, 22, BobUiR1.Paper,
+                TextAnchor.MiddleCenter, true);
             BobUi.Stretch(text.rectTransform);
-            cartBadges.Add(new CartBadge { img = pill, label = text, life = 1.5f, from = 1.5f, colour = colour });
+            cartBadges.Add(new CartBadge { img = pill, label = text, life = 1.5f, from = 1.5f,
+                colour = colour, stat = stat, fraction = fraction });
         }
 
         void TickCart(float dt)
@@ -1579,7 +1832,7 @@ namespace Bob.TaskRace
             if (step != 1 || cartLocked) return;
             if (!holding) { cartHold = Mathf.Max(0f, cartHold - dt * 2f); }
             else cartHold = Mathf.Clamp01(cartHold + dt / 0.6f);
-            if (cartLockFill != null) ((RectTransform)cartLockFill.transform).sizeDelta = new Vector2(292f * cartHold, -8f);
+            CartFillAmount(cartLockFill, cartHold);
             if (cartHold >= 1f) CartLock();
         }
 
@@ -1591,11 +1844,15 @@ namespace Bob.TaskRace
             holding = false;
             CartPassCount = BobTaskRaceRules.CartPassCount(cartStats, cartNeed);
             CartPassed = BobTaskRaceRules.CartPassed(CartPassCount, difficulty);
-            if (cartLockLabel != null) cartLockLabel.text = CartPassed ? "ผ่าน " + CartPassCount + "/4" : "ได้ " + CartPassCount + "/4";
-            if (cartLock != null) cartLock.color = CartPassed ? T.success : T.warn;
+            if (cartLockLabel != null) cartLockLabel.text = CartPassed ? "ผ่านสูตร · ทีมได้บัฟ" : "ล็อกแล้ว · ยังไม่ได้บัฟ";
+            if (cartLock != null) cartLock.color = CartPassed ? BobUiR1.Sun : BobUiR1.Paper;
+            LayoutCart();
             BobSfx.Play(CartPassed ? "reaction_good" : "reaction_bad", 0.9f);
-            Ring(new Vector2(120f, -232f), CartPassed ? T.success : T.warn, 320f);
-            if (CartPassed) Fx(fxHit, new Vector2(120f, -232f), 470f, 0.6f, 25f);
+            var lockAt = cartLock != null
+                ? (Vector2)play.InverseTransformPoint(cartLock.rectTransform.TransformPoint(cartLock.rectTransform.rect.center))
+                : Vector2.zero;
+            Ring(lockAt, CartPassed ? BobUiR1.Green : BobUiR1.Sun, 160f);
+            if (CartPassed) Fx(fxHit, lockAt, 240f, 0.6f, 25f);
             Hint = CartPassed
                 ? $"ผ่านสูตร {CartPassCount}/4 · ทีมได้บัฟ"
                 : $"ล็อกได้ แต่ผ่าน {CartPassCount}/4 · ยังไม่ได้บัฟ";
@@ -1922,7 +2179,7 @@ namespace Bob.TaskRace
             "T01" => "ลากนิ้วตามเส้นฝุ่น",
             "T02" => "ถูวนบนคราบ",
             "T03" => "แตะสไลม์ให้หมด",
-            "T04" => step == 0 ? $"แตะหยิบอุปกรณ์ {BobTaskRaceRules.CartParts} อย่างจากชั้น" : "ลากลงรถเข็นให้ผ่านสูตร แล้วกดค้างล็อก",
+            "T04" => step == 0 ? $"แตะหยิบอุปกรณ์ {BobTaskRaceRules.CartParts} อย่างจากชั้น" : "ลากให้ผ่านสูตร แล้วกดค้างล็อก",
             "T05" => "ลากขยะลงถังให้ตรง",
             "T06" => "กดค้างแล้วหมุนครึ่งวง",
             "T07" => step == 0 ? "ถูจานจนสะอาด" : step == 1 ? "กดค้างล้างฟอง" : "แตะเพื่อวางจาน",
@@ -2043,7 +2300,18 @@ namespace Bob.TaskRace
             cartBars.Clear();
             cartValues.Clear();
             cartMarks.Clear();
-            cartMethodPips.Clear();
+            cartShelfCards.Clear();
+            cartPartViews.Clear();
+            cartSlots.Clear();
+            cartPickSlots.Clear();
+            cartPickNames.Clear();
+            cartMetWords.Clear();
+            cartTargets.Clear();
+            cartLayout.Clear();
+            cartLayoutWidth = -1f;
+            cartDropZone = cartInlineHint = cartPickFill = null;
+            cartPickCount = cartTrayEmpty = cartTrayHint = cartSlotCount = null;
+            cartError = "";
             foreach (var b in cartBadges) if (b.img != null) DestroyNow(b.img.gameObject);
             cartBadges.Clear();
             buffRibbon.Clear();
