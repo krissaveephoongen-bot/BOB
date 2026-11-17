@@ -109,6 +109,13 @@ Unity เปิดโปรเจกต์เดียวกันสองต�
 ก๊อป `Assets/`, `Packages/`, `ProjectSettings/` และ `Library/PackageCache/` ไปโฟลเดอร์แยก (เช่น `compile-check/` ที่ถูก `git/info/exclude` ไว้) แล้วรัน
 `Unity.exe -projectPath compile-check -batchmode -quit -logFile Logs/compile.log` — ผลคอมไพล์เชื่อถือได้เท่ากัน (asset เดียวกัน, GUID เดิม) และไม่ต้องปิด editor ที่ owner เปิดอยู่
 
+**17 พ.ย. 2026 — คอมไพล์ในโปรเจกต์จริงแล้ว.** editor ว่าง (lockfile ที่เห็นเป็นซากของ PID ที่ตายแล้ว) จึงรัน
+`-executeMethod` ใน `unity/` ตรง ๆ ได้: รอบแรกล้มด้วย `CS0117` 3 จุดใน `BobOnlineRoom.cs` เพราะโค้ดเขียน
+`options.PlayerData` แต่ Lobby **1.3.0** ให้ `options.Player` (มี `Data` เป็น `Dictionary<string, PlayerDataObject>`);
+แก้เป็น `Player = new Player { Data = PlayerData(hero) }` ทั้งสาม option class แล้วคอมไพล์ `0 error CS`.
+**ข้อควรจำ:** `unity-typecheck` ตัด `Assets/Scripts/UGS/**` ออกเพราะไม่มี stub ของ SDK — error ชนิดนี้เห็นได้จาก
+คอมไพล์ Unity จริงเท่านั้น (รายละเอียดใน docs 30 §2.1)
+
 ## 10. ห้องออนไลน์ที่เล่นได้ 2–4 คน (16 พ.ย. 2026)
 
 รอบนี้คือคิว 7b: เปลี่ยนท่อ Relay/Lobby/Netcode ที่มีอยู่ให้เป็น **ห้องที่เล่นด้วยกันได้จริง** โดยไม่ต้องแก้ฉากหรือทำ prefab ผู้เล่น — ใช้ Netcode *named messages* ล้วน ๆ (`CustomMessagingManager`) ฉาก `TaskRace` เดิมจึงไม่ต้อง rebuild

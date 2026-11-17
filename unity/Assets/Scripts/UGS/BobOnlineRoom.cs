@@ -125,7 +125,7 @@ namespace Bob.Ugs
                 lobby = await LobbyService.Instance.CreateLobbyAsync("bob-" + pendingHero, slots, new CreateLobbyOptions
                 {
                     IsPrivate = false,
-                    PlayerData = PlayerData(pendingHero),
+                    Player = new Player { Data = PlayerData(pendingHero) },
                     Data = new Dictionary<string, DataObject>
                     {
                         { RelayJoinCodeKey, new DataObject(DataObject.VisibilityOptions.Member, relayCode) }
@@ -170,9 +170,10 @@ namespace Bob.Ugs
 
                 SetStatus(string.IsNullOrWhiteSpace(code) ? "quick joining" : "joining " + code.Trim().ToUpperInvariant());
                 lobby = string.IsNullOrWhiteSpace(code)
-                    ? await LobbyService.Instance.QuickJoinLobbyAsync(new QuickJoinLobbyOptions { PlayerData = PlayerData(pendingHero) })
+                    ? await LobbyService.Instance.QuickJoinLobbyAsync(new QuickJoinLobbyOptions
+                        { Player = new Player { Data = PlayerData(pendingHero) } })
                     : await LobbyService.Instance.JoinLobbyByCodeAsync(code.Trim().ToUpperInvariant(),
-                        new JoinLobbyByCodeOptions { PlayerData = PlayerData(pendingHero) });
+                        new JoinLobbyByCodeOptions { Player = new Player { Data = PlayerData(pendingHero) } });
 
                 if (lobby == null || lobby.Data == null || !lobby.Data.TryGetValue(RelayJoinCodeKey, out var entry) ||
                     string.IsNullOrEmpty(entry.Value))

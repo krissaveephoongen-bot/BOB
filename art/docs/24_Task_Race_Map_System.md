@@ -1205,4 +1205,38 @@ build แรกหลังงาน pure UGS + SFX — สั่งด้วย
 - **ตรวจ:** `bob-check` = `BOB-CHECK PASSED` (modules sync, task-race 75/75, LINE, typecheck 40 ชนิด),
   `node server/e2e-taskrace-test.js` = `E2E PASSED 39/39`, `ready-check` = `READY-CHECK PASSED`,
   `cd unity-check && dotnet run` = `UNITY-CHECK PASSED` · **ยังไม่มีหลักฐาน Unity/Play-mode/APK** เพราะ sandbox ไม่มี Unity
+  (อัปเดต 17 พ.ย.: ได้หลักฐานแล้วใน §15.34)
 - **ยังเปิด:** ดาวคุณภาพจากค่าเงา (docs 16 §2.5) ยังไม่ผูกกับรางวัล; งบ 100 ยังไม่ขึ้น S20; ยังไม่ได้เปิด Unity ดูระยะจริงบนจอ 20:9
+
+### 15.34 หลักฐานฝั่ง Unity ของชุดงาน cloud session (17 พ.ย. 2026)
+
+**ที่มา.** แถวทุกแถวของชุดงาน cloud session ลงท้ายด้วย "รอภาพ Unity/ยืนยัน" เพราะ sandbox ของ session นั้นไม่มี Unity.
+รอบนี้เปิด editor จริง (lockfile ที่เห็นเป็นซากของ PID ที่ตายแล้ว), คอมไพล์, รัน check ที่ยังไม่มีใครรัน และถ่ายภาพ
+หน้าเล่นจริงที่ edit mode มองไม่เห็น — **ไม่แตะโค้ดเกม/ฉาก/กติกา/ไม่ rebuild**
+
+- **คอมไพล์จริงครั้งแรก:** ล้ม `CS0117` 3 จุดใน `UGS/BobOnlineRoom.cs` (Lobby 1.3.0 ให้ `options.Player { Data = … }`
+  ไม่ใช่ `options.PlayerData`) → แก้ 3 จุด, รอบถัดไป `0 error CS`. `unity-typecheck` มองไม่เห็นเพราะตัด `UGS/**` ออก
+  (รายละเอียด docs 27 §9, docs 30 §2.1)
+- **check ที่รันผ่าน (edit mode, `-quit`):** `BobChapterCheck` = 6 บท ladder ok · `ChapterResultCheck` = PASSED ·
+  `StorySeriesCheck` = PASSED · `RaceCountdownCheck` = นับถอยหลัง 2.7 วิ ตรงสเปก · `TaskRaceVerify.Run/RunDuo/RunTeam`
+  = done ทั้งสาม (solo 6 แถว 0/9, duo/team 7 แถว 0/13, การ์ดบท 1 "ห้องเช่า" 2-0 ดาว 3/3 ถัดไป #2 LV 2, S28 9 การ์ด fx 6/6)
+- **check ที่รันผ่าน (play mode, ไม่มี `-quit` เพราะ check ออกจาก Play เอง):** `BotCheck` = บอทขยับ 20.90 u /
+  เก็บ-ข้าม-ป่วน true · `PauseCheck` = timeScale 0.00 clock แช่, เปิดการ์ดแล้วกดพักไม่ติด · `BobGameScene.RunTest`
+  = "GAME TEST PASSED: 2:0 in 2 rounds" ที่ 2400×1080 · `ready-check` = PASSED · `server/task-race-test.js` = 75/75
+- **ไดรเวอร์ใหม่ `Editor/TaskRaceShots.cs`** (editor-only) เข้า Play, seed เพื่อนบอทเอง (เล่นฉากตรง ๆ ไม่มี `MatchRequest`
+  จึงไม่มีเพื่อน), ถ่าย 6 ภาพด้วยกล้องตัวเดียวกับ `TaskRaceVerify.Shot` (เปลี่ยน `Shot` เป็น `public` 1 คำ):
+  `Logs/taskrace-duo-mate` (ถาดเพื่อน open=True chips=1), `taskrace-ping-wheel` (วงล้อ 6 คำ), `taskrace-emergency`
+  (แบนเนอร์ "คราบฉุกเฉิน · เจ้าคราบ" + เหลือ 56 วิ), `taskrace-emergency-arrow` (หมุนกล้อง 180° ให้คราบอยู่หลังกล้อง),
+  `taskrace-emergency-card` ("ปราบคราบ: เจ้าคราบ" ขั้น 1/1 "ถูวนบนคราบ"), `taskrace-cart-card` (T04 ขั้น 1/2 0%) —
+  ทั้งสองขนาด 1600×900 (`taskrace-*.png`) และ 2400×1080 (`taskrace-*-2400x1080.png`)
+- **ภาพหน้าโปรแกรม 2400×1080 ชุด S13/S14/S15:** `bob-game-{m1-splash,m2-login,m3-home,m4-modes,m4b-chapters,m4c-team,
+  m4d-online,m5-heroes,m6-shop,m7-confirm,1-title,2-intro,3-build,3a-shelf,4-test,4a-split,5-result}-2400x1080.png`
+- **ข้อสังเกตจากภาพ (ยังไม่แก้ — เป็นโค้ดเกม ไม่ใช่ editor):**
+  1. **ลูกศรขอบจอทับแบนเนอร์** เมื่อทิศของคราบชี้ลง: `RenderEmergencyArrow` clamp ที่ `halfH = h/2 − 100` จากกลางจอ
+     ซึ่งอยู่ในแถบแบนเนอร์ (24–156 px จากขอบล่าง) → เห็นลูกศรแดงทับป้าย "คราบฉุกเฉิน" และปุ่ม "ปราบ"
+     ใน `taskrace-emergency-arrow(‑2400x1080).png`. ทางแก้ที่ตรงเหตุ: ยกเพดานล่างขึ้นเหนือแบนเนอร์ (~180 px)
+     หรือซ่อนลูกศรเมื่อเสี้ยวทิศล่างจะตกในแถบนั้น
+  2. **ภาพรอบแรกของ emergency-card มีแบนเนอร์/toast ทับการ์ด** — ไม่ใช่บั๊ก: `RenderEmergency` มี `!CardOpen` และ
+     ซ่อนในเฟรมถัดไป ส่วน toast อยู่บนสุดโดยเจตนา 2.2 วิ; ถ่ายใหม่หลัง settle (2.6 วิ) ได้การ์ดสะอาด
+- **ยังต้องเป็นเครื่องจริง (ทำใน sandbox ไม่ได้):** ติดตั้ง APK, ประสิทธิภาพบนมือถือ, LINE OAuth, ออนไลน์ 2 เครื่อง
+  (host tunnel/Nakama ถอดแล้ว), Firebase tester group

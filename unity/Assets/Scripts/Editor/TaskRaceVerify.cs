@@ -468,7 +468,8 @@ namespace Bob.EditorTools
             if (wh.Length == 2 && int.TryParse(wh[0], out var vw) && int.TryParse(wh[1], out var vh) && vw > 0 && vh > 0) { w = vw; h = vh; }
         }
 
-        static void Shot(string file, Vector3 eye, Vector3 look, float fov, BobTaskRaceHud hud = null)
+        /// <summary>Play-mode captures (TaskRaceShots) reuse the exact shot camera, so the PNGs line up with the verify set.</summary>
+        public static void Shot(string file, Vector3 eye, Vector3 look, float fov, BobTaskRaceHud hud = null)
         {
             ViewSize(out var w, out var h);
             var main = Camera.main;
