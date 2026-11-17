@@ -6,8 +6,7 @@
 //   WalkTap    the rest of the screen. A clean tap puts a walk destination on the floor under the finger; drags and
 //              taps on a HUD panel never reach it, because both zones are the first children of the page.
 //
-// The joystick zone is lifted above the S28 dim when the card is built, so pushing the stick still cancels the card
-// while the panel itself stays on top. Once the pause/result overlay exists it covers both zones.
+// The joystick zone sits above the S28 dim only while its card is open; otherwise the worksheet owns its touches.
 using Bob.Game;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -82,10 +81,11 @@ namespace Bob.TaskRace
             else Debug.LogWarning("[TaskRaceTouch] no BobTaskRaceHero in the scene: the stick has nothing to drive.");
         }
 
-        /// <summary>The S28 dim is built after the zones; lift the stick above it so the cancel gesture works.</summary>
-        public void KeepJoystickOnTop()
+        public void SetCardOpen(bool open)
         {
-            if (zone != null) zone.SetAsLastSibling();
+            if (zone == null) return;
+            if (open) zone.SetAsLastSibling();
+            else zone.SetSiblingIndex(1);
         }
 
         /// <summary>Swap the resting hint for the knob while the stick is held.</summary>

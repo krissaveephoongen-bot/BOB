@@ -35,6 +35,12 @@ namespace Bob.Game
         /// <summary>The host's round seed, so both devices draw the same task list. 0 = the scene's own seed.</summary>
         public static int Seed { get; private set; }
 
+        /// <summary>The host's difficulty band (1-3); never written to the device's chapter selection.</summary>
+        public static int Difficulty { get; private set; } = 1;
+
+        /// <summary>The host's stage order (1-6); never written to local progression.</summary>
+        public static int StageOrder { get; private set; } = 1;
+
         /// <summary>
         /// The daily challenge (docs 31 section 2.2): one round on the server's seed. The attempt is spent when the
         /// match ends, not when the lobby opens, so a match that never starts costs nothing.
@@ -53,6 +59,7 @@ namespace Bob.Game
             Online = false;
             Host = false;
             Seed = 0;
+            Difficulty = StageOrder = 1;
             Daily = false;
             DayNumber = 0;
             Has = true;
@@ -62,7 +69,7 @@ namespace Bob.Game
         /// An online room's start: a best-of-three series (docs 27 section 10.7), the host's seed for round one, and no
         /// offline teammates (the clients are). Rounds two and three get their seed from the host, not from this value.
         /// </summary>
-        public static void SetOnline(bool host, int players, int seed)
+        public static void SetOnline(bool host, int players, int seed, int difficulty, int stageOrder)
         {
             ModeId = "online";
             Players = Math.Max(1, players);
@@ -71,6 +78,8 @@ namespace Bob.Game
             Online = true;
             Host = host;
             Seed = Math.Max(0, seed);
+            Difficulty = Math.Clamp(difficulty, 1, 3);
+            StageOrder = Math.Max(1, stageOrder);
             Daily = false;
             DayNumber = 0;
             Has = true;
@@ -89,6 +98,7 @@ namespace Bob.Game
             Online = false;
             Host = false;
             Seed = Math.Max(0, seed);
+            Difficulty = StageOrder = 1;
             Daily = Seed > 0 && dayNumber > 0;
             DayNumber = Daily ? dayNumber : 0;
             Has = true;

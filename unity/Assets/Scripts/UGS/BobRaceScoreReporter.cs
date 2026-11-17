@@ -10,7 +10,8 @@ namespace Bob.Ugs
     public class BobRaceScoreReporter : MonoBehaviour
     {
         TaskRaceModeManager manager;
-        bool sent;
+        /// <summary>The MatchSequence already answered for, so a rematch in the same scene is allowed to submit again.</summary>
+        int answeredFor = -1;
 
         /// <summary>The rank the board returned for the last submit (1 = top), or -1 when unknown or offline.</summary>
         public int LastRank { get; private set; } = -1;
@@ -45,11 +46,14 @@ namespace Bob.Ugs
 
         void OnMatchEnded(MatchResult result)
         {
-            if (sent) return; // one board entry per match, even if the overlay is rebuilt
-            if (manager != null && !manager.LastMatchRecorded) return; // the verify shot composed a result, it saved nothing
-            int score = manager != null ? manager.LastScore : 0;
+            if (manager == null) return;
+            // One board entry per match; a rematch bumps MatchSequence, so the next match is allowed to submit again.
+            if (answeredFor == manager.MatchSequence) return;
+            answeredFor = manager.MatchSequence;
+            if (!manager.LastMatchRecorded) return; // the verify shot composed a result, it saved nothing
+            if (manager.LastMatchCanceled) { LastError = "series abandoned"; return; } // nobody is ranked for a match a player left
+            int score = manager.LastScore;
             if (score <= 0) { LastError = "no score to send"; return; }
-            sent = true;
             _ = SubmitAsync(score);
         }
 
@@ -62,11 +66,11 @@ namespace Bob.Ugs
                 Debug.Log("[TaskRace] leaderboard skipped: this device is not signed in to UGS.");
                 return;
             }
-            var board = UgsLeaderboardManager.Instance;
+            var board = UgsLeaderboardManager.Ensure();
             if (board == null)
             {
                 LastError = "no leaderboard manager";
-                Debug.LogWarning("[TaskRace] leaderboard skipped: no UgsLeaderboardManager in the scene.");
+                Debug.LogWarning("[TaskRace] leaderboard skipped: no UgsLeaderboardManager could be created.");
                 return;
             }
             if (!await board.SubmitScoreAsync(score))

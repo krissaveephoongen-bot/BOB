@@ -288,10 +288,11 @@ sandbox ของ cloud session ไม่มี Unity — รอบนี้ร�
 
 ---
 
-### 6.2 UI R1 native Unity (17 พ.ย. 2026 — อยู่ระหว่างตรวจ)
+### 6.2 UI R1 native Unity (17 พ.ย. 2026 — ผ่านครบสามสัดส่วน + 4K)
 
-- รุ่น source: `ui/unity-r1-20261117` หลังแบบ `5621332`; owner อนุมัติ commit/push checkpoint นี้
-  และให้ทำงานต่อระหว่างรอผล run06–08. ยังไม่สร้าง APK หรือ deploy.
+- รุ่น source: `ui/unity-r1-20261117` หลังแบบ `5621332`; checkpoint `5258883` commit/push แล้วตามคำสั่ง owner.
+  งานตรวจและปรับ harness หลัง checkpoint อยู่ใน commit ของรอบนี้บน branch เดิม (owner สั่ง commit push);
+  ยังไม่สร้าง APK, ไม่ merge เข้า branch อื่น, ไม่ deploy.
 - กติกา server ผ่าน 80/80 และ E2E 39/39; `python ready-check/check.py` ผ่าน (Windows ไม่มี `python3`).
   `UNITY-CHECK PASSED` ด้วย `DOTNET_ROLL_FORWARD=Major dotnet run --project unity-check/BobCheck.csproj`
   เพราะเครื่องมี .NET 10/11 แต่ไม่มี runtime 8; ไม่ติดตั้ง package หรือแก้ project configuration.
@@ -315,10 +316,70 @@ sandbox ของ cloud session ไม่มี Unity — รอบนี้ร�
 - `Logs/ui-r1-play-03.log` / `04.log` ผ่านที่ 1920×1080 / 2400×1080 รวม emergency, arrow,
   ข้อความ 130% และคืน camera/overlay หลัง capture. run05 ที่ 1440×1080 เหลือคำแนะนำ T04 ถูกตัดสองภาพ;
   ลดคำซ้ำเป็น `ลากให้ผ่านสูตร แล้วกดค้างล็อก` ไม่ลด font. ภาพยังพบ SeriesPill ทับ budget bar และ delta FX
-  ทับหัวข้อ stat จึงแยก pill เป็น canvas order 19 และจำกัด FX ใกล้แถบค่า; กำลังตรวจ run06–08.
+  ทับหัวข้อ stat จึงแยก pill เป็น canvas order 19 และจำกัด FX ใกล้แถบค่า.
+- run06/07 ผ่านที่ 1440×1080 / 1920×1080 รวม layer assertions และ grace 25 วิ;
+  ภาพ 4:3 ยืนยัน hint ครบ, pill ไม่ทับ budget และ delta FX ไม่ทับชื่อ stat.
   fixture คราบตั้ง elapsed ตรงเวลา spawn ใน schedule เพื่อถ่าย grace 25 วิจริง ไม่ใช่เร่ง spawn จากอนาคต.
+- run08 ที่ 2400×1080 มีสาม FAIL ต่อเนื่องจาก short-hold สูตรสำเร็จล็อกในหนึ่งเฟรมหลัง capture;
+  layout/130%/คราบ/กล้องผ่าน. หนึ่งเฟรมของ Editor ไม่รับประกันว่าจะสั้นกว่า 0.6 วิ:
+  short-hold fixture จึงส่ง pointer จริงแล้ว tick 0.12 วิ (20%), ปล่อยแล้ว tick 0.05 วิ (10%) และ 0.06 วิ (0%)
+  ในเฟรมเดียว ตรวจ decay `dt * 2`; full hold ยังผ่าน pointer และ Update จริงพร้อมรอ 0.7 วิ.
+  ไม่เปลี่ยน runtime หรือเกณฑ์ผ่าน. run09/10/11 **R1 CHECKS PASSED**, exit 0 ที่2400/1920/1440ตามลำดับ.
+- Review พบ joystick zone สูง560u บัง88uล่างของ viewport ใบงาน: เลื่อนลำดับ zone ให้อยู่หลัง HUD ปกติ
+  และยกเหนือ dim เฉพาะขณะเปิดมินิเกม ก่อนคืนเมื่อปิด; ไม่เปลี่ยนขนาด/ความไว/เกณฑ์ยกเลิก70%.
+  เพิ่ม native drag จากขอบล่างใบงานก่อนและหลังเปิดการ์ด พร้อมตรวจว่า ScrollRect รับ drag และ hero ไม่เดิน,
+  joystick ยังยกเลิก TASK_LOCK ได้ และการ์ดจบรอบกับ dim แสดง/ซ่อนพร้อมกัน; run12/13/14 assertions ผ่านทั้งหมด.
+- ตรวจภาพ run12 พบ HUD ยังวาดเหนือการ์ดจบรอบที่4:3 แม้ sortingOrder assertions ผ่าน:
+  pixel บนกระดาษ HUD ก่อน/หลังจบรอบยังเป็น RGB255/253/245 ขณะที่1920/2400หรี่เป็น166/165/159.
+  เปลี่ยน pill จาก nested canvas เป็น root canvas แยก order19; การ์ดจบรอบอยู่ root order40.
+  เพิ่ม pixel regression เปรียบเทียบกระดาษ HUD ก่อน/หลัง dim ในภาพจริง: run15 (1440) ผ่าน แต่ run16 (1920)
+  ยัง FAIL เฉพาะ pixel dim; chain จึงไม่รัน run17. ไม่ถือว่าแยก root แล้วแก้ครบ.
+  run18 ที่ 1920×1080 **ผ่าน** หลัง capture helper เก็บ/คืน sorting layer และ order พร้อมโหมด/กล้อง แล้ว log
+  ลำดับเรนเดอร์จริง (`CountdownCanvas order=45 rendered=3`, `SeriesCanvas order=40 rendered=2`,
+  `Canvas order=20 rendered=1`, `SeriesPillCanvas order=19 rendered=0`) — ค่าที่ FAIL ใน run16 เป็น artefact
+  ของตอน capture ไม่ใช่ HUD ในเกม; กระดาษ HUD ก่อน/หลัง dim = RGBA(1.000, 0.992, 0.961) → (0.651, 0.647, 0.624)
+  เหมือนกันทุกสัดส่วน. run19 (1440) / run20 (2400) / run21 (1920 หลังแก้ material ตัวละคร) /
+  run22 (3840×2160 หลังแก้เส้น services + ออนไลน์) = **R1 CHECKS PASSED**, exit 0, ไม่มี FAIL และไม่มี exception
+  (`Logs/ui-r1-play-19.log:15416`, `Logs/ui-r1-play-20.log:15602`, `Logs/gap-services-play-22.log:15178`).
 - การขยาย 130% ใน runner ปิด TMP auto-size และคูณ font size จริง ไม่ใช่ dynamic type ของระบบ.
   Android Back, รอยบากจริง, dynamic type ของระบบ, performance มือถือ และออนไลน์สองเครื่องยังไม่ยืนยัน.
+- ภาพ native บางเฟรมมีปื้นสี magenta บนตัวละครในโลก 3D เช่น `ui-r1-play-16/hud-1920x1080.png` — **วินิจฉัยและแก้แล้ว**:
+  สี่ prefab `unity/Assets/Resources/Characters/SK_hero_{sweep,bubble,spray,press}.prefab` มี renderer ที่
+  `m_Enabled: 1` แต่ช่อง material ว่าง (`{fileID: 0}`) และ Unity วาด material ที่หาไม่เจอเป็นสี magenta
+  (shader ไม่ได้พัง, ไฟไม่ผิด). ผูกช่อง Outline กลับที่ `Materials/M_BOB_Outline.mat` (`_Pixels: 2.5`) ทั้งสี่ไฟล์,
+  ให้ `BobPropImporter` ผูกใหม่อัตโนมัติตอน import เพราะ material ชั่วคราวที่ `BobToon.Outline` สร้างเก็บใน prefab ไม่ได้
+  และเพิ่ม `check_hero_materials()` ใน `ready-check/check.py` กันย้อนกลับ. หลักฐาน: `Logs/ui-r1-hero-fix-21.log`
+  บรรทัด 1178/1191/1204/1217 `PASS hero … has supported persistent materials` และภาพ
+  `Logs/ui-r1-play-18/hud-1920x1080.png` (ปื้น magenta) เทียบ `Logs/ui-r1-hero-fix-21/hud-1920x1080.png`
+  (ขอบเข้มปกติ) — นับจากนี้ผล UI R1 ใช้รับรองภาพตัวละครใน Editor ได้ ยังไม่ใช่คำรับรองบนมือถือ
+
+### 6.3 ช่องว่างเซฟ / อันดับ / เดลี่ / ออนไลน์ที่ปิดรอบนี้ (17 พ.ย. 2026)
+
+- **Cloud Save เคยไม่โหลดเลย** เพราะไม่มีซีนไหนวาง `UgsCloudSaveManager` ไว้ และ bootstrap ไม่ได้เรียกโหลด
+  ส่วน `UgsLeaderboardManager` ตายเป็น singleton ตอนโหลดฉาก (การ์ดอันดับจึงเงียบหลังเข้า Task Race)
+  แก้ด้วย `Ensure()` ในทั้งสองคลาส (สร้างตัวเอง + `DontDestroyOnLoad`, คืน `null` นอก Play mode),
+  `UgsBootstrapManager.KickoffAsync` เรียก `Ensure()` แล้ว `LoadProfileAsync()` จริง, `BobBoard` และ
+  `BobRaceScoreReporter` ใช้ `Ensure()` แทนการ `new GameObject` เอง — docs 27 §3 บันทึกไว้แล้ว
+- แขกที่เคยล็อกอินแล้วเปิดเกมรอบใหม่: `Game.BootFlow` อ่าน `PlayerPrefs["bob.guest"]` แล้วสร้าง
+  `UgsBootstrapManager` ทันที (เดิมต้องกดปุ่ม S02 ก่อนเท่านั้น) — cloud เก็บเฉพาะ cosmetic ผ่าน
+  `UnlockItemAndSaveAsync`, เหรียญ/XP ยังอยู่ key `bob.*` บนเครื่องตามเดิม (ยังไม่มีนโยบาย merge cloud ↔ เครื่อง
+  จึงไม่แต่งตัวเลขขึ้นใหม่ — owner ต้องสั่งก่อน)
+- เดลี่ตรวจแล้วยังถูก: `BobDailyStore` ลงบัญชีตาม key วัน และ `BobDailyFeed` เทียบ seed กับ `BobDaily.Matches`
+  ก่อนนับ → ไม่แก้
+- ซีรีส์ที่ถูกยกเลิก (มีคนออกกลางรอบ) เคยยังจ่ายสถิติ/คะแนนบอร์ด → `TaskRaceModeManager` เพิ่ม
+  `MatchSequence` + `LastMatchCanceled` และธง `roundRegistered` (งานรอบปัจจุบันเข้า series แล้ว EndMatch
+  ไม่บวกซ้ำ; ถ้าโมฆะก่อนลงทะเบียนถึงบวกครั้งเดียว), `BobTaskRaceProfile.Record(canceled: true)` จ่ายเฉพาะ
+  เหรียญ/XP ไม่เขียน `BestPoints`/`Matches`/`Wins`, `BobRaceScore` ไม่นับผลชนะและเวลาเหลือ, reporter ไม่ส่งขึ้นบอร์ด
+- ออนไลน์: `bob.task` มีเลขรอบ, ฝั่งรับทิ้งแพ็กเก็ตคนละรอบแล้วเรียก `TaskSpot.SettleFromRoom()` (เส้นทางจริงของ
+  สถานีสอง pass) และ host rebroadcast ด้วยรอบเดิม; `bob.start` พก `difficulty` + `stageOrder` ของ host
+  (clamp ที่ปลายทาง ไม่ throw บนสาย Netcode) client จึงเล่นด่านเดียวกัน; host หลุดกลางรอบที่ยังไม่จบ → client เห็น
+  `AbandonSeries` เหมือนกด back
+- หลักฐานชั้นที่รันได้บนเครื่องนี้: `bash unity-typecheck/check.sh` (ไม่มี error ชนิดใหม่),
+  `dotnet run --project unity-check/BobCheck.csproj` = `UNITY-CHECK PASSED`, mirror compile
+  `Logs/gap-services-compile-01.log` exit 0 ไม่มี `error CS`, play-mode `Logs/gap-services-play-22.log`
+  = 396 PASS ไม่มี FAIL
+- **ยังยืนยันบนเครื่องนี้ไม่ได้ (Gate):** ค่าจริงของ UGS (ต้องล็อกอิน Unity Cloud + เปิด Cloud Save / Leaderboards /
+  Lobby / Relay ใน dashboard), ออนไลน์สองเครื่อง, APK + มือถือจริง, Firebase tester group — คงตาม §6.1 ข้อ 13/14
 
 ## 7. ลำดับลงมือถัดไป
 

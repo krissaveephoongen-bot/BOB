@@ -86,6 +86,20 @@ def check_scene_loads(names):
     return want
 
 
+def check_hero_materials():
+    for hero in ("sweep", "bubble", "spray", "press"):
+        path = os.path.join(ASSETS, "Resources", "Characters", f"SK_hero_{hero}.prefab")
+        if not os.path.exists(path):
+            fail(f"hero prefab missing: {hero}")
+            continue
+        for block in re.split(r"(?m)^--- !u!", read(path)):
+            if not re.match(r"(?:23|137) &", block) or "  m_Enabled: 1" not in block:
+                continue
+            materials = re.search(r"  m_Materials:\n((?:  - .*\n)+)", block)
+            if materials and "{fileID: 0}" in materials.group(1):
+                fail(f"hero {hero} has an enabled renderer with a missing material")
+
+
 def check_event_system(names):
     """A scene with a Canvas needs an EventSystem, or every uGUI pointer event is dead in a build.
 
@@ -424,6 +438,7 @@ def main():
     names = check_build_scenes()
     check_scene_loads(names)
     check_event_system(names)
+    check_hero_materials()
     check_resources()
     loads = check_resources_loads()
     scripts, external = check_scripts()

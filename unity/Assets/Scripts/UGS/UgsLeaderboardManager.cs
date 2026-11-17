@@ -25,11 +25,27 @@ namespace Bob.Ugs
         {
             if (Instance != null && Instance != this) { Destroy(this); return; }
             Instance = this;
+            // The board has to outlive the screen that created it: Home makes it for the board card, the Task Race
+            // scene submits from there, and a scene load would otherwise take the singleton with it.
+            if (transform.parent == null) DontDestroyOnLoad(gameObject);
         }
 
         void OnDestroy()
         {
             if (Instance == this) Instance = null;
+        }
+
+        /// <summary>
+        /// The one board manager, on its own persistent object when no scene carries one (docs 27 section 3). Outside
+        /// Play mode nothing is created and null comes back, so the edit-mode verify never grows objects into a scene.
+        /// </summary>
+        public static UgsLeaderboardManager Ensure()
+        {
+            if (Instance != null) return Instance;
+            var existing = FindAnyObjectByType<UgsLeaderboardManager>();
+            if (existing != null) { Instance = existing; return existing; }
+            if (!Application.isPlaying) return null;
+            return new GameObject("UGS Board").AddComponent<UgsLeaderboardManager>();
         }
 
         public async Task<bool> SubmitScoreAsync(double score)

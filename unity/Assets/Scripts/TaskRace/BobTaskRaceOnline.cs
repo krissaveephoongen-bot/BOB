@@ -136,15 +136,20 @@ namespace Bob.TaskRace
             remote.yaw = yaw;
         }
 
-        void OnTask(int netId, string spotId, bool completed)
+        void OnTask(int netId, int roundNumber, string spotId, bool completed)
         {
             if (room != null && netId == room.LocalNetId) return;
             if (!completed || round == null || string.IsNullOrEmpty(spotId)) return;
+            // A packet from the round before this one must not clean a freshly drawn station (docs 27 section 10.7).
+            int current = manager != null && manager.Series != null ? manager.Series.Round : 1;
+            if (roundNumber != current) return;
             foreach (var spot in round.StationsOf(team))
             {
                 if (spot.SpotId != spotId) continue;
-                if (!spot.Done) spot.ForceComplete();
-                knownDone[spotId] = true; // do not echo the remote's event back as ours
+                spot.SettleFromRoom();
+                // Only a station that really ended clean is marked known; a rejected update stays unsynced and the next
+                // poll sends this device's own state instead of silently losing the completion.
+                if (spot.Done) knownDone[spotId] = true;
                 return;
             }
         }

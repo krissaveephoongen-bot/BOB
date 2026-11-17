@@ -982,9 +982,6 @@ namespace Bob.TaskRace
         void BuildMinigameCard()
         {
             cardDim = FullCanvasDim(page, "S28Dim", BobUiR1.Dim);
-            // The stick stays above the dim so "push it past 70% to close the card" works during a task.
-            if (touch != null) touch.KeepJoystickOnTop();
-
             cardPanel = BobUiR1.Panel(page, BobUiR1.Cream, null, "S28Card");
             var panel = (RectTransform)cardPanel.transform;
             BobUi.Pin(panel, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1400f, 860f));
@@ -1156,6 +1153,7 @@ namespace Bob.TaskRace
             UpdateCardClock();
             cardDim.gameObject.SetActive(true);
             cardPanel.gameObject.SetActive(true);
+            if (touch != null) touch.SetCardOpen(true);
             cardPanel.transform.SetAsLastSibling();
             if (toastRoot != null) toastRoot.SetAsLastSibling();
         }
@@ -1268,6 +1266,7 @@ namespace Bob.TaskRace
             if (cardChipRoot != null) cardChipRoot.gameObject.SetActive(false);
             if (cardDim != null) cardDim.gameObject.SetActive(false);
             if (cardPanel != null) cardPanel.gameObject.SetActive(false);
+            if (touch != null) touch.SetCardOpen(false);
         }
 
         // ---------------------------------------------------------------- match result (S27)
@@ -1924,6 +1923,7 @@ namespace Bob.TaskRace
             UpdateCardClock();
             cardDim.gameObject.SetActive(true);
             cardPanel.gameObject.SetActive(true);
+            if (touch != null) touch.SetCardOpen(true);
             cardPanel.transform.SetAsLastSibling();
             if (toastRoot != null) toastRoot.SetAsLastSibling();
         }

@@ -50,11 +50,14 @@ namespace Bob.TaskRace
 
         /// <summary>
         /// Pay one match. `record` false only composes the result: the verify renders the overlay without changing
-        /// the developer's wallet.
+        /// the developer's wallet. `canceled` is a series voided because a player left the room (docs 27 section 10.7):
+        /// the tasks this device cleaned still pay, but an undecided match never becomes a win, a match count or a
+        /// best score, so leaving mid-series cannot farm the ladder.
         /// </summary>
         public static MatchResult Record(bool won, bool draw, int teamAPoints, int teamBPoints,
                                          int tasksA, int tasksB, int taskCount,
-                                         int localPoints, int localTasks, bool record = true, int extraXp = 0)
+                                         int localPoints, int localTasks, bool record = true, int extraXp = 0,
+                                         bool canceled = false)
         {
             int coins = 25 + (won ? 50 : draw ? 20 : 10) + localPoints / 20;
             int xp = 30 + (won ? 25 : 0) + localTasks * 8 + Mathf.Max(0, extraXp);
@@ -62,16 +65,19 @@ namespace Bob.TaskRace
             if (localTasks <= 0) { coins = 0; xp = 0; }
 
             int best = BestPoints;
-            bool newBest = localPoints > best;
+            bool newBest = !canceled && localPoints > best;
             if (newBest) best = localPoints;
 
             if (record)
             {
                 PlayerPrefs.SetInt(CoinsKey, Coins + coins);
                 PlayerPrefs.SetInt(XpKey, Xp + xp);
-                PlayerPrefs.SetInt(BestPointsKey, best);
-                PlayerPrefs.SetInt(MatchesKey, Matches + 1);
-                if (won) PlayerPrefs.SetInt(WinsKey, Wins + 1);
+                if (!canceled)
+                {
+                    PlayerPrefs.SetInt(BestPointsKey, best);
+                    PlayerPrefs.SetInt(MatchesKey, Matches + 1);
+                    if (won) PlayerPrefs.SetInt(WinsKey, Wins + 1);
+                }
                 PlayerPrefs.Save();
             }
 

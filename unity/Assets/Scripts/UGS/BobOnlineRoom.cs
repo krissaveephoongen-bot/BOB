@@ -81,8 +81,9 @@ namespace Bob.Ugs
 
         /// <summary>(netId, world position, yaw) — the sender's hero, 10 times a second over the unreliable channel.</summary>
         public event Action<int, Vector3, float> PoseReceived;
-        /// <summary>(netId, spotId, completed) — host-authoritative: a client's event is applied once, then rebroadcast.</summary>
-        public event Action<int, string, bool> TaskReceived;
+        /// <summary>(netId, series round, spotId, completed) — host-authoritative: a client's event is applied once,
+        /// then rebroadcast. The round rides along so a packet from a closed round cannot clean the next one.</summary>
+        public event Action<int, int, string, bool> TaskReceived;
         /// <summary>A client applied the host's round result (the series itself already carries it).</summary>
         public event Action<Bob.TaskRace.SeriesRound> SeriesResultApplied;
         /// <summary>A client was told to start round N on the host's seed.</summary>
@@ -270,8 +271,9 @@ namespace Bob.Ugs
         // ---------------------------------------------------------------- match handoff
 
         /// <summary>
-        /// Host presses start: the seed and the player count go out once (reliable), then every device loads the same
-        /// scene and draws the same task list. Clients get here from <see cref="StartMessage"/>, not from their own UI.
+        /// Host presses start: the host's chapter difficulty and stage ride along with the seed (docs 27 section 10.7),
+        /// so every device draws the same list at the same difficulty instead of each applying its own saved ladder.
+        /// Clients get here from <see cref="StartMessage"/>, not from their own UI.
         /// </summary>
         public void StartMatch(int seed, int players)
         {
@@ -281,13 +283,17 @@ namespace Bob.Ugs
             Starting = true;
             StartSeed = seed;
             int slots = Mathf.Clamp(players, 1, MaxSlots);
-            using (var writer = new FastBufferWriter(8, Allocator.Temp))
+            int difficulty = Bob.Rules.BobChapters.Saved.Difficulty;
+            int stageOrder = Bob.Rules.BobStages.Saved.Order;
+            using (var writer = new FastBufferWriter(16, Allocator.Temp))
             {
                 writer.WriteValueSafe(seed);
                 writer.WriteValueSafe(slots);
+                writer.WriteValueSafe(difficulty);
+                writer.WriteValueSafe(stageOrder);
                 nm.CustomMessagingManager.SendNamedMessageToAll(StartMessage, writer, NetworkDelivery.ReliableSequenced);
             }
-            EnterMatch(true, slots, seed);
+            EnterMatch(true, slots, seed, difficulty, stageOrder);
         }
 
         // ---------------------------------------------------------------- best-of-three (docs 27 section 10.7)
@@ -344,10 +350,10 @@ namespace Bob.Ugs
             SeriesAbandoned?.Invoke();
         }
 
-        void EnterMatch(bool host, int players, int seed)
+        void EnterMatch(bool host, int players, int seed, int difficulty, int stageOrder)
         {
-            Bob.Game.MatchRequest.SetOnline(host, players, seed);
-            Debug.Log($"[UGS] match start · host {host} · {players} player(s) · seed {seed}");
+            Bob.Game.MatchRequest.SetOnline(host, players, seed, difficulty, stageOrder);
+            Debug.Log($"[UGS] match start · host {host} · {players} player(s) · seed {seed} · D{difficulty} · stage {stageOrder}");
             if (Application.CanStreamedLevelBeLoaded(MatchScene)) SceneManager.LoadScene(MatchScene);
             else { Debug.LogError("[UGS] " + MatchScene + " is not in Build Settings"); SetStatus("scene missing"); }
         }
@@ -374,15 +380,17 @@ namespace Bob.Ugs
 
         /// <summary>
         /// A task was completed on this device. Clients send it to the host; the host applies it and rebroadcasts, so the
-        /// two islands can never disagree about which stations are clean.
+        /// two islands can never disagree about which stations are clean. The series round is stamped at send time.
         /// </summary>
         public void SendTask(string spotId, bool completed)
         {
             if (!Connected || nm == null || string.IsNullOrEmpty(spotId)) return;
             byte[] id = Encoding.ASCII.GetBytes(spotId);
-            using (var writer = new FastBufferWriter(id.Length + 12, Allocator.Temp))
+            int round = Series != null ? Series.Round : 1;
+            using (var writer = new FastBufferWriter(id.Length + 16, Allocator.Temp))
             {
                 writer.WriteValueSafe(LocalNetId);
+                writer.WriteValueSafe(round);
                 writer.WriteValueSafe(id);
                 writer.WriteValueSafe(completed);
                 if (nm.IsHost) nm.CustomMessagingManager.SendNamedMessageToAll(TaskMessage, writer, NetworkDelivery.ReliableSequenced);
@@ -436,6 +444,10 @@ namespace Bob.Ugs
             // docs 27 section 10.7: a series only belongs to the room that started it. Somebody leaving mid-series voids
             // it for everyone (no side is awarded the rounds that were never played).
             if (nm != null && nm.IsHost && Starting && Series != null && !Series.Over) AbandonSeries(true);
+            // A client whose line to the host died: the lobby data it holds is stale, so the local series cannot be
+            // finished by anyone. Void it here — waiting for bob.abandon that can never arrive strands the match.
+            else if (nm != null && !nm.IsHost && clientId == NetworkManager.ServerClientId && Starting)
+                AbandonSeries(false);
             RefreshRoster();
         }
 
@@ -472,19 +484,21 @@ namespace Bob.Ugs
             bool host = nm.IsHost;
             if (!host && sender != NetworkManager.ServerClientId) return;
             reader.ReadValueSafe(out int origin);
+            reader.ReadValueSafe(out int round);
             reader.ReadValueSafe(out byte[] id);
             reader.ReadValueSafe(out bool completed);
             string spotId = id == null ? "" : Encoding.ASCII.GetString(id);
             if (origin == LocalNetId) return; // already applied locally, the originator must not apply it twice
-            if (host && sender != nm.LocalClientId) RebroadcastTask(origin, id, completed);
-            TaskReceived?.Invoke(origin, spotId, completed);
+            if (host && sender != nm.LocalClientId) RebroadcastTask(origin, round, id, completed);
+            TaskReceived?.Invoke(origin, round, spotId, completed);
         }
 
-        void RebroadcastTask(int origin, byte[] id, bool completed)
+        void RebroadcastTask(int origin, int round, byte[] id, bool completed)
         {
-            using (var writer = new FastBufferWriter((id == null ? 0 : id.Length) + 12, Allocator.Temp))
+            using (var writer = new FastBufferWriter((id == null ? 0 : id.Length) + 16, Allocator.Temp))
             {
                 writer.WriteValueSafe(origin);
+                writer.WriteValueSafe(round);
                 writer.WriteValueSafe(id);
                 writer.WriteValueSafe(completed);
                 nm.CustomMessagingManager.SendNamedMessageToAll(TaskMessage, writer, NetworkDelivery.ReliableSequenced);
@@ -494,13 +508,16 @@ namespace Bob.Ugs
         void HandleStart(ulong sender, FastBufferReader reader)
         {
             if (nm == null || nm.IsHost) return;
+            if (sender != NetworkManager.ServerClientId) return;
             reader.ReadValueSafe(out int seed);
             reader.ReadValueSafe(out int players);
+            reader.ReadValueSafe(out int difficulty);
+            reader.ReadValueSafe(out int stageOrder);
             // A start after the last series was decided opens a fresh one on this device too (docs 27 section 10.7).
             if (Series == null || Series.Over) Series = new Bob.TaskRace.StorySeries(SeriesRoundSeconds, SeriesWinsToTake);
             StartSeed = seed;
             Starting = true;
-            EnterMatch(false, players, seed);
+            EnterMatch(false, players, seed, difficulty, stageOrder);
         }
 
         // ---------------------------------------------------------------- best-of-three handlers

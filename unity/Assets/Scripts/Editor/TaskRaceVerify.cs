@@ -492,6 +492,8 @@ namespace Bob.EditorTools
             var hudCanvas = hud != null ? hud.UiCanvas : null;
             Camera hudWas = hudCanvas != null ? hudCanvas.worldCamera : null;
             var modeWas = hudCanvas != null ? hudCanvas.renderMode : RenderMode.ScreenSpaceOverlay;
+            int orderWas = hudCanvas != null ? hudCanvas.sortingOrder : 0;
+            int layerWas = hudCanvas != null ? hudCanvas.sortingLayerID : 0;
             var rt = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32) { antiAliasing = 2 };
             cam.targetTexture = rt;
             try
@@ -511,6 +513,9 @@ namespace Bob.EditorTools
                 {
                     hudCanvas.worldCamera = hudWas;
                     hudCanvas.renderMode = modeWas;
+                    Debug.Log($"[TaskRaceVerify] restored mode sorting={hudCanvas.sortingOrder}/{hudCanvas.sortingLayerID}, saved={orderWas}/{layerWas}");
+                    hudCanvas.sortingLayerID = layerWas;
+                    hudCanvas.sortingOrder = orderWas;
                     Canvas.ForceUpdateCanvases();
                 }
             }

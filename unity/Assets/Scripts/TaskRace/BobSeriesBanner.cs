@@ -132,12 +132,18 @@ namespace Bob.TaskRace
             foreach (var text in new[] { cardTitle, cardTag, cardScore, cardHint }) text.raycastTarget = false;
             cardRoot.gameObject.SetActive(false);
 
-            // The pill sits between the joystick and the action button, clear of the task card and the top bar.
-            pill = BobUi.Panel(page, BobUi.Surface, null, "SeriesPill");
-            // The round strip must stay behind task cards, unlike the between-round overlay.
-            var pillCanvas = pill.gameObject.AddComponent<Canvas>();
-            pillCanvas.overrideSorting = true;
+            // Separate root canvases keep the strip below the HUD without pulling the round overlay underneath it.
+            var pillGo = new GameObject("SeriesPillCanvas", typeof(Canvas), typeof(CanvasScaler));
+            pillGo.transform.SetParent(transform, false);
+            var pillCanvas = pillGo.GetComponent<Canvas>();
+            pillCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
             pillCanvas.sortingOrder = 19;
+            var pillScaler = pillGo.GetComponent<CanvasScaler>();
+            pillScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            pillScaler.referenceResolution = new Vector2(1920, 1080);
+            pillScaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            pillScaler.matchWidthOrHeight = 1f;
+            pill = BobUi.Panel(pillGo.transform, BobUi.Surface, null, "SeriesPill");
             BobUi.Pin((RectTransform)pill.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
                 new Vector2(0f, 34f), new Vector2(560f, 62f));
             pill.raycastTarget = false;

@@ -1140,7 +1140,15 @@ wireframe P06 ใน [`ux/BOB_Play_Screen_Cafeteria.html`](ux/BOB_Play_Screen_Ca
 - แก้ `SeriesDim` ที่ค้างหลังซ่อนการ์ดจบรอบโดยจัดไว้ใต้ root เดียวกับการ์ด; HUD ใช้ Overlay order 20
   จึงไม่ผ่าน post-grade ของฉากและไม่ถูกไอคอนสถานี order 12–14 วาดทับ. `TaskRaceVerify.Shot` สลับเป็น
   camera canvas เฉพาะขณะถ่าย RenderTexture แล้วคืนโหมด/กล้องเดิม; ไม่ปรับสีชดเชยหรือเปลี่ยนแสงฉาก.
-- ภาพ/interaction ของฉบับสุดท้ายยังอยู่ระหว่างตรวจ จึงยังไม่รับรอง mobile touch, notch หรือข้อความไทย 130%.
+- Native run09/10/11 ผ่านที่ 2400×1080 / 1920×1080 / 1440×1080 รวมข้อความไทย 130% และ layout;
+  short-hold fixture ใช้ explicit timing ticks ระหว่าง pointer events ส่วน full hold ตรวจผ่าน Update จริง.
+  ภาพ 4:3 ยืนยันคำแนะนำ T04 ไม่ถูกตัด, SeriesPill order 19 ไม่ทับ budget bar และ delta FX ไม่ทับชื่อ stat.
+  ยังไม่รับรอง physical touch, รอยบากจริง, Android Back หรือ dynamic type ของระบบ; ดูหลักฐานล่าสุด docs 30 §6.2.
+- เพิ่ม regression ลากขอบล่างใบงานที่เคยถูก joystick zone บัง; คืน zone หลัง HUD เมื่อปิดมินิเกม.
+  การ์ดจบรอบแยก root canvas จาก pill แล้ว pixel dim ผ่านที่ทุกสัดส่วน หลัง capture helper คืน sorting layer/order
+  ให้ตรงกับตอนเล่นจริง (run16 ที่ FAIL เป็น artefact ของตอน capture ไม่ใช่ HUD ในเกม):
+  run18/19/20/21/22 = R1 CHECKS PASSED ที่ 1920/1440/2400/1920/3840×2160 หลักฐานและวิธีอ่านอยู่ docs 30 §6.2
+  ไม่ปิดงานจากตัวเลข sortingOrder เพียงอย่างเดียว.
 
 ## 15. รายการตรวจก่อนส่งหน้าจอใหม่ (Definition of Done)
 

@@ -167,6 +167,10 @@ namespace Bob.TaskRace
         public int LastScore { get; private set; }
         /// <summary>False when the last EndMatch only composed the result (the editor verify shot): nothing is saved.</summary>
         public bool LastMatchRecorded { get; private set; }
+        /// <summary>True when the last match closed a series a player abandoned: the reward is work-only and the board is not touched.</summary>
+        public bool LastMatchCanceled { get; private set; }
+        public int MatchSequence { get; private set; }
+        bool roundRegistered;
         /// <summary>The chapter series while storySeries is on; null in a PvP match.</summary>
         public StorySeries Series => series;
         /// <summary>This match belongs to an online room (docs 27): the room's best-of-three is the shared series.</summary>
@@ -265,10 +269,11 @@ namespace Bob.TaskRace
         /// </summary>
         void ApplyChapter()
         {
-            var chapter = Bob.Rules.BobChapters.Saved;
+            var chapter = Online ? BobChapters.Get(Bob.Game.MatchRequest.StageOrder) : BobChapters.Saved;
+            int difficulty = Online ? Bob.Game.MatchRequest.Difficulty : chapter.Difficulty;
             matchDuration = Mathf.Max(30f, chapter.RoundTime);
             var list = FindFirstObjectByType<TaskRaceRound>();
-            if (list != null) list.ConfigureRound(list.Players, chapter.Difficulty, list.ConfiguredSeed);
+            if (list != null) list.ConfigureRound(list.Players, difficulty, list.ConfiguredSeed);
             if (Application.isPlaying)
                 Debug.Log($"[TaskRace] chapter {chapter.Order} \"{chapter.Title}\" · D{chapter.Difficulty} · {matchDuration:0} s clock");
         }
@@ -278,7 +283,7 @@ namespace Bob.TaskRace
         /// moment the gates drop, the points per task and the two assignment rules. Runs after ApplyChapter, before
         /// TaskRaceRound.Start draws, so the very first round of the scene already follows the stage.
         /// </summary>
-        void ApplyStage() => ApplyStage(BobStages.Saved);
+        void ApplyStage() => ApplyStage(Online ? BobStages.Get(Bob.Game.MatchRequest.StageOrder) : BobStages.Saved);
 
         void ApplyStage(StageConfig s)
         {
@@ -440,6 +445,10 @@ namespace Bob.TaskRace
             warned = opened = false;
             LastResult = null;
             LastScore = 0;
+            LastMatchRecorded = false;
+            LastMatchCanceled = false;
+            MatchSequence++;
+            roundRegistered = false;
             TaskSpot.LocalTeam = localTeam;
             CloseBarriers();
             PointsChanged?.Invoke(TeamId.TeamA, teamAPoints);
@@ -534,6 +543,12 @@ namespace Bob.TaskRace
             // chapter carries a one-off bonus. A single PvP round keeps its own totals.
             int rewardTasks = series != null ? series.TotalLocalTasks : mine;
             int rewardPoints = series != null ? series.TotalLocalPoints : localPool;
+            bool canceled = series != null && series.Abandoned;
+            if (canceled && !roundRegistered)
+            {
+                rewardTasks += mine;
+                rewardPoints += localPool;
+            }
             int bonus = 0;
             // An online series belongs to the room, not to the story ladder: it earns no chapter first-clear bonus.
             if (!Online && series != null && series.Over && series.LocalTookSeries)
@@ -543,16 +558,20 @@ namespace Bob.TaskRace
             }
 
             LastResult = BobTaskRaceProfile.Record(won, draw, teamAPoints, teamBPoints, tasksA, tasksB, total,
-                rewardPoints, rewardTasks, record, bonus);
+                rewardPoints, rewardTasks, record, bonus, canceled);
             LastMatchRecorded = record;
+            LastMatchCanceled = canceled;
 
             // Leaderboard score (docs 16 section 2.6): one number per finished match, from the same facts the phone
             // shows on the result card. A chapter counts its whole series (rewardTasks), a lone round its own list.
             int level = round != null ? round.Difficulty : 1;
-            LastScore = Bob.Rules.BobRaceScore.Of(rewardTasks, cartPasses, won, draw, secondsLeft, level);
+            // A series somebody walked out of is graded on work alone: no outcome bonus, and no bonus for seconds the
+            // abandoned match never played out.
+            int scoreSeconds = canceled ? 0 : secondsLeft;
+            LastScore = Bob.Rules.BobRaceScore.Of(rewardTasks, cartPasses, !canceled && won, !canceled && draw, scoreSeconds, level);
             if (Application.isPlaying)
-                Debug.Log("[TaskRace] score " + Bob.Rules.BobRaceScore.Explain(rewardTasks, cartPasses, won, draw,
-                    secondsLeft, level));
+                Debug.Log("[TaskRace] score " + Bob.Rules.BobRaceScore.Explain(rewardTasks, cartPasses,
+                    !canceled && won, !canceled && draw, scoreSeconds, level));
 
             // Daily challenge (docs 31 section 2.2): the server handed out today's seed, so the attempt is spent when the
             // round ends, whatever the result. The store keys it by the day the seed belonged to, never by the phone's
@@ -612,6 +631,7 @@ namespace Bob.TaskRace
             RemainingSeconds = 0f;
 
             var line = series.Register(mine, theirs, PointsOf(localTeam), PointsOf(OtherTeam));
+            roundRegistered = true; // the round's work is inside the series totals now, so EndMatch must not add it again
             if (Online) Room?.SendSeriesResult(line);
             ShowRoundLine(line);
 
@@ -670,6 +690,7 @@ namespace Bob.TaskRace
         void BeginRound(float seconds, int seed)
         {
             roundEnding = false;
+            roundRegistered = false; // this round's work counts toward the series only once FinishRound registers it
             teamAPoints = 0; teamBPoints = 0;
             RemainingSeconds = seconds;
             warned = opened = false;
@@ -689,9 +710,9 @@ namespace Bob.TaskRace
         // ---------------------------------------------------------------- online best-of-three (docs 27 section 10.7)
 
         /// <summary>
-        /// The simulated rival cleared its whole list. Offline this keeps the old rule (the match ends on the spot);
-        /// online it is a closed round like the clock running out — the host registers and publishes it, a client waits
-        /// for the host's line (docs 27 section 10.7).
+        /// The simulated rival cleared its whole list, so this round is over even with time on the clock. It closes
+        /// like the clock running out: a story round goes through the series, a lone PvP round goes straight to the
+        /// result, and online the host is the only judge of the shared line (docs 27 section 10.7).
         /// </summary>
         public void OnRivalFinished()
         {
@@ -701,7 +722,8 @@ namespace Bob.TaskRace
                 else HoldForOnlineResult();
                 return;
             }
-            EndMatch();
+            if (series != null) FinishRound();
+            else EndMatch();
         }
 
         /// <summary>

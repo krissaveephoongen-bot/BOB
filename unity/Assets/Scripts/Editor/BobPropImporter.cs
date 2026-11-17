@@ -66,7 +66,10 @@ namespace Bob.EditorTools
                 foreach (var r in inst.GetComponentsInChildren<Renderer>())
                 {
                     r.sharedMaterials = r.sharedMaterials.Select(_ => mat).ToArray();
-                    BobToon.Outline(r.gameObject, 2f);
+                    var outline = BobToon.Outline(r.gameObject, 2f);
+                    // Prefabs cannot retain the temporary material created by Outline.
+                    if (outline != null)
+                        outline.GetComponent<Renderer>().sharedMaterial = Resources.Load<Material>("Materials/M_BOB_Outline");
                 }
                 foreach (var t in inst.GetComponentsInChildren<Transform>())
                     GameObjectUtility.SetStaticEditorFlags(t.gameObject, StaticEditorFlags.BatchingStatic);

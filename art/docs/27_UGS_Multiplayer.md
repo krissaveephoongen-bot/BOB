@@ -37,13 +37,13 @@ com.unity.netcode.gameobjects      2.14.0
 | ไฟล์ | หน้าที่ |
 | --- | --- |
 | `PlayerProfileData.cs` | `[Serializable]` — `coins`, `level`, `unlockedItems` (ค่าที่เก็บใน Cloud Save) |
-| `UgsCloudSaveManager.cs` | singleton — โหลด/เซฟ JSON ใต้ key `player_profile`; `LoadProfileAsync`, `SaveProfileAsync`, `AddCoinsAndSaveAsync(int)`, `UnlockItemAndSaveAsync(string)` |
-| `UgsLeaderboardManager.cs` | singleton — `leaderboardId = "global_high_score"`; `SubmitScoreAsync(double)` → `AddPlayerScoreAsync` และเก็บ `LastEntry` (มี `Rank`); `GetTopScoresAsync(limit = 10)` → `GetScoresAsync` |
+| `UgsCloudSaveManager.cs` | singleton — โหลด/เซฟ JSON ใต้ key `player_profile`; `LoadProfileAsync`, `SaveProfileAsync`, `AddCoinsAndSaveAsync(int)`, `UnlockItemAndSaveAsync(string)`; `Ensure()` สร้างตัวที่ยังไม่มีให้ (วางตัวเองใน `DontDestroyOnLoad`) จึงไม่ต้องวางในซีนเอง — ใช้นอก Play mode ไม่ได้ คืน `null` |
+| `UgsLeaderboardManager.cs` | singleton — `leaderboardId = "global_high_score"`; `SubmitScoreAsync(double)` → `AddPlayerScoreAsync` และเก็บ `LastEntry` (มี `Rank`); `GetTopScoresAsync(limit = 10)` → `GetScoresAsync`; `Ensure()` สร้างแบบเดียวกับ Cloud Save และ `Awake` เก็บตัวเองข้ามซีน (singleton เดิมตายตอนโหลดฉาก ทำบอร์ดเงียบทั้ง session) |
 | `UgsRelayLobbyManager.cs` | singleton — `CreateRoomAsync(name, maxPlayers)`, `QuickJoinOrJoinByCodeAsync(code = "")`, heartbeat 15 วิ, `LeaveRoomAsync()` |
-| `BobOnlineRoom.cs` | singleton ห้องที่เล่นได้จริง — `HostAsync(heroId, maxPlayers)`, `JoinAsync(heroId, code)`, `LeaveAsync()`, `StartMatch(seed, players)`, `SendPose`, `SendTask`; สร้าง `NetworkManager` + `UnityTransport` เองตอนรัน; ข้อความ Netcode `bob.start` / `bob.pose` / `bob.task` (§10) |
-| `BobBoard.cs` | การ์ดอันดับอ่านข้อมูลผ่าน `BobBoardService.LoadAsync(limit)` → `BobBoardSnapshot` (แถว `Rank`/`Name`/`Score`/`Self`, `SelfRank`, `Error`) — SDK ทั้งหมดอยู่ในไฟล์นี้ UI ไม่ต้องอ้าง `Unity.Services.Leaderboards`; ถ้ายังไม่มี manager ในซีนจะสร้างให้เอง |
-| `BobRaceScoreReporter.cs` | ตัวส่งคะแนนของแมตช์ — `Attach(manager)` ตอน `TaskRaceModeManager.Awake`; ฟัง `MatchEnded` แล้วส่ง `manager.LastScore` เข้า `global_high_score` **ครั้งเดียวต่อแมตช์** เฉพาะเมื่อ `LastMatchRecorded` และเครื่องล็อกอินแล้ว; `LastRank` เก็บอันดับที่บอร์ดตอบกลับ (ยังไม่แสดงบน UI) |
-| `UgsBootstrapManager.cs` | singleton — `UnityServices.InitializeAsync()` + `SignInAnonymouslyAsync()` ตอนเริ่ม แล้วโหลดโปรไฟล์, log `PlayerId`, `EnsureReadyAsync()` เรียกซ้ำได้ |
+| `BobOnlineRoom.cs` | singleton ห้องที่เล่นได้จริง — `HostAsync(heroId, maxPlayers)`, `JoinAsync(heroId, code)`, `LeaveAsync()`, `StartMatch(seed, players)` (ส่งระดับความยาก + ลำดับด่านของ host ไปกับ `bob.start` ด้วย), `SendPose`, `SendTask` (ประทับเลขรอบ current ลงในแพ็กเก็ต), `SendSeriesResult`, `SendSeriesRound`, `AbandonSeries`; สร้าง `NetworkManager` + `UnityTransport` เองตอนรัน; ข้อความ Netcode `bob.start` / `bob.pose` / `bob.task` / `bob.round` / `bob.result` / `bob.abandon` (§10) |
+| `BobBoard.cs` | การ์ดอันดับอ่านข้อมูลผ่าน `BobBoardService.LoadAsync(limit)` → `BobBoardSnapshot` (แถว `Rank`/`Name`/`Score`/`Self`, `SelfRank`, `Error`) — SDK ทั้งหมดอยู่ในไฟล์นี้ UI ไม่ต้องอ้าง `Unity.Services.Leaderboards`; ถ้ายังไม่มี manager ในซีนจะเรียก `UgsLeaderboardManager.Ensure()` สร้างให้ |
+| `BobRaceScoreReporter.cs` | ตัวส่งคะแนนของแมตช์ — `Attach(manager)` ตอน `TaskRaceModeManager.Awake`; ฟัง `MatchEnded` แล้วส่ง `manager.LastScore` เข้า `global_high_score` **ครั้งเดียวต่อ `manager.MatchSequence`** (กดเล่นซ้ำรอบเดิมไม่ส่งสองรอบ) เฉพาะเมื่อ `LastMatchRecorded` และซีรีส์ไม่ถูกยกเลิก และเครื่องล็อกอินแล้ว; ซีรีส์ที่ถูกโมฆะจะไม่ขึ้นบอร์ดแม้คะแนนในเครื่องคำนวณไว้; `LastRank` เก็บอันดับที่บอร์ดตอบกลับ (ยังไม่แสดงบน UI) |
+| `UgsBootstrapManager.cs` | singleton — `UnityServices.InitializeAsync()` + `SignInAnonymouslyAsync()` ตอนเริ่ม แล้ว `UgsCloudSaveManager.Ensure()` + `LoadProfileAsync()` (โปรไฟล์จึงโหลดจริงโดยไม่ต้องวาง manager ในซีน), log `PlayerId`, `EnsureReadyAsync()` เรียกซ้ำได้ |
 | `PureUgsDebugUI.cs` | IMGUI ปุ่มทดสอบ: +100 เหรียญ (Cloud Save), ส่งคะแนนสุ่ม + ดู Top 10, Create Room / Quick Join / Leave — Editor และ Development Build เท่านั้น |
 
 API ที่ใช้ (ยืนยันกับ package ที่ติดตั้งจริง):
@@ -143,9 +143,9 @@ Home (S10) → เลือกโหมด Solo/Duo/Team (S11) → S14 เลื
 
 | ข้อความ | ผู้ส่ง → ผู้รับ | delivery | payload | ปลายทาง |
 | --- | --- | --- | --- | --- |
-| `bob.start` | host → ทุกคน | ReliableSequenced | `int seed`, `int players` | `MatchRequest.SetOnline(host:false, players, seed)` แล้ว `LoadScene("TaskRace")` (client ไม่โหลดจาก UI ตัวเอง) |
+| `bob.start` | host → ทุกคน | ReliableSequenced | `int seed`, `int players`, `int difficulty`, `int stageOrder` | `MatchRequest.SetOnline(host:false, players, seed, difficulty, stageOrder)` แล้ว `LoadScene("TaskRace")` (client ไม่โหลดจาก UI ตัวเอง) — ทุกเครื่องได้ความยาก + ลำดับด่านเดียวกับ host |
 | `bob.pose` | ทุกคน → host (client) / host → ทุกคน | Unreliable | `int origin`, `float x`, `float z`, `float yaw` | `BobTaskRaceOnline` ขยับตัวละครระยะไกล (`Vector3.Lerp` + `Quaternion.Slerp`) |
-| `bob.task` | ทุกคน → host (client) / host → ทุกคน | ReliableSequenced | `int origin`, `byte[] spotId`, `bool completed` | ฝั่งรับ `spot.ForceComplete()` ถ้ายังไม่สะอาด |
+| `bob.task` | ทุกคน → host (client) / host → ทุกคน | ReliableSequenced | `int origin`, `int round`, `byte[] spotId`, `bool completed` | ฝั่งรับทิ้งแพ็กเก็ตที่ `round` ไม่ตรงกับรอบซีรีส์ปัจจุบัน แล้วเรียก `spot.SettleFromRoom()` (ปิดสถานี + เก็บ pass ที่เหลือตามกติกาจริงของสถานนั้น) |
 | `bob.round` | host → ทุกคน | ReliableSequenced | `int round`, `int seed`, `float seconds` | client `TaskRaceModeManager.BeginOnlineRound(...)` — เริ่มรอบถัดไปด้วย seed/เวลาของ host (§10.7) |
 | `bob.result` | host → ทุกคน | ReliableSequenced | `int round`, `byte outcome`, `int localTasks`, `int rivalTasks`, `int localPoints`, `int rivalPoints` | client `Series.RegisterOutcome(...)` ตามผลของ host แล้ว `HoldForOnlineResult` → การ์ด/รอบถัดไป |
 | `bob.abandon` | host → ทุกคน | ReliableSequenced | `int round` | client `Series.Abandon()` → การ์ด "ยกเลิกซีรีส์" (§10.7) |
@@ -153,13 +153,15 @@ Home (S10) → เลือกโหมด Solo/Duo/Team (S11) → S14 เลื
 - **origin id อยู่ใน payload** เพราะ client ส่งถึง host คนเดียว: ถ้าใช้ client id บนสาย 3–4 คนจะถูกยุบเป็นตัวเดียว — host จึง rebroadcast พร้อม origin เดิม และฝั่งรับข้าม event ที่ `origin == LocalNetId` (กัน apply ซ้ำกับที่ทำเองไปแล้ว)
 - client ยอมรับ `bob.task`/`bob.pose` จาก `NetworkManager.ServerClientId` เท่านั้น; host คือผู้ตัดสินว่าสถานีไหนสะอาด (host-authoritative) แต่คะแนนยังคิดบนเครื่องเหมือนเดิม
 - `bob.round`/`bob.result`/`bob.abandon` เป็น **host → ทุกคนเท่านั้น**: client ไม่มีสิทธิ์ปิดรอบหรือเปลี่ยนผล; ฝั่งรับตรวจ `NetworkManager.ServerClientId` และรอบต้องตรงกับ `Series.Round` ปัจจุบัน (บรรทัดเก่าที่มาช้าถูกทิ้ง)
+- `bob.task` มี `round` ติดไปด้วย (17 พ.ย.): แพ็กเก็ตที่มาจากรอบที่ปิดไปแล้ว — เช่นเพื่อนเก็บงานตอนหมดเวลาแต่ข้อความมาถึงหลังเครื่องเราเริ่มรอบใหม่ — จะถูกทิ้งก่อนแตะสถานี มิฉะนั้นสถานีที่รอบใหม่เพิ่งทำ Dirty จะถูก "ล้างสะอาด" ให้ฟรีและงานของรอบใหม่หาย; host ยัง **rebroadcast** ด้วยเลขรอบเดิม (ไม่ใช้รอบของ host ตอนส่งต่อ ไม่งั้นแพ็กเก็ตของ client จะถูกทิ้งที่เครื่องที่สาม)
 - ไม่มี prefab/NetworkObject spawn, ไม่มี scene sync, ไม่มี RPC ต่อผู้เล่น — named message พอสำหรับตัวละคร 4 ตัว + สถานี ~10 จุด
 
 ### 10.3 seed เดียวกันทั้งห้อง
 
 `TaskRaceRound.Start()` ปกติสุ่ม seed ใหม่เมื่อ `randomSeedEachPlay`; ออนไลน์จึงต้องล็อก:
-`BobOnlineRoom.StartMatch(seed, players)` → `MatchRequest.SetOnline(...)` → `TaskRaceModeManager.Awake()` เห็น `Seed > 0` → `ConfigureRound(players, difficulty, seed)` + `LockSeed(seed)` → `Start()` ใช้ seed ที่ล็อก ไม่สุ่มทับ
-ผลคือทุกเครื่องได้ **ใบงานชุดเดียวกัน ลำดับเดียวกัน** โดยไม่ต้องส่งรายการงานข้ามเน็ต (log: `online host/client seed N`)
+`BobOnlineRoom.StartMatch(seed, players)` → `MatchRequest.SetOnline(...)` (ค่าที่ 4–5 คือ `difficulty` และ `stageOrder` ของ host — clamp เป็น 1–3 / ≥1 ที่ปลายทาง ไม่ throw เพราะ handler อยู่บนสาย Netcode) → `TaskRaceModeManager.Awake()` เห็น `Seed > 0` → `ConfigureRound(players, difficulty, seed)` + `LockSeed(seed)` → `Start()` ใช้ seed ที่ล็อก ไม่สุ่มทับ
+ผลคือทุกเครื่องได้ **ใบงานชุดเดียวกัน ลำดับเดียวกัน ความยากเดียวกัน ด่านเดียวกัน** โดยไม่ต้องส่งรายการงานข้ามเน็ต (log: `online host/client seed N`)
+เดิม client ใช้ `BobChapters.Saved`/`BobStages.Saved` ของเครื่องตัวเอง ทำให้ host เลือกด่าน 3 แล้ว client โหลดเกาะของด่านที่ตัวเองเล่นล่าสุด — ตอนนี้ `ApplyChapter`/`ApplyStage` ฝั่งออนไลน์อ่านจาก `MatchRequest` แทน
 
 รอบ 2–3 ของซีรีส์ใช้กลไกเดียวกันคนละทาง: host สุ่ม seed ใหม่เองแล้วส่ง `bob.round(round, seed, seconds)` ให้ทุกเครื่อง
 client จึง **ไม่** สุ่มเอง (`BeginOnlineRound` ใช้ seed ที่มากับข้อความ) — ทั้งห้องได้ใบงานรอบใหม่ชุดเดียวกันเสมอกัน
@@ -168,7 +170,7 @@ client จึง **ไม่** สุ่มเอง (`BeginOnlineRound` ใช�
 
 - `Attach()` ถูกเรียกจาก `TaskRaceModeManager.Start()` เฉพาะเมื่อ `MatchRequest.Online` — โหมดออฟไลน์ไม่สร้าง component นี้เลย
 - ส่งท่าฮีโร่ตัวเอง 10 Hz (`SendPose`), รับของคนอื่นแล้ว lerp ที่ 12 rad/s; ตัวละครระยะไกลใช้ `BobTaskRaceTeammates.Avatar(heroId)` (ร่างเดิมของเพื่อนบอท, ไม่มีปัญญา/ไม่เก็บงาน)
-- poll สถานีฝั่งเรา 4 Hz: `Done` เปลี่ยนจาก false → true = ส่ง `bob.task` หนึ่งครั้ง; ฝั่งรับเรียก `ForceComplete()` และจำ `knownDone` เพื่อไม่ส่งกลับ
+- poll สถานีฝั่งเรา 4 Hz: `Done` เปลี่ยนจาก false → true = ส่ง `bob.task` หนึ่งครั้งพร้อมเลขรอบซีรีส์ปัจจุบัน; ฝั่งรับทิ้งแพ็กเก็ตคนละรอบ แล้วเรียก `spot.SettleFromRoom()` (ปิดสถานี + เก็บ pass ที่ยังขาดด้วยเส้นทางจริงของสถานนั้น) และจำ `knownDone` เพื่อไม่ส่งกลับ — จำเฉพาะเมื่อสถานีสะอาดจริง (สถานีสอง pass เช่นคราบสี แตะครั้งเดียวไม่จบ ถ้าจำตั้งแต่นั้นจะปิดประตูไม่ให้แพ็กเก็ตถัดไปล้างที่เหลือ)
 - สถานีที่สะอาดอยู่แล้วตั้งแต่เฟรมแรกถูกบันทึกเป็น baseline ไม่ใช่ event
 
 ### 10.5 ทดสอบสองเครื่อง (ทำได้เลย)
@@ -192,6 +194,7 @@ client จึง **ไม่** สุ่มเอง (`BeginOnlineRound` ใช�
 - **ไม่มี server validation ของผลรอบ**: host คือผู้ตัดสินคนเดียว (ผลที่ host ส่งคือผลที่ทุกเครื่องใช้) — เชื่อใจ host ตามแบบ LAN/เพื่อน; การโกงฝั่ง host ยังเป็นไปได้
 - เก็บงานเป็นแบบทางเดียว (false→true): การแกล้งทำให้สถานี Dirty (ฝั่งคู่แข่ง/หลังสะพานเปิด) ยังเป็นเรื่องของแต่ละเครื่อง ไม่ถูกส่งข้ามห้อง
 - คะแนน/เหรียญยังคิดและบันทึกบนเครื่อง (Cloud Save เป็นรายผู้เล่น ไม่ใช่คะแนนห้อง); รางวัลจ่ายครั้งเดียวตอนจบซีรีส์ และออนไลน์ไม่เขียนดาวบท/สถิติเนื้อเรื่อง
+- ซีรีส์ที่ถูกยกเลิก (มีคนออกกลางรอบ) **จ่ายเฉพาะผลงาน**: `EndMatch` รวมงาน/แต้มของรอบที่ค้างอยู่เข้าด้วยครั้งเดียว (ไม่ให้รอบนั้นหายไปทั้งลูก) แต่ข้าม `BestPoints` / `Matches` / `Wins` / โบนัสผ่านบท, คิด `BobRaceScore` โดยไม่นับผลชนะและเวลาเหลือ และ `BobRaceScoreReporter` ไม่ส่งขึ้นบอร์ด (`LastError = "series abandoned"`) — ไม่งั้นกด back หลังเก็บงานครบจะเป็นฟาร์มคะแนน
 - โควตา free tier ของ Relay/Lobby ตาม §5 — ห้องถูกทิ้งเมื่อ host ออก และไม่มี heartbeat ค้างหลัง Leave
 
 ### 10.7 ออนไลน์ชนะ 2 ใน 3 (17 พ.ย. 2026)

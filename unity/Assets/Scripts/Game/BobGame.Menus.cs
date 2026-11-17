@@ -139,7 +139,19 @@ namespace Bob.Game
             phase = Phase.Splash; RenderAll();
             yield return new WaitForSecondsRealtime(1.6f);
             bool guest = false; try { guest = PlayerPrefs.GetInt("bob.guest", 0) == 1; } catch (Exception) { }
+            // A returning visitor already chose "เล่นเลย", so the login screen is skipped. The sign-in is what makes the
+            // leaderboard and the cloud profile work, so it is asked for in the background instead of being dropped.
+            if (guest) ResumeGuestSignIn();
             phase = guest ? Phase.Title : Phase.Login; RenderAll();
+        }
+
+        /// <summary>The boot-time sign-in for a device that already went through S02: nothing on screen waits for it.</summary>
+        static void ResumeGuestSignIn()
+        {
+            if (UgsBootstrapManager.Instance != null) return;
+            // signInOnAwake stays on: the manager's own Start signs in and loads the cloud profile, and a failure only
+            // means this session plays offline, exactly as it did before the sign-in existed.
+            new GameObject("UGS").AddComponent<UgsBootstrapManager>();
         }
 
         void Splash()

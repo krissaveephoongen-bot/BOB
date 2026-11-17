@@ -2,8 +2,10 @@
 // They are only compiled by unity-typecheck (never by Unity), so two rules apply:
 //   1. Mirror the API surface that the game scripts actually touch — nothing more.
 //   2. Keep the members faithful enough that a typo or a wrong type still fails the build.
-// Packages covered: TextMeshPro, AI Navigation (Unity.AI.Navigation), UnityEditor.Android,
-// and the Unity Gaming Services bootstrap (Bob.Ugs), whose real folder this project leaves out.
+// Packages covered: TextMeshPro (labels + the font-asset calls BobUi/BobTmpSetup make), AI Navigation
+// (Unity.AI.Navigation), UnityEditor.Android, and the Unity Gaming Services bootstrap (Bob.Ugs), whose real
+// folder this project leaves out. References to an editor file this project excludes (BobGameScene) are not
+// shimmed — they stay listed in baseline-errors.txt.
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.UI;
@@ -31,7 +33,32 @@ namespace TMPro
 
     public enum TextOverflowModes { Overflow, Ellipsis, Masking, Truncate, ScrollRect, Page, Linked }
 
-    public class TMP_FontAsset : Object { }
+    public enum AtlasPopulationMode { Dynamic, Static }
+
+    public class TMP_Character { }
+
+    /// <summary>Real TMP uses TMP_CharacterDictionary; only Count is read (BobTmpSetup's build log).</summary>
+    public class TMP_CharacterDictionary : System.Collections.Generic.Dictionary<int, TMP_Character> { }
+
+    /// <summary>Font asset surface BobUi (runtime wrap of a Font) and BobTmpSetup (editor atlas builder) touch.
+    /// TryAddCharacters really returns TMP_TextProcessingResults; both call sites discard it, so bool is enough here.</summary>
+    public class TMP_FontAsset : Object
+    {
+        public static TMP_FontAsset CreateFontAsset(Font font) { return null; }
+
+        public static TMP_FontAsset CreateFontAsset(Font font, int samplingPointSize, int atlasPadding,
+            UnityEngine.TextCore.LowLevel.GlyphRenderMode renderMode, int atlasWidth, int atlasHeight,
+            AtlasPopulationMode atlasPopulationMode = AtlasPopulationMode.Dynamic, bool enableFallbackNote = true)
+        { return null; }
+
+        public AtlasPopulationMode atlasPopulationMode { get; set; }
+        public Texture2D[] atlasTextures { get { return new Texture2D[0]; } }
+        public int atlasTextureCount { get { return 0; } }
+        public Material material { get { return null; } }
+        public TMP_CharacterDictionary characterTable { get { return null; } }
+        public bool TryAddCharacters(string newCharacters, out string missingCharacters)
+        { missingCharacters = ""; return true; }
+    }
 
     /// <summary>Base of every TMP label. Derives from MaskableGraphic so GetComponent/AddComponent and the
     /// Graphic members (color, raycastTarget, rectTransform) behave like they do in Unity.</summary>
@@ -54,6 +81,16 @@ namespace TMPro
         public float fontSizeMax { get; set; }
         public float alpha { get; set; }
         public Material fontMaterial { get { return null; } }
+
+        // The three members the R1 shot harness measures with. Overloads are listed separately (no optional
+        // arguments) so a wrong argument count still fails the build, as TMP's real API does.
+        public void ForceMeshUpdate() { }
+        public void ForceMeshUpdate(bool ignoreActivePageBehaviour) { }
+        public Vector2 GetPreferredValues() { return default; }
+        public Vector2 GetPreferredValues(string text) { return default; }
+        public Vector2 GetPreferredValues(float width, float height) { return default; }
+        public Vector2 GetPreferredValues(string text, float width, float height) { return default; }
+        public bool isTextTruncated { get; private set; }
     }
 
     public class TextMeshProUGUI : TMP_Text { }
@@ -205,7 +242,7 @@ namespace Bob.Ugs
         public System.Collections.Generic.IReadOnlyList<string> Roster { get; private set; }
         public Bob.TaskRace.StorySeries Series { get; private set; }
         public event System.Action<int, Vector3, float> PoseReceived;
-        public event System.Action<int, string, bool> TaskReceived;
+        public event System.Action<int, int, string, bool> TaskReceived;
         public event System.Action<Bob.TaskRace.SeriesRound> SeriesResultApplied;
         public event System.Action<int, int, float> SeriesRoundRequested;
         public event System.Action SeriesAbandoned;

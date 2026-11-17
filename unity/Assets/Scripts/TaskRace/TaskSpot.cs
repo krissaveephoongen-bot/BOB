@@ -329,6 +329,18 @@ namespace Bob.TaskRace
             return true;
         }
 
+        /// <summary>
+        /// The online room says this station is done. Runs the normal close first so the card and its events see a real
+        /// completion, then lands every pass the station still needs — one local pass would leave a two-pass stain
+        /// dirty and the two islands disagreeing about which stations are clean (docs 27 section 10).
+        /// </summary>
+        public void SettleFromRoom()
+        {
+            if (IsOpen) Close(true);
+            for (int pass = 0; pass < RequiredPasses && !Done; pass++)
+                if (!ForceComplete()) break;
+        }
+
         /// <summary>HUD: show whether the opponent may sabotage this station right now (the bridges and the state are
         /// checked by the manager; `isProtected` is deliberately not part of "may try" so the tap can explain the shield).</summary>
         public bool CanSabotageNow

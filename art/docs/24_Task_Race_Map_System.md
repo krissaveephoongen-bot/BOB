@@ -1256,6 +1256,13 @@ build แรกหลังงาน pure UGS + SFX — สั่งด้วย
 นำแบบ docs 11 §14.1 ลง native uGUI บนสาขา `ui/unity-r1-20261117`: HUD/ใบงาน/พัก/เรียก/คราบ/toast/ลูกศร,
 T04 หยิบ-จัดกอง-ล็อก, joystick และหน้าตัวละคร; ไม่แก้แผนที่ กติกา สูตร คะแนน รางวัล หรือ UGS.
 รายละเอียดและสถานะหลักฐานอยู่ docs 11 §14.2 และ docs 30 §6.2. ใช้ `compile-check/` แยกจาก Editor ที่เปิดโปรเจกต์หลัก,
-ไม่ rebuild ฉาก ไม่สร้าง APK; owner อนุมัติ commit/push checkpoint ระหว่างตรวจ run06–08 และให้ทำงานต่อ.
+ไม่ rebuild ฉาก ไม่สร้าง APK; checkpoint `5258883` commit/push แล้วตามคำสั่ง owner และทำงานตรวจต่อใน local.
 พบและแก้เฉพาะ presentation: กล่องข้อความไทย 130% เตี้ย, `SeriesDim` ค้างขณะเล่น และ station icons วาดทับ HUD;
-คง world post-grade, runtime กติกา และทางถ่าย camera RenderTexture เดิม. กำลังรันตรวจภาพหลังแก้.
+คง world post-grade, runtime กติกา และทางถ่าย camera RenderTexture เดิม. run09/10/11 ผ่านครบ2400/1920/1440.
+Review เพิ่มพบ joystick zone แย่ง drag ด้านล่างของใบงาน จึงยก zone เหนือ dim เฉพาะตอนเปิดมินิเกม
+และคืนใต้ HUD เมื่อปิด; run12–14 ผ่าน drag ใบงาน, joystick cancel และการ์ดจบรอบ/เริ่มรอบใหม่.
+ภาพ 4:3 ยังพบลำดับวาดผิดตอนจบรอบ จึงแยก pill/root canvas ออกจาก overlay และเพิ่ม pixel regression;
+run15 (1440) ผ่าน แต่ run16 (1920) ยัง FAIL pixel dim; run18 ตรวจพบว่าเป็น artefact ของตอน capture
+ไม่ใช่ HUD ในเกม — capture helper เก็บ/คืน sorting layer กับ order, โหมดและกล้อง แล้ว log ลำดับเรนเดอร์จริง;
+run18/19/20/21/22 = R1 CHECKS PASSED ที่ 1920/1440/2400/1920/3840×2160 (หลักฐานวิธีอ่าน docs 30 §6.2)
+และ run22 ย้ำหลังแก้เส้นทางเซฟ/อันดับ/เดลี่/ออนไลน์ ไม่อ้าง sortingOrder หรือ compile แทนหลักฐานภาพจริง.

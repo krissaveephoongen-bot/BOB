@@ -41,9 +41,11 @@ namespace Bob.Ugs
             await EnsureReadyAsync();
             if (!IsReady) return;
 
-            var save = UgsCloudSaveManager.Instance != null ? UgsCloudSaveManager.Instance : FindAnyObjectByType<UgsCloudSaveManager>();
+            // No scene hosts the save manager, so the boot flow creates the one persistent copy before reading the
+            // profile; without it every device played a local-only profile and Cloud Save stayed empty.
+            var save = UgsCloudSaveManager.Ensure();
             if (save != null) await save.LoadProfileAsync();
-            else Debug.LogWarning("[UGS] no UgsCloudSaveManager in the scene — profile not loaded");
+            else Debug.LogWarning("[UGS] no UgsCloudSaveManager could be created — profile not loaded");
         }
 
         /// <summary>Initializes Unity Services once and signs in anonymously if needed.</summary>

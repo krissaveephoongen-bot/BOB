@@ -47,12 +47,11 @@ namespace Bob.Ugs
             }
             snap.SignedIn = true;
 
-            var board = UgsLeaderboardManager.Instance;
+            var board = UgsLeaderboardManager.Ensure();
             if (board == null)
             {
-                // The lobby scene only hosts the bootstrap, so the board manager is created on the first look.
-                var host = new GameObject("UGS Board");
-                board = host.AddComponent<UgsLeaderboardManager>();
+                snap.Error = "no leaderboard manager";
+                return snap;
             }
 
             var page = await board.GetTopScoresAsync(limit);

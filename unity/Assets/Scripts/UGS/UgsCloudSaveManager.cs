@@ -31,6 +31,20 @@ namespace Bob.Ugs
             if (Instance == this) Instance = null;
         }
 
+        /// <summary>
+        /// The one cloud-save manager. No scene hosts it — the lobby's boot flow builds only the bootstrap — so without
+        /// this the profile would never reach Cloud Save (docs 27 section 2). Outside Play mode nothing is created and
+        /// null comes back, because the edit-mode verify must not grow objects into the scene.
+        /// </summary>
+        public static UgsCloudSaveManager Ensure()
+        {
+            if (Instance != null) return Instance;
+            var existing = FindAnyObjectByType<UgsCloudSaveManager>();
+            if (existing != null) { Instance = existing; return existing; }
+            if (!Application.isPlaying) return null;
+            return new GameObject("UGS Cloud Save").AddComponent<UgsCloudSaveManager>();
+        }
+
         /// <summary>Reads the profile from Cloud Save; a missing entry simply means a fresh player.</summary>
         public async Task<PlayerProfileData> LoadProfileAsync()
         {

@@ -280,7 +280,7 @@ namespace Bob.EditorTools
             Debug.Log($"[UIR1] {(pass ? "PASS" : "FAIL")} {name}");
         }
 
-        static IEnumerator CaptureR1(string name)
+        static IEnumerator CaptureR1(string name, Action<Texture2D> inspect = null)
         {
             yield return new WaitForEndOfFrame();
             string dir = Environment.GetEnvironmentVariable("BOB_R1_OUT") ?? "Logs/ui-r1";
@@ -288,6 +288,7 @@ namespace Bob.EditorTools
             string path = Path.Combine(dir, name + "-" + Screen.width + "x" + Screen.height + ".png");
             var texture = ScreenCapture.CaptureScreenshotAsTexture();
             File.WriteAllBytes(path, texture.EncodeToPNG());
+            inspect?.Invoke(texture);
             UnityEngine.Object.Destroy(texture);
             var labels = UnityEngine.Object.FindObjectsByType<TMP_Text>(FindObjectsInactive.Exclude)
                 .Where(t => t.GetComponentInParent<Canvas>() != null && t.isActiveAndEnabled)
@@ -388,6 +389,35 @@ namespace Bob.EditorTools
             yield return new WaitForSecondsRealtime(0.25f);
         }
 
+        static IEnumerator DragWorksheetBottom()
+        {
+            var viewport = Field<RectTransform>(hud, "rowsViewport");
+            var scroll = viewport.GetComponent<ScrollRect>();
+            scroll.StopMovement();
+            scroll.verticalNormalizedPosition = 1f;
+            yield return null;
+            var start = viewport.TransformPoint(new Vector2(viewport.rect.center.x, viewport.rect.yMin + 16f));
+            var hit = Hit(RectTransformUtility.WorldToScreenPoint(null, start), out var pointer);
+            if (hit == null) yield break;
+            var receiver = ExecuteEvents.GetEventHandler<IDragHandler>(hit);
+            Check(receiver == viewport.gameObject, "worksheet bottom drag belongs to ScrollRect, not joystick");
+            if (receiver != viewport.gameObject) yield break;
+            ExecuteEvents.ExecuteHierarchy(hit, pointer, ExecuteEvents.pointerDownHandler);
+            ExecuteEvents.ExecuteHierarchy(hit, pointer, ExecuteEvents.initializePotentialDrag);
+            ExecuteEvents.ExecuteHierarchy(hit, pointer, ExecuteEvents.beginDragHandler);
+            yield return null;
+            pointer.position += Vector2.up * 80f;
+            pointer.dragging = true;
+            ExecuteEvents.ExecuteHierarchy(receiver, pointer, ExecuteEvents.dragHandler);
+            yield return null;
+            Check(Field<RectTransform>(hud, "rowsRoot").anchoredPosition.y > 0f &&
+                !BobTaskRaceTouch.Current.IsHeld && BobTaskRaceTouch.Current.Move == Vector2.zero,
+                "dragging worksheet bottom scrolls without moving hero");
+            ExecuteEvents.ExecuteHierarchy(receiver, pointer, ExecuteEvents.endDragHandler);
+            ExecuteEvents.ExecuteHierarchy(receiver, pointer, ExecuteEvents.pointerUpHandler);
+            scroll.StopMovement();
+        }
+
         static RectTransform Part(BobMinigameHost mini, string id)
         {
             var text = mini.GetComponentsInChildren<TMP_Text>().FirstOrDefault(t => t.text == BobRules.Parts[id].Name);
@@ -401,16 +431,20 @@ namespace Bob.EditorTools
             if (hit == null) yield break;
             var receiver = ExecuteEvents.ExecuteHierarchy(hit, pointer, ExecuteEvents.pointerDownHandler);
             Check(Field<bool>(mini, "holding"), "lock pointer acquires hold");
-            yield return null;
+            // Screenshot encoding can stall an editor frame past 0.6 s; short timing uses explicit ticks between live pointer events.
+            mini.Tick(0.12f);
             float releasedProgress = Field<float>(mini, "cartHold");
-            Check(!Field<bool>(mini, "cartLocked") && releasedProgress > 0f && releasedProgress < 1f,
-                "one-frame hold advances without completing");
+            Check(!Field<bool>(mini, "cartLocked") && Mathf.Approximately(releasedProgress, 0.2f),
+                "0.12-second hold advances to 20% without completing");
             ExecuteEvents.ExecuteHierarchy(receiver ?? hit, pointer, ExecuteEvents.pointerUpHandler);
             Check(!Field<bool>(mini, "holding"), "lock pointer releases hold");
-            float deadline = Time.realtimeSinceStartup + 2f;
-            while (Field<float>(mini, "cartHold") > 0f && Time.realtimeSinceStartup < deadline) yield return null;
+            mini.Tick(0.05f);
+            Check(!Field<bool>(mini, "cartLocked") && Mathf.Approximately(Field<float>(mini, "cartHold"), 0.1f),
+                "released hold decays by dt times two");
+            mini.Tick(0.06f);
             Debug.Log($"[UIR1] hold {state}: release={releasedProgress:F3} decayed={Field<float>(mini, "cartHold"):F3}");
             Check(!Field<bool>(mini, "cartLocked") && Field<float>(mini, "cartHold") <= 0f, "short hold releases and decays without locking");
+            yield return null;
             receiver = ExecuteEvents.ExecuteHierarchy(hit, pointer, ExecuteEvents.pointerDownHandler);
             Check(Field<bool>(mini, "holding"), "full lock hold acquired");
             yield return CaptureR1("cart-holding-" + state);
@@ -494,18 +528,30 @@ namespace Bob.EditorTools
             stains.enabled = false;
             BobTaskRaceTeammates.Spawn(new[] { "sweep" }, TaskSpot.LocalTeam);
             yield return new WaitForSecondsRealtime(0.6f);
+            foreach (var id in new[] { "sweep", "bubble", "spray", "press" })
+            {
+                var prefab = Resources.Load<GameObject>(BobTaskRaceTeammates.HeroResourcePath + id);
+                Check(prefab != null && prefab.GetComponentsInChildren<Renderer>(true)
+                    .Where(r => r.enabled).All(r => r.sharedMaterials.Length > 0 && r.sharedMaterials
+                        .All(m => m != null && m.shader != null && m.shader.isSupported)),
+                    "hero " + id + " has supported persistent materials");
+            }
             Check(hud.RowCount == round.TaskCount, "all worksheet rows retained");
             var series = UnityEngine.Object.FindAnyObjectByType<BobSeriesBanner>();
             var seriesDim = series.GetComponentsInChildren<Image>(true).First(i => i.name == "SeriesDim");
             Check(!seriesDim.gameObject.activeInHierarchy, "series dim is hidden during the round");
-            var pillCanvas = series.GetComponentsInChildren<Canvas>(true).First(c => c.name == "SeriesPill");
-            Check(pillCanvas.overrideSorting && pillCanvas.sortingOrder < hud.UiCanvas.sortingOrder,
-                "series pill renders behind HUD cards");
+            var pillCanvas = series.GetComponentsInChildren<Canvas>(true).First(c => c.name == "SeriesPillCanvas");
+            Check(pillCanvas.isRootCanvas && pillCanvas.sortingOrder < hud.UiCanvas.sortingOrder,
+                "series pill has a separate root canvas behind HUD cards");
             Check(hud.UiCanvas.renderMode == RenderMode.ScreenSpaceOverlay, "HUD renders after world post-processing");
             CheckBounds(Field<RectTransform>(hud, "card"), "worksheet");
             CheckBounds(Field<RectTransform>(hud, "topBar"), "score group");
             CheckBounds(Field<Button>(hud, "pauseButton").transform as RectTransform, "pause");
-            yield return CaptureR1("hud");
+            var topBar = Field<RectTransform>(hud, "topBar");
+            var paperSample = RectTransformUtility.WorldToScreenPoint(null,
+                topBar.TransformPoint(new Vector2(topBar.rect.xMin + 16f, topBar.rect.center.y)));
+            Color paperBefore = Color.clear;
+            yield return CaptureR1("hud", texture => paperBefore = texture.GetPixel((int)paperSample.x, (int)paperSample.y));
             yield return CaptureLargerText(Field<RectTransform>(hud, "page"), "hud");
             while (round.TaskCount < 10) round.AddPenaltyTask(round.Tasks[0].Spec, TaskSpot.LocalTeam);
             yield return null;
@@ -516,6 +562,7 @@ namespace Bob.EditorTools
             yield return null;
             Check(hud.RowCount == 10 && Field<RectTransform>(hud, "rowsRoot").anchoredPosition.y > 0f,
                 "overflow worksheet retains ten rows and scrolls");
+            yield return DragWorksheetBottom();
             yield return CaptureR1("worksheet-scrolled");
             round.StartRound(1019);
             yield return null;
@@ -615,6 +662,23 @@ namespace Bob.EditorTools
             yield return HoldLock(mini, "empty");
             Check(!mini.CartPassed && !hud.CardOpen, "empty stack can lock without buff");
             round.StartRound(1019); yield return null;
+            spot = round.StationsOf(TaskSpot.LocalTeam).First(s => s.TaskId == "T04");
+            if (!spot.TryOpen("ui-r1", out why)) { Check(false, "cancel fixture open " + why); Finish(); yield break; }
+            Check(hud.DebugOpenCard(spot), "joystick cancel fixture opens");
+            yield return null;
+            var zone = Field<RectTransform>(touch, "zone");
+            stickHit = Hit(RectTransformUtility.WorldToScreenPoint(null, zone.TransformPoint(new Vector2(24f, 24f))), out stickPointer);
+            if (stickHit == null) { Finish(); yield break; }
+            stickReceiver = ExecuteEvents.ExecuteHierarchy(stickHit, stickPointer, ExecuteEvents.pointerDownHandler);
+            Check(touch.IsHeld, "joystick receives touch above minigame dim");
+            stickPointer.position += Vector2.right * 150f * hud.UiCanvas.scaleFactor;
+            ExecuteEvents.ExecuteHierarchy(stickReceiver, stickPointer, ExecuteEvents.dragHandler);
+            yield return null; yield return null;
+            Check(!hud.CardOpen && !spot.IsOpen, "joystick still cancels open station card");
+            ExecuteEvents.ExecuteHierarchy(stickReceiver, stickPointer, ExecuteEvents.pointerUpHandler);
+            while (round.TaskCount < 10) round.AddPenaltyTask(round.Tasks[0].Spec, TaskSpot.LocalTeam);
+            yield return DragWorksheetBottom();
+            round.StartRound(1019); yield return null;
             stains.enabled = true;
             stains.Bind(round, manager);
             // Update must build the schedule before the debug hook brings its first entry forward.
@@ -656,13 +720,38 @@ namespace Bob.EditorTools
                 "non-cart minigame retains RenderTexture stage");
             yield return CaptureR1("emergency-card");
             var cameraWas = hud.UiCanvas.worldCamera;
+            int orderWas = hud.UiCanvas.sortingOrder;
+            int layerWas = hud.UiCanvas.sortingLayerID;
             Shot(Path.Combine(Environment.GetEnvironmentVariable("BOB_R1_OUT") ?? "Logs/ui-r1", "camera-capture.png"));
-            Check(hud.UiCanvas.renderMode == RenderMode.ScreenSpaceOverlay && hud.UiCanvas.worldCamera == cameraWas,
-                "RenderTexture capture restores overlay and camera");
+            Check(hud.UiCanvas.renderMode == RenderMode.ScreenSpaceOverlay && hud.UiCanvas.worldCamera == cameraWas &&
+                hud.UiCanvas.sortingOrder == orderWas && hud.UiCanvas.sortingLayerID == layerWas,
+                "RenderTexture capture restores overlay, camera and sorting");
             yield return null;
             Click(Field<Button>(hud, "cardClose").transform as RectTransform); yield return null;
             Check(!hud.CardOpen, "close exits emergency card");
             rig.yaw = yaw;
+            Check(manager.Series != null && manager.Series.Round == 1, "round overlay fixture remains in the first round");
+            if (manager.Series == null || manager.Series.Round != 1) { Finish(); yield break; }
+            manager.DebugFinishRound();
+            var roundCard = Field<RectTransform>(series, "card");
+            Check(seriesDim.gameObject.activeInHierarchy && roundCard.gameObject.activeInHierarchy,
+                "round end shows both series card and dim");
+            Check(roundCard.GetComponentInParent<Canvas>().sortingOrder > hud.UiCanvas.sortingOrder,
+                "between-round card renders above HUD");
+            CheckBounds(roundCard, "between-round card");
+            yield return CaptureR1("series-round-end", texture =>
+            {
+                var after = texture.GetPixel((int)paperSample.x, (int)paperSample.y);
+                Debug.Log($"[UIR1] series paper before={paperBefore} after={after}");
+                foreach (var c in UnityEngine.Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude))
+                    Debug.Log($"[UIR1] canvas {c.name}: root={c.isRootCanvas} mode={c.renderMode} layer={c.sortingLayerID} order={c.sortingOrder} rendered={c.renderOrder}");
+                Check(after.r < paperBefore.r - 0.08f && after.g < paperBefore.g - 0.08f && after.b < paperBefore.b - 0.08f,
+                    "captured series dim darkens HUD paper, not only the world");
+            });
+            yield return new WaitForSecondsRealtime(manager.nextRoundDelay + 0.2f);
+            Check(manager.Series.Round == 2 && !seriesDim.gameObject.activeInHierarchy && !roundCard.gameObject.activeInHierarchy,
+                "next round hides both series card and dim");
+            yield return CaptureR1("series-next-round");
             Debug.Log(ok ? "[UIR1] R1 CHECKS PASSED" : "[UIR1] R1 CHECKS FAILED");
             Finish();
         }
