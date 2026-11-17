@@ -112,6 +112,26 @@ namespace Bob.Game
             catch (Exception) { }
         }
 
+        /// <summary>
+        /// Grant every cosmetic the counters have earned (docs 31 section 2.3), once: the id joins the same owned list
+        /// the shop writes, so one key stays the truth, and the cloud save is told as well when the player is signed in.
+        /// Decoration only — nothing here is read by a rule or a minigame.
+        /// </summary>
+        void GrantUnlocks()
+        {
+            var fresh = BobUnlocks.Missing(BobCosmetics.Stats(), owned);
+            if (fresh.Count == 0) return;
+            foreach (var id in fresh)
+            {
+                owned.Add(id);
+                try { var svc = Bob.Ugs.UgsCloudSaveManager.Instance; if (svc != null) _ = svc.UnlockItemAndSaveAsync(id); }
+                catch (Exception) { }
+            }
+            SaveProfile();
+            Sfx("ui_confirm");
+            Toast("ปลดของแต่งใหม่ " + fresh.Count + " ชิ้น");
+        }
+
         // ---------------------------------------------------------------- boot flow: splash -> (login once) -> home
 
         IEnumerator BootFlow()
@@ -281,7 +301,7 @@ namespace Bob.Game
             var pf = BobUi.Img(prof, charId + "_portrait", 86); BobUi.Pin(pf.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(12, 0), new Vector2(86, 86));
             var pn = BobUi.Label(prof, $"{Hero.Name}  ระดับ {Level}", 34, BobUi.Ink, TextAnchor.MiddleLeft, FontStyle.Bold); BobUi.Pin(pn.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(112, -10), new Vector2(340, 48));
             var bar = BobUi.Rect("Xp", prof); BobUi.Pin(bar, new Vector2(0, 0), new Vector2(0, 0), new Vector2(112, 22), new Vector2(330, 22)); bar.gameObject.AddComponent<Image>().color = BobUi.Hex("#E9DDB8");
-            var fill = BobUi.Rect("Fill", bar); fill.gameObject.AddComponent<Image>().color = BobUi.Teal;
+            var fill = BobUi.Rect("Fill", bar); fill.gameObject.AddComponent<Image>().color = BobCosmetics.HasFrame ? BobCosmetics.FrameTint : BobUi.Teal;
             fill.anchorMin = Vector2.zero; fill.anchorMax = new Vector2(Mathf.Clamp01((xp % 200) / 200f), 1); fill.offsetMin = fill.offsetMax = Vector2.zero;
             // currency + settings (top right)
             var gear = BobUi.Button(S, "", BobUi.Surface, () => SetOverlay(Overlay.Settings), 24);
@@ -291,7 +311,8 @@ namespace Bob.Game
             Chip(S, "item_gem", gems.ToString(), new Vector2(-150 - 244, -24));
 
             // hero on a stage (tap = choose hero)
-            var stage = BobUi.Disc(S, new Color(1, 1, 1, 0.28f), 440, "Stage"); BobUi.Pin(stage.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 0), new Vector2(440, 440));
+            // A worn frame colours the stage disc and the XP bar (docs 31 2.3); with nothing worn it is the plain disc.
+            var stage = BobUi.Disc(S, BobCosmetics.FrameTint, 440, "Stage"); BobUi.Pin(stage.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 0), new Vector2(440, 440));
             var hero = BobUi.Rect("Hero", S); BobUi.Pin(hero, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 30), new Vector2(440, 440));
             var himg = hero.gameObject.AddComponent<Image>(); himg.preserveAspect = true;
             var idle = art.Find(charId + "_idle");
@@ -301,12 +322,23 @@ namespace Bob.Game
             BobUi.Pin(hn.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -225), new Vector2(700, 80));
             var hs = BobUi.Label(S, "แตะตัวละครเพื่อเปลี่ยน · ถนัด" + SpecialtyName(charId) + " +25% · " + Hero.Ability, 24, BobUi.Surface, TextAnchor.MiddleCenter); BobUi.OutlineText(hs, BobUi.Ink, 0.25f);
             BobUi.Pin(hs.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -280), new Vector2(1000, 44));
+            // The worn title (docs 31 2.3): one extra line, only when something is worn, so a new player sees no empty chip.
+            var wornTitle = BobCosmetics.TitleName;
+            if (wornTitle.Length > 0)
+            {
+                var tl = BobUi.Label(S, wornTitle, 26, BobUi.Sun, TextAnchor.MiddleCenter, FontStyle.Bold);
+                BobUi.OutlineText(tl, BobUi.Ink, 0.28f);
+                BobUi.Pin(tl.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -322), new Vector2(700, 40));
+            }
 
             // Dock (bottom left): only buttons that open a screen that works. A4 removed "บ้าน", which only raised a
-            // "เร็วๆ นี้" toast, so the dock is one square again (the layout group keeps the single child at 190).
-            var dock = BobUi.Pin(BobUi.Rect("Dock", S), Vector2.zero, Vector2.zero, new Vector2(30, 30), new Vector2(190, 190));
+            // "เร็วๆ นี้" toast; 17 Nov added the board and the daily, so the dock is three squares wide now
+            // (3 x 143 + 2 x 14 spacing = 457, rounded to 460).
+            var dock = BobUi.Pin(BobUi.Rect("Dock", S), Vector2.zero, Vector2.zero, new Vector2(30, 30), new Vector2(460, 190));
             var dh = dock.gameObject.AddComponent<HorizontalLayoutGroup>(); dh.spacing = 14; dh.childControlWidth = dh.childControlHeight = true;
             DockButton(dock, "menu_shop", "ร้านค้า", () => { Phase p = Phase.Shop; phase = p; Sfx("ui_confirm"); RenderAll(); });
+            DockButton(dock, "icon_star", "อันดับ", () => SetOverlay(Overlay.Board));
+            DockButton(dock, "icon_timer", "เดลี่", () => SetOverlay(Overlay.Daily));
 
             // Task Race is the only match (docs 24): the chip above PLAY is the chapter the player picked in S13, tap
             // opens the stage select. It carries the values the TaskRace scene applies (difficulty + clock), so what
@@ -924,7 +956,7 @@ namespace Bob.Game
             if (!string.IsNullOrEmpty(roomNote))
                 BobUi.Label(right, roomNote, 24, BobUi.Muted, TextAnchor.UpperLeft);
 
-            BobUi.Label(right, "ห้องออนไลน์: ทุกคนอยู่ฝั่งเราและแข่งกับคู่แข่งจำลองจนกว่าจะมีระบบทีมสองฝั่ง", 20, BobUi.Muted, TextAnchor.UpperLeft);
+            BobUi.Label(right, "ห้องออนไลน์: ทุกคนอยู่ฝั่งเรา แข่งกับคู่แข่งจำลอง 3 รอบ ชนะ 2 รอบก่อน · ออกกลางซีรีส์ = ซีรีส์ถูกยกเลิก", 20, BobUi.Muted, TextAnchor.UpperLeft);
         }
 
         // ---------------------------------------------------------------- S16 hero select (15 s when starting a match)
@@ -1018,8 +1050,10 @@ namespace Bob.Game
                 BobUi.Pin(BobUi.Img(pr, "item_coin", 52).rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(14, 0), new Vector2(52, 52));
                 var pt = BobUi.Label(pr, has ? "มีแล้ว" : it.price.ToString(), 38, has ? Color.white : BobUi.Ink, TextAnchor.MiddleRight, FontStyle.Bold); BobUi.Stretch(pt.rectTransform, 70, 0, 18, 0);
             }
-            var fn = BobUi.Label(screenRoot, "ของแต่งตัวใช้ในตู้เสื้อผ้า (เร็วๆ นี้) ไม่มีกล่องสุ่ม ราคาแสดงชัดเจนเสมอ", 26, BobUi.Surface, TextAnchor.MiddleCenter); BobUi.OutlineText(fn, BobUi.Ink, 0.25f);
-            BobUi.Pin(fn.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 40), new Vector2(1500, 50));
+            var fn = BobUi.Label(screenRoot, "ของแต่งไม่ได้ขายด้วยเหรียญ · ได้จากการเล่น ไม่มีกล่องสุ่ม", 26, BobUi.Surface, TextAnchor.MiddleCenter); BobUi.OutlineText(fn, BobUi.Ink, 0.25f);
+            BobUi.Pin(fn.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 130), new Vector2(1500, 44));
+            var wardrobe = BobUi.Button(screenRoot, "ตู้เสื้อผ้า · ของแต่งที่ปลดด้วยการเล่น", BobUi.Sun, () => { Sfx("ui_tap"); SetOverlay(Overlay.Wardrobe); }, 28);
+            BobUi.Pin((RectTransform)wardrobe.transform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 36), new Vector2(820, 84));
         }
 
         void AskBuy(string id)

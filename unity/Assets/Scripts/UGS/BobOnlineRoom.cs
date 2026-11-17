@@ -32,11 +32,17 @@ namespace Bob.Ugs
     {
         public const string MatchScene = "TaskRace";
         public const int MaxSlots = 4;
+        /// <summary>One online round is the story round length, and the room takes two of three (docs 27 section 10.7).</summary>
+        public const float SeriesRoundSeconds = 100f;
+        public const int SeriesWinsToTake = 2;
         const string RelayJoinCodeKey = "RelayJoinCode";
         const string HeroKey = "hero";
         const string PoseMessage = "bob.pose";
         const string TaskMessage = "bob.task";
         const string StartMessage = "bob.start";
+        const string RoundMessage = "bob.round";
+        const string ResultMessage = "bob.result";
+        const string AbandonMessage = "bob.abandon";
         const string ConnectionType = "dtls";
         const float HeartbeatSeconds = 15f;
         const float RosterSeconds = 2f;
@@ -67,11 +73,22 @@ namespace Bob.Ugs
         public string HeroId { get; private set; } = "sweep";
         /// <summary>Hero ids in lobby join order (host first) — the S15 room draws one portrait per entry.</summary>
         public IReadOnlyList<string> Roster => roster;
+        /// <summary>
+        /// The room's best-of-three (docs 27 section 10.7). It lives here, not in the TaskRace scene, so the standing
+        /// survives a scene reload and every device reads the same host-applied result. Null before host/join.
+        /// </summary>
+        public Bob.TaskRace.StorySeries Series { get; private set; }
 
         /// <summary>(netId, world position, yaw) — the sender's hero, 10 times a second over the unreliable channel.</summary>
         public event Action<int, Vector3, float> PoseReceived;
         /// <summary>(netId, spotId, completed) — host-authoritative: a client's event is applied once, then rebroadcast.</summary>
         public event Action<int, string, bool> TaskReceived;
+        /// <summary>A client applied the host's round result (the series itself already carries it).</summary>
+        public event Action<Bob.TaskRace.SeriesRound> SeriesResultApplied;
+        /// <summary>A client was told to start round N on the host's seed.</summary>
+        public event Action<int, int, float> SeriesRoundRequested;
+        /// <summary>The series was voided because somebody left before it was decided.</summary>
+        public event Action SeriesAbandoned;
 
         NetworkManager nm;
         UnityTransport transport;
@@ -141,10 +158,11 @@ namespace Bob.Ugs
                 }
 
                 HeroId = pendingHero;
+                Series = new Bob.TaskRace.StorySeries(SeriesRoundSeconds, SeriesWinsToTake);
                 HookHandlers(net);
                 StartLoops();
                 SetStatus("hosting");
-                Debug.Log($"[UGS] room up · lobby {lobby.LobbyCode} · relay {relayCode} · {slots} slots");
+                Debug.Log($"[UGS] room up · lobby {lobby.LobbyCode} · relay {relayCode} · {slots} slots · best of 3");
                 RefreshRoster();
                 return true;
             }
@@ -198,10 +216,11 @@ namespace Bob.Ugs
                 }
 
                 HeroId = pendingHero;
+                Series = new Bob.TaskRace.StorySeries(SeriesRoundSeconds, SeriesWinsToTake);
                 HookHandlers(net);
                 StartLoops();
                 SetStatus("joining");
-                Debug.Log($"[UGS] joined room · lobby {lobby.LobbyCode}");
+                Debug.Log($"[UGS] joined room · lobby {lobby.LobbyCode} · best of 3");
                 RefreshRoster();
                 return true;
             }
@@ -216,6 +235,10 @@ namespace Bob.Ugs
         {
             loops?.Cancel(); loops = null;
             var leaving = lobby;
+            // docs 27 section 10.7: walking out with a series in play voids it for everyone still inside. A series that
+            // is already decided keeps its result — leaving after the whistle takes nothing back.
+            bool wasHost = leaving != null && leaving.HostId == OwnPlayerId;
+            if (Series != null && !Series.Over) AbandonSeries(wasHost);
             lobby = null;
             Starting = false;
 
@@ -224,6 +247,7 @@ namespace Bob.Ugs
             if (nm != null && nm.IsListening) nm.Shutdown();
             UnhookHandlers();
             roster.Clear();
+            Series = null;
             SetStatus("offline");
         }
 
@@ -252,6 +276,8 @@ namespace Bob.Ugs
         public void StartMatch(int seed, int players)
         {
             if (!InRoom || !IsHost || nm == null) return;
+            // A start either opens the room's series or opens a fresh one after a decided one (docs 27 section 10.7).
+            if (Series == null || Series.Over) Series = new Bob.TaskRace.StorySeries(SeriesRoundSeconds, SeriesWinsToTake);
             Starting = true;
             StartSeed = seed;
             int slots = Mathf.Clamp(players, 1, MaxSlots);
@@ -262,6 +288,60 @@ namespace Bob.Ugs
                 nm.CustomMessagingManager.SendNamedMessageToAll(StartMessage, writer, NetworkDelivery.ReliableSequenced);
             }
             EnterMatch(true, slots, seed);
+        }
+
+        // ---------------------------------------------------------------- best-of-three (docs 27 section 10.7)
+
+        /// <summary>Host: publish a closed round's line; the clients apply the very same numbers to their room series.</summary>
+        public void SendSeriesResult(Bob.TaskRace.SeriesRound line)
+        {
+            if (!InRoom || !IsHost || nm == null) return;
+            using (var writer = new FastBufferWriter(24, Allocator.Temp))
+            {
+                writer.WriteValueSafe(line.Number);
+                writer.WriteValueSafe((byte)line.Outcome);
+                writer.WriteValueSafe(line.LocalTasks);
+                writer.WriteValueSafe(line.RivalTasks);
+                writer.WriteValueSafe(line.LocalPoints);
+                writer.WriteValueSafe(line.RivalPoints);
+                nm.CustomMessagingManager.SendNamedMessageToAll(ResultMessage, writer, NetworkDelivery.ReliableSequenced);
+            }
+            Debug.Log($"[UGS] series result sent · {line}");
+        }
+
+        /// <summary>Host: open the next round on a fresh seed every device draws from (docs 27 section 10.7).</summary>
+        public void SendSeriesRound(int round, int seed, float seconds)
+        {
+            if (!InRoom || !IsHost || nm == null) return;
+            using (var writer = new FastBufferWriter(16, Allocator.Temp))
+            {
+                writer.WriteValueSafe(round);
+                writer.WriteValueSafe(seed);
+                writer.WriteValueSafe(seconds);
+                nm.CustomMessagingManager.SendNamedMessageToAll(RoundMessage, writer, NetworkDelivery.ReliableSequenced);
+            }
+            Debug.Log($"[UGS] next round sent · round {round} · seed {seed} · {seconds:0} s");
+        }
+
+        /// <summary>
+        /// Void a series that is still in play; the host tells the room. A client leaving only voids its own copy —
+        /// the host learns about the departure from Netcode and voids the room's series there.
+        /// </summary>
+        public void AbandonSeries() => AbandonSeries(true);
+
+        void AbandonSeries(bool broadcast)
+        {
+            if (Series == null || !Series.Abandon()) return;
+            if (broadcast && nm != null && nm.IsListening && nm.IsHost)
+            {
+                using (var writer = new FastBufferWriter(4, Allocator.Temp))
+                {
+                    writer.WriteValueSafe(Series.Round);
+                    nm.CustomMessagingManager.SendNamedMessageToAll(AbandonMessage, writer, NetworkDelivery.ReliableSequenced);
+                }
+            }
+            Debug.Log("[UGS] series abandoned · somebody left before it was decided");
+            SeriesAbandoned?.Invoke();
         }
 
         void EnterMatch(bool host, int players, int seed)
@@ -322,6 +402,9 @@ namespace Bob.Ugs
             net.CustomMessagingManager.RegisterNamedMessageHandler(PoseMessage, HandlePose);
             net.CustomMessagingManager.RegisterNamedMessageHandler(TaskMessage, HandleTask);
             net.CustomMessagingManager.RegisterNamedMessageHandler(StartMessage, HandleStart);
+            net.CustomMessagingManager.RegisterNamedMessageHandler(RoundMessage, HandleSeriesRound);
+            net.CustomMessagingManager.RegisterNamedMessageHandler(ResultMessage, HandleSeriesResult);
+            net.CustomMessagingManager.RegisterNamedMessageHandler(AbandonMessage, HandleSeriesAbandon);
         }
 
         void UnhookHandlers()
@@ -334,6 +417,9 @@ namespace Bob.Ugs
             nm.CustomMessagingManager.UnregisterNamedMessageHandler(PoseMessage);
             nm.CustomMessagingManager.UnregisterNamedMessageHandler(TaskMessage);
             nm.CustomMessagingManager.UnregisterNamedMessageHandler(StartMessage);
+            nm.CustomMessagingManager.UnregisterNamedMessageHandler(RoundMessage);
+            nm.CustomMessagingManager.UnregisterNamedMessageHandler(ResultMessage);
+            nm.CustomMessagingManager.UnregisterNamedMessageHandler(AbandonMessage);
         }
 
         void OnPeerConnected(ulong clientId)
@@ -347,6 +433,9 @@ namespace Bob.Ugs
         {
             Debug.Log($"[UGS] peer left · client {clientId}");
             if (nm != null && nm.IsHost) SetStatus("hosting · " + Players + "/" + MaxPlayers);
+            // docs 27 section 10.7: a series only belongs to the room that started it. Somebody leaving mid-series voids
+            // it for everyone (no side is awarded the rounds that were never played).
+            if (nm != null && nm.IsHost && Starting && Series != null && !Series.Over) AbandonSeries(true);
             RefreshRoster();
         }
 
@@ -407,9 +496,55 @@ namespace Bob.Ugs
             if (nm == null || nm.IsHost) return;
             reader.ReadValueSafe(out int seed);
             reader.ReadValueSafe(out int players);
+            // A start after the last series was decided opens a fresh one on this device too (docs 27 section 10.7).
+            if (Series == null || Series.Over) Series = new Bob.TaskRace.StorySeries(SeriesRoundSeconds, SeriesWinsToTake);
             StartSeed = seed;
             Starting = true;
             EnterMatch(false, players, seed);
+        }
+
+        // ---------------------------------------------------------------- best-of-three handlers
+
+        void HandleSeriesResult(ulong sender, FastBufferReader reader)
+        {
+            if (nm == null || nm.IsHost) return;
+            if (sender != NetworkManager.ServerClientId) return;
+            reader.ReadValueSafe(out int round);
+            reader.ReadValueSafe(out byte outcome);
+            reader.ReadValueSafe(out int localTasks);
+            reader.ReadValueSafe(out int rivalTasks);
+            reader.ReadValueSafe(out int localPoints);
+            reader.ReadValueSafe(out int rivalPoints);
+            if (outcome > (byte)Bob.TaskRace.RoundOutcome.Loss) return;
+            // Only the round the room is waiting for: a duplicated or stale result cannot rewrite a closed score.
+            if (Series == null || Series.Over || round != Series.Round) return;
+            var line = Series.RegisterOutcome((Bob.TaskRace.RoundOutcome)outcome,
+                localTasks, rivalTasks, localPoints, rivalPoints);
+            Debug.Log($"[UGS] series result from host · {line}");
+            SeriesResultApplied?.Invoke(line);
+        }
+
+        void HandleSeriesRound(ulong sender, FastBufferReader reader)
+        {
+            if (nm == null || nm.IsHost) return;
+            if (sender != NetworkManager.ServerClientId) return;
+            reader.ReadValueSafe(out int round);
+            reader.ReadValueSafe(out int seed);
+            reader.ReadValueSafe(out float seconds);
+            if (Series == null || Series.Over || round != Series.Round) return;
+            Debug.Log($"[UGS] next round from host · round {round} · seed {seed} · {seconds:0} s");
+            SeriesRoundRequested?.Invoke(round, seed, seconds);
+        }
+
+        void HandleSeriesAbandon(ulong sender, FastBufferReader reader)
+        {
+            if (nm == null || nm.IsHost) return;
+            if (sender != NetworkManager.ServerClientId) return;
+            reader.ReadValueSafe(out int round);
+            if (Series == null || Series.Over) return;
+            Series.Abandon();
+            Debug.Log($"[UGS] series abandoned by the host · round {round}");
+            SeriesAbandoned?.Invoke();
         }
 
         // ---------------------------------------------------------------- loops

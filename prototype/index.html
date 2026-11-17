@@ -407,6 +407,14 @@ function taskEmergencyEnemy(seed){
 }
 
 /* ============ STATE ============ */
+// The daily challenge (docs 31 2.2): mirror of server/daily.js and BobDaily.cs. The day boundary is UTC+7 midnight and
+// the seed is a pure function of the day number, so a phone with a wrong clock cannot roll a private list.
+// DAILY RULES BEGIN - server/daily-test.js compares this block with server/daily.js after every change.
+const DAILY_SALT=0x02f6e2b1, DAILY_ROUNDS=1, DAILY_TZ_MS=7*3600*1000, DAILY_SEED_MAX=8388607;
+function dailyDayNumber(ms){ return Math.floor((ms+DAILY_TZ_MS)/86400000) }
+function dailySeed(dayNumber){ return 1+Math.floor(mulberry((dayNumber|0)^DAILY_SALT)()*DAILY_SEED_MAX) }
+function dailyDayLabel(dayNumber){ return new Date((dayNumber|0)*86400000).toISOString().slice(0,10) }
+// DAILY RULES END
 const $=id=>document.getElementById(id);
 const S={phase:'title',char:'sweep',seed:(Date.now()%1e6)|0,round:0,R:null,stack:[],hand:[],time:ROUND_TIME,budget:ROUND_BUDGET,
   carry:0,rivalCarry:0,wins:0,losses:0,abUsed:false,shield:false,swap:false,freeze:0,preview:null,last:null,coins:0,

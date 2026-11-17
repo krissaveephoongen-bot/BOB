@@ -36,6 +36,7 @@ function InitModule(ctx, logger, nk, initializer) {
   initializer.registerRpc('bob_create_match', rpcCreateMatch);
   initializer.registerRpc('line_status', rpcLineStatus); // docs 28: LINE Login, secret stays in the server env
   initializer.registerRpc('line_login', rpcLineLogin);
+  initializer.registerRpc('bob_daily', rpcDaily); // docs 31 2.2: the day's seed, same code as GET /daily/seed
   initializer.registerMatch('bob_coop', { matchInit: matchInit, matchJoinAttempt: matchJoinAttempt, matchJoin: matchJoin,
     matchLeave: matchLeave, matchLoop: matchLoop, matchTerminate: matchTerminate, matchSignal: matchSignal });
   initializer.registerMatchmakerMatched(mpMatchmakerMatched);

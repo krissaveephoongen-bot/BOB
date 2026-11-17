@@ -82,13 +82,19 @@ namespace Bob.TaskRace
         public float SecondsForRound { get; private set; }
         public bool ChallengeOffered { get; private set; }
         public SeriesRound? LastRound { get; private set; }
-        /// <summary>Two wins either way, or all three rounds played: whoever has more rounds takes the chapter.
+        /// <summary>
+        /// The series was voided before it was decided because a player left the room mid-series (docs 27 section 10.7).
+        /// Nobody takes it: the round that was in play pays as a draw, and the next series starts from round one.
+        /// </summary>
+        public bool Abandoned { get; private set; }
+        /// <summary>Two wins either way, or all three rounds played, or a voided series: the series is closed.
         /// Counts rounds actually played: `Round` already points at the next one, so it cannot drive this test.</summary>
-        public bool Over => LastRound.HasValue &&
-                            (LocalWins >= winsToTake || RivalWins >= winsToTake || LastRound.Value.Number >= Rounds);
-        /// <summary>Taking the chapter needs <see cref="winsToTake"/> round wins: one win and two draws is not a win.
+        public bool Over => Abandoned || (LastRound.HasValue &&
+                            (LocalWins >= winsToTake || RivalWins >= winsToTake || LastRound.Value.Number >= Rounds));
+        /// <summary>Taking the chapter needs <see cref="winsToTake"/> round wins: one win and two draws is not a win,
+        /// and a voided series never has a winner.
         /// Owns the verdict so a series cannot be "taken" by having merely lost less.</summary>
-        public bool LocalTookSeries => LocalWins >= winsToTake;
+        public bool LocalTookSeries => !Abandoned && LocalWins >= winsToTake;
         /// <summary>Won without dropping a round: the "never lost a round" star of the chapter card (A3).</summary>
         public bool CleanSweep => LocalTookSeries && RivalWins == 0;
         /// <summary>
@@ -128,17 +134,41 @@ namespace Bob.TaskRace
             CartRuns = CartPasses = 0;
             TotalLocalTasks = TotalRivalTasks = TotalLocalPoints = TotalRivalPoints = 0;
             ChallengeOffered = false; LastRound = null; SecondsForRound = roundSeconds;
+            Abandoned = false;
         }
 
-        /// <summary>Close the round on its task counts; points only break a task tie, and a tie on both is a draw.</summary>
-        public SeriesRound Register(int localTasks, int rivalTasks, int localPoints, int rivalPoints)
+        /// <summary>
+        /// Void a series that is still in play (docs 27 section 10.7): a player left the room mid-series, so the room
+        /// cannot keep playing a shared best-of-three. False when the series was already decided — a finished result
+        /// is never taken back by a later departure.
+        /// </summary>
+        public bool Abandon()
         {
-            var outcome = localTasks > rivalTasks ? RoundOutcome.Win
-                        : localTasks < rivalTasks ? RoundOutcome.Loss
-                        : localPoints > rivalPoints ? RoundOutcome.Win
-                        : localPoints < rivalPoints ? RoundOutcome.Loss
-                        : RoundOutcome.Draw;
+            if (Over) return false;
+            Abandoned = true;
+            return true;
+        }
 
+        /// <summary>The round's winner from the two task counts, points only breaking a task tie, then a draw.</summary>
+        public static RoundOutcome OutcomeOf(int localTasks, int rivalTasks, int localPoints, int rivalPoints) =>
+            localTasks > rivalTasks ? RoundOutcome.Win
+          : localTasks < rivalTasks ? RoundOutcome.Loss
+          : localPoints > rivalPoints ? RoundOutcome.Win
+          : localPoints < rivalPoints ? RoundOutcome.Loss
+          : RoundOutcome.Draw;
+
+        /// <summary>Close the round on its task counts; points only break a task tie, and a tie on both is a draw.</summary>
+        public SeriesRound Register(int localTasks, int rivalTasks, int localPoints, int rivalPoints) =>
+            RegisterOutcome(OutcomeOf(localTasks, rivalTasks, localPoints, rivalPoints),
+                localTasks, rivalTasks, localPoints, rivalPoints);
+
+        /// <summary>
+        /// Close a round whose winner was decided elsewhere — the online host is the one judge of a shared round
+        /// (docs 27 section 10.7). The maths of the totals and the series score are the same as <see cref="Register"/>;
+        /// callers must not register a round after <see cref="Over"/>, the room ignores stale results before this call.
+        /// </summary>
+        public SeriesRound RegisterOutcome(RoundOutcome outcome, int localTasks, int rivalTasks, int localPoints, int rivalPoints)
+        {
             TotalLocalTasks += Math.Max(0, localTasks);
             TotalRivalTasks += Math.Max(0, rivalTasks);
             TotalLocalPoints += Math.Max(0, localPoints);

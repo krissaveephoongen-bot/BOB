@@ -123,6 +123,22 @@ namespace UnityEngine
 
 namespace Bob.Ugs
 {
+    /// <summary>Cloud Save mirror: the wardrobe stores the ids of the cosmetics it granted (real file left out here).</summary>
+    public class PlayerProfileData
+    {
+        public int coins = 0;
+        public int level = 1;
+        public System.Collections.Generic.List<string> unlockedItems = new System.Collections.Generic.List<string>();
+    }
+
+    /// <summary>Mirror of the members the game screens touch; the real manager needs the UGS SDK.</summary>
+    public class UgsCloudSaveManager : MonoBehaviour
+    {
+        public static UgsCloudSaveManager Instance { get; private set; }
+        public PlayerProfileData Profile { get; private set; }
+        public bool IsLoaded { get; private set; }
+        public System.Threading.Tasks.Task<bool> UnlockItemAndSaveAsync(string itemId) { return null; }
+    }
     /// <summary>The real bootstrap needs the Unity Gaming Services SDK (unity/Assets/Scripts/UGS is left out of this
     /// project). Game screens reference it for the S02 guest sign-in, so mirror the members they touch.</summary>
     public class UgsBootstrapManager : MonoBehaviour
@@ -136,6 +152,30 @@ namespace Bob.Ugs
         public System.Threading.Tasks.Task EnsureReadyAsync() => null;
     }
 
+    /// <summary>The board card (UGS/BobBoard.cs) is SDK code and stays out of this project; mirror the three plain types
+    /// the HUD reads, so the card compiles without the Leaderboards assembly.</summary>
+    public sealed class BobBoardRow
+    {
+        public int Rank;
+        public string Name;
+        public int Score;
+        public bool Self;
+    }
+
+    public sealed class BobBoardSnapshot
+    {
+        public readonly System.Collections.Generic.List<BobBoardRow> Rows = new System.Collections.Generic.List<BobBoardRow>();
+        public bool SignedIn;
+        public int SelfRank = -1;
+        public int SelfScore;
+        public string Error;
+    }
+
+    public static class BobBoardService
+    {
+        public static System.Threading.Tasks.Task<BobBoardSnapshot> LoadAsync(int limit = 10) => null;
+    }
+
     /// <summary>The real reporter (UGS/BobRaceScoreReporter.cs) posts a finished match's score to the leaderboard.
     /// The Task Race manager only needs Attach, so that is all this mirrors.</summary>
     public class BobRaceScoreReporter : MonoBehaviour
@@ -147,6 +187,8 @@ namespace Bob.Ugs
     /// screens and the Task Race scene read: the state they draw, the two events they listen to, and the calls they make.</summary>
     public sealed class BobOnlineRoom : MonoBehaviour
     {
+        public const float SeriesRoundSeconds = 100f;
+        public const int SeriesWinsToTake = 2;
         public static BobOnlineRoom Instance { get; private set; }
         public static BobOnlineRoom Ensure() => null;
         public bool InRoom { get; private set; }
@@ -161,13 +203,20 @@ namespace Bob.Ugs
         public int StartSeed { get; private set; }
         public string HeroId { get; private set; }
         public System.Collections.Generic.IReadOnlyList<string> Roster { get; private set; }
+        public Bob.TaskRace.StorySeries Series { get; private set; }
         public event System.Action<int, Vector3, float> PoseReceived;
         public event System.Action<int, string, bool> TaskReceived;
+        public event System.Action<Bob.TaskRace.SeriesRound> SeriesResultApplied;
+        public event System.Action<int, int, float> SeriesRoundRequested;
+        public event System.Action SeriesAbandoned;
         public System.Threading.Tasks.Task<bool> HostAsync(string heroId, int maxPlayers) => null;
         public System.Threading.Tasks.Task<bool> JoinAsync(string heroId, string code) => null;
         public System.Threading.Tasks.Task LeaveAsync() => null;
         public void StartMatch(int seed, int players) { }
         public void SendPose(Vector3 position, float yaw) { }
         public void SendTask(string spotId, bool completed) { }
+        public void SendSeriesResult(Bob.TaskRace.SeriesRound line) { }
+        public void SendSeriesRound(int round, int seed, float seconds) { }
+        public void AbandonSeries() { }
     }
 }

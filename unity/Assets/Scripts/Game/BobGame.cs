@@ -77,6 +77,8 @@ namespace Bob.Game
             LoadProfile();
             BuildWorld();
             BuildHud();
+            // After the HUD: earning a cosmetic toasts, and the toast line does not exist before BuildHud (docs 31 2.3).
+            GrantUnlocks();
             RenderAll();
             if (AutoRequested()) StartCoroutine(AutoPlay()); else StartCoroutine(BootFlow());
         }

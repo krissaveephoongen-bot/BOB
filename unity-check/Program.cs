@@ -57,6 +57,80 @@ static class Program
             BobRaceScore.Of(10, 4, true, false, 0, 3) == BobRaceScore.Of(10, 4, true, false, 0, 1) * 14 / 10);
         Console.WriteLine("race score table checked");
 
+        // The board card's bars (docs 31 section 3): length against the leader, a floor so a low score still reads.
+        Check("board: the leader's bar is full", BobRaceScore.BarFraction(2268, 2268) == 1f);
+        Check("board: half the score is half a bar", Math.Abs(BobRaceScore.BarFraction(810, 1620) - 0.5f) < 0.0001f);
+        Check("board: a tiny score keeps a visible sliver", BobRaceScore.BarFraction(10, 2000) == 0.08f);
+        Check("board: no score or no leader draws nothing",
+            BobRaceScore.BarFraction(0, 100) == 0f && BobRaceScore.BarFraction(50, 0) == 0f);
+        Check("board: a score past the leader stops at the track", BobRaceScore.BarFraction(9000, 1620) == 1f);
+        Console.WriteLine("board bars checked");
+
+        // The daily challenge (docs 31 2.2): the day turns at UTC+7 midnight and the seed belongs to the server.
+        // Same six rows as server/daily-test.js, so a phone that drifts from GET /daily/seed fails this gate.
+        long Ms(int y, int mo, int d, int h, int mi, int sec) =>
+            new DateTimeOffset(new DateTime(y, mo, d, h, mi, sec, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
+        var noonTh = Ms(2026, 11, 17, 5, 0, 0);
+        Check("daily: noon on 2026-11-17 is day 20774", BobDaily.DayNumber(noonTh) == 20774);
+        Check("daily: the day turns at UTC+7 midnight",
+            BobDaily.DayNumber(Ms(2026, 11, 17, 16, 59, 59)) == 20774 &&
+            BobDaily.DayNumber(Ms(2026, 11, 17, 17, 0, 0)) == 20775);
+        Check("daily: a fresh day lasts a whole day",
+            BobDaily.UntilNextDayMs(Ms(2026, 11, 17, 17, 0, 0)) == BobDaily.DayMs);
+        Check("daily: the day halves by noon", BobDaily.UntilNextDayMs(noonTh) == 43200000L);
+        var seedRows = new (int day, int want)[]
+        {
+            (20774, 8131275), (20775, 1364361), (20776, 8028718),
+            (0, 716302), (1, 4737385), (365, 3934344),
+        };
+        foreach (var row in seedRows)
+            Check($"daily: seed of day {row.day} is {row.want}", BobDaily.SeedFor(row.day) == row.want);
+        Check("daily: a seed is in 1..8388607",
+            new[] { 0, 1, 20774, 20775, 99999, 1234567 }.All(d => BobDaily.SeedFor(d) >= 1 && BobDaily.SeedFor(d) <= 8388607));
+        Check("daily: thirty days give thirty different seeds",
+            Enumerable.Range(20774, 30).Select(BobDaily.SeedFor).Distinct().Count() == 30);
+        Check("daily: the seed and the day agree",
+            BobDaily.Matches(8131275, 20774) && !BobDaily.Matches(8131275, 20775) && !BobDaily.Matches(0, 20774));
+        Check("daily: a new day refills the attempt",
+            BobDaily.AttemptsLeft(20775, 20774, 1) == 1 && BobDaily.AttemptsLeft(20774, 20774, 0) == 1);
+        Check("daily: a played day does not",
+            BobDaily.AttemptsLeft(20774, 20774, 1) == 0 && BobDaily.AttemptsLeft(20774, 20774, 5) == 0);
+        Console.WriteLine("daily seed table checked");
+
+        // The cosmetics table (docs 31 2.3): decoration only, bought with counters the device already keeps. The whole
+        // point is that no row asks for skill the game does not measure, and that progress never overshoots its target.
+        Check("unlocks: six pieces with unique ids",
+            BobUnlocks.All.Length == 6 && BobUnlocks.All.Select(d => d.Id).Distinct().Count() == 6);
+        Check("unlocks: a brand new player has earned nothing", BobUnlocks.EarnedCount(new BobUnlockStats(0, 0, 0, 0, 0)) == 0);
+        Check("unlocks: three matches earn the sweep title",
+            BobUnlocks.Earned(BobUnlocks.Get("title_sweep"), new BobUnlockStats(3, 0, 0, 0, 0)));
+        Check("unlocks: two matches do not",
+            !BobUnlocks.Earned(BobUnlocks.Get("title_sweep"), new BobUnlockStats(2, 0, 0, 0, 0)));
+        Check("unlocks: one win earns the teal frame",
+            BobUnlocks.Earned(BobUnlocks.Get("frame_teal"), new BobUnlockStats(0, 1, 0, 0, 0)));
+        Check("unlocks: 900 best points earn the sun frame, 899 do not",
+            BobUnlocks.Earned(BobUnlocks.Get("frame_sun"), new BobUnlockStats(0, 0, 900, 0, 0)) &&
+            !BobUnlocks.Earned(BobUnlocks.Get("frame_sun"), new BobUnlockStats(0, 0, 899, 0, 0)));
+        Check("unlocks: three days of daily earn the steady title",
+            BobUnlocks.Earned(BobUnlocks.Get("title_steady"), new BobUnlockStats(0, 0, 0, 0, 3)) &&
+            !BobUnlocks.Earned(BobUnlocks.Get("title_steady"), new BobUnlockStats(0, 0, 0, 0, 2)));
+        Check("unlocks: three cleared chapters earn the clean title",
+            BobUnlocks.Earned(BobUnlocks.Get("title_clean"), new BobUnlockStats(0, 0, 0, 3, 0)));
+        Check("unlocks: progress stops at the target",
+            BobUnlocks.Progress(BobUnlocks.Get("frame_sun"), new BobUnlockStats(0, 0, 5000, 0, 0)) == 900);
+        Check("unlocks: the progress line reads as asked",
+            BobUnlocks.Requirement(BobUnlocks.Get("title_steady"), new BobUnlockStats(0, 0, 0, 0, 1)) == "วันเดลี่ 1/3");
+        Check("unlocks: missing lists only what is earned and not owned",
+            BobUnlocks.Missing(new BobUnlockStats(3, 1, 0, 0, 0), new List<string> { "title_sweep" })
+                .SequenceEqual(new[] { "frame_teal" }));
+        Check("unlocks: a finished player earns all six",
+            BobUnlocks.EarnedCount(new BobUnlockStats(9, 9, 2000, 9, 9)) == 6);
+        Check("unlocks: every frame carries a colour and every title does not",
+            BobUnlocks.All.Where(d => !d.Title).All(d => d.Hex.Length == 7 && d.Hex[0] == '#') &&
+            BobUnlocks.All.Where(d => d.Title).All(d => d.Hex.Length == 0));
+        Console.WriteLine("unlock table checked");
+
+
         int rooms = 0;
         foreach (var seed in new[] { 1, 2, 3, 7, 42, 999, 123456, 654321, 8388607 })
         for (int round = 1; round <= 3; round++)
@@ -107,6 +181,54 @@ static class Program
         totals.Reset();
         Check("series: reset clears the totals",
             totals.TotalLocalTasks == 0 && totals.TotalLocalPoints == 0 && totals.RoundsPlayed == 0 && totals.Score == "0-0");
+
+        // The online best-of-three (docs 27 section 10.7): the room's series is the same StorySeries, and the host is
+        // the one judge — a round closed with RegisterOutcome counts the outcome the host saw, whatever this device's
+        // own counts were. The void rule is the leave rule: a series still in play can be abandoned, a decided one can not.
+        Check("online: the round outcome follows tasks first",
+            StorySeries.OutcomeOf(6, 5, 0, 0) == RoundOutcome.Win &&
+            StorySeries.OutcomeOf(5, 6, 0, 0) == RoundOutcome.Loss);
+        Check("online: points break a task tie",
+            StorySeries.OutcomeOf(5, 5, 60, 40) == RoundOutcome.Win &&
+            StorySeries.OutcomeOf(5, 5, 40, 60) == RoundOutcome.Loss);
+        Check("online: a tie on both is a draw", StorySeries.OutcomeOf(5, 5, 50, 50) == RoundOutcome.Draw);
+
+        var hostWord = new StorySeries(100f, 2);
+        var hostLine = hostWord.RegisterOutcome(RoundOutcome.Win, 4, 9, 0, 0);
+        Check("online: the host's outcome counts even when the counts disagree",
+            hostLine.Outcome == RoundOutcome.Win && hostLine.LocalWins == 1 && hostLine.RivalWins == 0);
+        hostWord.RegisterOutcome(RoundOutcome.Win, 2, 8, 0, 0);
+        Check("online: two host wins close the series at round two",
+            hostWord.Over && hostWord.LocalTookSeries && hostWord.RoundsPlayed == 2 && hostWord.Score == "2-0");
+        Check("online: a client applying a stale line cannot reopen a closed round",
+            hostWord.Round == 2 && hostWord.LastRound.Value.Number == 2);
+
+        var voided = new StorySeries(100f, 2);
+        voided.Register(6, 5, 0, 0);
+        Check("online: a live series can be voided", voided.Abandon() && voided.Abandoned && voided.Over);
+        Check("online: a voided series has no winner",
+            !voided.LocalTookSeries && voided.Stars == 0 && voided.Score == "1-0" && voided.RoundsPlayed == 1);
+
+        var lateLeave = new StorySeries(100f, 2);
+        lateLeave.Register(6, 5, 0, 0);
+        lateLeave.Register(6, 5, 0, 0);
+        Check("online: a decided series keeps its winner when someone leaves",
+            !lateLeave.Abandon() && !lateLeave.Abandoned && lateLeave.LocalTookSeries && lateLeave.Score == "2-0");
+
+        var emptyVoid = new StorySeries(100f, 2);
+        Check("online: leaving before the first result still voids the series",
+            emptyVoid.Abandon() && emptyVoid.Over && !emptyVoid.LocalTookSeries && emptyVoid.RoundsPlayed == 0);
+
+        var withDraw = new StorySeries(100f, 2);
+        withDraw.Register(6, 6, 70, 70);
+        withDraw.Register(3, 4, 0, 0);
+        withDraw.Register(7, 6, 0, 0);
+        Check("online: a draw is a played round but no win",
+            withDraw.Over && withDraw.RoundsPlayed == 3 && withDraw.LocalWins == 1 && withDraw.RivalWins == 1 &&
+            !withDraw.LocalTookSeries);
+
+        voided.Reset();
+        Check("online: reset clears the void flag", !voided.Abandoned && !voided.Over && voided.Score == "0-0");
 
         var margin = new StorySeries(100f, 2);
         margin.Register(6, 4, 0, 0);

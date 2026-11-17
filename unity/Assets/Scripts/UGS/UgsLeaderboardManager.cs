@@ -55,6 +55,29 @@ namespace Bob.Ugs
             return false;
         }
 
+        /// <summary>My own entry on the board (rank counts from 0), or null when this device has no score yet.</summary>
+        public async Task<LeaderboardEntry> GetPlayerScoreAsync()
+        {
+            try
+            {
+                var entry = await LeaderboardsService.Instance.GetPlayerScoreAsync(leaderboardId);
+                LastError = null;
+                return entry;
+            }
+            catch (LeaderboardsException e)
+            {
+                LastError = e.Message;
+                Debug.LogError("[UGS] player score read failed: " + e);
+            }
+            catch (Exception e)
+            {
+                LastError = e.Message;
+                Debug.LogError("[UGS] player score read failed: " + e);
+            }
+
+            return null;
+        }
+
         public async Task<LeaderboardScoresPage> GetTopScoresAsync(int limit = 10)
         {
             try

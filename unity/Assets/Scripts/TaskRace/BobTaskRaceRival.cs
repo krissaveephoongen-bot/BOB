@@ -75,7 +75,8 @@ namespace Bob.TaskRace
 
             if (round != null && round.TaskCount > 0 && round.DoneCountOf(TeamId.TeamB) >= round.TaskCount)
             {
-                manager.EndMatch();
+                // A closed round, not necessarily a closed match: online the host decides the shared line (docs 27 10.7).
+                manager.OnRivalFinished();
                 return;
             }
             Schedule();
