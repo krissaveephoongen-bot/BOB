@@ -43,7 +43,7 @@ namespace Bob.Game
         RectTransform cartCardRt;
         string popFor;
         int lastTick = -1;
-        enum Overlay { None, Pause, Settings, Board, Daily }
+        enum Overlay { None, Pause, Settings, Board, Daily, Wardrobe }
         Overlay overlay = Overlay.None;
         // The board card reads a snapshot, never the SDK: LoadBoard fills it in the background and re-renders.
         BobBoardSnapshot boardSnap;
@@ -767,6 +767,7 @@ namespace Bob.Game
             }
             if (overlay == Overlay.Board) { Board(card); return; }
             if (overlay == Overlay.Daily) { Daily(card); return; }
+            if (overlay == Overlay.Wardrobe) { Wardrobe(card); return; }
             BobUi.Label(card, "ตั้งค่า", 52, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
             BobUi.Size(BobUi.Button(card, "เสียงเอฟเฟกต์: " + (soundOn ? "เปิด" : "ปิด"), soundOn ? BobUi.Sun : BobUi.Surface, () => { SetSound(!soundOn); RenderOverlay(); }, 34), 104, 104);
             BobUi.Size(BobUi.Button(card, "เพลง: " + (musicOn ? "เปิด" : "ปิด"), musicOn ? BobUi.Sun : BobUi.Surface, () => { SetMusic(!musicOn); RenderOverlay(); }, 34), 104, 104);
@@ -900,6 +901,60 @@ namespace Bob.Game
             MatchRequest.SetDaily(dailyReply.dayNumber, dailyReply.seed);
             SetOverlay(Overlay.None);
             LoadMatchScene("TaskRace");
+        }
+
+        // ---------------------------------------------------------------- wardrobe (docs 31 section 2.3)
+
+        /// <summary>
+        /// The wardrobe: one row per cosmetic the table ships, its requirement with the player's own count, and one
+        /// button. Locked rows show how far along they are instead of a button that would do nothing. Nothing here is
+        /// sold for coins and nothing here changes a stat — the shop sells tools, the wardrobe wears decoration.
+        /// </summary>
+        void Wardrobe(RectTransform card)
+        {
+            BobUi.Pin(card, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(980f, 0f));
+            GrantUnlocks(); // an earned piece is granted the moment the screen opens, so no row is ever stuck
+            var stats = BobCosmetics.Stats();
+            BobUi.Label(card, "ตู้เสื้อผ้า", 52, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Label(card, $"ปลดแล้ว {BobUnlocks.EarnedCount(stats)} จาก {BobUnlocks.All.Length} · ของแต่งไม่เพิ่มพลัง",
+                26, BobUi.Muted, TextAnchor.MiddleCenter);
+            for (int i = 0; i < BobUnlocks.All.Length; i++) WardrobeRow(card, BobUnlocks.All[i], stats);
+            BobUi.Size(BobUi.Button(card, "ถอดทั้งหมด", BobUi.Surface, () => { BobCosmetics.Equip(""); Sfx("ui_tap"); RenderOverlay(); }, 30), 96, 96);
+            BobUi.Size(BobUi.Button(card, "ปิด", BobUi.Surface, () => SetOverlay(phase == Phase.Build ? Overlay.Pause : Overlay.None), 34), 104, 104);
+        }
+
+        /// <summary>One cosmetic: a swatch, the name, what it asks (or "ปลดแล้ว"), and ใช้ / ใช้อยู่.</summary>
+        void WardrobeRow(RectTransform card, UnlockDef def, BobUnlockStats stats)
+        {
+            bool has = owned.Contains(def.Id);
+            bool worn = def.Title ? BobCosmetics.TitleId == def.Id : BobCosmetics.FrameId == def.Id;
+            var line = BobUi.Panel(card, worn ? BobUi.Sun : new Color(1f, 1f, 1f, 0.62f), "ui_panel", "Row");
+            BobUi.Size(line, 84, 84, 1);
+
+            var sw = BobUi.Rect("Swatch", line.transform);
+            var simg = sw.gameObject.AddComponent<Image>();
+            simg.raycastTarget = false;
+            simg.color = has ? (def.Title ? BobUi.Teal : BobUi.Hex(def.Hex)) : new Color(0.78f, 0.75f, 0.70f, 1f);
+            BobUi.Pin(sw, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(14f, 0f), new Vector2(44f, 44f));
+
+            var nm = BobUi.Label(line.transform, def.Name, 28, BobUi.Ink, TextAnchor.MiddleLeft,
+                worn ? FontStyle.Bold : FontStyle.Normal);
+            BobUi.Pin(nm.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(74f, 12f), new Vector2(460f, 34f));
+            var req = BobUi.Label(line.transform, has ? "ปลดแล้ว" : BobUnlocks.Requirement(def, stats), 22,
+                has ? BobUi.Teal : BobUi.Muted, TextAnchor.MiddleLeft);
+            BobUi.Pin(req.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(74f, -20f), new Vector2(460f, 28f));
+
+            if (has && !worn)
+            {
+                var use = BobUi.Button(line.transform, "ใช้", BobUi.Sun, () => { BobCosmetics.Equip(def.Id); Sfx("ui_confirm"); RenderOverlay(); }, 28);
+                BobUi.Pin((RectTransform)use.transform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-14f, 0f), new Vector2(130f, 60f));
+            }
+            else
+            {
+                var tag = BobUi.Label(line.transform, has ? "ใช้อยู่" : "ยังไม่ปลด", 24,
+                    has ? BobUi.Ink : BobUi.Muted, TextAnchor.MiddleRight, has ? FontStyle.Bold : FontStyle.Normal);
+                BobUi.Pin(tag.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-18f, 0f), new Vector2(200f, 40f));
+            }
         }
 
         void LoadDaily()

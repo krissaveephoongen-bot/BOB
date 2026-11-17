@@ -123,6 +123,22 @@ namespace UnityEngine
 
 namespace Bob.Ugs
 {
+    /// <summary>Cloud Save mirror: the wardrobe stores the ids of the cosmetics it granted (real file left out here).</summary>
+    public class PlayerProfileData
+    {
+        public int coins = 0;
+        public int level = 1;
+        public System.Collections.Generic.List<string> unlockedItems = new System.Collections.Generic.List<string>();
+    }
+
+    /// <summary>Mirror of the members the game screens touch; the real manager needs the UGS SDK.</summary>
+    public class UgsCloudSaveManager : MonoBehaviour
+    {
+        public static UgsCloudSaveManager Instance { get; private set; }
+        public PlayerProfileData Profile { get; private set; }
+        public bool IsLoaded { get; private set; }
+        public System.Threading.Tasks.Task<bool> UnlockItemAndSaveAsync(string itemId) { return null; }
+    }
     /// <summary>The real bootstrap needs the Unity Gaming Services SDK (unity/Assets/Scripts/UGS is left out of this
     /// project). Game screens reference it for the S02 guest sign-in, so mirror the members they touch.</summary>
     public class UgsBootstrapManager : MonoBehaviour

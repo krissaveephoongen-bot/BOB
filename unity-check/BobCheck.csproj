@@ -1,4 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><Nullable>disable</Nullable><LangVersion>9.0</LangVersion></PropertyGroup>
-  <ItemGroup><Compile Include="../unity/Assets/Scripts/Rules/BobRules.cs;../unity/Assets/Scripts/Rules/BobMatch.cs;../unity/Assets/Scripts/Rules/BobTaskRaceRules.cs;../unity/Assets/Scripts/Rules/BobRaceScore.cs;../unity/Assets/Scripts/Rules/BobDaily.cs;../unity/Assets/Scripts/Rules/BobStoryText.cs;../unity/Assets/Scripts/TaskRace/StorySeries.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../unity/Assets/Scripts/Rules/BobRules.cs;../unity/Assets/Scripts/Rules/BobMatch.cs;../unity/Assets/Scripts/Rules/BobTaskRaceRules.cs;../unity/Assets/Scripts/Rules/BobRaceScore.cs;../unity/Assets/Scripts/Rules/BobDaily.cs;../unity/Assets/Scripts/Rules/BobUnlocks.cs;../unity/Assets/Scripts/Rules/BobStoryText.cs;../unity/Assets/Scripts/TaskRace/StorySeries.cs" /></ItemGroup>
 </Project>

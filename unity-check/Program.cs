@@ -97,6 +97,39 @@ static class Program
             BobDaily.AttemptsLeft(20774, 20774, 1) == 0 && BobDaily.AttemptsLeft(20774, 20774, 5) == 0);
         Console.WriteLine("daily seed table checked");
 
+        // The cosmetics table (docs 31 2.3): decoration only, bought with counters the device already keeps. The whole
+        // point is that no row asks for skill the game does not measure, and that progress never overshoots its target.
+        Check("unlocks: six pieces with unique ids",
+            BobUnlocks.All.Length == 6 && BobUnlocks.All.Select(d => d.Id).Distinct().Count() == 6);
+        Check("unlocks: a brand new player has earned nothing", BobUnlocks.EarnedCount(new BobUnlockStats(0, 0, 0, 0, 0)) == 0);
+        Check("unlocks: three matches earn the sweep title",
+            BobUnlocks.Earned(BobUnlocks.Get("title_sweep"), new BobUnlockStats(3, 0, 0, 0, 0)));
+        Check("unlocks: two matches do not",
+            !BobUnlocks.Earned(BobUnlocks.Get("title_sweep"), new BobUnlockStats(2, 0, 0, 0, 0)));
+        Check("unlocks: one win earns the teal frame",
+            BobUnlocks.Earned(BobUnlocks.Get("frame_teal"), new BobUnlockStats(0, 1, 0, 0, 0)));
+        Check("unlocks: 900 best points earn the sun frame, 899 do not",
+            BobUnlocks.Earned(BobUnlocks.Get("frame_sun"), new BobUnlockStats(0, 0, 900, 0, 0)) &&
+            !BobUnlocks.Earned(BobUnlocks.Get("frame_sun"), new BobUnlockStats(0, 0, 899, 0, 0)));
+        Check("unlocks: three days of daily earn the steady title",
+            BobUnlocks.Earned(BobUnlocks.Get("title_steady"), new BobUnlockStats(0, 0, 0, 0, 3)) &&
+            !BobUnlocks.Earned(BobUnlocks.Get("title_steady"), new BobUnlockStats(0, 0, 0, 0, 2)));
+        Check("unlocks: three cleared chapters earn the clean title",
+            BobUnlocks.Earned(BobUnlocks.Get("title_clean"), new BobUnlockStats(0, 0, 0, 3, 0)));
+        Check("unlocks: progress stops at the target",
+            BobUnlocks.Progress(BobUnlocks.Get("frame_sun"), new BobUnlockStats(0, 0, 5000, 0, 0)) == 900);
+        Check("unlocks: the progress line reads as asked",
+            BobUnlocks.Requirement(BobUnlocks.Get("title_steady"), new BobUnlockStats(0, 0, 0, 0, 1)) == "วันเดลี่ 1/3");
+        Check("unlocks: missing lists only what is earned and not owned",
+            BobUnlocks.Missing(new BobUnlockStats(3, 1, 0, 0, 0), new List<string> { "title_sweep" })
+                .SequenceEqual(new[] { "frame_teal" }));
+        Check("unlocks: a finished player earns all six",
+            BobUnlocks.EarnedCount(new BobUnlockStats(9, 9, 2000, 9, 9)) == 6);
+        Check("unlocks: every frame carries a colour and every title does not",
+            BobUnlocks.All.Where(d => !d.Title).All(d => d.Hex.Length == 7 && d.Hex[0] == '#') &&
+            BobUnlocks.All.Where(d => d.Title).All(d => d.Hex.Length == 0));
+        Console.WriteLine("unlock table checked");
+
 
         int rooms = 0;
         foreach (var seed in new[] { 1, 2, 3, 7, 42, 999, 123456, 654321, 8388607 })
