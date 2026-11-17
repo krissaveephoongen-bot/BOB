@@ -360,6 +360,27 @@ sandbox ของ cloud session ไม่มี Unity — รอบนี้ร�
   บรรทัด 1178/1191/1204/1217 `PASS hero … has supported persistent materials` และภาพ
   `Logs/ui-r1-play-18/hud-1920x1080.png` (ปื้น magenta) เทียบ `Logs/ui-r1-hero-fix-21/hud-1920x1080.png`
   (ขอบเข้มปกติ) — นับจากนี้ผล UI R1 ใช้รับรองภาพตัวละครใน Editor ได้ ยังไม่ใช่คำรับรองบนมือถือ
+- **การ์ด overlay ของ Home (docs 31 §2.1–§2.3, docs 11 §14.2)** ย้ายจากชุด `BobUi` เดิมมา `BobUiR1` ทั้ง plate,
+  label, ปุ่ม และแถว — run 26 `Logs/cards-play-26.log` = 138 PASS / 32 FAIL เปิดสามกลุ่มปัญหา: (ก) assertion ฟอนต์
+  เทียบชื่อ asset แต่ `CreateFontAsset` ตอนรันงานปล่อยชื่อว่าง จึงเปลี่ยนไปเทียบ `atlasPopulationMode == Dynamic`
+  (ตัว pre-baked ใน Resources เป็น Static) (ข) บอร์ดใน Editor อ่านไม่ได้จริง (UGS leaderboard 404 — dashboard ยังไม่มี
+  config) จึงเพิ่ม `BoardFixture` สร้าง `BobBoardSnapshot` ด้วย reflection เพื่อวัด layout แถว และเปลี่ยนข้อตรวจ
+  เป็น "ตก branch ใด branch หนึ่ง" แทนการบังคับว่ามีแถว (ค) 20 ข้อ `130% text height` FAIL เพราะแถวของอันดับ/ตู้เสื้อผ้า
+  ทับกันเกินการ์ด → ใส่รายการยาวใน `ScrollList` (ScrollRect) และเพิ่มความสูง rect ของแถว/ป้ายแทนการลดฟอนต์.
+  run 27 = 245/4 เหลือ 4 ข้อที่ `raycast Button hits Overlay` — การ์ดที่ความสูงมาจาก `ContentSizeFitter`
+  มี plate พื้นที่ 0 จนถึง layout passถัดไป จึง force rebuild + `Canvas.ForceUpdateCanvases` + รอเฟรมที่วาดจริง
+  (helper `Drawn`) แล้วส่งทุกการกดในการ์ดผ่าน `Tap`; ภาพ run 27 ยังชี้ว่าแถวในลิสต์กว้าง 0 เพราะ content ของ ScrollRect
+  ไม่ถูกยึดเต็ม viewport — แก้ที่ `ScrollList` ตรง ๆ. run 28 = 251/0 `CARD CHECKS PASSED` แต่ภาพตู้เสื้อผ้าจบกลางแถวที่ 4
+  จึง quantize ความสูง viewport เป็นจำนวนแถวเต็ม (row pitch = แถว + ช่องไฟ 12). run 29 ที่ 1920×1080 =
+  **`CARD CHECKS PASSED` 249 PASS / 0 FAIL**, exit 0, `Logs/cards-play-29.log` + ภาพ 12 ไฟล์
+  `Logs/cards-play-29/card-{board,board-ranked,daily,pause,settings,wardrobe}[-text130]-1920x1080.png`
+  (Exception หนึ่งบรรทัดใน log คือ `[UGS] leaderboard read failed … 404` ที่ service log เอง ไม่ใช่ของไดรเวอร์ —
+  branch นี้จึงถูกถ่ายเป็นภาพจริงใน run 29 ส่วน branch ออฟไลน์อยู่ใน run 28). การ์ดที่แก้ค่าถูกคืนก่อนจบ run:
+  `PASS the card run leaves the sound and music switches as it found them` และ
+  `cosmetics restored: frame="frame_teal" title="" owned="title_sweep,frame_teal"`; ภาพ `card-wardrobe` ถ่ายหลังกด `ใช้`
+  แถวที่ได้จึงขึ้น `ใช้อยู่` สองแถว (ป้ายกับกรอบคนละ slot). ด่านอื่นหลังแก้: `typecheck ok: 43 known kinds`,
+  `UNITY-CHECK PASSED`, `READY-CHECK PASSED` (glyphs 3011 literal). ยังไม่ใช่คำรับรอง touch จริง/Android Back/
+  dynamic type ของระบบ และยังไม่มีการยืนยันคะแนนจริงบนคลาวด์
 
 ### 6.3 ช่องว่างเซฟ / อันดับ / เดลี่ / ออนไลน์ที่ปิดรอบนี้ (17 พ.ย. 2026)
 

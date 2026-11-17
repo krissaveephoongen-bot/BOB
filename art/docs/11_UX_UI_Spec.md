@@ -1123,7 +1123,7 @@ wireframe P06 ใน [`ux/BOB_Play_Screen_Cafeteria.html`](ux/BOB_Play_Screen_Ca
   ZIP ส่งมอบ `art/prototype/ui-revision-r1/exports/bob-r1-2026-11-17T07-55-09-802Z.zip` (39.13 MiB),
   ตรวจ CRC ผ่าน; ชุดแบบ commit/push แล้วที่ `5621332` บน `design/figma-ui-r1-20261117` (ไม่รวม Unity).
 
-### 14.2 Native Unity R1 (17 พ.ย. 2026 — อยู่ระหว่างตรวจ)
+### 14.2 Native Unity R1 (17–18 พ.ย. 2026 — ผ่านใน Editor, ยังไม่รับรองมือถือ)
 
 - สาขา `ui/unity-r1-20261117`; `BobUiR1` แยกสี cream/mint/navy/yellow, ปุ่มมุมมนและ IBM Plex Sans Thai
   Regular/Bold ออกจากชุด UI เดิม ไม่เปลี่ยน Home/ร้านค้า/ฉาก/สูตร/คะแนน/UGS.
@@ -1153,6 +1153,13 @@ wireframe P06 ใน [`ux/BOB_Play_Screen_Cafeteria.html`](ux/BOB_Play_Screen_Ca
   ส่วนเส้นของชั้นของในรถยังใช้เทากลางกับเขียว "ชั้นบนสุด" ตามเดิม เพราะ `frame_teal` `#2F7F6F` ใกล้เขียวสัญญาณ
   gameplay `#256552` จนแยกกันไม่ออก — เป็นการตกแต่งล้วน ไม่แตะกติกา/สูตร/คะแนน; หลักฐาน run23–25 docs 30 §6.2
   กับ docs 31 §2.3.
+- 18 พ.ย. การ์ด overlay ที่เปิดจาก dock Home (อันดับ / เดลี่ / ตู้เสื้อผ้า / ตั้งค่า / หยุดเกม) ย้ายมา `BobUiR1`
+  ทั้ง plate, label, ปุ่ม และแถว — เป็นการตกแต่งล้วน ไม่แตะกติกา สูตรคะแนน เซิร์ฟเวอร์ หรือฉาก. รายการยาว
+  (10 อันดับ, 6 ชิ้นตกแต่ง) ใส่ ScrollRect ที่ความสูงเท่ากับจำนวนแถวเต็ม (แถว 88/124 + ช่องไฟ 12) และ content
+  ยึดกว้างเต็ม viewport มิฉะนั้นแถวจะมีความกว้าง 0. หลักฐาน play-mode `compile-check/Logs/cards-play-29.log`
+  = `CARD CHECKS PASSED` 249 PASS / 0 FAIL พร้อมภาพ 12 ไฟล์ `compile-check/Logs/cards-play-29/` (docs 30 §6.2)
+  — เห็น branch จริงของบอร์ด (ออฟไลน์ run28 / อ่านไม่ได้เพราะ UGS 404 run29) กับเดลี่ที่ seed มาจากเซิร์ฟเวอร์;
+  ยังไม่รับรอง touch จริง, Android Back และ dynamic type ของระบบ.
 
 ## 15. รายการตรวจก่อนส่งหน้าจอใหม่ (Definition of Done)
 

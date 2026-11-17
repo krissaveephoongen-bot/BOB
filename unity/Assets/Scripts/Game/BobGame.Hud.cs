@@ -753,28 +753,61 @@ namespace Bob.Game
             overlayRoot.gameObject.SetActive(overlay != Overlay.None);
             if (overlay == Overlay.None) return;
             BobUi.Clear(overlayRoot);
-            var card = Card(overlayRoot, "Card", BobUi.Bg); BobUi.Pin(card, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(760, 0));
+            // The dock cards open over the R1 Home, so they are drawn from the same kit: a rounded cream plate, Plex labels.
+            var card = BobUiR1.Panel(overlayRoot, BobUiR1.Cream, name: "Card").rectTransform;
+            BobUi.Pin(card, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(760, 0));
             VStack(card, 46, 36, 18);
             card.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             if (overlay == Overlay.Pause)
             {
-                BobUi.Label(card, "หยุดเกม", 52, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
-                BobUi.Size(BobUi.Button(card, "เล่นต่อ", BobUi.Sun, () => SetOverlay(Overlay.None), 40), 120, 120);
-                BobUi.Size(BobUi.Button(card, "ตั้งค่า", BobUi.Surface, () => SetOverlay(Overlay.Settings), 34), 104, 104);
-                BobUi.Size(BobUi.Button(card, "เริ่มแมตช์ใหม่", BobUi.Surface, () => { SetOverlay(Overlay.None); StartMatch(); }, 34), 104, 104);
-                BobUi.Size(BobUi.Button(card, "ออกไปหน้าหลัก", BobUi.Surface, () => { SetOverlay(Overlay.None); ToTitle(); }, 34), 104, 104);
+                BobUiR1.Label(card, "หยุดเกม", 52, BobUiR1.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+                BobUi.Size(BobUiR1.Button(card, "เล่นต่อ", BobUiR1.Sun, () => SetOverlay(Overlay.None), 40), 120, 120);
+                BobUi.Size(BobUiR1.Button(card, "ตั้งค่า", BobUiR1.Paper, () => SetOverlay(Overlay.Settings), 34), 104, 104);
+                BobUi.Size(BobUiR1.Button(card, "เริ่มแมตช์ใหม่", BobUiR1.Paper, () => { SetOverlay(Overlay.None); StartMatch(); }, 34), 104, 104);
+                BobUi.Size(BobUiR1.Button(card, "ออกไปหน้าหลัก", BobUiR1.Paper, () => { SetOverlay(Overlay.None); ToTitle(); }, 34), 104, 104);
                 return;
             }
             if (overlay == Overlay.Board) { Board(card); return; }
             if (overlay == Overlay.Daily) { Daily(card); return; }
             if (overlay == Overlay.Wardrobe) { Wardrobe(card); return; }
-            BobUi.Label(card, "ตั้งค่า", 52, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
-            BobUi.Size(BobUi.Button(card, "เสียงเอฟเฟกต์: " + (soundOn ? "เปิด" : "ปิด"), soundOn ? BobUi.Sun : BobUi.Surface, () => { SetSound(!soundOn); RenderOverlay(); }, 34), 104, 104);
-            BobUi.Size(BobUi.Button(card, "เพลง: " + (musicOn ? "เปิด" : "ปิด"), musicOn ? BobUi.Sun : BobUi.Surface, () => { SetMusic(!musicOn); RenderOverlay(); }, 34), 104, 104);
-            BobUi.Size(BobUi.Button(card, "ปิด", BobUi.Surface, () => SetOverlay(phase == Phase.Build ? Overlay.Pause : Overlay.None), 34), 104, 104);
+            BobUiR1.Label(card, "ตั้งค่า", 52, BobUiR1.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Size(BobUiR1.Button(card, "เสียงเอฟเฟกต์: " + (soundOn ? "เปิด" : "ปิด"), soundOn ? BobUiR1.Sun : BobUiR1.Paper, () => { SetSound(!soundOn); RenderOverlay(); }, 34), 104, 104);
+            BobUi.Size(BobUiR1.Button(card, "เพลง: " + (musicOn ? "เปิด" : "ปิด"), musicOn ? BobUiR1.Sun : BobUiR1.Paper, () => { SetMusic(!musicOn); RenderOverlay(); }, 34), 104, 104);
+            BobUi.Size(BobUiR1.Button(card, "ปิด", BobUiR1.Paper, () => SetOverlay(phase == Phase.Build ? Overlay.Pause : Overlay.None), 34), 104, 104);
         }
 
         // ---------------------------------------------------------------- board (docs 31 section 3)
+
+        /// <summary>
+        /// A bounded list inside a card. Ten rank rows or six wardrobe rows are taller than a phone, and they grow again
+        /// when the system text scale goes up, so the rows scroll instead of the card leaving the screen.
+        /// The window is a whole number of rows: ending mid-row looks like a broken card, and the next row is a scroll away.
+        /// </summary>
+        RectTransform ScrollList(RectTransform card, float share, float rowHeight)
+        {
+            const float gap = 12f;
+            int lines = Mathf.Max(1, Mathf.FloorToInt((overlayRoot.rect.height * share + gap) / (rowHeight + gap)));
+            var outer = BobUi.Rect("List", card);
+            var le = outer.gameObject.AddComponent<LayoutElement>();
+            le.flexibleWidth = 1f; le.minHeight = rowHeight;
+            le.preferredHeight = lines * (rowHeight + gap) - gap;
+            var scroll = outer.gameObject.AddComponent<ScrollRect>();
+            scroll.horizontal = false; scroll.vertical = true; scroll.scrollSensitivity = 34f;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            var viewport = BobUi.Stretch(BobUi.Rect("Viewport", outer));
+            viewport.gameObject.AddComponent<RectMask2D>();
+            var content = BobUi.Rect("Content", viewport);
+            // Stretched across the viewport, pinned to its top: the rows then get a real width from the layout group and
+            // the ContentSizeFitter only has to decide the height.
+            content.anchorMin = new Vector2(0f, 1f); content.anchorMax = new Vector2(1f, 1f);
+            content.pivot = new Vector2(0f, 1f); content.sizeDelta = Vector2.zero;
+            var v = content.gameObject.AddComponent<VerticalLayoutGroup>();
+            v.spacing = gap; v.childControlWidth = v.childControlHeight = true;
+            v.childForceExpandWidth = true; v.childForceExpandHeight = false;
+            content.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            scroll.viewport = viewport; scroll.content = content;
+            return content;
+        }
 
         /// <summary>
         /// The leaderboard card: one bar per row, length against the leader, my own row in sun yellow. No table of digits:
@@ -783,74 +816,76 @@ namespace Bob.Game
         void Board(RectTransform card)
         {
             BobUi.Pin(card, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(980f, 0f));
-            BobUi.Label(card, "อันดับ", 52, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUiR1.Label(card, "อันดับ", 52, BobUiR1.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
 
             if (boardLoading)
             {
-                BobUi.Label(card, "กำลังโหลด…", 30, BobUi.Muted, TextAnchor.MiddleCenter);
+                BobUiR1.Label(card, "กำลังโหลด…", 30, BobUiR1.Muted, TextAnchor.MiddleCenter);
             }
             else if (boardSnap == null)
             {
                 LoadBoard();
-                BobUi.Label(card, "กำลังโหลด…", 30, BobUi.Muted, TextAnchor.MiddleCenter);
+                BobUiR1.Label(card, "กำลังโหลด…", 30, BobUiR1.Muted, TextAnchor.MiddleCenter);
             }
             else if (!boardSnap.SignedIn)
             {
-                BobUi.Label(card, "ออฟไลน์ · เล่นจบแมตช์เพื่อเก็บคะแนน", 28, BobUi.Muted, TextAnchor.MiddleCenter);
-                BobUi.Label(card, $"ดีสุดในเครื่อง {Bob.TaskRace.BobTaskRaceProfile.BestPoints} แต้ม", 34, BobUi.Ink,
+                BobUiR1.Label(card, "ออฟไลน์ · เล่นจบแมตช์เพื่อเก็บคะแนน", 28, BobUiR1.Muted, TextAnchor.MiddleCenter);
+                BobUiR1.Label(card, $"ดีสุดในเครื่อง {Bob.TaskRace.BobTaskRaceProfile.BestPoints} แต้ม", 34, BobUiR1.Ink,
                     TextAnchor.MiddleCenter, FontStyle.Bold);
             }
             else if (boardSnap.Rows.Count == 0 && boardSnap.SelfRank <= 0)
             {
-                BobUi.Label(card, boardSnap.Error != null ? "อ่านอันดับไม่ได้ · ลองใหม่ภายหลัง" : "ยังไม่มีใครมีคะแนน · เริ่มเลย",
-                    28, BobUi.Muted, TextAnchor.MiddleCenter);
+                BobUiR1.Label(card, boardSnap.Error != null ? "อ่านอันดับไม่ได้ · ลองใหม่ภายหลัง" : "ยังไม่มีใครมีคะแนน · เริ่มเลย",
+                    28, BobUiR1.Muted, TextAnchor.MiddleCenter);
             }
             else
             {
                 int top = 0;
                 for (int i = 0; i < boardSnap.Rows.Count; i++) if (boardSnap.Rows[i].Score > top) top = boardSnap.Rows[i].Score;
-                for (int i = 0; i < boardSnap.Rows.Count; i++) BoardRow(card, boardSnap.Rows[i], top);
+                var rows = ScrollList(card, 0.46f, 88f);
+                for (int i = 0; i < boardSnap.Rows.Count; i++) BoardRow(rows, boardSnap.Rows[i], top);
 
                 bool shown = false;
                 for (int i = 0; i < boardSnap.Rows.Count; i++) if (boardSnap.Rows[i].Self) shown = true;
                 string mine = boardSnap.SelfRank > 0
                     ? $"ของคุณ # {boardSnap.SelfRank} · {boardSnap.SelfScore} คะแนน"
                     : "ยังไม่มีคะแนนของคุณ · เล่นหนึ่งแมตช์";
-                BobUi.Label(card, shown ? "แถวสีเหลืองคือคุณ" : mine, 28,
-                    shown ? BobUi.Muted : BobUi.Teal, TextAnchor.MiddleCenter, shown ? FontStyle.Normal : FontStyle.Bold);
+                BobUiR1.Label(card, shown ? "แถวสีเหลืองคือคุณ" : mine, 28,
+                    shown ? BobUiR1.Muted : BobUiR1.Green, TextAnchor.MiddleCenter, shown ? FontStyle.Normal : FontStyle.Bold);
             }
 
-            BobUi.Size(BobUi.Button(card, "ปิด", BobUi.Surface, () => SetOverlay(phase == Phase.Build ? Overlay.Pause : Overlay.None), 34), 104, 104);
+            BobUi.Size(BobUiR1.Button(card, "ปิด", BobUiR1.Paper, () => SetOverlay(phase == Phase.Build ? Overlay.Pause : Overlay.None), 34), 104, 104);
         }
 
-        /// <summary>One board line: a rank disc, the name, a bar scaled to the leader and the score on the right.</summary>
+        /// <summary>One board line: a rank disc, the name, a bar scaled to the leader and the score on the right.
+        /// The two text boxes are sized for the system text at 130%, so a longer bar row never clips a name.</summary>
         void BoardRow(RectTransform card, BobBoardRow row, int top)
         {
-            var line = BobUi.Panel(card, row.Self ? BobUi.Sun : new Color(1f, 1f, 1f, 0.62f), "ui_panel", "Row");
-            BobUi.Size(line, 76, 76, 1);
+            var line = BobUiR1.Panel(card, row.Self ? BobUiR1.Sun : new Color(1f, 1f, 1f, 0.62f), name: "Row");
+            BobUi.Size(line, 88, 88, 1);
 
-            var disc = BobUi.Disc(line.transform, row.Self ? BobUi.Bg : BobUi.Sun, 52, "Rank");
-            BobUi.Pin((RectTransform)disc.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(12f, 0f), new Vector2(52f, 52f));
-            var rn = BobUi.Label(disc.transform, row.Rank.ToString(), 26, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+            var disc = BobUi.Disc(line.transform, row.Self ? BobUiR1.Cream : BobUiR1.Sun, 60, "Rank");
+            BobUi.Pin((RectTransform)disc.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(14f, 0f), new Vector2(60f, 60f));
+            var rn = BobUiR1.Label(disc.transform, row.Rank.ToString(), 26, BobUiR1.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
             BobUi.Stretch(rn.rectTransform);
 
-            var nm = BobUi.Label(line.transform, row.Name, 28, BobUi.Ink, TextAnchor.MiddleLeft,
+            var nm = BobUiR1.Label(line.transform, row.Name, 28, BobUiR1.Ink, TextAnchor.MiddleLeft,
                 row.Self ? FontStyle.Bold : FontStyle.Normal);
-            BobUi.Pin(nm.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(78f, 0f), new Vector2(290f, 40f));
+            BobUi.Pin(nm.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(84f, 0f), new Vector2(290f, 62f));
 
             var track = BobUi.Rect("Track", line.transform);
             var timg = track.gameObject.AddComponent<Image>();
             timg.color = new Color(0.90f, 0.86f, 0.77f, 1f); timg.raycastTarget = false;
-            BobUi.Pin(track, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(380f, 0f), new Vector2(300f, 18f));
+            BobUi.Pin(track, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(386f, 0f), new Vector2(300f, 18f));
             var fill = BobUi.Rect("Fill", track);
             var fimg = fill.gameObject.AddComponent<Image>();
-            fimg.color = row.Self ? BobUi.Ink : BobUi.Teal; fimg.raycastTarget = false;
+            fimg.color = row.Self ? BobUiR1.Ink : BobUiR1.Green; fimg.raycastTarget = false;
             fill.anchorMin = Vector2.zero;
             fill.anchorMax = new Vector2(BobRaceScore.BarFraction(row.Score, top), 1f);
             fill.offsetMin = fill.offsetMax = Vector2.zero;
 
-            var sc = BobUi.Label(line.transform, row.Score.ToString(), 30, BobUi.Ink, TextAnchor.MiddleRight, FontStyle.Bold);
-            BobUi.Pin(sc.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-16f, 0f), new Vector2(190f, 44f));
+            var sc = BobUiR1.Label(line.transform, row.Score.ToString(), 30, BobUiR1.Ink, TextAnchor.MiddleRight, FontStyle.Bold);
+            BobUi.Pin(sc.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-16f, 0f), new Vector2(190f, 66f));
         }
 
         // ---------------------------------------------------------------- daily challenge (docs 31 section 2.2)
@@ -862,34 +897,34 @@ namespace Bob.Game
         void Daily(RectTransform card)
         {
             BobUi.Pin(card, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900f, 0f));
-            BobUi.Label(card, "เดลี่วันนี้", 52, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUiR1.Label(card, "เดลี่วันนี้", 52, BobUiR1.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
 
             if (dailyReply == null)
             {
                 if (!dailyBusy) LoadDaily();
-                BobUi.Label(card, "กำลังถามเซิร์ฟเวอร์…", 30, BobUi.Muted, TextAnchor.MiddleCenter);
+                BobUiR1.Label(card, "กำลังถามเซิร์ฟเวอร์…", 30, BobUiR1.Muted, TextAnchor.MiddleCenter);
             }
             else if (!dailyReply.Valid)
             {
-                BobUi.Label(card, "ออฟไลน์ · เล่นโหมดปกติไปก่อน", 30, BobUi.Muted, TextAnchor.MiddleCenter);
-                BobUi.Label(card, dailyReply.error ?? "อ่านเดลี่ไม่ได้", 24, BobUi.Muted, TextAnchor.MiddleCenter);
-                BobUi.Size(BobUi.Button(card, "ลองใหม่", BobUi.Surface, () => { dailyReply = null; dailyBusy = false; RenderOverlay(); }, 34), 104, 104);
+                BobUiR1.Label(card, "ออฟไลน์ · เล่นโหมดปกติไปก่อน", 30, BobUiR1.Muted, TextAnchor.MiddleCenter);
+                BobUiR1.Label(card, dailyReply.error ?? "อ่านเดลี่ไม่ได้", 24, BobUiR1.Muted, TextAnchor.MiddleCenter);
+                BobUi.Size(BobUiR1.Button(card, "ลองใหม่", BobUiR1.Paper, () => { dailyReply = null; dailyBusy = false; RenderOverlay(); }, 34), 104, 104);
             }
             else
             {
                 int left = BobDailyStore.AttemptsLeft(dailyReply.dayNumber);
-                BobUi.Label(card, "วัน " + dailyReply.day, 34, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
-                BobUi.Label(card, left > 0 ? "เหลือ " + left + " รอบวันนี้" : "เล่นแล้ววันนี้ · กลับมาพรุ่งนี้",
-                    left > 0 ? 40 : 34, left > 0 ? BobUi.Teal : BobUi.Muted, TextAnchor.MiddleCenter,
+                BobUiR1.Label(card, "วัน " + dailyReply.day, 34, BobUiR1.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+                BobUiR1.Label(card, left > 0 ? "เหลือ " + left + " รอบวันนี้" : "เล่นแล้ววันนี้ · กลับมาพรุ่งนี้",
+                    left > 0 ? 40 : 34, left > 0 ? BobUiR1.Green : BobUiR1.Muted, TextAnchor.MiddleCenter,
                     left > 0 ? FontStyle.Bold : FontStyle.Normal);
-                BobUi.Label(card, "seed " + dailyReply.seed + " · ทุกคนได้ชุดงานเดียวกัน", 24, BobUi.Muted, TextAnchor.MiddleCenter);
+                BobUiR1.Label(card, "seed " + dailyReply.seed + " · ทุกคนได้ชุดงานเดียวกัน", 24, BobUiR1.Muted, TextAnchor.MiddleCenter);
                 if (left > 0)
-                    BobUi.Size(BobUi.Button(card, "เล่นเดลี่", BobUi.Sun, StartDaily, 44), 130, 130);
+                    BobUi.Size(BobUiR1.Button(card, "เล่นเดลี่", BobUiR1.Sun, StartDaily, 44), 130, 130);
                 else
-                    BobUi.Label(card, "เปิดใหม่ตอน 00:00 น.", 24, BobUi.Muted, TextAnchor.MiddleCenter);
+                    BobUiR1.Label(card, "เปิดใหม่ตอน 00:00 น.", 24, BobUiR1.Muted, TextAnchor.MiddleCenter);
             }
 
-            BobUi.Size(BobUi.Button(card, "ปิด", BobUi.Surface, () => SetOverlay(phase == Phase.Build ? Overlay.Pause : Overlay.None), 34), 104, 104);
+            BobUi.Size(BobUiR1.Button(card, "ปิด", BobUiR1.Paper, () => SetOverlay(phase == Phase.Build ? Overlay.Pause : Overlay.None), 34), 104, 104);
         }
 
         /// <summary>The daily round: one timed solo round on the server's seed, spent when it ends (MatchRequest.Daily).</summary>
@@ -915,45 +950,46 @@ namespace Bob.Game
             BobUi.Pin(card, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(980f, 0f));
             GrantUnlocks(); // an earned piece is granted the moment the screen opens, so no row is ever stuck
             var stats = BobCosmetics.Stats();
-            BobUi.Label(card, "ตู้เสื้อผ้า", 52, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
-            BobUi.Label(card, $"ปลดแล้ว {BobUnlocks.EarnedCount(stats)} จาก {BobUnlocks.All.Length} · ของแต่งไม่เพิ่มพลัง",
-                26, BobUi.Muted, TextAnchor.MiddleCenter);
-            for (int i = 0; i < BobUnlocks.All.Length; i++) WardrobeRow(card, BobUnlocks.All[i], stats);
-            BobUi.Size(BobUi.Button(card, "ถอดทั้งหมด", BobUi.Surface, () => { BobCosmetics.Equip(""); Sfx("ui_tap"); RenderOverlay(); }, 30), 96, 96);
-            BobUi.Size(BobUi.Button(card, "ปิด", BobUi.Surface, () => SetOverlay(phase == Phase.Build ? Overlay.Pause : Overlay.None), 34), 104, 104);
+            BobUiR1.Label(card, "ตู้เสื้อผ้า", 52, BobUiR1.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUiR1.Label(card, $"ปลดแล้ว {BobUnlocks.EarnedCount(stats)} จาก {BobUnlocks.All.Length} · ของแต่งไม่เพิ่มพลัง",
+                26, BobUiR1.Muted, TextAnchor.MiddleCenter);
+            var pieces = ScrollList(card, 0.42f, 124f);
+            for (int i = 0; i < BobUnlocks.All.Length; i++) WardrobeRow(pieces, BobUnlocks.All[i], stats);
+            BobUi.Size(BobUiR1.Button(card, "ถอดทั้งหมด", BobUiR1.Paper, () => { BobCosmetics.Equip(""); Sfx("ui_tap"); RenderOverlay(); }, 30), 96, 96);
+            BobUi.Size(BobUiR1.Button(card, "ปิด", BobUiR1.Paper, () => SetOverlay(phase == Phase.Build ? Overlay.Pause : Overlay.None), 34), 104, 104);
         }
 
         /// <summary>One cosmetic: a swatch, the name, what it asks (or "ปลดแล้ว"), and ใช้ / ใช้อยู่.</summary>
-        void WardrobeRow(RectTransform card, UnlockDef def, BobUnlockStats stats)
+        void WardrobeRow(RectTransform list, UnlockDef def, BobUnlockStats stats)
         {
             bool has = owned.Contains(def.Id);
             bool worn = def.Title ? BobCosmetics.TitleId == def.Id : BobCosmetics.FrameId == def.Id;
-            var line = BobUi.Panel(card, worn ? BobUi.Sun : new Color(1f, 1f, 1f, 0.62f), "ui_panel", "Row");
-            BobUi.Size(line, 84, 84, 1);
+            var line = BobUiR1.Panel(list, worn ? BobUiR1.Sun : new Color(1f, 1f, 1f, 0.62f), name: "Row");
+            BobUi.Size(line, 124, 124, 1);
 
             var sw = BobUi.Rect("Swatch", line.transform);
             var simg = sw.gameObject.AddComponent<Image>();
             simg.raycastTarget = false;
-            simg.color = has ? (def.Title ? BobUi.Teal : BobUi.Hex(def.Hex)) : new Color(0.78f, 0.75f, 0.70f, 1f);
-            BobUi.Pin(sw, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(14f, 0f), new Vector2(44f, 44f));
+            simg.color = has ? (def.Title ? BobUiR1.Green : BobUi.Hex(def.Hex)) : new Color(0.78f, 0.75f, 0.70f, 1f);
+            BobUi.Pin(sw, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(14f, 0f), new Vector2(48f, 48f));
 
-            var nm = BobUi.Label(line.transform, def.Name, 28, BobUi.Ink, TextAnchor.MiddleLeft,
+            var nm = BobUiR1.Label(line.transform, def.Name, 28, BobUiR1.Ink, TextAnchor.MiddleLeft,
                 worn ? FontStyle.Bold : FontStyle.Normal);
-            BobUi.Pin(nm.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(74f, 12f), new Vector2(460f, 34f));
-            var req = BobUi.Label(line.transform, has ? "ปลดแล้ว" : BobUnlocks.Requirement(def, stats), 22,
-                has ? BobUi.Teal : BobUi.Muted, TextAnchor.MiddleLeft);
-            BobUi.Pin(req.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(74f, -20f), new Vector2(460f, 28f));
+            BobUi.Pin(nm.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(74f, 30f), new Vector2(460f, 60f));
+            var req = BobUiR1.Label(line.transform, has ? "ปลดแล้ว" : BobUnlocks.Requirement(def, stats), 22,
+                has ? BobUiR1.Green : BobUiR1.Muted, TextAnchor.MiddleLeft);
+            BobUi.Pin(req.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(74f, -30f), new Vector2(460f, 52f));
 
             if (has && !worn)
             {
-                var use = BobUi.Button(line.transform, "ใช้", BobUi.Sun, () => { BobCosmetics.Equip(def.Id); Sfx("ui_confirm"); RenderOverlay(); }, 28);
-                BobUi.Pin((RectTransform)use.transform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-14f, 0f), new Vector2(130f, 60f));
+                var use = BobUiR1.Button(line.transform, "ใช้", BobUiR1.Sun, () => { BobCosmetics.Equip(def.Id); Sfx("ui_confirm"); RenderOverlay(); }, 28);
+                BobUi.Pin((RectTransform)use.transform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-14f, 0f), new Vector2(140f, 84f));
             }
             else
             {
-                var tag = BobUi.Label(line.transform, has ? "ใช้อยู่" : "ยังไม่ปลด", 24,
-                    has ? BobUi.Ink : BobUi.Muted, TextAnchor.MiddleRight, has ? FontStyle.Bold : FontStyle.Normal);
-                BobUi.Pin(tag.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-18f, 0f), new Vector2(200f, 40f));
+                var tag = BobUiR1.Label(line.transform, has ? "ใช้อยู่" : "ยังไม่ปลด", 24,
+                    has ? BobUiR1.Ink : BobUiR1.Muted, TextAnchor.MiddleRight, has ? FontStyle.Bold : FontStyle.Normal);
+                BobUi.Pin(tag.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-18f, 0f), new Vector2(200f, 54f));
             }
         }
 

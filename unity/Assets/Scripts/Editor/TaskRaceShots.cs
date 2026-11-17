@@ -24,7 +24,8 @@ namespace Bob.EditorTools
 {
     public static class TaskRaceShots
     {
-        const string ArmKey = "Bob.TaskRaceShots.Arm", R1Key = "Bob.TaskRaceShots.R1", HeroesKey = "Bob.TaskRaceShots.Heroes";
+        const string ArmKey = "Bob.TaskRaceShots.Arm", R1Key = "Bob.TaskRaceShots.R1", HeroesKey = "Bob.TaskRaceShots.Heroes",
+            CardsKey = "Bob.TaskRaceShots.Cards";
         static bool r1Started;
         static double r1WatchdogAt = -1;
         static readonly BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
@@ -36,6 +37,15 @@ namespace Bob.EditorTools
         {
             Run();
             SessionState.SetBool(HeroesKey, true);
+            EditorSceneManager.OpenScene(BobGameScene.ScenePath);
+        }
+
+        /// <summary>The Home overlay cards (อันดับ / เดลี่ / ตู้เสื้อผ้า / ตั้งค่า / หยุดเกม) opened the way a player opens them.</summary>
+        [MenuItem("Bob/Run UI R1 Card Checks")]
+        public static void RunR1Cards()
+        {
+            Run();
+            SessionState.SetBool(CardsKey, true);
             EditorSceneManager.OpenScene(BobGameScene.ScenePath);
         }
 
@@ -51,6 +61,7 @@ namespace Bob.EditorTools
         {
             SessionState.SetBool(R1Key, false);
             SessionState.SetBool(HeroesKey, false);
+            SessionState.SetBool(CardsKey, false);
             typeof(BobGameScene).GetMethod("ApplyViewSize", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, null);
             r1Started = false;
             r1WatchdogAt = -1;
@@ -101,15 +112,17 @@ namespace Bob.EditorTools
             }
             if (!EditorApplication.isPlaying) return;
             bool heroes = SessionState.GetBool(HeroesKey, false);
+            bool cards = SessionState.GetBool(CardsKey, false);
             bool r1 = SessionState.GetBool(R1Key, false);
-            if (heroes || r1)
+            if (heroes || cards || r1)
             {
                 // Editor time catches missing dependencies even when the player is not advancing frames.
                 Application.runInBackground = true;
                 if (r1WatchdogAt < 0) r1WatchdogAt = EditorApplication.timeSinceStartup;
-                if (EditorApplication.timeSinceStartup - r1WatchdogAt > (heroes ? 60f : 100f))
+                float budget = heroes ? 60f : cards ? 150f : 100f;
+                if (EditorApplication.timeSinceStartup - r1WatchdogAt > budget)
                 {
-                    Check(false, $"{(heroes ? "hero" : "R1")} timeout; started={r1Started} frame={Time.frameCount} " +
+                    Check(false, $"{(heroes ? "hero" : cards ? "card" : "R1")} timeout; started={r1Started} frame={Time.frameCount} " +
                         $"manager={manager != null} hud={hud != null} round={round != null} events={EventSystem.current != null}");
                     Finish();
                     return;
@@ -117,15 +130,15 @@ namespace Bob.EditorTools
             }
             if (Time.realtimeSinceStartup < 1f) return;
 
-            if (heroes)
+            if (heroes || cards)
             {
                 var game = UnityEngine.Object.FindAnyObjectByType<BobGame>();
                 if (!r1Started && EventSystem.current != null && game != null && Field<RectTransform>(game, "screenRoot") != null &&
                     (Field<object>(game, "phase").ToString() == "Title" || Field<object>(game, "phase").ToString() == "Login"))
                 {
                     r1Started = true;
-                    Debug.Log("[UIR1] character checks start after menu boot; frame=" + Time.frameCount);
-                    game.StartCoroutine(HeroChecks(game));
+                    Debug.Log($"[UIR1] {(cards ? "overlay card" : "character")} checks start after menu boot; frame=" + Time.frameCount);
+                    game.StartCoroutine(cards ? CardChecks(game) : HeroChecks(game));
                 }
                 return;
             }
@@ -523,6 +536,293 @@ namespace Bob.EditorTools
             Finish();
         }
 
+        /// <summary>
+        /// The Home dock cards, opened the way a player opens them and checked as R1 kit: the rounded cream plate instead
+        /// of ui_panel, the R1 Plex faces instead of the pre-baked SDF twins, the copy each branch is meant to say, and the
+        /// close route. Settings and wardrobe edits are reverted before the run ends — nothing here may change a rule.
+        /// </summary>
+        static IEnumerator CardChecks(BobGame game)
+        {
+            Debug.Log($"[UIR1] native Play Mode {Screen.width}x{Screen.height}; Home overlay cards opened through the dock");
+            var overlayType = Field<object>(game, "overlay").GetType();
+            var phaseType = Field<object>(game, "phase").GetType();
+            var setOverlay = typeof(BobGame).GetMethod("SetOverlay", Private);
+            var phaseField = typeof(BobGame).GetField("phase", Private);
+            var owned = Field<HashSet<string>>(game, "owned");
+            var overlayRoot = Field<RectTransform>(game, "overlayRoot");
+            var screenRoot = Field<RectTransform>(game, "screenRoot");
+            string OverlayName() => Field<object>(game, "overlay").ToString();
+            void Open(string name) => setOverlay.Invoke(game, new object[] { Enum.Parse(overlayType, name) });
+            RectTransform Card() => overlayRoot.GetComponentsInChildren<RectTransform>(true)
+                .FirstOrDefault(r => r.name == "Card" && r.gameObject.activeInHierarchy);
+            TMP_Text[] Labels(RectTransform root) => root.GetComponentsInChildren<TMP_Text>().Where(t => t.isActiveAndEnabled).ToArray();
+            bool Shows(string text)
+            {
+                var card = Card();
+                return card != null && Labels(card).Any(t => t.text.Trim().StartsWith(text, StringComparison.Ordinal));
+            }
+            Button CardButton(string text)
+            {
+                var card = Card();
+                if (card == null) return null;
+                return card.GetComponentsInChildren<Button>().FirstOrDefault(b => b.isActiveAndEnabled &&
+                    b.GetComponentInChildren<TMP_Text>() != null &&
+                    b.GetComponentInChildren<TMP_Text>().text.Trim().StartsWith(text, StringComparison.Ordinal));
+            }
+            Button Dock(string label) => screenRoot.GetComponentsInChildren<Button>().FirstOrDefault(b => b.isActiveAndEnabled &&
+                b.GetComponentInChildren<TMP_Text>() != null && b.GetComponentInChildren<TMP_Text>().text.Trim() == label);
+            IEnumerator WaitUntilSettled(string loading, string what, float seconds)
+            {
+                double until = EditorApplication.timeSinceStartup + seconds;
+                while (Shows(loading) && EditorApplication.timeSinceStartup < until) yield return null;
+                Check(!Shows(loading), what + " card leaves its loading line");
+            }
+            // A card is rebuilt from nothing each time it opens and its height comes from a ContentSizeFitter, so a click
+            // in the frame right after that rebuild lands on the dim instead of the button. Force the layout pass and wait
+            // for a drawn frame before tapping anything inside a card.
+            IEnumerator Drawn(RectTransform root = null)
+            {
+                root = root != null ? root : Card();
+                if (root != null) LayoutRebuilder.ForceRebuildLayoutImmediate(root);
+                Canvas.ForceUpdateCanvases();
+                yield return new WaitForEndOfFrame();
+            }
+            IEnumerator Tap(Button button)
+            {
+                yield return Drawn();
+                Click(button.transform as RectTransform);
+                yield return new WaitForEndOfFrame();
+            }
+            // A row below the fold is clipped by the viewport mask, so a click there would never reach it: the list is
+            // scrolled until the row sits in the visible window.
+            IEnumerator Reveal(RectTransform row)
+            {
+                var scroll = Card().GetComponentInChildren<ScrollRect>(true);
+                if (scroll == null) yield break;
+                LayoutRebuilder.ForceRebuildLayoutImmediate(scroll.content);
+                float view = scroll.viewport.rect.height, full = scroll.content.rect.height;
+                if (full > view)
+                {
+                    float top = -scroll.content.InverseTransformPoint(row.position).y;
+                    float wanted = Mathf.Clamp(top - (view - row.rect.height) * 0.5f, 0f, full - view);
+                    scroll.verticalNormalizedPosition = 1f - wanted / (full - view);
+                }
+                yield return new WaitForEndOfFrame();
+            }
+            void CheckKit(string what)
+            {
+                var card = Card();
+                Check(card != null, what + " card draws on the overlay root");
+                if (card == null) return;
+                var plate = card.GetComponent<Image>();
+                Check(plate != null && plate.sprite != null && plate.sprite.texture.width == 64 && plate.type == Image.Type.Sliced,
+                    what + " card plate is the R1 rounded sprite, not ui_panel");
+                var labels = Labels(card);
+                // The R1 faces are made at runtime by CreateFontAsset, which leaves the asset name empty, so the atlas mode
+                // is what tells them apart from the pre-baked SDF twins in Resources (those are Static).
+                Debug.Log($"[UIR1] {what} fonts: " + string.Join(" | ", labels.Select(t => t.font == null ? "<none>"
+                    : (string.IsNullOrEmpty(t.font.name) ? "<runtime>" : t.font.name) + " / " + t.font.atlasPopulationMode).Distinct()));
+                Check(labels.Length > 0 && labels.All(t => t.font != null && t.font != BobUi.BodyTmp && t.font != BobUi.HeadingTmp &&
+                    t.font.atlasPopulationMode == AtlasPopulationMode.Dynamic), what + " labels are set in the R1 Plex faces");
+                Check(Labels(card).Count(t => t.raycastTarget) == 0, what + " labels do not eat clicks");
+                CheckBounds(card, what + " card");
+            }
+            int RowCount() => Card().GetComponentsInChildren<Image>().Count(i => i.name == "Row" && i.gameObject.activeInHierarchy);
+
+            // A board snapshot that never touches the service: rows are built by reflection over the plain data types in
+            // Scripts/UGS so the card's signed-in branch can be drawn and measured inside the editor.
+            object BoardFixture(int lines, string error)
+            {
+                var asm = typeof(BobGame).Assembly;
+                var snapType = asm.GetType("Bob.Ugs.BobBoardSnapshot");
+                var rowType = asm.GetType("Bob.Ugs.BobBoardRow");
+                var pub = BindingFlags.Public | BindingFlags.Instance;
+                var snap = Activator.CreateInstance(snapType);
+                snapType.GetField("SignedIn", pub).SetValue(snap, true);
+                snapType.GetField("Error", pub).SetValue(snap, error);
+                var rows = (IList)snapType.GetField("Rows", pub).GetValue(snap);
+                for (int i = 1; i <= lines; i++)
+                {
+                    var row = Activator.CreateInstance(rowType, i, i == 3 ? "บ๊อบ" : "นักกวาด " + i, 1400 - i * 90);
+                    rowType.GetField("Self", pub).SetValue(row, i == 3);
+                    rows.Add(row);
+                }
+                snapType.GetField("SelfRank", pub).SetValue(snap, lines > 0 ? 3 : -1);
+                snapType.GetField("SelfScore", pub).SetValue(snap, lines > 0 ? 1130 : 0);
+                return snap;
+            }
+            var boardSnapField = typeof(BobGame).GetField("boardSnap", Private);
+
+            var boardDock = Dock("อันดับ");
+            Check(boardDock != null, "Home dock offers อันดับ");
+            if (boardDock == null) { Finish(); yield break; }
+            Click(boardDock.transform as RectTransform); yield return new WaitForEndOfFrame();
+            Check(OverlayName() == "Board", "dock อันดับ opens the board card");
+            yield return WaitUntilSettled("กำลังโหลด", "board", 20f);
+            CheckKit("board");
+            Check(Shows("อันดับ"), "board card keeps its title");
+            bool boardOffline = Shows("ออฟไลน์ · เล่นจบแมตช์เพื่อเก็บคะแนน");
+            bool boardEmpty = Shows("ยังไม่มีใครมีคะแนน") || Shows("อ่านอันดับไม่ได้");
+            Debug.Log($"[UIR1] board branch: live offline={boardOffline} empty={boardEmpty} rows={RowCount()} " +
+                $"deviceBest={Bob.TaskRace.BobTaskRaceProfile.BestPoints}");
+            if (boardOffline) Check(Shows("ดีสุดในเครื่อง"), "offline board prints the device best");
+            else Check(boardEmpty || RowCount() > 0, "the live board lands in one of its branches");
+            Check(CardButton("ปิด") != null, "board card offers ปิด");
+            yield return CaptureR1("card-board");
+            yield return CaptureLargerText(Card(), "card-board");
+
+            // The leaderboard service is not reachable from the editor, so the rows a signed-in player sees are fed in
+            // here and drawn by the same Board → BoardRow path. Nothing is sent to the service, and the field goes back.
+            var renderOverlay = typeof(BobGame).GetMethod("RenderOverlay", Private);
+            var boardSnapWas = boardSnapField.GetValue(game);
+            boardSnapField.SetValue(game, BoardFixture(10, null));
+            renderOverlay.Invoke(game, null);
+            yield return Drawn();
+            CheckKit("ranked board");
+            Check(RowCount() == 10, "a signed-in board prints one row per rank");
+            Check(Shows("แถวสีเหลืองคือคุณ"), "the ranked board marks my own row");
+            yield return CaptureR1("card-board-ranked");
+            yield return CaptureLargerText(Card(), "card-board-ranked");
+            boardSnapField.SetValue(game, BoardFixture(0, "no config"));
+            renderOverlay.Invoke(game, null);
+            yield return Drawn();
+            Check(Shows("อ่านอันดับไม่ได้"), "a board the service refuses says so instead of an empty list");
+            boardSnapField.SetValue(game, boardSnapWas);
+            renderOverlay.Invoke(game, null);
+            yield return Drawn();
+
+            yield return Tap(CardButton("ปิด"));
+            Check(OverlayName() == "None", "board ปิด returns to Home");
+
+            var dailyDock = Dock("เดลี่");
+            Check(dailyDock != null, "Home dock offers เดลี่");
+            if (dailyDock == null) { Finish(); yield break; }
+            Click(dailyDock.transform as RectTransform); yield return new WaitForEndOfFrame();
+            Check(OverlayName() == "Daily", "dock เดลี่ opens the daily card");
+            yield return WaitUntilSettled("กำลังถามเซิร์ฟเวอร์", "daily", 25f);
+            CheckKit("daily");
+            Check(Shows("เดลี่วันนี้"), "daily card keeps its title");
+            bool served = Shows("วัน 20");
+            Debug.Log($"[UIR1] daily branch: serverAnswered={served} url={PlayerPrefs.GetString(BobDailyFeed.UrlKey, "<default>")}");
+            if (served)
+            {
+                Check(Shows("seed"), "daily card prints the seed the server handed out");
+                Check(Shows("เหลือ") || Shows("เล่นแล้ววันนี้"), "daily card prints the rounds left today");
+                Check(CardButton("เล่นเดลี่") != null || Shows("เปิดใหม่ตอน"), "daily card offers play, or names the refill");
+            }
+            else
+            {
+                Check(Shows("ออฟไลน์ · เล่นโหมดปกติไปก่อน"), "an unreachable daily says so and points at the normal mode");
+                Check(CardButton("ลองใหม่") != null, "an unreachable daily offers a retry");
+            }
+            Check(CardButton("ปิด") != null, "daily card offers ปิด");
+            yield return CaptureR1("card-daily");
+            yield return CaptureLargerText(Card(), "card-daily");
+            yield return Tap(CardButton("ปิด"));
+            Check(OverlayName() == "None", "daily ปิด returns to Home");
+
+            Open("Pause"); yield return new WaitForEndOfFrame();
+            Check(OverlayName() == "Pause", "the pause card renders");
+            CheckKit("pause");
+            Check(Shows("หยุดเกม"), "pause card titles itself หยุดเกม");
+            Check(CardButton("เล่นต่อ") != null && CardButton("ตั้งค่า") != null && CardButton("เริ่มแมตช์ใหม่") != null &&
+                CardButton("ออกไปหน้าหลัก") != null, "pause card carries its four actions");
+            yield return CaptureR1("card-pause");
+            yield return CaptureLargerText(Card(), "card-pause");
+            yield return Tap(CardButton("ตั้งค่า"));
+            Check(OverlayName() == "Settings", "the pause card hands over to the settings card");
+            CheckKit("settings");
+            Check(Shows("ตั้งค่า"), "settings card titles itself ตั้งค่า");
+            bool soundWas = Field<bool>(game, "soundOn"), musicWas = Field<bool>(game, "musicOn");
+            yield return CaptureR1("card-settings");
+            yield return CaptureLargerText(Card(), "card-settings");
+            yield return Tap(CardButton("เสียงเอฟเฟกต์"));
+            Check(Field<bool>(game, "soundOn") != soundWas, "the sound switch flips");
+            Check(Shows("เสียงเอฟเฟกต์: " + (Field<bool>(game, "soundOn") ? "เปิด" : "ปิด")), "the sound switch says the state it is in");
+            yield return Tap(CardButton("เสียงเอฟเฟกต์"));
+            Check(Field<bool>(game, "soundOn") == soundWas, "the sound switch is restored");
+            yield return Tap(CardButton("เพลง:"));
+            Check(Field<bool>(game, "musicOn") != musicWas, "the music switch flips");
+            yield return Tap(CardButton("เพลง:"));
+            Check(Field<bool>(game, "musicOn") == musicWas, "the music switch is restored");
+            // A failed flip check must not leave the profile with the wrong switches, so the settings are forced back
+            // through the game's own setters before the card is closed.
+            if (Field<bool>(game, "soundOn") != soundWas)
+                typeof(BobGame).GetMethod("SetSound", Private).Invoke(game, new object[] { soundWas });
+            if (Field<bool>(game, "musicOn") != musicWas)
+                typeof(BobGame).GetMethod("SetMusic", Private).Invoke(game, new object[] { musicWas });
+            Check(Field<bool>(game, "soundOn") == soundWas && Field<bool>(game, "musicOn") == musicWas,
+                "the card run leaves the sound and music switches as it found them");
+            yield return Tap(CardButton("ปิด"));
+            Check(OverlayName() == "None", "settings ปิด returns to Home");
+
+            var shopDock = Dock("ร้านค้า");
+            Check(shopDock != null, "Home dock offers ร้านค้า");
+            if (shopDock == null) { Finish(); yield break; }
+            Click(shopDock.transform as RectTransform); yield return new WaitForEndOfFrame();
+            Check(Field<object>(game, "phase").ToString() == "Shop", "dock ร้านค้า opens the shop");
+            var wardrobeDock = screenRoot.GetComponentsInChildren<Button>().FirstOrDefault(b => b.isActiveAndEnabled &&
+                b.GetComponentInChildren<TMP_Text>() != null &&
+                b.GetComponentInChildren<TMP_Text>().text.StartsWith("ตู้เสื้อผ้า", StringComparison.Ordinal));
+            Check(wardrobeDock != null, "the shop offers the wardrobe");
+            if (wardrobeDock == null) { Finish(); yield break; }
+            const string fixtureFrame = "frame_teal";
+            string frameWas = BobCosmetics.FrameId, titleWas = BobCosmetics.TitleId, ownedWas = PlayerPrefs.GetString(BobCosmetics.OwnedKey, "");
+            bool fixture = !BobCosmetics.IsOwned(fixtureFrame);
+            if (fixture)
+            {
+                // One owned piece so the row that can be worn is on screen; the prefs go back exactly as they were below.
+                owned.Add(fixtureFrame);
+                PlayerPrefs.SetString(BobCosmetics.OwnedKey, ownedWas.Length == 0 ? fixtureFrame : ownedWas + "," + fixtureFrame);
+                PlayerPrefs.Save();
+            }
+            yield return Drawn(screenRoot);
+            Click(wardrobeDock.transform as RectTransform); yield return new WaitForEndOfFrame();
+            Check(OverlayName() == "Wardrobe", "the shop button opens the wardrobe card");
+            CheckKit("wardrobe");
+            Check(Shows("ตู้เสื้อผ้า"), "wardrobe card titles itself ตู้เสื้อผ้า");
+            Check(Shows("ปลดแล้ว"), "wardrobe header counts the pieces earned");
+            Check(RowCount() == BobUnlocks.All.Length, "wardrobe shows one row per piece in the table");
+            // The list scrolls, so the row is first brought into the viewport; any piece that is owned and not worn will
+            // do — which row that is depends on what this profile has already earned.
+            var wearRow = Card().GetComponentsInChildren<Image>().Where(i => i.name == "Row")
+                .Select(i => new KeyValuePair<RectTransform, Button>(i.rectTransform, i.GetComponentsInChildren<Button>()
+                    .FirstOrDefault(b => b.GetComponentInChildren<TMP_Text>()?.text.Trim() == "ใช้")))
+                .FirstOrDefault(p => p.Value != null);
+            Debug.Log($"[UIR1] wardrobe: fixture={fixture} wearRowFound={wearRow.Value != null} " +
+                $"owned=\"{PlayerPrefs.GetString(BobCosmetics.OwnedKey, "")}\" worn={BobCosmetics.FrameId}/{BobCosmetics.TitleId}");
+            Check(wearRow.Value != null, "an owned piece that is not worn offers ใช้");
+            if (wearRow.Value != null)
+            {
+                string wornWas = BobCosmetics.FrameId + "/" + BobCosmetics.TitleId;
+                yield return Reveal(wearRow.Key);
+                yield return Tap(wearRow.Value);
+                Check(BobCosmetics.FrameId + "/" + BobCosmetics.TitleId != wornWas, "ใช้ wears the piece");
+                Check(Shows("ใช้อยู่"), "the worn row reads ใช้อยู่");
+            }
+            yield return CaptureR1("card-wardrobe");
+            yield return CaptureLargerText(Card(), "card-wardrobe");
+            yield return Tap(CardButton("ถอดทั้งหมด"));
+            Check(BobCosmetics.FrameId.Length == 0 && BobCosmetics.TitleId.Length == 0, "ถอดทั้งหมด empties both slots");
+            yield return Tap(CardButton("ปิด"));
+            if (fixture)
+            {
+                owned.Remove(fixtureFrame);
+                PlayerPrefs.SetString(BobCosmetics.OwnedKey, ownedWas);
+                PlayerPrefs.Save();
+            }
+            if (frameWas.Length > 0) BobCosmetics.Equip(frameWas);
+            if (titleWas.Length > 0) BobCosmetics.Equip(titleWas);
+            Debug.Log($"[UIR1] cosmetics restored: frame=\"{BobCosmetics.FrameId}\" title=\"{BobCosmetics.TitleId}\" " +
+                $"owned=\"{PlayerPrefs.GetString(BobCosmetics.OwnedKey, "")}\"");
+            phaseField.SetValue(game, Enum.Parse(phaseType, "Title"));
+            typeof(BobGame).GetMethod("RenderAll", Private).Invoke(game, null);
+            yield return null;
+            Check(!overlayRoot.gameObject.activeSelf, "every card is closed and Home is drawn again");
+            Debug.Log(ok ? "[UIR1] CARD CHECKS PASSED" : "[UIR1] CARD CHECKS FAILED");
+            Finish();
+        }
+
         static IEnumerator R1Checks()
         {
             Debug.Log($"[UIR1] native Play Mode {Screen.width}x{Screen.height}; pointer events raycast through live EventSystem; no physical touch evidence");
@@ -804,6 +1104,7 @@ namespace Bob.EditorTools
             SessionState.SetBool(ArmKey, false);
             SessionState.SetBool(R1Key, false);
             SessionState.SetBool(HeroesKey, false);
+            SessionState.SetBool(CardsKey, false);
             EditorApplication.update -= Tick;
             Debug.Log(ok ? "[TaskRaceShots] SHOTS PASSED" : "[TaskRaceShots] SHOTS FAILED");
             EditorApplication.ExitPlaymode();
