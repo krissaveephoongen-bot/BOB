@@ -38,7 +38,7 @@ Checks without Unity:
 bash unity-typecheck/check.sh
 cd unity-check && dotnet run
 node server/task-race-test.js
-bash ready-check/check.sh      # play-readiness: 9 static checks (scenes, EventSystem, Resources.Load, script GUIDs, ...)
+bash ready-check/check.sh      # play-readiness: 11 static checks (scenes, EventSystem, Resources.Load, GUIDs, glyphs, ...)
 ```
 
 `art/docs/30_Play_Ready_And_Test_Plan.md` is the full-system test plan (four layers: offline gates → editor

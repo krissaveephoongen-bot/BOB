@@ -9,7 +9,7 @@
 
 1. **เจอบล็อกเกอร์จริง:** ซีน Task Race ทั้งสามไม่มี `EventSystem` และไม่มีโค้ดสร้างให้ → build ที่เปิดซีนนี้ตรง ๆ จะ**แตะอะไรไม่ติดเลย** (HUD, ปุ่มพัก, วงล้อ ping, การ์ดมินิเกม)
 2. **แก้แล้ว** ที่ `TaskRaceModeManager.Awake` → `EnsureEventSystem()` สร้าง `EventSystem` + `StandaloneInputModule` ให้เองถ้ายังไม่มี และ `DontDestroyOnLoad` ตอนเล่นจริง
-3. **เพิ่ม gate `ready-check`** ที่จับ 9 ชนิดความพังเชิง "เล่นไม่ได้" ซึ่ง typecheck มองไม่เห็น (ซีนหาย/GUID ไม่ตรง, `LoadScene` ชื่อผิด, Canvas ไม่มี EventSystem, Resources หาย, `Resources.Load` ชี้ที่ว่าง, script GUID ตาย, GUID ซ้ำ, PlayerSettings ผิด, ชื่อ sprite/เสียงไม่มีจริง) — ทดสอบย้อนกลับครบทุกข้อ
+3. **เพิ่ม gate `ready-check`** ที่จับ 11 ชนิดความพังเชิง "เล่นไม่ได้" ซึ่ง typecheck มองไม่เห็น (ซีนหาย/GUID ไม่ตรง, `LoadScene` ชื่อผิด, Canvas ไม่มี EventSystem, Resources หาย, `Resources.Load` ชี้ที่ว่าง, script GUID ตาย, **แอสเซตที่ซีน/prefab อ้างถูกอัปโหลด GUID ตาย**, GUID ซ้ำ, PlayerSettings ผิด, ชื่อ sprite/เสียงไม่มีจริง, **อักขระที่ฟอนต์ไม่มี glyph**) — ทดสอบย้อนกลับครบทุกข้อ
 4. **ของที่ตรวจแล้วครบ:** 4 ซีนใน Build Settings, `Resources/Chapters` 6, `Resources/Stages` 6, audio prefab (38 คลิป), ฟอนต์ไทย 2 ตัว, ชื่อ sprite 18 ตัว, ชื่อเสียง 38 ตัว + tone สำรอง `ping_pop`
 5. **ที่ยังค้างและไม่ใช่โค้ด:** ยังไม่มีภาพ/หลักฐานจาก Unity (ต้องรันบนเครื่อง owner), build entry `TaskRace_Duo/Team` เป็นซีนที่เข้าไม่ถึง, `server/coop-test|mp-test|mp-bots-queue` ยังยิงพอร์ต Nakama 7350 ที่ถูกถอดไปแล้ว, LFS อัปโหลดไม่ได้ (HTTP 501) เหลือไฟล์ธรรมดา 301 ไฟล์
 6. **แผนทดสอบ 4 ชั้น:** ออฟไลน์ (4 คำสั่ง) → editor checks (10 ตัว) → มือถือจริง (S01→S16) → ออนไลน์ UGS พร้อมเกณฑ์ผ่านของแต่ละชั้น (ข้อ 4–5)
@@ -77,7 +77,7 @@ note: LFS: 0 pointer(s), 301 plain binary file(s) under unity/Assets
 READY-CHECK PASSED
 ```
 
-ตรวจ 9 ข้อ (ทุกข้อทดสอบย้อนกลับแล้วว่าจับได้จริง):
+ตรวจ 11 ข้อ (ทุกข้อทดสอบย้อนกลับแล้วว่าจับได้จริง):
 
 | # | ตรวจ | ถ้าพังจะเห็นอะไร |
 | --- | --- | --- |
@@ -90,6 +90,8 @@ READY-CHECK PASSED
 | 7 | **GUID ซ้ำ** ใน `.meta` | แอสเซตสลับกันเองแบบเงียบ |
 | 8 | **PlayerSettings ตอนส่ง**: package id, versionCode ≥ 1, minSdk ≥ 26, แนวนอนเท่านั้น, `activeInputHandler: 0` ให้ตรงกับ `StandaloneInputModule` | APK ติดตั้งได้แต่เล่นไม่ได้/จอเบี้ยว |
 | 9 | ชื่อ sprite (manifest) และชื่อเสียง (audio prefab + tone) ที่โค้ดขอ | สี่เหลี่ยมขาว/ไม่มีเสียง |
+| 10 | **GUID ของแอสเซตที่ซีน/prefab/`.mat`/`.anim` อ้าง** ยังมีไฟล์จริง (7,443 จุด; GUID ที่มาจากแพ็กเกจ/บิลต์อินอยู่ใน `ready-check/external-assets.txt` 19 ตัว) + `.meta` กำพร้าเป็น note | วัตถุหายเงียบ ๆ ตอนโหลด |
+| 11 | **อักขระในข้อความ UI มี glyph ในฟอนต์** (ชุด glyph อ่านจาก `BobTmpSetup`; ข้าม `Debug.Log`, คอมเมนต์, `[Header]`/`[Tooltip]`) | ขึ้นเป็นกล่องสี่เหลี่ยม |
 
 **พิสูจน์ว่า gate จับได้จริง (ทดสอบย้อนกลับ):** ใส่ของเสียชั่วคราวทีละอย่างแล้วรัน gate → แดงตรงเป้าทุกครั้ง แล้วคืนค่ากลับ → เขียว
 - เปลี่ยนชื่อ `EnsureEventSystem` → แดง 3 บรรทัด: `TaskRace has a Canvas, no EventSystem in the scene, and TaskRaceModeManager.cs does not build one` (×3 ซีน)
@@ -97,6 +99,10 @@ READY-CHECK PASSED
 - เปลี่ยน script GUID ใน `BobAudio.prefab` → `unresolved script GUID 0123…: no .cs in Assets and not in ready-check/external-scripts.txt`
 - วาง `.meta` ที่ใช้ GUID ซ้ำกับ `Stage1_RentalRoom.asset` → `duplicate GUID 9d08…`
 - ตั้ง `AndroidMinSdkVersion: 21` → `AndroidMinSdkVersion is 21, expected 26 or newer`
+- เปลี่ยน GUID ของสไปรต์ใน `BobAudio.prefab` เป็น `deadbeef…` → `references missing asset GUID deadbeef…`
+- ใส่ literal `"⏭ 65 วิ"` → `renders '⏭' (U+23ED) but the TMP font set has no such glyph`
+
+ทั้งสองข้อใหม่**จับของจริงได้ทันที**: `⏭` บนปุ่มดีบัก `AddDebugButton(... "⏭ 65 วิ")` ถูกเปลี่ยนเป็น `→ 65 วิ` (ชุด glyph มี `→`) — ตัวอื่นที่เจอ (`§` ใน `[Header]`/`[Tooltip]`) เป็นข้อความInspector ไม่ได้วาดบนจอ จึงข้ามอย่างถูกต้อง
 
 รอบแรกของ gate ผ่านทั้งที่ยังไม่มี EventSystem เพราะยอมรับ "มีตัวสร้างอยู่ในไฟล์ใดก็ได้" — แก้ให้ผูกซีนกับเจ้าของของมันแล้วจึงจับได้จริง
 
