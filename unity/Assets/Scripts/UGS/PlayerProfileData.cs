@@ -9,5 +9,9 @@ namespace Bob.Ugs
         public int coins = 0;
         public int level = 1;
         public List<string> unlockedItems = new List<string>();
+        // The two cosmetic slots (docs 31 section 2.3): ids from BobUnlocks, "" when nothing is worn. Kept here so a
+        // reinstall wears the same title and frame; the device still decides what it owns before wearing anything.
+        public string equippedTitle = "";
+        public string equippedFrame = "";
     }
 }

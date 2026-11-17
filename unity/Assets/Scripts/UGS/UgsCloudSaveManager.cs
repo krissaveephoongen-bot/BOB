@@ -50,6 +50,9 @@ namespace Bob.Ugs
                 }
 
                 Profile.unlockedItems ??= new List<string>();
+                // Cosmetics (docs 31 section 2.3): merge what the account owns into this device's list and adopt the
+                // worn slots when this device has no valid choice of its own. Never replaces offline progress.
+                Bob.Game.BobCosmetics.AdoptCloud(Profile.equippedTitle, Profile.equippedFrame, Profile.unlockedItems);
                 IsLoaded = true;
                 LastError = null;
                 Debug.Log($"[UGS] profile loaded · coins {Profile.coins} · level {Profile.level} · items {Profile.unlockedItems.Count}");
@@ -104,6 +107,14 @@ namespace Bob.Ugs
             if (string.IsNullOrWhiteSpace(itemId)) return false;
             Profile.unlockedItems ??= new List<string>();
             if (!Profile.unlockedItems.Contains(itemId)) Profile.unlockedItems.Add(itemId);
+            return await SaveProfileAsync();
+        }
+
+        /// <summary>Remember the worn title and frame so a reinstall wears the same decoration (docs 31 section 2.3).</summary>
+        public async Task<bool> SetEquippedAndSaveAsync(string titleId, string frameId)
+        {
+            Profile.equippedTitle = titleId ?? "";
+            Profile.equippedFrame = frameId ?? "";
             return await SaveProfileAsync();
         }
     }

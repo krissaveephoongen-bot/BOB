@@ -1146,21 +1146,12 @@ namespace Bob.TaskRace
             Track(cartRecipe.gameObject);
         }
 
-        /// <summary>The T04 cart body: cream, tinted toward the worn frame colour as paint only (docs 31 section 2.3).</summary>
-        static Color CartBodyColour()
-        {
-            var frame = Bob.Game.BobCosmetics.FrameColour;
-            var body = Bob.Rules.BobCartPaint.Body(Bob.Game.BobCosmetics.HasFrame,
-                new Bob.Rules.BobRgb(frame.r, frame.g, frame.b));
-            return new Color(body.R, body.G, body.B, 1f);
-        }
-
         void SetupCartBuild()
         {
             // The cart: four layer slots, the same number of parts the shelf hands over (BobTaskRaceRules.CartParts).
             // Its body wears the worn frame colour as paint only (docs 31 section 2.3): no rule reads the colour, and
             // BobCartPaint keeps the body light enough for the ink labels drawn on it.
-            var cart = BobUi.Panel(layer, CartBodyColour(), "ui_panel", "Cart");
+            var cart = BobUi.Panel(layer, Bob.Game.BobCosmetics.CartPaint, "ui_panel", "Cart");
             cart.raycastTarget = false;
             BobUi.Pin((RectTransform)cart.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
                 new Vector2(360f, -10f), new Vector2(300f, 430f));

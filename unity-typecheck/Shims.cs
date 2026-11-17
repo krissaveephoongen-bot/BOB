@@ -138,6 +138,7 @@ namespace Bob.Ugs
         public PlayerProfileData Profile { get; private set; }
         public bool IsLoaded { get; private set; }
         public System.Threading.Tasks.Task<bool> UnlockItemAndSaveAsync(string itemId) { return null; }
+        public System.Threading.Tasks.Task<bool> SetEquippedAndSaveAsync(string titleId, string frameId) { return null; }
     }
     /// <summary>The real bootstrap needs the Unity Gaming Services SDK (unity/Assets/Scripts/UGS is left out of this
     /// project). Game screens reference it for the S02 guest sign-in, so mirror the members they touch.</summary>

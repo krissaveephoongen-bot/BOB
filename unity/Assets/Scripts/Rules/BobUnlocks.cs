@@ -113,5 +113,60 @@ namespace Bob.Rules
             int have = System.Math.Max(0, Value(def.Kind, stats));
             return KindLabel(def.Kind) + " " + System.Math.Min(have, def.Target) + "/" + def.Target;
         }
+
+        /// <summary>The pieces of one wardrobe tab, in table order: titles (true) or frame colours (false).</summary>
+        public static UnlockDef[] Of(bool title)
+        {
+            int n = 0;
+            for (int i = 0; i < All.Length; i++) if (All[i].Title == title) n++;
+            var list = new UnlockDef[n];
+            int k = 0;
+            for (int i = 0; i < All.Length; i++) if (All[i].Title == title) list[k++] = All[i];
+            return list;
+        }
+
+        /// <summary>Where a piece shows once worn (docs 31 section 2.3): one short line for the wardrobe row.</summary>
+        public static string Where(UnlockDef def) =>
+            def == null ? ""
+            : def.Title ? "บรรทัดใต้ชื่อฮีโร่บนหน้าหลัก"
+            : "จานรอง · แถบ XP · รถเข็น T04";
+
+        /// <summary>
+        /// The owned list after a cloud profile arrives: the device's ids first, then anything only the cloud has.
+        /// A merge and never a replace, so a reinstall recovers what the account bought without dropping what this
+        /// device earned while offline.
+        /// </summary>
+        public static string[] MergeOwned(ICollection<string> local, ICollection<string> cloud)
+        {
+            var seen = new HashSet<string>();
+            var list = new List<string>();
+            Add(local); Add(cloud);
+            return list.ToArray();
+
+            void Add(ICollection<string> source)
+            {
+                if (source == null) return;
+                foreach (var id in source)
+                    if (!string.IsNullOrEmpty(id) && seen.Add(id)) list.Add(id);
+            }
+        }
+
+        /// <summary>
+        /// Which id to wear after a cloud profile arrives: the device's own choice when it is still owned and belongs
+        /// to that slot, otherwise the cloud's when it qualifies, otherwise nothing. A stale id never keeps the slot.
+        /// </summary>
+        public static string ResolveWorn(string local, string cloud, bool title, ICollection<string> owned)
+        {
+            if (Qualifies(local)) return local;
+            if (Qualifies(cloud)) return cloud;
+            return "";
+
+            bool Qualifies(string id)
+            {
+                if (string.IsNullOrEmpty(id)) return false;
+                var def = Get(id);
+                return def != null && def.Title == title && owned != null && owned.Contains(id);
+            }
+        }
     }
 }

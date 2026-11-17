@@ -51,6 +51,8 @@ namespace Bob.Game
         // The daily card holds the server's reply, never a locally invented seed (docs 31 section 2.2).
         BobDailyReply dailyReply;
         bool dailyBusy;
+        // Which wardrobe tab is open (0 = titles, 1 = frame colours); kept while the card is open, reset on reload.
+        int wardrobeTab;
 
         // ================================================================ build once
 
@@ -906,9 +908,9 @@ namespace Bob.Game
         // ---------------------------------------------------------------- wardrobe (docs 31 section 2.3)
 
         /// <summary>
-        /// The wardrobe: one row per cosmetic the table ships, its requirement with the player's own count, and one
-        /// button. Locked rows show how far along they are instead of a button that would do nothing. Nothing here is
-        /// sold for coins and nothing here changes a stat — the shop sells tools, the wardrobe wears decoration.
+        /// S31, the wardrobe (docs 31 section 2.3, docs 11 S31): two tabs over the same six-piece table, a preview that
+        /// shows the worn title, the frame on the profile disc and the paint on the T04 cart, and one row per piece with
+        /// its own progress. It sells nothing and changes no rule — the shop sells tools, this screen wears decoration.
         /// </summary>
         void Wardrobe(RectTransform card)
         {
@@ -918,12 +920,88 @@ namespace Bob.Game
             BobUi.Label(card, "ตู้เสื้อผ้า", 52, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
             BobUi.Label(card, $"ปลดแล้ว {BobUnlocks.EarnedCount(stats)} จาก {BobUnlocks.All.Length} · ของแต่งไม่เพิ่มพลัง",
                 26, BobUi.Muted, TextAnchor.MiddleCenter);
-            for (int i = 0; i < BobUnlocks.All.Length; i++) WardrobeRow(card, BobUnlocks.All[i], stats);
-            BobUi.Size(BobUi.Button(card, "ถอดทั้งหมด", BobUi.Surface, () => { BobCosmetics.Equip(""); Sfx("ui_tap"); RenderOverlay(); }, 30), 96, 96);
-            BobUi.Size(BobUi.Button(card, "ปิด", BobUi.Surface, () => SetOverlay(phase == Phase.Build ? Overlay.Pause : Overlay.None), 34), 104, 104);
+
+            var tabs = BobUi.HBox(card, 12, "Tabs");
+            tabs.childForceExpandHeight = false; tabs.childAlignment = TextAnchor.MiddleCenter;
+            BobUi.Size(tabs, 84, 84);
+            WardrobeTab(tabs.transform, "ป้ายชื่อ", true);
+            WardrobeTab(tabs.transform, "สีกรอบ", false);
+
+            WardrobePreview(card);
+
+            var list = BobUnlocks.Of(wardrobeTab == 0);
+            if (list.Length == 0) BobUi.Label(card, "ยังไม่มีของในหมวดนี้", 26, BobUi.Muted, TextAnchor.MiddleCenter);
+            for (int i = 0; i < list.Length; i++) WardrobeRow(card, list[i], stats);
+
+            var foot = BobUi.HBox(card, 12, "Foot");
+            foot.childForceExpandHeight = false; foot.childAlignment = TextAnchor.MiddleCenter;
+            BobUi.Size(foot, 100, 100);
+            BobUi.Size(BobUi.Button(foot.transform, "ถอดทั้งหมด", BobUi.Surface,
+                () => { BobCosmetics.Equip(""); Sfx("ui_tap"); RenderOverlay(); }, 30), 96, 96, 0.5f);
+            BobUi.Size(BobUi.Button(foot.transform, "ปิด", BobUi.Surface,
+                () => SetOverlay(phase == Phase.Build ? Overlay.Pause : Overlay.None), 34), 96, 96, 0.5f);
         }
 
-        /// <summary>One cosmetic: a swatch, the name, what it asks (or "ปลดแล้ว"), and ใช้ / ใช้อยู่.</summary>
+        /// <summary>One tab, with how many of its pieces are owned: the two tabs partition the six-piece table.</summary>
+        void WardrobeTab(Transform tabs, string label, bool title)
+        {
+            bool active = (wardrobeTab == 0) == title;
+            var list = BobUnlocks.Of(title);
+            int have = 0;
+            for (int i = 0; i < list.Length; i++) if (owned.Contains(list[i].Id)) have++;
+            var b = BobUi.Button(tabs, label + " " + have + "/" + list.Length,
+                active ? BobUi.Sun : BobUi.Surface, () =>
+                {
+                    int want = title ? 0 : 1;
+                    if (wardrobeTab == want) return;
+                    wardrobeTab = want; Sfx("ui_tap"); RenderOverlay();
+                }, 28, active ? BobUi.Ink : BobUi.Muted);
+            BobUi.Size(b, 64, 64, 0.5f);
+        }
+
+        /// <summary>
+        /// What the pieces look like before committing: the worn title, the frame on the stage disc, and the same paint
+        /// the T04 card will use (BobCosmetics.CartPaint), so the preview cannot drift from the game.
+        /// </summary>
+        void WardrobePreview(RectTransform card)
+        {
+            var box = BobUi.Panel(card, new Color(1f, 1f, 1f, 0.55f), "ui_panel", "Preview");
+            BobUi.Size(box, 190, 190, 1);
+
+            var disc = BobUi.Disc(box.transform, BobCosmetics.FrameTint, 140, "Stage");
+            BobUi.Pin((RectTransform)disc.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(24f, 0f), new Vector2(140, 140));
+            var cap = BobUi.Label(box.transform, "กรอบ", 20, BobUi.Muted, TextAnchor.MiddleCenter);
+            BobUi.Pin(cap.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(24f, -76f), new Vector2(140, 24f));
+
+            string title = BobCosmetics.TitleName;
+            var head = BobUi.Label(box.transform, string.IsNullOrEmpty(title) ? "ยังไม่ใส่ป้าย" : title, 30,
+                string.IsNullOrEmpty(title) ? BobUi.Muted : BobUi.Ink, TextAnchor.MiddleLeft, FontStyle.Bold);
+            BobUi.Pin(head.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(190f, 52f), new Vector2(430f, 36f));
+            var sub = BobUi.Label(box.transform, string.IsNullOrEmpty(title)
+                    ? "เลือกป้ายจากแท็บ “ป้ายชื่อ” เพื่อแสดงใต้ชื่อฮีโร่"
+                    : "ป้ายใต้ชื่อฮีโร่บนหน้าหลัก", 20, BobUi.Muted, TextAnchor.MiddleLeft);
+            BobUi.Pin(sub.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(190f, 20f), new Vector2(430f, 28f));
+
+            var frameName = BobCosmetics.HasFrame ? BobUnlocks.Get(BobCosmetics.FrameId).Name : "กรอบมาตรฐาน";
+            var frameLine = BobUi.Label(box.transform, frameName, 26, BobUi.Ink, TextAnchor.MiddleLeft, FontStyle.Bold);
+            BobUi.Pin(frameLine.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(190f, -22f), new Vector2(430f, 32f));
+            var frameSub = BobUi.Label(box.transform, "จานรอง · แถบ XP · สีรถเข็น T04", 20, BobUi.Muted, TextAnchor.MiddleLeft);
+            BobUi.Pin(frameSub.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(190f, -50f), new Vector2(430f, 28f));
+
+            // The T04 cart in the same paint the card uses: the preview is the promise, not a second design.
+            var cart = BobUi.Panel(box.transform, BobCosmetics.CartPaint, "ui_panel", "CartPreview");
+            BobUi.Pin((RectTransform)cart.transform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-24f, 6f), new Vector2(190f, 120f));
+            if (BobCosmetics.HasFrame)
+            {
+                var rim = BobUi.Rect("Rim", cart.transform); var img = rim.gameObject.AddComponent<Image>();
+                img.raycastTarget = false; img.color = BobCosmetics.FrameColour;
+                BobUi.Pin(rim, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 4f), new Vector2(182f, 6f));
+            }
+            var cartCap = BobUi.Label(box.transform, "รถเข็น T04", 20, BobUi.Muted, TextAnchor.MiddleCenter);
+            BobUi.Pin(cartCap.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-24f, -66f), new Vector2(190f, 24f));
+        }
+
+        /// <summary>One cosmetic: a swatch, the name, where it shows (or what it asks), and ใช้ / ใช้อยู่ / ยังไม่ปลด.</summary>
         void WardrobeRow(RectTransform card, UnlockDef def, BobUnlockStats stats)
         {
             bool has = owned.Contains(def.Id);
@@ -940,7 +1018,8 @@ namespace Bob.Game
             var nm = BobUi.Label(line.transform, def.Name, 28, BobUi.Ink, TextAnchor.MiddleLeft,
                 worn ? FontStyle.Bold : FontStyle.Normal);
             BobUi.Pin(nm.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(74f, 12f), new Vector2(460f, 34f));
-            var req = BobUi.Label(line.transform, has ? "ปลดแล้ว" : BobUnlocks.Requirement(def, stats), 22,
+            // Owned pieces say where the decoration shows; locked ones say how far along the player is.
+            var req = BobUi.Label(line.transform, has ? BobUnlocks.Where(def) : BobUnlocks.Requirement(def, stats), 22,
                 has ? BobUi.Teal : BobUi.Muted, TextAnchor.MiddleLeft);
             BobUi.Pin(req.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(74f, -20f), new Vector2(460f, 28f));
 

@@ -152,6 +152,34 @@ static class Program
             !BobCartPaint.ParseHex("#2F7F6").HasValue);
         Console.WriteLine("cart paint checked");
 
+        // S31, the wardrobe (docs 31 section 2.3): the two tabs partition the six-piece table, each piece says where it
+        // shows, and a cloud profile can never make the device wear something it does not own.
+        var titles = BobUnlocks.Of(true);
+        var frames = BobUnlocks.Of(false);
+        Check("wardrobe: the two tabs cover every piece exactly once",
+            titles.Length + frames.Length == BobUnlocks.All.Length &&
+            titles.All(d => d.Title) && frames.All(d => !d.Title));
+        Check("wardrobe: both tabs have pieces", titles.Length == 3 && frames.Length == 3);
+        Check("wardrobe: every piece says where it shows",
+            BobUnlocks.All.All(d => !string.IsNullOrEmpty(BobUnlocks.Where(d))) &&
+            BobUnlocks.Where(BobUnlocks.Get("title_sweep")) != BobUnlocks.Where(BobUnlocks.Get("frame_teal")));
+        Check("wardrobe: a merge keeps both sides and drops repeats",
+            BobUnlocks.MergeOwned(new[] { "frame_teal", "title_sweep" }, new[] { "title_sweep", "frame_sun" })
+                .SequenceEqual(new[] { "frame_teal", "title_sweep", "frame_sun" }));
+        Check("wardrobe: empty ids never enter the owned list", BobUnlocks.MergeOwned(new[] { "" }, null).Length == 0);
+        Check("wardrobe: the device keeps a worn id it still owns",
+            BobUnlocks.ResolveWorn("frame_sun", "frame_pink", false, new[] { "frame_sun", "frame_pink" }) == "frame_sun");
+        Check("wardrobe: an empty device adopts the cloud's id",
+            BobUnlocks.ResolveWorn("", "frame_pink", false, new[] { "frame_pink" }) == "frame_pink");
+        Check("wardrobe: an unowned cloud id is refused",
+            BobUnlocks.ResolveWorn("", "frame_pink", false, new[] { "frame_sun" }) == "");
+        Check("wardrobe: a piece cannot fill the other slot",
+            BobUnlocks.ResolveWorn("", "title_sweep", false, new[] { "title_sweep" }) == "" &&
+            BobUnlocks.ResolveWorn("", "frame_sun", true, new[] { "frame_sun" }) == "");
+        Check("wardrobe: a stale local id falls back to the cloud's",
+            BobUnlocks.ResolveWorn("frame_pink", "frame_sun", false, new[] { "frame_sun" }) == "frame_sun");
+        Console.WriteLine("wardrobe checked");
+
 
         int rooms = 0;
         foreach (var seed in new[] { 1, 2, 3, 7, 42, 999, 123456, 654321, 8388607 })

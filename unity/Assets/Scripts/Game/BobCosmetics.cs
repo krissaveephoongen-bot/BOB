@@ -81,6 +81,20 @@ namespace Bob.Game
             }
         }
 
+        /// <summary>
+        /// The T04 cart body in the worn colour (docs 31 section 2.3): the card and the wardrobe preview both read this
+        /// one value, so the paint a player sees in the wardrobe is the paint they get in the minigame. No rule reads it.
+        /// </summary>
+        public static Color CartPaint
+        {
+            get
+            {
+                var frame = FrameColour;
+                var body = Bob.Rules.BobCartPaint.Body(HasFrame, new Bob.Rules.BobRgb(frame.r, frame.g, frame.b));
+                return new Color(body.R, body.G, body.B, 1f);
+            }
+        }
+
         /// <summary>Wear an owned piece in its slot; "" takes both off. A piece that is not owned is refused.</summary>
         public static bool Equip(string id)
         {
@@ -91,15 +105,62 @@ namespace Bob.Game
                     PlayerPrefs.SetString(TitleKey, "");
                     PlayerPrefs.SetString(FrameKey, "");
                     PlayerPrefs.Save();
+                    SaveToCloud();
                     return true;
                 }
                 var def = Bob.Rules.BobUnlocks.Get(id);
                 if (def == null || !IsOwned(id)) return false;
                 PlayerPrefs.SetString(def.Title ? TitleKey : FrameKey, def.Id);
                 PlayerPrefs.Save();
+                SaveToCloud();
                 return true;
             }
             catch (System.Exception) { return false; }
+        }
+
+        /// <summary>
+        /// Adopt what the account already owns and wears when a cloud profile arrives: the owned ids are merged (never
+        /// replaced, so offline play is not lost) and each slot keeps the device's choice only when that id is still
+        /// owned and belongs to the slot. Called by the cloud save manager after a successful load.
+        /// </summary>
+        public static void AdoptCloud(string cloudTitle, string cloudFrame, System.Collections.Generic.ICollection<string> cloudOwned)
+        {
+            try
+            {
+                var local = OwnedIds();
+                var merged = Bob.Rules.BobUnlocks.MergeOwned(local, cloudOwned);
+                PlayerPrefs.SetString(OwnedKey, string.Join(",", merged));
+                string title = Bob.Rules.BobUnlocks.ResolveWorn(TitleId, cloudTitle, true, merged);
+                string frame = Bob.Rules.BobUnlocks.ResolveWorn(FrameId, cloudFrame, false, merged);
+                PlayerPrefs.SetString(TitleKey, title);
+                PlayerPrefs.SetString(FrameKey, frame);
+                PlayerPrefs.Save();
+            }
+            catch (System.Exception) { }
+        }
+
+        /// <summary>Push both slots to the account so a reinstall wears the same thing (best effort, silent offline).</summary>
+        public static void SaveToCloud()
+        {
+            try
+            {
+                var svc = Bob.Ugs.UgsCloudSaveManager.Instance;
+                if (svc != null) _ = svc.SetEquippedAndSaveAsync(TitleId, FrameId);
+            }
+            catch (System.Exception) { }
+        }
+
+        /// <summary>The owned list as ids, read the way the shop writes it.</summary>
+        public static System.Collections.Generic.List<string> OwnedIds()
+        {
+            var list = new System.Collections.Generic.List<string>();
+            try
+            {
+                foreach (var s in PlayerPrefs.GetString(OwnedKey, "").Split(','))
+                    if (s.Length > 0) list.Add(s);
+            }
+            catch (System.Exception) { }
+            return list;
         }
 
         /// <summary>The owned list as the shop writes it: ids separated by commas.</summary>
