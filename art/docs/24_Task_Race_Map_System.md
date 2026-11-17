@@ -1066,16 +1066,16 @@ build แรกหลังงาน pure UGS + SFX — สั่งด้วย
 
 ที่มา: ใน `BobMinigameHost` สองงานนี้เคยเป็น `MiniKind.Timed` — เปิดการ์ดแล้วได้แถบเวลามีข้อความ "จัดรถเข็นในห้อง แล้วกลับมาล็อกสูตร" เฉย ๆ ไม่มีกลไกอะไรเลย. รอบนี้ทำทั้งสองตัวตาม docs 16 §4 (T04) และ §5 (T12) โดย **ไม่แตะฉาก** และ **ไม่แตะ `server/`**
 
-- **T04 — การ์ด 2 ขั้น (`MiniKind.Cart`):** ขั้น 1 `SetupCartShelf` ปูชั้นวางของ 6 ชิ้นจาก `BobTaskRaceRules.CartShelf(seed, D)` (seed = `SpotId.GetHashCode()`; 4 ชิ้นเป็นชุดที่ผ่านใบงานได้ + 2 ตัวหลอก) แตะหยิบ **4 ชิ้น** (`CartParts`); ขั้น 2 `SetupCartBuild` มีรถเข็น 5 ช่อง (`BobRules.MaxLayers`), ชิปที่หยิบมา 4 ใบลากลงรถเข็นได้, กดชั้นบนสุดเพื่อเอาออกได้, และ **กดค้าง "ล็อกสูตร" 0.6 วิ** (`cartHold`) ตามสเปกขั้น 2
+- **T04 — การ์ด 2 ขั้น (`MiniKind.Cart`):** ขั้น 1 `SetupCartShelf` ปูชั้นวางของ 6 ชิ้นจาก `BobTaskRaceRules.CartShelf(seed, D)` (seed = `SpotId.GetHashCode()`; 4 ชิ้นเป็นชุดที่ผ่านใบงานได้ + 2 ตัวหลอก) แตะหยิบ **4 ชิ้น** (`CartParts`); ขั้น 2 `SetupCartBuild` มีรถเข็น **4 ช่อง** (ตรงกับ `CartParts`; 17 พ.ย. 2026 แก้จาก 5 ช่องตาม `MaxLayers`), ชิปที่หยิบมา 4 ใบลากลงรถเข็นได้, กดชั้นบนสุดเพื่อเอาออกได้, และ **กดค้าง "ล็อกสูตร" 0.6 วิ** (`cartHold`) ตามสเปกขั้น 2
 - **การตัดสินสูตร** อยู่ใน pure C# ไม่ใช่ใน UI: `BobTaskRaceRules.CartNeed(seed, D)` คืนค่าที่ต้องผ่าน 4 ตัว (ค่าดาวของรอบสูงกว่าอีกสามตัว และ +1 ทุกขั้น D), `CartPassCount(stats, need)` นับเงื่อนไขที่ผ่าน, `CartPassed(pass, D)` = ผ่าน 1/2/3 เงื่อนไขตาม D, `CartBuffs(stats, need)` คืนคีย์บัฟ — ค่าดิบของการ์ดมาจาก `BobRules.EvalStack` ตัวเดียวกับที่ server ใช้ (`unity-check` เทสต์ตารางนี้อยู่แล้ว; เพิ่มเคสของ T04 เข้า `SelfTest`)
-- **บัฟ:** `TaskRaceRound.NoteCartResult(stats)` เรียกครั้งเดียวต่อรอบ (การล็อกครั้งแรกคือครั้งที่ตัดสิน) เก็บ `CartPassed` / `CartPassCount` / `CartBuffs` และลงมือกับตัวที่ระบบรองรับจริง: `speed` → `BobTaskRaceHero.speedScale = 1.1` (เดินเร็วขึ้น 10% ถึงจบรอบ, ถูกรีเซ็ตใน `StartRound`) — อีกสามคีย์ถูกเก็บเป็นธงให้ระบบที่จะมาใช้ทีหลัง (ขจัดคราบ → T02/T16, ถนอม → T03, เงา → ดาวคุณภาพ)
+- **บัฟ:** `TaskRaceRound.NoteCartResult(stats)` เรียกครั้งเดียวต่อรอบ (การล็อกครั้งแรกคือครั้งที่ตัดสิน) เก็บ `CartPassed` / `CartPassCount` / `CartBuffs`; `BobTaskRaceHud` ส่ง `round.CartBuffs` เข้า `BobMinigameHost.SetRoundBuffs` ก่อนเปิดการ์ดทุกใบ จึงมีผลจริงครบทั้งสี่: `clean` → `ScrubAt` ต้องใช้แรงน้อยลง 28%, `gentle` → T03 ช้าลง/T10 ฝุ่นอยู่นานขึ้น, `speed` → `BobTaskRaceHero.speedScale = 1.1`, `shine` → T11 แถบกว้างขึ้น/T06,T09,T13 กดค้างสั้นลง/T15 โชว์ลำดับนานขึ้น (ถูกรีเซ็ตใน `ResetCart`)
 - **T12 — ในโลก ไม่มีการ์ด (`TaskRace/BobChairTask.cs` ใหม่):** `TaskRaceRound.AssignTo` เรียก `BobChairTask.Attach(spot, players)` เมื่อสถานี **ฝ่ายเรา** ได้การ์ด T12. ตัว component สร้างเก้าอี้ล้มจาก `Props/SM_chair_bentwood` 2–4 ตัว (จำนวน = จำนวนผู้เล่น, ทีม 1 คน = 2 ตัวตามน้ำหนัก 2) วางรอบสถานี 2.45–2.9u พร้อมวงสีทีมที่พื้น + ช่องวางเป็นวงบาง (`LineRenderer` 40 เหลี่ยม) ที่ 1.75u หน้าสถานี
 - **วงกลม/ช่อง ต้องอิงพื้นโค้ง:** ทุกวงใช้ `BobCurvedWorld.Drop(p)` เหมือนวงจุดงานของ `TaskSpot` (บทเรียน §15.10/4.3) ไม่งั้นวงจะลอยหรือจมเมื่อกล้องเบนโค้ง; เก้าอี้วางเท้าด้วย `Renderer.bounds.min.y` ไม่ใช่ `position.y`
 - **กดปุ่มหลักแทนการเพิ่มปุ่ม:** `BobChairTask.PromptFor(near, out label, out can)` + `TryPress(near)` ถูกเรียกก่อนเส้นทางปกติใน `BobTaskRaceHud.RenderMain`/`OnMain`. เพราะเก้าอี้อยู่ห่างสถานีเกิน `interactRadius` (1.2u) ปุ่มจึงต้องโผล่ได้ **แม้ `TaskSpot.ActiveNear == null`** — `show = near != null || chairPrompt`. ข้อความ: `จับเก้าอี้` / `ลากเก้าอี้ไปที่โต๊ะ` / `วางเก้าอี้ที่ช่อง` / `เดินไปที่เก้าอี้ (n/N)`; กดที่สถานีเปล่า ๆ จะไม่เปิดการ์ด T12 อีก (toast `เดินไปที่เก้าอี้ที่ล้มอยู่ก่อน`)
 - **ระหว่างลาก:** เก้าอี้ลอยที่ `hero.forward * 0.85` + `hero.dragFactor = 0.8` (ช้าลง 20% ตามสเปก) — `BobTaskRaceHero` มี `speedScale` กับ `dragFactor` คูณเข้าความเร็วเดิม (`speed * clamp(speedScale*dragFactor)`) เพื่อให้บัฟรถเข็นกับงานเก้าอี้อยู่ร่วมกันได้; ครบทุกตัว → `spot.ForceComplete()` ผ่านเส้นทาง `Closed` ปกติ (ไม่มี TASK_LOCK) แล้ว component ลบของตัวเองใน 1.1 วิ
 - **เสียง:** `cart_grab` ตอนจับ, `cart_roll_loop` loop ระหว่างลาก, `table_put` ตอนเข้าที่, `drop_invalid` ตอนวางไม่ลงช่อง (ทุกไฟล์มีอยู่ใน `Assets/Audio/SFX`)
 - **ตรวจ:** `bash unity-typecheck/check.sh` = `typecheck ok: 40 known Unity-6 gap kind(s), no new errors`; `bob-check` = `BOB-CHECK PASSED`; `cd unity-check && dotnet run` = `UNITY-CHECK PASSED` (SelfTest ที่เพิ่มครอบ `CartNeed`/`CartPassCount`/`CartPassed`/`CartBuffs`)
-- **ยังไม่ทำ:** ขั้นเดินไปหยิบของที่ชั้นวางในห้องจริงของ T04 (หยิบใน card), งบ 100 ของ S20, บัฟอีกสามตัวที่ยังไม่มีระบบอ่าน, ภาพหน้าฮีโร่บนเก้าอี้, ของรกขวางทางตาม D, ช่องเส้นประสี่เหลี่ยม, ระยะลากตาม D, server ถือตำแหน่งเก้าอี้/ตรวจด้วย `bob_score_stack`, สถิติ `sample` ของทั้งสองงาน, และยังไม่ได้เปิด Unity ถ่ายการ์ด T04 หรือฉากเก้าอี้ T12
+- **ยังไม่ทำ:** ขั้นเดินไปหยิบของที่ชั้นวางในห้องจริงของ T04 (หยิบใน card), งบ 100 ของ S20, ภาพหน้าฮีโร่บนเก้าอี้, ของรกขวางทางตาม D, ช่องเส้นประสี่เหลี่ยม, ระยะลากตาม D, server ถือตำแหน่งเก้าอี้/ตรวจด้วย `bob_score_stack`, สถิติ `sample` ของทั้งสองงาน, และยังไม่ได้เปิด Unity ถ่ายการ์ด T04 หรือฉากเก้าอี้ T12 (บัฟทั้งสี่มีผลจริงแล้ว — ดู §15.33)
 
 ### 15.27 T16 เติมเต็ม — จำนวนตาม D + ลูกศรขอบจอ (16 พ.ย. 2026)
 
@@ -1180,3 +1180,29 @@ build แรกหลังงาน pure UGS + SFX — สั่งด้วย
 ทุก seed/D, ชุดคำตอบผ่าน D3 ทุกดาว), `bash unity-typecheck/check.sh` =
 `typecheck ok: 40 known Unity-6 gap kind(s), no new errors`, `cd unity-check && dotnet run` = `UNITY-CHECK PASSED`,
 `bob-check` = `BOB-CHECK PASSED`, `ready-check` = `READY-CHECK PASSED` · **ไม่แตะฉาก/ไม่ rebuild/ไม่มีอาร์ต-เสียง**
+
+### 15.33 T04 อ่านน้อยลง เห็นมากขึ้น — ปฏิกิริยาและบัฟที่จับต้องได้ (17 พ.ย. 2026)
+
+**ที่มา.** owner สั่งให้ "ใช้สื่อวิชวลให้มาก ลดการอ่าน" หลังรีวิวแบบผู้เล่น 6.6/10: การ์ด T04 วาด 5 ช่องทั้งที่ให้หยิบ 4,
+ไม่เคยแสดงปฏิกิริยาที่ `BobRules.EvalStack` คำนวณไว้ (`ev.Fx` ไม่ถูกวาด), แถบสเกลด้วย 18 ตายตัวจน "ผ่าน" อ่านผิด,
+ดาวของรอบไม่ถูกไฮไลต์, และบัฟ 3 ใน 4 เป็นธงที่ไม่มีใครอ่าน. รอบนี้แก้ทั้งห้าข้อใน `BobMinigameHost` เท่านั้น
+(ไม่แตะฉาก, ไม่แตะ `server/`, ไม่แตะ `CartNeed`/`CartShelf`).
+
+- **การ์ดตรงกติกาหลัก:** `SetupCartBuild` วาด `CartParts = 4` ช่อง (เดิม `BobRules.MaxLayers = 5`), หัวรถเข็นมีมิเตอร์
+  **งบ 100** (`BobRules.StackCost`) + ป้ายราคาบนทุกชิ้น และ **ทุ่มวิธี 2 จุด** (`BobRules.MaxMethods`). `CartWhyCannot`
+  บังคับ 4 ช่อง / วิธี ≤ 2 / วิธีต้องวางบนของ / งบไม่พอ ก่อนรับชิป — ปฏิเสธแล้วชิปเด้งกลับ+สั่น+ข้อความสั้น
+- **แถบสเกลด้วยเพดาน:** แต่ละแถวใช้ `CartCeiling[i]` เป็น 100% (เดิม 18 ทุกแถว) → ค่า `7/6` ของถนอมอ่านเป็น "เต็มกว่าเป้า"
+  ถูกต้อง; ขีดแดงคือเป้า, ตัวเลข `ค่า/เป้า` อยู่ข้างแถบ, และเมื่อข้ามเป้ามีประกายที่ขีด
+- **ดาว:** `CartStar(seed)` ถูกเก็บเป็น `cartStar`; แถวดาวได้รูปดาวทอง (สไปรต์ `fx_hitstar`) + กรอบทอง + ตัวหนา
+  ขณะที่อีกสามแถวหรี่ลง; ใบงานทั้งสี่แถวโชว์ตั้งแต่ขั้นหยิบของ (เดิมเห็นตอนประกอบเท่านั้น)
+- **ปฏิกิริยาเป็นภาพ:** ตอนวางชิ้นที่ `index` การ์ดเรียก `EvalStack` แล้วเอา `Fx` ที่ `At == index` มาวาด — แต่ละค่า
+  ที่ขยับได้ป้าย `+N`/`-N` สีของค่านั้น (`CartStatColour`) ลอยขึ้นเหนือแถบ, ชั้นที่เกิดได้ดาวทอง (ดี) หรือดาวแดง (เสีย)
+  ติดถาวรจนกว่าจะเอาชั้นออก, เกิดประกาย + เสียง `reaction_good`/`reaction_bad`; เอาชั้นออกแล้วดาวนั้นถูกลบด้วย
+- **ชิ้นส่วนอ่านได้โดยไม่ต้องอ่าน:** ทุกชิ้นบนชั้น/ถาดมีแถบสี 4 ค่า (ความยาว = `part.S / 4`) + ป้ายราคา, สีเดียวกับแถบใหญ่
+- **บัฟครบสี่และเห็นตอนเปิดการ์ด:** `SetRoundBuffs(round.CartBuffs)` ถูกเรียกใน `BeginCard`/`OpenEmergencyCard` ก่อน
+  `Begin`; `Buffed()` ถูกอ่านใน `ScrubAt` (clean), `SetupTap` (gentle), `SetupFill`/`SetupHold`/`SetupSequence` (shine),
+  ส่วน speed ยังผ่าน `TaskRaceRound.ApplySpeedBuff`. การ์ดที่ไม่ใช่ T04 มี **ริบบิ้นบัฟ** สี 4 ชิป โผล่ 4 วิแล้วจาง
+- **ตรวจ:** `bob-check` = `BOB-CHECK PASSED` (modules sync, task-race 75/75, LINE, typecheck 40 ชนิด),
+  `node server/e2e-taskrace-test.js` = `E2E PASSED 39/39`, `ready-check` = `READY-CHECK PASSED`,
+  `cd unity-check && dotnet run` = `UNITY-CHECK PASSED` · **ยังไม่มีหลักฐาน Unity/Play-mode/APK** เพราะ sandbox ไม่มี Unity
+- **ยังเปิด:** ดาวคุณภาพจากค่าเงา (docs 16 §2.5) ยังไม่ผูกกับรางวัล; งบ 100 ยังไม่ขึ้น S20; ยังไม่ได้เปิด Unity ดูระยะจริงบนจอ 20:9

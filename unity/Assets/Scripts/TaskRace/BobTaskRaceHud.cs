@@ -915,6 +915,8 @@ namespace Bob.TaskRace
             cardSpot = spot;
             cardSabotage = sabotage;
             cardElapsed = 0f;
+            // The cart's buffs reach every later card, so the round's buff list is handed over before the card builds.
+            if (mini != null) mini.SetRoundBuffs(round != null ? round.CartBuffs : null);
             cardInteractive = !sabotage && mini != null &&
                               mini.Begin(spot, spot.TaskId, round != null ? round.Difficulty : 1);
 
@@ -1578,6 +1580,7 @@ namespace Bob.TaskRace
             cardElapsed = 0f;
             cardStartProgress = 0f;
             cardDuration = 0f;
+            mini.SetRoundBuffs(round != null ? round.CartBuffs : null);
             cardInteractive = mini.BeginEmergency(stains.MinigameId, stains.Difficulty);
 
             if (cardChipRoot != null)

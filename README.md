@@ -127,8 +127,13 @@ Unity screen consumes it after the pure-UGS migration. Full setup and limits: `a
   quality stars and online sync.
 - **T04 and T12 are playable but not complete.** The cart is a two-step card (pick four parts off a six-part shelf,
   stack them, hold 0.6 s to lock) judged by `BobTaskRaceRules.CartNeed`; the shelf comes from
-  `BobTaskRaceRules.CartShelf`, which always contains a four-part stack that passes the hardest sheet. Only the
-  speed buff lands (walk +10% for the round). The chairs are dragged in the world by the context button, with a 3/4/5 unit drag and 0/1/2 pieces of
+  `BobTaskRaceRules.CartShelf`, which always contains a four-part stack that passes the hardest sheet. The card is
+  drawn to be read without reading: stat-coloured pips on every part, a gold star row plus a star sprite for the
+  round's condition, `value/need` beside each ceiling-scaled bar, reaction `+N`/`-N` pills over the bars plus a
+  gold/red star on the layer that reacted, 4 slots (not 5), a 100-budget meter with a cost tag on every part and
+  two method pips. All four buffs now land on later cards (clean = less scrub work, gentle = slower slimes/longer
+  dust, speed = walk +10% for the round, shine = wider fill band/shorter hold/longer sequence flash) and the card
+  opens with a coloured buff ribbon. The chairs are dragged in the world by the context button, with a 3/4/5 unit drag and 0/1/2 pieces of
   clutter (real colliders, carved navmesh) as difficulty rises; the owner portrait and the server-held chair
   position are missing. Both score with the same pure functions the server module generates (`taskCartNeed`/`taskCartScore`, asserted by
 `server/task-race-test.js`), so no RPC round trip is needed and the two sides cannot drift.
