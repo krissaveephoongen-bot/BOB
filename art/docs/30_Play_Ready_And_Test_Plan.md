@@ -192,8 +192,20 @@ T16 แถวฉุกเฉิน + คราบบอส · T12 ภาพพ�
 
 **กับดัก typecheck (17 พ.ย. 2026):** `baseline-errors.txt` เป็น LF แต่บนเครื่อง Windows ที่ `core.autocrlf` เปิด
 ไฟล์จะถูก checkout เป็น CRLF ทำให้ `comm` เทียบไม่ตรงและขึ้น "new error" ทั้งกระดาน (ทั้งที่ไม่มีอะไรเปลี่ยน) —
-ทางแก้คือรัน `bash unity-typecheck/check.sh --update` หนึ่งครั้ง (จะเขียน baseline เป็น LF และรับ gap ของสคริปต์ใหม่ เช่น
-`Editor/TaskRaceShots.cs` → 40 → 43 kind) แล้วรันซ้ำจนเขียว
+ถ้าเกิดจาก CRLF ให้แปลงเฉพาะ line ending เป็น LF โดยไม่เปลี่ยนรายการ baseline; ใช้ `--update` เฉพาะเมื่อทบทวน
+ทุก gap ใหม่และยืนยันกับ Unity จริงแล้วว่าเป็น API ที่ shim ไม่รองรับ เช่น `Editor/TaskRaceShots.cs` → 40 → 43 kind
+ห้ามรับ baseline ใหม่เพียงเพื่อให้ gate เขียว
+
+**ตรวจหลังรวม cloud ถึง `ecb5796` (17 พ.ย. 2026):** typecheck 43, ready-check, task-race 80/80, daily 34/34,
+e2e 39/39 และ LINE auth ผ่าน. `unity-check` compile target net8.0 ผ่านหลัง restore จาก NuGet ทางการ;
+เครื่องนี้มี runtime .NET 10/11 แต่ไม่มี 8 จึงรันด้วย `DOTNET_ROLL_FORWARD=Major` บน .NET 10 ได้ `UNITY-CHECK PASSED`
+(ไม่ใช่หลักฐาน runtime .NET 8). log `unity/Logs/verify-merge-{gates,contracts,rules-net10}.log`;
+`/usr/local/bin/bob-check` ไม่มีบนเครื่อง Windows นี้ จึงยังไม่ได้รัน wrapper/live-module ซ้ำในรอบนี้.
+Unity จริงหลังรวมผ่าน `SHOTS PASSED` (`verify-shots8-merged.log`: ระหว่าง toast ลูกศร False,
+หลัง toast True ที่ `(244,-330)`) และ `GAME TEST PASSED: 2:0 in 2 rounds` (`verify-gametour-merged.log`),
+ไม่มี `error CS`; ถ่ายหน้า Home/เมนูและสนามใหม่ที่ 2400×1080. ทั้งสอง log มีข้อความโหลด assembly ของ
+`Unity.AI.Navigation.Editor.ConversionSystem` ไม่สำเร็จ แต่ editor ทำงานและไดรเวอร์จบ exit 0;
+ยังไม่ใช่การตรวจออนไลน์สองเครื่องหรือ APK.
 
 **หมายเหตุ 17 พ.ย. 2026 (การ์ด T04 อ่านน้อยลง):** การเปลี่ยนรอบนี้เป็น UI/ปฏิสัมพันธ์ใน `BobMinigameHost`
 (4 ช่อง, แถบสเกลเพดาน, แถวดาว, ป้าย `+N`/`-N`, มิเตอร์งบ, ทุ่มวิธี, บัฟครบสี่) — ชั้น 1 ยืนยันได้แค่ "ยังคอมไพล์/สัญญาไม่เพี้ยน"
