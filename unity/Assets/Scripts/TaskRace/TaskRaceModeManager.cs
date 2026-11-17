@@ -169,6 +169,11 @@ namespace Bob.TaskRace
         public bool LastMatchRecorded { get; private set; }
         /// <summary>The chapter series while storySeries is on; null in a PvP match.</summary>
         public StorySeries Series => series;
+        /// <summary>This match belongs to an online room (docs 27): the room's best-of-three is the shared series.</summary>
+        public bool Online => Bob.Game.MatchRequest.Has && Bob.Game.MatchRequest.Online;
+        /// <summary>This device hosts the online room: only it may close a shared round and open the next one.</summary>
+        public bool IsOnlineHost => Online && Bob.Game.MatchRequest.Host;
+        static Bob.Ugs.BobOnlineRoom Room => Bob.Ugs.BobOnlineRoom.Instance;
         /// <summary>A story round is running and the chapter is still open.</summary>
         public bool InSeries => series != null && !series.Over;
         /// <summary>The round that just closed (story series only).</summary>
@@ -226,10 +231,11 @@ namespace Bob.TaskRace
         }
 
         /// <summary>
-        /// The lobby's pick (docs 11 S11 -> S14): a story chapter is three rounds and a lone hero, while a Solo/Duo/Team
-        /// pick is one timed round and Team may carry offline teammates. Runs before ApplyChapter, so the chapter's
-        /// difficulty lands on the team size the player chose. A direct play of this scene carries no request and keeps
-        /// exactly what the scene was built with.
+        /// The lobby's pick (docs 11 S11 -> S14): a story chapter is three rounds and a lone hero, an online room is a
+        /// best-of-three on the room's shared series (docs 27 section 10.7), while a Solo/Duo/Team pick is one timed
+        /// round and Team may carry offline teammates. Runs before ApplyChapter, so the chapter's difficulty lands on the
+        /// team size the player chose. A direct play of this scene carries no request and keeps exactly what the scene
+        /// was built with.
         /// </summary>
         void ApplyMatchRequest()
         {
@@ -246,7 +252,7 @@ namespace Bob.TaskRace
             if (Application.isPlaying)
                 Debug.Log($"[TaskRace] lobby pick: {Bob.Game.MatchRequest.ModeId} · " +
                           $"{Bob.Game.MatchRequest.Players} player(s)/side · " +
-                          $"{(storySeries ? "story series (3 rounds)" : "one round")} · " +
+                          $"{(Online ? "online best of 3" : storySeries ? "story series (3 rounds)" : "one round")} · " +
                           $"{Bob.Game.MatchRequest.Helpers.Length} offline teammate(s)" +
                           $"{(Bob.Game.MatchRequest.Online ? $" · online {(Bob.Game.MatchRequest.Host ? "host" : "client")} seed {Bob.Game.MatchRequest.Seed}" : "")}" +
                           $"{(Bob.Game.MatchRequest.Daily ? $" · daily day {Bob.Game.MatchRequest.DayNumber} seed {Bob.Game.MatchRequest.Seed}" : "")}");
@@ -344,8 +350,21 @@ namespace Bob.TaskRace
         /// <summary>The local island finished its whole list: the race is over even with time on the clock.</summary>
         void OnRoundWon(TaskRaceRound finished)
         {
+            if (Online && !IsOnlineHost) { HoldForOnlineResult(); return; }
             if (series != null) FinishRound();
             else EndMatch();
+        }
+
+        /// <summary>
+        /// A client does not close a shared round: it stopped when its clock or its list did, and the host's line is the
+        /// one that closes it (docs 27 section 10.7). The hold is idempotent.
+        /// </summary>
+        void HoldForOnlineResult()
+        {
+            if (roundEnding) return;
+            roundEnding = true;
+            if (Application.isPlaying) Debug.Log("[TaskRace] online round over here · waiting for the host's line.");
+            ToastRequested?.Invoke("รอบจบ · รอเจ้าของห้องสรุปผล");
         }
 
         void Update()
@@ -358,7 +377,8 @@ namespace Bob.TaskRace
                 TickClock();
                 if (IsMatchOver)
                 {
-                    if (series != null) FinishRound();
+                    if (Online && !IsOnlineHost) HoldForOnlineResult();
+                    else if (series != null) FinishRound();
                     else EndMatch();
                 }
             }
@@ -411,8 +431,12 @@ namespace Bob.TaskRace
             Time.timeScale = 1f;
             teamAPoints = 0; teamBPoints = 0;
             roundEnding = false;
-            series = storySeries ? new StorySeries(storyRoundSeconds, seriesWinsToTake) : null;
-            RemainingSeconds = series != null ? StorySecondsForRound : matchDuration;
+            // Online the room owns the series (docs 27 section 10.7): the standing survives the scene and every device
+            // reads the same host-applied score. Offline a fresh chapter starts from round one.
+            series = Online
+                ? (Room != null && Room.Series != null ? Room.Series : new StorySeries(storyRoundSeconds, seriesWinsToTake))
+                : storySeries ? new StorySeries(storyRoundSeconds, seriesWinsToTake) : null;
+            RemainingSeconds = series != null ? (Online ? series.SecondsForRound : StorySecondsForRound) : matchDuration;
             warned = opened = false;
             LastResult = null;
             LastScore = 0;
@@ -422,15 +446,17 @@ namespace Bob.TaskRace
             PointsChanged?.Invoke(TeamId.TeamB, teamBPoints);
             MatchStarted?.Invoke();
             SendHeroHome();
-            if (series != null && StoryLossStreak >= 2)
+            if (series != null && !Online && StoryLossStreak >= 2)
             {
                 ToastRequested?.Invoke($"แพ้ติด 2 บท — รอบแรกได้เวลาเพิ่ม {loseStreakBonusSeconds:0} วิ");
                 if (Application.isPlaying) Debug.Log($"[TaskRace] mercy: {StoryLossStreak} chapters lost in a row, round 1 is {RemainingSeconds:0} s.");
             }
             if (Application.isPlaying)
-                Debug.Log(series != null
-                    ? $"[TaskRace] chapter start: round 1/{StorySeries.Rounds}, {RemainingSeconds:0} s each, {mode}, local team {localTeam}."
-                    : $"[TaskRace] match start: {matchDuration:0} s, {mode}, local team {localTeam}.");
+                Debug.Log(Online
+                    ? $"[TaskRace] online best of 3 · round {series?.Round ?? 1}/{StorySeries.Rounds} · {RemainingSeconds:0} s each, {mode}, local team {localTeam}, host {IsOnlineHost}."
+                    : series != null
+                        ? $"[TaskRace] chapter start: round 1/{StorySeries.Rounds}, {RemainingSeconds:0} s each, {mode}, local team {localTeam}."
+                        : $"[TaskRace] match start: {matchDuration:0} s, {mode}, local team {localTeam}.");
             StartCountdown();
         }
 
@@ -509,7 +535,8 @@ namespace Bob.TaskRace
             int rewardTasks = series != null ? series.TotalLocalTasks : mine;
             int rewardPoints = series != null ? series.TotalLocalPoints : localPool;
             int bonus = 0;
-            if (series != null && series.Over && series.LocalTookSeries)
+            // An online series belongs to the room, not to the story ladder: it earns no chapter first-clear bonus.
+            if (!Online && series != null && series.Over && series.LocalTookSeries)
             {
                 var chapter = Bob.Rules.BobChapters.Saved;
                 if (!Bob.Rules.BobChapters.Cleared(chapter.Order)) bonus = BobTaskRaceProfile.FirstClearBonus;
@@ -539,7 +566,8 @@ namespace Bob.TaskRace
             }
 
             // A3: a decided story chapter earns 0-3 stars, written before MatchEnded so the card reads the new best.
-            if (record && series != null && series.Over)
+            // An online series is not a chapter: it never writes stars, clears a chapter or moves the streak.
+            if (record && !Online && series != null && series.Over)
             {
                 var chapter = Bob.Rules.BobChapters.Saved;
                 int best = Bob.Rules.BobChapters.SaveStars(chapter.Order, series.Stars);
@@ -567,10 +595,13 @@ namespace Bob.TaskRace
         /// <summary>
         /// Close a story round. Two wins either way (or three rounds played) hands the chapter to EndMatch, which pays
         /// once; otherwise the round banner sits for nextRoundDelay seconds and the next round starts on a fresh list.
+        /// Online the host is the only judge (docs 27 section 10.7): it registers the round here and publishes the same
+        /// line to the room, so no device can close a different round than the one the host saw.
         /// </summary>
         void FinishRound()
         {
             if (series == null || series.Over || roundEnding) return;
+            if (Online && !IsOnlineHost) return; // a client waits for bob.result (HoldForOnlineResult)
             roundEnding = true;
             if (round == null) round = FindAnyObjectByType<TaskRaceRound>();
 
@@ -581,8 +612,30 @@ namespace Bob.TaskRace
             RemainingSeconds = 0f;
 
             var line = series.Register(mine, theirs, PointsOf(localTeam), PointsOf(OtherTeam));
+            if (Online) Room?.SendSeriesResult(line);
+            ShowRoundLine(line);
+
+            if (series.Over)
+            {
+                roundEnding = false;
+                // Two chapters lost in a row buy the next attempt 15 s; a win clears the streak for good. An online
+                // series is not the story ladder, so it never moves the streak (docs 27 section 10.7).
+                if (!Online)
+                {
+                    if (series.LocalTookSeries) StoryLossStreak = 0;
+                    else if (series.LocalWins < series.RivalWins) StoryLossStreak = StoryLossStreak + 1;
+                }
+                EndMatch(seriesWon: series.LocalTookSeries, seriesDraw: series.LocalWins == series.RivalWins);
+                return;
+            }
+            StartCoroutine(NextRoundAfter(nextRoundDelay));
+        }
+
+        /// <summary>The toast and the banner for one closed round — the same line on the host and on every client.</summary>
+        void ShowRoundLine(SeriesRound line)
+        {
             if (Application.isPlaying) Debug.Log($"[TaskRace] {line}");
-            if (line.Outcome == RoundOutcome.Win && series.ChallengeOffered)
+            if (line.Outcome == RoundOutcome.Win && series.ChallengeOffered && !Online)
             {
                 ToastRequested?.Invoke("ชนะขาด! เปิดด่านท้าทายของบทนี้แล้ว");
                 if (Application.isPlaying) Debug.Log($"[TaskRace] challenge stage offered: win margin {line.LocalTasks - line.RivalTasks} tasks.");
@@ -594,28 +647,27 @@ namespace Bob.TaskRace
                     : $"จบรอบ {line.Number}: {(line.Outcome == RoundOutcome.Win ? "เราชนะ" : line.Outcome == RoundOutcome.Loss ? "เราแพ้" : "เสมอ")} {series.Score} · รอบหน้า {series.SecondsForRound:0} วิ");
             }
             RoundEnded?.Invoke(line);
-
-            if (series.Over)
-            {
-                roundEnding = false;
-                // Two chapters lost in a row buy the next attempt 15 s; a win clears the streak for good.
-                if (series.LocalTookSeries) StoryLossStreak = 0;
-                else if (series.LocalWins < series.RivalWins) StoryLossStreak = StoryLossStreak + 1;
-                EndMatch(seriesWon: series.LocalTookSeries, seriesDraw: series.LocalWins == series.RivalWins);
-                return;
-            }
-            StartCoroutine(NextRoundAfter(nextRoundDelay));
         }
 
         IEnumerator NextRoundAfter(float delay)
         {
             yield return new WaitForSeconds(delay);
             if (series == null || series.Over) { roundEnding = false; yield break; }
-            BeginRound(series.SecondsForRound);
+            if (Online)
+            {
+                // The next round's list is drawn from a seed the host picks and publishes, so both islands get the
+                // same order (docs 27 section 10.7). Offline each round keeps drawing its own seed.
+                int seed = UnityEngine.Random.Range(1, 100000);
+                Room?.SendSeriesRound(series.Round, seed, series.SecondsForRound);
+                BeginRound(series.SecondsForRound, seed);
+            }
+            else BeginRound(series.SecondsForRound);
         }
 
         /// <summary>Fresh list, zero points, gates shut, new seed; the clock is this round's series length.</summary>
-        void BeginRound(float seconds)
+        void BeginRound(float seconds) => BeginRound(seconds, UnityEngine.Random.Range(1, 100000));
+
+        void BeginRound(float seconds, int seed)
         {
             roundEnding = false;
             teamAPoints = 0; teamBPoints = 0;
@@ -625,13 +677,68 @@ namespace Bob.TaskRace
             PointsChanged?.Invoke(TeamId.TeamA, teamAPoints);
             PointsChanged?.Invoke(TeamId.TeamB, teamBPoints);
             if (round == null) round = FindAnyObjectByType<TaskRaceRound>();
-            round?.StartRound(UnityEngine.Random.Range(1, 100000));
+            round?.StartRound(seed);
             MatchStarted?.Invoke();
             SendHeroHome(); // a round must not open with the hero stranded on the rival island
             ToastRequested?.Invoke($"รอบ {series?.Round ?? 2}/{StorySeries.Rounds} · {seconds:0} วิ");
             if (Application.isPlaying)
                 Debug.Log($"[TaskRace] round {(series?.Round ?? 0)}/{StorySeries.Rounds} start: {seconds:0} s, series {series?.Score}.");
             StartCountdown();
+        }
+
+        // ---------------------------------------------------------------- online best-of-three (docs 27 section 10.7)
+
+        /// <summary>
+        /// The simulated rival cleared its whole list. Offline this keeps the old rule (the match ends on the spot);
+        /// online it is a closed round like the clock running out — the host registers and publishes it, a client waits
+        /// for the host's line (docs 27 section 10.7).
+        /// </summary>
+        public void OnRivalFinished()
+        {
+            if (Online)
+            {
+                if (IsOnlineHost) FinishRound();
+                else HoldForOnlineResult();
+                return;
+            }
+            EndMatch();
+        }
+
+        /// <summary>
+        /// A client was handed the host's closed round; the room already registered it on the shared series. This only
+        /// shows the line and, when the third round or the second win closed the series, pays the match.
+        /// </summary>
+        public void OnOnlineSeriesRound(SeriesRound line)
+        {
+            if (!Online || series == null || LastResult.HasValue) return;
+            RemainingSeconds = 0f;
+            ShowRoundLine(line);
+            // A round that did not close the series keeps the clock held until the host opens the next one (bob.round);
+            // otherwise the clock would hit zero every frame and re-toast the same line.
+            roundEnding = !series.Over;
+            if (series.Over) EndMatch(seriesWon: series.LocalTookSeries, seriesDraw: series.LocalWins == series.RivalWins);
+        }
+
+        /// <summary>A client was told which seed round N runs on; it starts the same list the host draws.</summary>
+        public void BeginOnlineRound(int round, int seed, float seconds)
+        {
+            if (!Online || IsOnlineHost || series == null || series.Over) return;
+            if (round != series.Round) return;
+            roundEnding = false;
+            BeginRound(seconds, seed);
+        }
+
+        /// <summary>
+        /// The room's series was voided because somebody left mid-series. No side takes it: the match closes as a draw
+        /// so the result card can say so, and the story ladder (streak, stars, chapter) is untouched.
+        /// </summary>
+        public void OnOnlineSeriesAbandoned()
+        {
+            if (!Online || LastResult.HasValue) return;
+            series?.Abandon(); // idempotent: the room may have voided it already, or the host simply vanished
+            roundEnding = false;
+            ToastRequested?.Invoke("ซีรีส์ถูกยกเลิก · มีผู้เล่นออกจากห้อง");
+            EndMatch(seriesWon: false, seriesDraw: true);
         }
 
         void TickClock()

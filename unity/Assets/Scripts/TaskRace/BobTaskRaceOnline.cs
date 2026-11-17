@@ -26,12 +26,14 @@ namespace Bob.TaskRace
         Bob.Ugs.BobOnlineRoom room;
         BobTaskRaceHero hero;
         TaskRaceRound round;
+        TaskRaceModeManager manager;
         TeamId team;
         readonly Dictionary<int, Remote> remotes = new Dictionary<int, Remote>();
         readonly Dictionary<string, bool> knownDone = new Dictionary<string, bool>();
         readonly List<string> heroPool = new List<string>();
         float nextPose, nextPoll;
         int remoteCount;
+        bool roomGone;
 
         /// <summary>Attach to the running match when the lobby handed over an online room (called by TaskRaceModeManager).</summary>
         public static BobTaskRaceOnline Attach()
@@ -47,13 +49,16 @@ namespace Bob.TaskRace
             room = Bob.Ugs.BobOnlineRoom.Instance;
             hero = FindAnyObjectByType<BobTaskRaceHero>();
             round = FindAnyObjectByType<TaskRaceRound>();
-            var manager = TaskRaceModeManager.Instance;
+            manager = TaskRaceModeManager.Instance;
             team = manager != null ? manager.localTeam : TeamId.TeamA;
 
             if (room != null)
             {
                 room.PoseReceived += OnPose;
                 room.TaskReceived += OnTask;
+                room.SeriesResultApplied += OnSeriesResult;
+                room.SeriesRoundRequested += OnSeriesRound;
+                room.SeriesAbandoned += OnSeriesAbandoned;
                 foreach (var id in room.Roster)
                     if (!string.IsNullOrEmpty(id) && !heroPool.Contains(id)) heroPool.Add(id);
             }
@@ -71,11 +76,22 @@ namespace Bob.TaskRace
             if (room == null) return;
             room.PoseReceived -= OnPose;
             room.TaskReceived -= OnTask;
+            room.SeriesResultApplied -= OnSeriesResult;
+            room.SeriesRoundRequested -= OnSeriesRound;
+            room.SeriesAbandoned -= OnSeriesAbandoned;
         }
 
         void Update()
         {
             if (room == null) return;
+
+            // The host closed the room (or its connection died) while a series was in play: the shared series cannot
+            // continue, so it is voided here too (docs 27 section 10.7). A decided series is left alone.
+            if (!roomGone && !room.InRoom)
+            {
+                roomGone = true;
+                if (manager != null && manager.Series != null && !manager.Series.Over) manager.OnOnlineSeriesAbandoned();
+            }
 
             if (hero != null && Time.time >= nextPose)
             {
@@ -131,6 +147,23 @@ namespace Bob.TaskRace
                 knownDone[spotId] = true; // do not echo the remote's event back as ours
                 return;
             }
+        }
+
+        // ---------------------------------------------------------------- best-of-three (docs 27 section 10.7)
+
+        void OnSeriesResult(SeriesRound line)
+        {
+            if (manager != null) manager.OnOnlineSeriesRound(line);
+        }
+
+        void OnSeriesRound(int roundNumber, int seed, float seconds)
+        {
+            if (manager != null) manager.BeginOnlineRound(roundNumber, seed, seconds);
+        }
+
+        void OnSeriesAbandoned()
+        {
+            if (manager != null) manager.OnOnlineSeriesAbandoned();
         }
 
         /// <summary>A body for a client we have not seen yet; the next unused roster hero wears it.</summary>

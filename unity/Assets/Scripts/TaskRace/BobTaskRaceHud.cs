@@ -1087,7 +1087,10 @@ namespace Bob.TaskRace
             BobUi.Pin(p, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1080f, 760f));
 
             var series = manager != null ? manager.Series : null;
-            if (series != null && series.Over) BuildChapterCard(p, r, series);
+            // An online room closes as a best-of-three (docs 27 section 10.7): its own card, not the chapter card —
+            // the room has no chapter, no stars and no next chapter of the story ladder.
+            if (Bob.Game.MatchRequest.Has && Bob.Game.MatchRequest.Online) BuildOnlineCard(p, r);
+            else if (series != null && series.Over) BuildChapterCard(p, r, series);
             else BuildMatchCard(p, r);
 
             shownResult = r;
@@ -1138,24 +1141,82 @@ namespace Bob.TaskRace
             // this card, so the tagline sits there rather than beside the score line.
             SloganChip(p, new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f), new Vector2(0f, -517f), 460f);
 
-            // An online round cannot restart on one device alone (docs 27): the seed is the host's, so the replay is a
-            // new room. The card says so instead of leaving a button that would desync the two islands.
-            bool online = Bob.Game.MatchRequest.Has && Bob.Game.MatchRequest.Online;
-            if (online)
+            var again = BobUi.Button(p, "เล่นอีกครั้ง", T.primary, RestartFromResult, T.buttonLg, T.ink);
+            BobUi.Pin((RectTransform)again.transform, new Vector2(1f, 0f), new Vector2(1f, 0f),
+                new Vector2(-40f, 40f), new Vector2(480f, 160f));
+            var home = BobUi.Button(p, "กลับเมนู", T.surfaceCream, BackToLobby, T.buttonLg, T.ink);
+            BobUi.Pin((RectTransform)home.transform, new Vector2(0f, 0f), new Vector2(0f, 0f),
+                new Vector2(40f, 40f), new Vector2(480f, 160f));
+        }
+
+        // ---------------------------------------------------------------- online series result (docs 27 10.7)
+
+        /// <summary>
+        /// The end of an online best-of-three: the shared standing the room applied, the last round's line, and one
+        /// next step — the host opens a fresh series, everybody else waits for it or goes home.
+        /// </summary>
+        void BuildOnlineCard(RectTransform p, MatchResult r)
+        {
+            var room = Bob.Ugs.BobOnlineRoom.Instance;
+            var s = room != null && room.Series != null ? room.Series : manager != null ? manager.Series : null;
+            bool abandoned = s != null && s.Abandoned;
+            bool won = s != null && s.LocalTookSeries;
+            bool draw = s != null && !won && !abandoned && s.LocalWins == s.RivalWins;
+
+            string heading = abandoned ? "ยกเลิกซีรีส์" : won ? "ชนะซีรีส์!" : draw ? "เสมอซีรีส์" : "แพ้ซีรีส์";
+            var colour = abandoned ? T.inkMuted : won ? T.success : draw ? T.ink : T.danger;
+            var title = BobUi.Label(p, heading, 92, colour, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Pin(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -28f), new Vector2(1000f, 120f));
+
+            var score = BobUi.Label(p, s != null ? $"ชนะ {s.LocalWins} – {s.RivalWins}" : "ซีรีส์", 64, T.ink,
+                TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Pin(score.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -160f), new Vector2(900f, 80f));
+
+            var line = s != null ? s.LastRound : null;
+            string last = line.HasValue
+                ? $"รอบ {line.Value.Number}/{StorySeries.Rounds} · " +
+                  (line.Value.Outcome == RoundOutcome.Win ? "เราชนะ" : line.Value.Outcome == RoundOutcome.Loss ? "เราแพ้" : "เสมอ") +
+                  $" · งาน {line.Value.LocalTasks}:{line.Value.RivalTasks}"
+                : "ยังไม่จบรอบแรก";
+            var sub = BobUi.Label(p, last, 34, T.inkMuted, TextAnchor.MiddleCenter);
+            BobUi.Pin(sub.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -242f), new Vector2(1000f, 54f));
+            if (abandoned)
             {
-                var note = BobUi.Label(p, "ออนไลน์ · กลับเมนูแล้วสร้างห้องใหม่เพื่อเล่นอีกครั้ง", 28, T.inkMuted, TextAnchor.MiddleRight);
-                BobUi.Pin(note.rectTransform, new Vector2(1f, 0f), new Vector2(1f, 0f),
-                    new Vector2(-40f, 92f), new Vector2(560f, 60f));
+                var why = BobUi.Label(p, "มีผู้เล่นออกจากห้องกลางซีรีส์ · ไม่มีผู้ชนะ", 28, T.inkMuted, TextAnchor.MiddleCenter);
+                BobUi.Pin(why.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                    new Vector2(0f, -294f), new Vector2(1000f, 48f));
+            }
+
+            RewardBlock(p, r, -326f);
+            SloganChip(p, new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f), new Vector2(0f, -517f), 460f);
+
+            bool host = room != null && room.InRoom && room.IsHost;
+            if (host)
+            {
+                var again = BobUi.Button(p, "เริ่มซีรีส์ใหม่", T.primary, StartNewOnlineSeries, T.buttonLg, T.ink);
+                BobUi.Pin((RectTransform)again.transform, new Vector2(1f, 0f), new Vector2(1f, 0f),
+                    new Vector2(-40f, 40f), new Vector2(480f, 160f));
             }
             else
             {
-                var again = BobUi.Button(p, "เล่นอีกครั้ง", T.primary, RestartFromResult, T.buttonLg, T.ink);
-                BobUi.Pin((RectTransform)again.transform, new Vector2(1f, 0f), new Vector2(1f, 0f),
-                    new Vector2(-40f, 40f), new Vector2(480f, 160f));
+                var note = BobUi.Label(p, "รอเจ้าของห้องเริ่มซีรีส์ใหม่", 28, T.inkMuted, TextAnchor.MiddleRight);
+                BobUi.Pin(note.rectTransform, new Vector2(1f, 0f), new Vector2(1f, 0f),
+                    new Vector2(-40f, 92f), new Vector2(560f, 60f));
             }
             var home = BobUi.Button(p, "กลับเมนู", T.surfaceCream, BackToLobby, T.buttonLg, T.ink);
             BobUi.Pin((RectTransform)home.transform, new Vector2(0f, 0f), new Vector2(0f, 0f),
                 new Vector2(40f, 40f), new Vector2(480f, 160f));
+        }
+
+        /// <summary>Host only: open a fresh best-of-three in the same room, on a new round-one seed.</summary>
+        void StartNewOnlineSeries()
+        {
+            var room = Bob.Ugs.BobOnlineRoom.Instance;
+            if (room == null || !room.InRoom || !room.IsHost) return;
+            room.StartMatch(Random.Range(1, 100000), Mathf.Max(2, room.Players));
         }
 
         // ---------------------------------------------------------------- chapter result (A3)

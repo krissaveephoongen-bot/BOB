@@ -20,7 +20,7 @@ namespace Bob.Game
         /// <summary>Players per side the round list is sized for: 1 for story/solo, 2 for Duo and 2v2, 3 for 3v3.</summary>
         public static int Players { get; private set; } = 1;
 
-        /// <summary>Story chapter = three rounds, best of three. Every other pick is one timed round.</summary>
+        /// <summary>Best of three: a story chapter, and an online room (docs 27 section 10.7). Every other pick is one timed round.</summary>
         public static bool Series { get; private set; } = true;
 
         /// <summary>Hero ids of the offline teammates on the player's island; empty for a solo or Duo pick.</summary>
@@ -58,12 +58,15 @@ namespace Bob.Game
             Has = true;
         }
 
-        /// <summary>An online room's start: one timed round, the host's seed, and no offline teammates (the clients are).</summary>
+        /// <summary>
+        /// An online room's start: a best-of-three series (docs 27 section 10.7), the host's seed for round one, and no
+        /// offline teammates (the clients are). Rounds two and three get their seed from the host, not from this value.
+        /// </summary>
         public static void SetOnline(bool host, int players, int seed)
         {
             ModeId = "online";
             Players = Math.Max(1, players);
-            Series = false;
+            Series = true;
             Helpers = Array.Empty<string>();
             Online = true;
             Host = host;

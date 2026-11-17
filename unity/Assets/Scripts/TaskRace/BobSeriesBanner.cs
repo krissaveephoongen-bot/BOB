@@ -77,7 +77,8 @@ namespace Bob.TaskRace
             cardScore.text = $"เรา {line.LocalWins} - {line.RivalWins} คู่แข่ง";
             cardHint.text = $"รอบถัดไปเริ่มใน {Mathf.CeilToInt(manager.nextRoundDelay)}…";
             if (cardTag != null)
-                cardTag.gameObject.SetActive(manager.Series != null && manager.Series.ChallengeOffered);
+                cardTag.gameObject.SetActive(manager.Series != null && manager.Series.ChallengeOffered &&
+                                             !(Bob.Game.MatchRequest.Has && Bob.Game.MatchRequest.Online));
             RefreshPill();
         }
 

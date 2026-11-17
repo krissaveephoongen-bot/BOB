@@ -182,6 +182,54 @@ static class Program
         Check("series: reset clears the totals",
             totals.TotalLocalTasks == 0 && totals.TotalLocalPoints == 0 && totals.RoundsPlayed == 0 && totals.Score == "0-0");
 
+        // The online best-of-three (docs 27 section 10.7): the room's series is the same StorySeries, and the host is
+        // the one judge — a round closed with RegisterOutcome counts the outcome the host saw, whatever this device's
+        // own counts were. The void rule is the leave rule: a series still in play can be abandoned, a decided one can not.
+        Check("online: the round outcome follows tasks first",
+            StorySeries.OutcomeOf(6, 5, 0, 0) == RoundOutcome.Win &&
+            StorySeries.OutcomeOf(5, 6, 0, 0) == RoundOutcome.Loss);
+        Check("online: points break a task tie",
+            StorySeries.OutcomeOf(5, 5, 60, 40) == RoundOutcome.Win &&
+            StorySeries.OutcomeOf(5, 5, 40, 60) == RoundOutcome.Loss);
+        Check("online: a tie on both is a draw", StorySeries.OutcomeOf(5, 5, 50, 50) == RoundOutcome.Draw);
+
+        var hostWord = new StorySeries(100f, 2);
+        var hostLine = hostWord.RegisterOutcome(RoundOutcome.Win, 4, 9, 0, 0);
+        Check("online: the host's outcome counts even when the counts disagree",
+            hostLine.Outcome == RoundOutcome.Win && hostLine.LocalWins == 1 && hostLine.RivalWins == 0);
+        hostWord.RegisterOutcome(RoundOutcome.Win, 2, 8, 0, 0);
+        Check("online: two host wins close the series at round two",
+            hostWord.Over && hostWord.LocalTookSeries && hostWord.RoundsPlayed == 2 && hostWord.Score == "2-0");
+        Check("online: a client applying a stale line cannot reopen a closed round",
+            hostWord.Round == 2 && hostWord.LastRound.Value.Number == 2);
+
+        var voided = new StorySeries(100f, 2);
+        voided.Register(6, 5, 0, 0);
+        Check("online: a live series can be voided", voided.Abandon() && voided.Abandoned && voided.Over);
+        Check("online: a voided series has no winner",
+            !voided.LocalTookSeries && voided.Stars == 0 && voided.Score == "1-0" && voided.RoundsPlayed == 1);
+
+        var lateLeave = new StorySeries(100f, 2);
+        lateLeave.Register(6, 5, 0, 0);
+        lateLeave.Register(6, 5, 0, 0);
+        Check("online: a decided series keeps its winner when someone leaves",
+            !lateLeave.Abandon() && !lateLeave.Abandoned && lateLeave.LocalTookSeries && lateLeave.Score == "2-0");
+
+        var emptyVoid = new StorySeries(100f, 2);
+        Check("online: leaving before the first result still voids the series",
+            emptyVoid.Abandon() && emptyVoid.Over && !emptyVoid.LocalTookSeries && emptyVoid.RoundsPlayed == 0);
+
+        var withDraw = new StorySeries(100f, 2);
+        withDraw.Register(6, 6, 70, 70);
+        withDraw.Register(3, 4, 0, 0);
+        withDraw.Register(7, 6, 0, 0);
+        Check("online: a draw is a played round but no win",
+            withDraw.Over && withDraw.RoundsPlayed == 3 && withDraw.LocalWins == 1 && withDraw.RivalWins == 1 &&
+            !withDraw.LocalTookSeries);
+
+        voided.Reset();
+        Check("online: reset clears the void flag", !voided.Abandoned && !voided.Over && voided.Score == "0-0");
+
         var margin = new StorySeries(100f, 2);
         margin.Register(6, 4, 0, 0);
         Check("series: two tasks do not open the challenge", !margin.ChallengeOffered);

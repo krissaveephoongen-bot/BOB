@@ -956,7 +956,7 @@ namespace Bob.Game
             if (!string.IsNullOrEmpty(roomNote))
                 BobUi.Label(right, roomNote, 24, BobUi.Muted, TextAnchor.UpperLeft);
 
-            BobUi.Label(right, "ห้องออนไลน์: ทุกคนอยู่ฝั่งเราและแข่งกับคู่แข่งจำลองจนกว่าจะมีระบบทีมสองฝั่ง", 20, BobUi.Muted, TextAnchor.UpperLeft);
+            BobUi.Label(right, "ห้องออนไลน์: ทุกคนอยู่ฝั่งเรา แข่งกับคู่แข่งจำลอง 3 รอบ ชนะ 2 รอบก่อน · ออกกลางซีรีส์ = ซีรีส์ถูกยกเลิก", 20, BobUi.Muted, TextAnchor.UpperLeft);
         }
 
         // ---------------------------------------------------------------- S16 hero select (15 s when starting a match)

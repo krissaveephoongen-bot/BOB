@@ -182,8 +182,8 @@ T16 แถวฉุกเฉิน + คราบบอส · T12 ภาพพ�
 
 | คำสั่ง | พิสูจน์ | ผ่านเมื่อ |
 | --- | --- | --- |
-| `bash unity-typecheck/check.sh` | ทุกสคริปต์ compile เทียบ baseline | `typecheck ok: 40 known Unity-6 gap kind(s), no new errors` |
-| `cd unity-check && dotnet run` | กติกาล้วน: กอง 5 ชั้น, ตารางฉุกเฉิน, series/stars, ตารางคะแนนรวม 10 แถว, แถบอันดับ, seed เดลี่, ตารางของตกแต่ง 13 ข้อ, ห้องออฟไลน์ | `UNITY-CHECK PASSED` |
+| `bash unity-typecheck/check.sh` | ทุกสคริปต์ compile เทียบ baseline | `typecheck ok: 43 known Unity-6 gap kind(s), no new errors` |
+| `cd unity-check && dotnet run` | กติกาล้วน: กอง 5 ชั้น, ตารางฉุกเฉิน, series/stars, ตารางคะแนนรวม 10 แถว, แถบอันดับ, seed เดลี่, ตารางของตกแต่ง 13 ข้อ, ห้องออฟไลน์, **ออนไลน์ best-of-3 11 ข้อ (ผลรอบ/โมฆะ/ผู้ชนะ/บรรทัดเก่า)** | `UNITY-CHECK PASSED` |
 | `node server/e2e-taskrace-test.js` | **เล่นทั้งรอบ**ผ่าน module จริง: lobby → race → การ์ดทุกใบ/ทุกขั้น → T04 4 ชิ้น → คราบ 3 ครั้ง → RESULT + analytics | `E2E PASSED: 39/39 checks` |
 | `/usr/local/bin/bob-check` | module server สด + `task-race-test` + `daily-test` + LINE auth + typecheck | `BOB-CHECK PASSED` |
 | `bash ready-check/check.sh` | **เล่นได้จริงใน build**: ซีน/GUID/EventSystem/Resources/ชื่อ asset | `READY-CHECK PASSED` |

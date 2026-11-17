@@ -187,6 +187,8 @@ namespace Bob.Ugs
     /// screens and the Task Race scene read: the state they draw, the two events they listen to, and the calls they make.</summary>
     public sealed class BobOnlineRoom : MonoBehaviour
     {
+        public const float SeriesRoundSeconds = 100f;
+        public const int SeriesWinsToTake = 2;
         public static BobOnlineRoom Instance { get; private set; }
         public static BobOnlineRoom Ensure() => null;
         public bool InRoom { get; private set; }
@@ -201,13 +203,20 @@ namespace Bob.Ugs
         public int StartSeed { get; private set; }
         public string HeroId { get; private set; }
         public System.Collections.Generic.IReadOnlyList<string> Roster { get; private set; }
+        public Bob.TaskRace.StorySeries Series { get; private set; }
         public event System.Action<int, Vector3, float> PoseReceived;
         public event System.Action<int, string, bool> TaskReceived;
+        public event System.Action<Bob.TaskRace.SeriesRound> SeriesResultApplied;
+        public event System.Action<int, int, float> SeriesRoundRequested;
+        public event System.Action SeriesAbandoned;
         public System.Threading.Tasks.Task<bool> HostAsync(string heroId, int maxPlayers) => null;
         public System.Threading.Tasks.Task<bool> JoinAsync(string heroId, string code) => null;
         public System.Threading.Tasks.Task LeaveAsync() => null;
         public void StartMatch(int seed, int players) { }
         public void SendPose(Vector3 position, float yaw) { }
         public void SendTask(string spotId, bool completed) { }
+        public void SendSeriesResult(Bob.TaskRace.SeriesRound line) { }
+        public void SendSeriesRound(int round, int seed, float seconds) { }
+        public void AbandonSeries() { }
     }
 }

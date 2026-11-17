@@ -130,12 +130,14 @@ Home (S10) → เลือกโหมด Solo/Duo/Team (S11) → S14 เลื
                                   ├─ เจ้าของห้อง: "สร้างห้อง" → Relay allocation + Lobby → โค้ด 6 ตัวบนการ์ด
                                   ├─ เพื่อน: "กรอกรหัส" (TouchScreenKeyboard) หรือ "เข้าห้องที่เปิดอยู่" (quick join)
                                   └─ เจ้าของห้องกด "เริ่มแมตช์" → ทุกเครื่องโหลด TaskRace พร้อม seed เดียวกัน
+                                       แล้วแข่งแบบ **ชนะ 2 ใน 3 รอบ** (§10.7)
 ```
 
 - โค้ดห้องคือ `Lobby.LobbyCode` (6 ตัว) — แสดงตัวใหญ่กลางการ์ดซ้ายของ S15, ที่นั่ง 4 ช่องวาดภาพฮีโร่ตามลำดับที่เข้า lobby (เจ้าของห้องก่อน)
 - S15 ไม่มี matchmaking จริง: quick join = `QuickJoinLobbyAsync` ของ Lobby service (เลือกห้องที่เปิดอยู่ให้) และห้องรับ 2–4 คน (`BobOnlineRoom.MaxSlots = 4`)
 - ออนไลน์ใช้ฉาก `TaskRace` เท่านั้น (ไม่ใช้ `TaskRace_Duo`/`TaskRace_Team`); จำนวนผู้เล่นในห้องคือ `MatchRequest.Players` จึงกำหนดจำนวนงานต่อรอบตามตาราง docs 16 §2.2 (2 คน = 1 common/2 long/4 short, 4 คน = 1/3/7)
-- ออกจากห้อง/กด back: host ลบ lobby, client `RemovePlayerAsync`, แล้ว `NetworkManager.Shutdown()` — กลับ Home ได้ทันที
+- ออนไลน์เป็น **ซีรีส์ best-of-3** เสมอ (`MatchRequest.SetOnline` ตั้ง `Series = true`): รอบ 1 seed มาจาก `bob.start`, รอบ 2–3 host ออก seed ใหม่และส่ง `bob.round` ให้ทุกเครื่องก่อนเริ่มรอบ
+- ออกจากห้อง/กด back: host ลบ lobby, client `RemovePlayerAsync`, แล้ว `NetworkManager.Shutdown()` — กลับ Home ได้ทันที; ถ้าออกกลางซีรีส์ที่ยังไม่จบ ซีรีส์ถูกยกเลิก (§10.7)
 
 ### 10.2 สัญญาข้อความ (Netcode named messages)
 
@@ -144,9 +146,13 @@ Home (S10) → เลือกโหมด Solo/Duo/Team (S11) → S14 เลื
 | `bob.start` | host → ทุกคน | ReliableSequenced | `int seed`, `int players` | `MatchRequest.SetOnline(host:false, players, seed)` แล้ว `LoadScene("TaskRace")` (client ไม่โหลดจาก UI ตัวเอง) |
 | `bob.pose` | ทุกคน → host (client) / host → ทุกคน | Unreliable | `int origin`, `float x`, `float z`, `float yaw` | `BobTaskRaceOnline` ขยับตัวละครระยะไกล (`Vector3.Lerp` + `Quaternion.Slerp`) |
 | `bob.task` | ทุกคน → host (client) / host → ทุกคน | ReliableSequenced | `int origin`, `byte[] spotId`, `bool completed` | ฝั่งรับ `spot.ForceComplete()` ถ้ายังไม่สะอาด |
+| `bob.round` | host → ทุกคน | ReliableSequenced | `int round`, `int seed`, `float seconds` | client `TaskRaceModeManager.BeginOnlineRound(...)` — เริ่มรอบถัดไปด้วย seed/เวลาของ host (§10.7) |
+| `bob.result` | host → ทุกคน | ReliableSequenced | `int round`, `byte outcome`, `int localTasks`, `int rivalTasks`, `int localPoints`, `int rivalPoints` | client `Series.RegisterOutcome(...)` ตามผลของ host แล้ว `HoldForOnlineResult` → การ์ด/รอบถัดไป |
+| `bob.abandon` | host → ทุกคน | ReliableSequenced | `int round` | client `Series.Abandon()` → การ์ด "ยกเลิกซีรีส์" (§10.7) |
 
 - **origin id อยู่ใน payload** เพราะ client ส่งถึง host คนเดียว: ถ้าใช้ client id บนสาย 3–4 คนจะถูกยุบเป็นตัวเดียว — host จึง rebroadcast พร้อม origin เดิม และฝั่งรับข้าม event ที่ `origin == LocalNetId` (กัน apply ซ้ำกับที่ทำเองไปแล้ว)
 - client ยอมรับ `bob.task`/`bob.pose` จาก `NetworkManager.ServerClientId` เท่านั้น; host คือผู้ตัดสินว่าสถานีไหนสะอาด (host-authoritative) แต่คะแนนยังคิดบนเครื่องเหมือนเดิม
+- `bob.round`/`bob.result`/`bob.abandon` เป็น **host → ทุกคนเท่านั้น**: client ไม่มีสิทธิ์ปิดรอบหรือเปลี่ยนผล; ฝั่งรับตรวจ `NetworkManager.ServerClientId` และรอบต้องตรงกับ `Series.Round` ปัจจุบัน (บรรทัดเก่าที่มาช้าถูกทิ้ง)
 - ไม่มี prefab/NetworkObject spawn, ไม่มี scene sync, ไม่มี RPC ต่อผู้เล่น — named message พอสำหรับตัวละคร 4 ตัว + สถานี ~10 จุด
 
 ### 10.3 seed เดียวกันทั้งห้อง
@@ -154,6 +160,9 @@ Home (S10) → เลือกโหมด Solo/Duo/Team (S11) → S14 เลื
 `TaskRaceRound.Start()` ปกติสุ่ม seed ใหม่เมื่อ `randomSeedEachPlay`; ออนไลน์จึงต้องล็อก:
 `BobOnlineRoom.StartMatch(seed, players)` → `MatchRequest.SetOnline(...)` → `TaskRaceModeManager.Awake()` เห็น `Seed > 0` → `ConfigureRound(players, difficulty, seed)` + `LockSeed(seed)` → `Start()` ใช้ seed ที่ล็อก ไม่สุ่มทับ
 ผลคือทุกเครื่องได้ **ใบงานชุดเดียวกัน ลำดับเดียวกัน** โดยไม่ต้องส่งรายการงานข้ามเน็ต (log: `online host/client seed N`)
+
+รอบ 2–3 ของซีรีส์ใช้กลไกเดียวกันคนละทาง: host สุ่ม seed ใหม่เองแล้วส่ง `bob.round(round, seed, seconds)` ให้ทุกเครื่อง
+client จึง **ไม่** สุ่มเอง (`BeginOnlineRound` ใช้ seed ที่มากับข้อความ) — ทั้งห้องได้ใบงานรอบใหม่ชุดเดียวกันเสมอกัน
 
 ### 10.4 `BobTaskRaceOnline` (ฝั่งฉาก)
 
@@ -170,14 +179,53 @@ Home (S10) → เลือกโหมด Solo/Duo/Team (S11) → S14 เลื
 4. เครื่อง B: เข้าหน้าเดียวกัน → `กรอกรหัส` → `เข้าร่วมด้วยโค้ดนี้` (หรือ `เข้าห้องที่เปิดอยู่`) → ที่นั่งในห้องขึ้น 2/4 ทั้งสองฝั่ง
 5. เครื่อง A กด `เริ่มแมตช์` → ทั้งสองเครื่องเข้า `TaskRace` พร้อมกัน; Console มี `online host seed N` ฝั่ง A และ `online client seed N` ฝั่ง B (เลขเดียวกัน)
 6. เดินชนกันบนเกาะ: ตัวละครอีกฝ่ายตามมาแบบ lerp; เก็บงานจุดหนึ่ง → อีกเครื่องเห็นจุดนั้นสะอาดขึ้น
-7. จบรอบ/กด back: host ลบ lobby (Console `[UGS] leave lobby` ไม่ควรมี error) — กลับเข้า S15 สร้างห้องใหม่ได้
+7. จบรอบ 1: ทั้งสองเครื่องขึ้นบรรทัดรอบเดียวกัน (Console `series round 1 · win/loss/draw · tasks/paints`) และการ์ด `รอบ N/3` พร้อมปุ่ม `รอบถัดไป` เฉพาะ host; client เห็น `รอเจ้าของห้องเริ่มรอบถัดไป`
+8. host กด `รอบถัดไป` → ทั้งสองเครื่องเข้าใบงานรอบ 2 ชุดเดียวกัน (Console `online round 2 seed …` เลขเดียวกัน); เล่นจนมีฝ่ายชนะ 2 รอบ → การ์ด `ชนะซีรีส์!` / `แพ้ซีรีส์` ทั้งห้อง
+9. ทดสอบออกกลางซีรีส์: เริ่มซีรีส์ใหม่แล้วให้ client กด back ก่อนจบ → host ขึ้น `ซีรีส์ถูกยกเลิก`; ถ้าซีรีส์จบแล้วมีคนออก → ผลยังเป็นของผู้ชนะ
+10. กด back หลังจบ: host ลบ lobby (Console `[UGS] leave lobby` ไม่ควรมี error) — กลับเข้า S15 สร้างห้องใหม่ได้
 
 ### 10.6 ข้อจำกัดของเฟสนี้ (ตั้งใจ)
 
-- **co-op บนเกาะของเจ้าของห้อง** แข่งกับคู่แข่งจำลอง (`BobTaskRaceRival`) — ยังไม่มีสองทีมจริง/คะแนนรวมบนเซิร์ฟเวอร์; ข้อความใน S15 เขียนตรง ๆ ว่า "ทุกคนอยู่ฝั่งเราและแข่งกับคู่แข่งจำลอง"
+- **co-op บนเกาะของเจ้าของห้อง** แข่งกับคู่แข่งจำลอง (`BobTaskRaceRival`) — ยังไม่มีสองทีมจริง/คะแนนรวมบนเซิร์ฟเวอร์; ข้อความใน S15 เขียนตรง ๆ ว่า "ทุกคนอยู่ฝั่งเราและแข่งกับคู่แข่งจำลอง 3 รอบ ชนะ 2 รอบก่อน"
 - ความสามารถ/เอฟเฟกต์ของฮีโร่คนอื่นไม่ถูกส่ง — เห็นแค่ร่างกับตำแหน่ง; งานที่อีกฝ่ายเก็บจะสะอาดขึ้นแต่ไม่มีแอนิเมชันผู้เล่นนั้น
-- ไม่มี reconnect / host migration / late join หลังกดเริ่ม (คนที่เข้าห้องหลัง `bob.start` จะไม่ถูกโหลดเข้าแมตช์)
-- ไม่มีการส่งผลจบแมตช์: แต่ละเครื่องจบเมื่อรายการฝั่งตัวเองครบหรือหมดเวลา; การ์ดผลจึงซ่อนปุ่ม `เล่นอีกครั้ง` เมื่อออนไลน์ และบอกให้กลับไปสร้างห้องใหม่
+- ไม่มี reconnect / host migration / late join หลังกดเริ่ม (คนที่เข้าห้องหลัง `bob.start` จะไม่ถูกโหลดเข้าแมตช์); ถ้า host หลุด ซีรีส์ถูกยกเลิก ไม่มีการย้ายเจ้าของห้อง
+- **ไม่มี server validation ของผลรอบ**: host คือผู้ตัดสินคนเดียว (ผลที่ host ส่งคือผลที่ทุกเครื่องใช้) — เชื่อใจ host ตามแบบ LAN/เพื่อน; การโกงฝั่ง host ยังเป็นไปได้
 - เก็บงานเป็นแบบทางเดียว (false→true): การแกล้งทำให้สถานี Dirty (ฝั่งคู่แข่ง/หลังสะพานเปิด) ยังเป็นเรื่องของแต่ละเครื่อง ไม่ถูกส่งข้ามห้อง
-- คะแนน/เหรียญยังคิดและบันทึกบนเครื่อง (Cloud Save เป็นรายผู้เล่น ไม่ใช่คะแนนห้อง)
+- คะแนน/เหรียญยังคิดและบันทึกบนเครื่อง (Cloud Save เป็นรายผู้เล่น ไม่ใช่คะแนนห้อง); รางวัลจ่ายครั้งเดียวตอนจบซีรีส์ และออนไลน์ไม่เขียนดาวบท/สถิติเนื้อเรื่อง
 - โควตา free tier ของ Relay/Lobby ตาม §5 — ห้องถูกทิ้งเมื่อ host ออก และไม่มี heartbeat ค้างหลัง Leave
+
+### 10.7 ออนไลน์ชนะ 2 ใน 3 (17 พ.ย. 2026)
+
+คิวถัดจาก §10: ห้องออนไลน์เดิมจบรอบแบบ "ใครครบรายการก่อนจบเครื่องตัวเอง" — ไม่มีผลรอบที่แชร์กัน ไม่มีสถานะซีรีส์
+และไม่มีกติกาตอนมีคนออกกลางซีรีส์. รอบนี้ทำให้ออนไลน์ใช้ **กติกาเดียวกับ `StorySeries` ฝั่งออฟไลน์** โดยไม่แตะฉาก:
+
+- **ซีรีส์เป็นของห้อง ไม่ใช่ของเครื่อง.** `BobOnlineRoom` ถือ `public StorySeries Series` (สร้างใน `HostAsync`/`JoinAsync`
+  และใน `StartMatch`/`HandleStart` ถ้ายังไม่มีหรือจบแล้ว): รอบละ **100 วิ** (`SeriesRoundSeconds`) ชนะ **2 รอบ**
+  (`SeriesWinsToTake`) และทุกเครื่องอ่าน `Room.Series` ผ่าน `TaskRaceModeManager.series` ตอน `BeginMatch`
+- **host คือผู้ตัดสินรอบเดียว.** `FinishRound` ทำงานเฉพาะ host (`if (Online && !IsOnlineHost) return;`)
+  แล้ว host `series.Register(localTasks, rivalTasks, localPoints, rivalPoints)` + `SendSeriesResult(line)` (`bob.result`).
+  client ไม่มีสิทธิ์ปิดรอบ: เมื่อรอบจบ (ครบงาน/หมดเวลา/คู่แข่งจำลองจบ) client เข้า `HoldForOnlineResult()` —
+  ตรึงนาฬิกาและขึ้น `รอบจบ · รอเจ้าของห้องสรุปผล` แล้วรอ `bob.result` มาถึง
+- **ผลรอบไหลทางเดียว.** client เรียก `Series.RegisterOutcome(...)` ตาม `outcome`/ตัวเลขของ host (ไม่คำนวณเอง)
+  และทิ้งบรรทัดที่ `round != Series.Round` หรือซีรีส์จบแล้ว — บรรทัดเก่าที่มาช้าไม่สามารถเปิดรอบที่ปิดไปแล้ว
+  เกณฑ์คิดผลอยู่ที่ `StorySeries.OutcomeOf`: งานก่อน → แต้มรถเข็น → เสมอ (เหมือนออฟไลน์)
+- **seed ของรอบ 2–3 มาจาก host.** host เริ่มรอบถัดไปใน `NextRoundAfter` → `Room.SendSeriesRound(series.Round, seed, seconds)`
+  (`bob.round`) แล้ว `BeginRound(seconds, seed)`; client รับแล้ว `BeginOnlineRound(...)` ด้วย seed เดียวกัน
+  (ไม่มีการ reroll ฝั่ง client) — ทุกเครื่องได้ใบงานชุดเดียวกัน; ถ้า client ยังไม่ได้รับข้อความ รอบจะไม่เริ่มเอง
+- **คนออกกลางซีรีส์ = ซีรีส์ถูกยกเลิก ไม่มีผู้ชนะ.** `StorySeries.Abandon()` / `Over` / `LocalTookSeries` เพิ่มใน `StorySeries`
+  (ใช้ร่วมกับออฟไลน์ได้ ไม่กระทบเดิม). `LeaveAsync` ของ host ตรวจว่าซีรีส์ยังไม่จบ → `AbandonSeries()` แล้ว broadcast
+  `bob.abandon`; host เห็น client หลุด (`OnPeerDisconnected`) ก็ abandon เช่นกัน; ฝั่ง client ตรวจ `!room.InRoom`
+  ใน `BobTaskRaceOnline.Update` แล้วเรียก `OnOnlineSeriesAbandoned()`. ซีรีส์ที่ **ตัดสินแล้ว** (มีฝ่ายชนะ 2)
+  ไม่ถูกยกเลิกเมื่อมีคนออกหลังจบ — ผู้ชนะยังชนะ
+- **การ์ดผลออนไลน์** (`BobTaskRaceHud.BuildOnlineCard`): หัวข้อ `ชนะซีรีส์!` / `แพ้ซีรีส์` / `เสมอซีรีส์` / `ยกเลิกซีรีส์`,
+  บรรทัด `ชนะ w – l`, บรรทัดรอบล่าสุด `รอบ N/3 · ผล · งาน l:r`, บรรทัด `มีผู้เล่นออกจากห้องกลางซีรีส์ · ไม่มีผู้ชนะ`
+  (เฉพาะที่ถูกยกเลิก), รางวัล, คำขวัญ; host ได้ปุ่ม `เริ่มซีรีส์ใหม่` (`StartNewOnlineSeries` → `StartMatch(seed ใหม่, players)`),
+  client เห็น `รอเจ้าของห้องเริ่มซีรีส์ใหม่` แทน — ไม่มีปุ่ม `เล่นอีกครั้ง` เดี่ยว ๆ ที่ทำให้สองเครื่องหลุดกัน
+- **รางวัลจ่ายครั้งเดียวตอนจบซีรีส์** (เดิมจ่ายทุกครั้งที่รอบจบ). ออนไลน์ยังคง **ไม่** เขียนดาวบท/สถิติเนื้อเรื่อง/
+  โบนัสผ่านบทแรก/สตรีคลื่นพ่าย: ทุกจุดที่เขียนกติกาเนื้อเรื่องถูกกันด้วย `!Online`
+- **ด่านที่คุมส่วนนี้:** `unity-check` +11 ข้อ — ผลรอบคิดจากงานก่อน, แต้มตัดสินเมื่องานเท่า, เสมอทั้งคู่ = เสมอ,
+  ผลของ host ชนะแม้ตัวเลขไม่ตรง, host ชนะ 2 รอบปิดซีรีส์ที่รอบ 2, บรรทัดเก่าของ client เปิดรอบที่ปิดแล้วไม่ได้,
+  ซีรีส์ที่ยังเล่นอยู่ถูกทำให้เป็นโมฆะ, ซีรีส์โมฆะไม่มีผู้ชนะ, ซีรีส์ที่ตัดสินแล้วไม่เสียผู้ชนะเมื่อมีคนออก,
+  ออกก่อนผลแรกยังทำให้เป็นโมฆะ, เสมอเป็นรอบที่เล่นแล้วแต่ไม่ใช่ชัย, `Reset()` เคลียร์ธงโมฆะ
+- **ข้อจำกัดที่ยังเหลือ:** ไม่มี reconnect / host migration / late join; ไม่มีสองทีมจริง (ทุกคนอยู่ฝั่งเราแข่งคู่แข่งจำลอง);
+  ไม่มี server validation ของผลรอบ (host ตัดสินคนเดียว) — ดู §10.6
