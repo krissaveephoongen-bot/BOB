@@ -14,6 +14,12 @@ namespace Bob.Game
             Green = BobUi.Hex("#256552"), Sun = BobUi.Hex("#FFDA70"), Sky = BobUi.Hex("#C8EAF3"),
             Line = BobUi.Hex("#D8DECE"), Red = BobUi.Hex("#A53143"), Pink = BobUi.Hex("#FFE3DF"),
             Violet = BobUi.Hex("#E4DCF3"), Dim = new Color(36 / 255f, 54 / 255f, 75 / 255f, 0.68f);
+
+        /// <summary>
+        /// Furniture outline colour: the frame the player wears, or the neutral line when they wear none.
+        /// Presentation only — no rule, score or recipe reads it, so a player with nothing equipped sees `Line`.
+        /// </summary>
+        public static Color FrameLine => BobCosmetics.HasFrame ? BobCosmetics.FrameColour : Line;
         static Sprite rounded;
         static TMP_FontAsset regular, bold;
         static Bob.UI.BobUiTheme theme;

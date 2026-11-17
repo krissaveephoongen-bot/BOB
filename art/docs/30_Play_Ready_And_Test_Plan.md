@@ -341,6 +341,14 @@ sandbox ของ cloud session ไม่มี Unity — รอบนี้ร�
   เหมือนกันทุกสัดส่วน. run19 (1440) / run20 (2400) / run21 (1920 หลังแก้ material ตัวละคร) /
   run22 (3840×2160 หลังแก้เส้น services + ออนไลน์) = **R1 CHECKS PASSED**, exit 0, ไม่มี FAIL และไม่มี exception
   (`Logs/ui-r1-play-19.log:15416`, `Logs/ui-r1-play-20.log:15602`, `Logs/gap-services-play-22.log:15178`).
+- ชุดสีรถเข็นตามกรอบตกแต่ง (docs 31 §2.3) เริ่มที่ run23 ซึ่ง **FAIL** เพราะ fixture อ่าน `cartDropZone`
+  ก่อนที่การ์ดจะถึงขั้นซ้อน — โซนนั้นถูกสร้างตอนนี้จึงเป็น null แล้ว NullReference ทำ coroutine ตาย, watchdog
+  รายงาน `R1 timeout; started=True frame=5243` (เก็บไว้แค่ 355 PASS). run24 ผ่าน 408 / 0 FAIL แต่ภาพชี้ว่า
+  ทาสีเส้นชั้นของในรถด้วยทำให้ `frame_teal` `#2F7F6F` แยกไม่ออกจากเขียว gameplay `#256552` ของสัญญาณ
+  "ชั้นบนสุด" จึงถอยจุดนั้นให้อยู่เป็นสีเทากลางตามเดิม. run25 ที่ 1920×1080 (เฉพาะเส้นกรอบตัวรถเข็น +
+  null-guard ให้ตกเป็น Check แทน Exception) = **R1 CHECKS PASSED**, 398 PASS / 0 FAIL / 0 exception, exit 0
+  พร้อม `PASS trolley outline takes the worn frame colour`
+  (`compile-check/Logs/cart-tint-play-25.log`, ภาพ `compile-check/Logs/cart-tint-play-25/cart-frame-teal-1920x1080.png`).
 - การขยาย 130% ใน runner ปิด TMP auto-size และคูณ font size จริง ไม่ใช่ dynamic type ของระบบ.
   Android Back, รอยบากจริง, dynamic type ของระบบ, performance มือถือ และออนไลน์สองเครื่องยังไม่ยืนยัน.
 - ภาพ native บางเฟรมมีปื้นสี magenta บนตัวละครในโลก 3D เช่น `ui-r1-play-16/hud-1920x1080.png` — **วินิจฉัยและแก้แล้ว**:

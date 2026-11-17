@@ -274,6 +274,9 @@ namespace Bob.EditorTools
 
         static T Field<T>(object target, string name) => (T)target.GetType().GetField(name, Private | BindingFlags.Public).GetValue(target);
 
+        static bool CloseColour(Color a, Color b) => Mathf.Approximately(a.r, b.r) && Mathf.Approximately(a.g, b.g) &&
+            Mathf.Approximately(a.b, b.b) && Mathf.Approximately(a.a, b.a);
+
         static void Check(bool pass, string name)
         {
             ok &= pass;
@@ -661,6 +664,26 @@ namespace Bob.EditorTools
             foreach (string id in good) { Click(Part(mini, id)); yield return new WaitForSecondsRealtime(0.22f); }
             yield return HoldLock(mini, "empty");
             Check(!mini.CartPassed && !hud.CardOpen, "empty stack can lock without buff");
+            // The worn cosmetic frame has to reach the trolley (docs 31 §2.3): equip, rebuild the card, read the outline back.
+            string wornFrame = PlayerPrefs.GetString(BobCosmetics.FrameKey, "");
+            PlayerPrefs.SetString(BobCosmetics.FrameKey, "frame_teal");
+            round.StartRound(1019); yield return null;
+            spot = round.StationsOf(TaskSpot.LocalTeam).First(s => s.TaskId == "T04");
+            if (!spot.TryOpen("ui-r1", out why))
+            {
+                Check(false, "tint fixture open " + why);
+                PlayerPrefs.SetString(BobCosmetics.FrameKey, wornFrame);
+                Finish(); yield break;
+            }
+            Check(hud.DebugOpenCard(spot), "tint fixture card opens"); yield return null;
+            // The trolley is built when the card reaches the stacking step, so pick before reading its outline.
+            foreach (string id in good) { Click(Part(mini, id)); yield return new WaitForSecondsRealtime(0.22f); }
+            var trolleyZone = Field<Image>(mini, "cartDropZone");
+            var trolley = trolleyZone != null ? trolleyZone.GetComponent<Outline>() : null;
+            Check(trolley != null && CloseColour(trolley.effectColor, BobUi.Hex("#2F7F6F")),
+                "trolley outline takes the worn frame colour");
+            yield return CaptureR1("cart-frame-teal");
+            PlayerPrefs.SetString(BobCosmetics.FrameKey, wornFrame);
             round.StartRound(1019); yield return null;
             spot = round.StationsOf(TaskSpot.LocalTeam).First(s => s.TaskId == "T04");
             if (!spot.TryOpen("ui-r1", out why)) { Check(false, "cancel fixture open " + why); Finish(); yield break; }

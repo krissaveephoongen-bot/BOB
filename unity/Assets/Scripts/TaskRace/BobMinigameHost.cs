@@ -1312,7 +1312,9 @@ namespace Bob.TaskRace
             BobUi.Stretch(cartTrayHint.rectTransform, 16f, 4f, 16f, 4f);
 
             cartDropZone = CartPanel("CartDropZone", BobUiR1.Paper, w => new Rect(w * 0.57f + 24f, 192f, w * 0.43f - 24f, 428f));
-            CartOutline(cartDropZone, BobUiR1.Line);
+            // The trolley itself is the only cart furniture the worn frame re-colours; green still means "top layer / locked"
+            // and every other line stays the neutral UI colour, so nothing in the recipe reads as a cosmetic.
+            CartOutline(cartDropZone, BobUiR1.FrameLine);
             var cartTitle = CartLabel(cartDropZone.transform, "รถเข็น", 30, BobUiR1.Ink, bold: true);
             CartStrip(cartTitle.rectTransform, 24f, 0f, 170f, 66f);
             cartSlotCount = CartLabel(cartDropZone.transform, "", 28, BobUiR1.Ink, TextAnchor.MiddleRight, true);
