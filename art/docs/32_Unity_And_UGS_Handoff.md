@@ -74,6 +74,17 @@ bash ready-check/check.sh                # READY-CHECK PASSED
 
 **เรื่อง dayNumber:** `dayNumber = floor((epochMs + 7h) / 24h)` (เที่ยงคืนเวลาไทย) — 17 พ.ย. 2026 = `20774`,
 18 พ.ย. = `20775`. ต้องสร้างบอร์ดของวันที่จะทดสอบก่อน (โค้ดไม่สร้างบอร์ดเอง; ชื่อผิดรูปจะถูกปฏิเสธที่ `BobDaily.ValidBoardName`).
+**พิมพ์รายการบอร์ดที่จะต้องสร้าง (ไม่ต้องคำนวณเอง):**
+
+```bash
+node server/daily-boards.js        # วันนี้ + 6 วันข้างหน้า (UTC+7): day · board id · seed · วันที่
+node server/daily-boards.js 14     # 14 วัน
+node server/daily-boards.js --self-test   # DAILY BOARDS PASSED (9 checks)
+```
+
+สคริปต์นี้ใช้ `dailyDayNumber`/`dailyDayLabel`/`dailySeed` จาก `server/daily.js` ตัวเดียวกับ endpoint และเทสต์
+⇒ ไม่มีนาฬิกาที่สอง; ส่วนกฎชื่อ `daily_<n>` ยังตรึงด้วย `unity-check` (`daily board checked`) เหมือนเดิม. ตัวสคริปต์ไม่แตะ UGS (สร้างบอร์ดต้องใช้สิทธิ์ dashboard)
+
 > **การตัดสินใจที่ต้องถามเจ้าของ:** จะสร้าง `daily_<day>` ล่วงหน้าทุกวันด้วยมือ หรือจะให้มีสคริปต์/endpoint สร้างให้อัตโนมัติ
 
 ## 4. คิว C — APK + ชั้น 3 (12 ข้อบนเครื่องจริง)
