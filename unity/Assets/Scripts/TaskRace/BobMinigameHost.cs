@@ -103,7 +103,7 @@ namespace Bob.TaskRace
         int turnRequired = 6;
         float pourSpeed = 0.3f;
 
-        // ---- T04 cart (docs 16 section 4): pick three parts off the shelf, stack them on the cart, hold to lock the
+        // ---- T04 cart (docs 16 section 4): pick four parts off the shelf, stack them on the cart, hold to lock the
         // formula. The stack is judged by the shipped Bob.Rules reactions, the same file the server scores with.
         readonly List<string> cartShelf = new List<string>();
         readonly List<string> cartTray = new List<string>();
@@ -115,6 +115,7 @@ namespace Bob.TaskRace
         Image cartLock, cartLockFill;
         TMP_Text cartLockLabel, cartRecipe;
         Dictionary<string, int> cartNeed = new Dictionary<string, int>();
+        int cartSeed;
         readonly int[] cartStats = new int[4];
         float cartHold;
         bool cartLocked;
@@ -628,7 +629,8 @@ namespace Bob.TaskRace
             {
                 cartShelf.Clear(); cartTray.Clear(); cartStack.Clear();
                 cartChips.Clear(); cartLayers.Clear(); cartBars.Clear();
-                cartNeed = BobTaskRaceRules.CartNeed(spot != null ? spot.SpotId.GetHashCode() : 1975, difficulty);
+                cartSeed = spot != null ? spot.SpotId.GetHashCode() : 1975;
+                cartNeed = BobTaskRaceRules.CartNeed(cartSeed, difficulty);
             }
 
             slimeVariant = 0;
@@ -1013,7 +1015,7 @@ namespace Bob.TaskRace
             _ => new Color(0.72f, 0.62f, 0.90f, 1f),
         };
 
-        /// <summary>Step 1 picks three parts off the shelf; step 2 stacks them on the cart and holds the lock.</summary>
+        /// <summary>Step 1 picks four parts off the shelf; step 2 stacks them on the cart and holds the lock.</summary>
         void SetupCart()
         {
             Bg(new Vector2(0f, 262f), new Vector2(AreaW, 96f), new Color(0.72f, 0.60f, 0.42f, 1f)); // shelf board
@@ -1023,19 +1025,10 @@ namespace Bob.TaskRace
 
         void SetupCartShelf()
         {
-            // Six seeded parts, at least three of them real layers (a stack of methods alone cannot clean anything).
-            var pool = new List<string>(BobRules.Parts.Keys);
-            for (int i = pool.Count - 1; i > 0; i--)
-            {
-                int j = rng.Next(i + 1);
-                (pool[i], pool[j]) = (pool[j], pool[i]);
-            }
+            // Six seeded parts, four of them a stack that passes the hardest worksheet (BobTaskRaceRules.CartShelf):
+            // the card is a puzzle of order and choice, never a draw nobody can win.
             cartShelf.Clear();
-            for (int i = 0; i < pool.Count && cartShelf.Count < 6; i++)
-            {
-                if (BobRules.IsMethod(pool[i]) && cartShelf.Count >= 4) continue;
-                cartShelf.Add(pool[i]);
-            }
+            cartShelf.AddRange(BobTaskRaceRules.CartShelf(cartSeed, difficulty));
 
             for (int i = 0; i < cartShelf.Count; i++)
             {
@@ -1044,7 +1037,7 @@ namespace Bob.TaskRace
                     FamilyColour(part.Family), part.Name, 28);
                 box.bin = i; // index into cartShelf: the tap reads it back
             }
-            cartRecipe = BobUi.Label(layer, "แตะหยิบ 3 อย่าง · ชั้นวางของในห้อง", 34, T.inkMuted,
+            cartRecipe = BobUi.Label(layer, $"แตะหยิบ {BobTaskRaceRules.CartParts} อย่าง · ชั้นวางของในห้อง", 34, T.inkMuted,
                 TextAnchor.MiddleCenter, FontStyle.Bold);
             BobUi.Pin(cartRecipe.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
                 new Vector2(0f, 150f), new Vector2(900f, 60f));
@@ -1113,7 +1106,7 @@ namespace Bob.TaskRace
         /// <summary>The four stat bars: fill = the stack's value, the tick = this round's worksheet number.</summary>
         void BuildCartBars()
         {
-            const float max = 12f;
+            const float max = 18f; // four parts with reactions reach 17 clean, so the bar never clips
             for (int i = 0; i < BobTaskRaceRules.CartKeys.Length; i++)
             {
                 float y = 150f - i * 78f;
@@ -1152,7 +1145,7 @@ namespace Bob.TaskRace
         {
             var ev = BobRules.EvalStack(cartStack);
             for (int i = 0; i < 4; i++) cartStats[i] = ev.Stats[i];
-            const float max = 12f;
+            const float max = 18f; // four parts with reactions reach 17 clean, so the bar never clips
             for (int i = 0; i < cartBars.Count && i < 4; i++)
             {
                 var rt = (RectTransform)cartBars[i].transform;
@@ -1181,8 +1174,8 @@ namespace Bob.TaskRace
                 box.bin = -1;
                 Pop(box, T.primaryLight);
                 BobSfx.Play("pass_part", 0.8f);
-                stepProgress = cartTray.Count / 3f;
-                Hint = $"หยิบแล้ว {cartTray.Count}/3";
+                stepProgress = cartTray.Count / (float)BobTaskRaceRules.CartParts;
+                Hint = $"หยิบแล้ว {cartTray.Count}/{BobTaskRaceRules.CartParts}";
                 return;
             }
 
@@ -1604,7 +1597,7 @@ namespace Bob.TaskRace
             "T01" => "ลากนิ้วตามเส้นฝุ่น",
             "T02" => "ถูวนบนคราบ",
             "T03" => "แตะสไลม์ให้หมด",
-            "T04" => step == 0 ? "แตะหยิบอุปกรณ์ 3 อย่างจากชั้น" : "ลากลงรถเข็นให้ผ่านสูตร แล้วกดค้างล็อก",
+            "T04" => step == 0 ? $"แตะหยิบอุปกรณ์ {BobTaskRaceRules.CartParts} อย่างจากชั้น" : "ลากลงรถเข็นให้ผ่านสูตร แล้วกดค้างล็อก",
             "T05" => "ลากขยะลงถังให้ตรง",
             "T06" => "กดค้างแล้วหมุนครึ่งวง",
             "T07" => step == 0 ? "ถูจานจนสะอาด" : step == 1 ? "กดค้างล้างฟอง" : "แตะเพื่อวางจาน",

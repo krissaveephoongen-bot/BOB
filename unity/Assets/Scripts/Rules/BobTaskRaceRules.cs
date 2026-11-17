@@ -152,17 +152,39 @@ namespace Bob.Rules
         public static readonly string[] CartKeys = { "clean", "gentle", "speed", "shine" };
 
         /// <summary>
-        /// The best three parts in BobRules.Parts can give per stat, in CartKeys order (brush+scrub+steam 10 clean,
-        /// cloth+sponge+broom 7 gentle, broom+air+spray 7 speed, polish+cloth+circle 8 shine). The card hands three
-        /// parts, so a worksheet target above these can never be met - the clamp in CartNeed keeps the promise that a
-        /// card is passable, and SelfTest asserts it.
+        /// How many parts the T04 card lets the player take off the shelf (docs 16 section 4). Four is what makes the
+        /// D3 worksheet (three of four conditions) reachable with the parts BobRules actually ships.
         /// </summary>
-        public static readonly int[] CartCeiling = { 10, 7, 7, 8 };
+        public const int CartParts = 4;
+
+        /// <summary>The shelf always shows six parts: a four-part solution plus two decoys.</summary>
+        public const int CartShelfSize = 6;
+
+        /// <summary>
+        /// The catalogue in a fixed order, so the phone, the browser prototype and the server enumerate the same parts
+        /// in the same sequence. BobRules.Parts is a dictionary; its order is not a contract we can rely on.
+        /// </summary>
+        public static readonly string[] PartIds =
+        {
+            "cloth", "sponge", "brush", "broom", "soap", "vinegar", "soda", "polish",
+            "hot", "steam", "scrub", "air", "soak", "spray", "circle",
+        };
+
+        /// <summary>
+        /// The most four parts can reach per stat in CartKeys order, best order, once pair/method reactions and the
+        /// trailing air bonus land: 17 clean (brush→scrub, vinegar→soda), 9 gentle, 11 speed, 16 shine. A worksheet
+        /// target above these can never be met, so CartNeed clamps to them; SelfTest recomputes this array from
+        /// BobRules.EvalStack, so a part or reaction change fails the test instead of silently drifting.
+        /// </summary>
+        public static readonly int[] CartCeiling = { 17, 9, 11, 16 };
+
+        /// <summary>The round's star condition, from the same first draw CartNeed makes.</summary>
+        public static int CartStar(int seed) => (int)(new Rng(seed ^ unchecked((int)0xc2b2ae35u)).Next() * 4) % 4;
 
         /// <summary>
         /// The T04 worksheet of docs 16 section 4: what the cart must reach in each stat. One stat is the round's star
-        /// condition, the rest sit a step lower, and D2/D3 raise every number. Three parts is all the shelf gives, so
-        /// the values stay inside what a three-layer stack can reach — a card nobody can pass is not a hard card.
+        /// condition (base 6), the rest sit three lower (base 3), and D2/D3 raise every number by one. Four parts and
+        /// a warm-up of reactions are what make the D3 ask (three conditions, the star among them) reachable.
         /// </summary>
         public static Dictionary<string, int> CartNeed(int seed, int difficulty)
         {
@@ -172,10 +194,93 @@ namespace Bob.Rules
             var need = new Dictionary<string, int>();
             for (int i = 0; i < CartKeys.Length; i++)
             {
-                int value = (i == star ? 7 : 5) + (d - 1) + (rng.Next() < 0.5 ? 0 : 1);
+                int value = (i == star ? 6 : 3) + (d - 1) + (rng.Next() < 0.5 ? 0 : 1);
                 need[CartKeys[i]] = Math.Max(3, Math.Min(CartCeiling[i], value));
             }
             return need;
+        }
+
+        /// <summary>
+        /// Two stacks per star key (indices 2*star and 2*star+1) that meet the hardest worksheet (D3 + the jitter:
+        /// star 9, the rest 6) with the star among its three conditions, so every seed has a shelf that can be passed.
+        /// Verified by SelfTest and by server/task-race-test.js, both through BobRules.EvalStack.
+        /// </summary>
+        static readonly string[][] CartSolutions =
+        {
+            new[] { "sponge", "brush", "steam", "cloth" },   // clean
+            new[] { "brush", "soap", "steam", "cloth" },     // clean, second shape
+            new[] { "sponge", "soap", "steam", "cloth" },    // gentle
+            new[] { "sponge", "steam", "cloth", "broom" },   // gentle, second shape
+            new[] { "cloth", "brush", "broom", "air" },      // speed
+            new[] { "broom", "sponge", "steam", "air" },     // speed, second shape
+            new[] { "cloth", "polish", "sponge", "brush" },  // shine
+            new[] { "cloth", "polish", "sponge", "steam" },  // shine, second shape
+        };
+
+        /// <summary>
+        /// The shelf the T04 card offers for this seed: four parts that pass the hardest worksheet plus two decoys,
+        /// drawn from the seed so both islands see the same shelf. Difficulty is in the signature for the server
+        /// replay; the solution already covers D3, so it covers D1 and D2 as well.
+        /// </summary>
+        public static List<string> CartShelf(int seed, int difficulty)
+        {
+            int star = CartStar(seed);
+            var options = new[] { CartSolutions[star * 2], CartSolutions[star * 2 + 1] };
+            var rng = new Rng(seed ^ unchecked((int)0x27d4eb2du));
+            var shelf = new List<string>(options[(int)(rng.Next() * options.Length) % options.Length]);
+
+            var rest = PartIds.Where(id => !shelf.Contains(id)).ToList();
+            for (int i = rest.Count - 1; i > 0; i--)
+            {
+                int j = (int)(rng.Next() * (i + 1));
+                (rest[i], rest[j]) = (rest[j], rest[i]);
+            }
+            for (int i = 0; i < rest.Count && shelf.Count < CartShelfSize; i++) shelf.Add(rest[i]);
+            return shelf;
+        }
+
+        /// <summary>Does some order of four parts off this shelf meet the pass rule for this worksheet?</summary>
+        public static bool ShelfCanPass(IList<string> shelf, IDictionary<string, int> need, int difficulty)
+        {
+            int d = Math.Max(1, Math.Min(3, difficulty));
+            for (int a = 0; a < shelf.Count; a++)
+                for (int b = 0; b < shelf.Count; b++)
+                {
+                    if (b == a) continue;
+                    for (int c = 0; c < shelf.Count; c++)
+                    {
+                        if (c == a || c == b) continue;
+                        for (int e = 0; e < shelf.Count; e++)
+                        {
+                            if (e == a || e == b || e == c) continue;
+                            var stack = new[] { shelf[a], shelf[b], shelf[c], shelf[e] };
+                            if (CartPassCount(BobRules.EvalStack(stack).Stats, need) >= d) return true;
+                        }
+                    }
+                }
+            return false;
+        }
+
+        /// <summary>The best four-part stack per stat, recomputed from BobRules.EvalStack for SelfTest.</summary>
+        static int[] BestCartStats()
+        {
+            var best = new int[4];
+            for (int a = 0; a < PartIds.Length; a++)
+                for (int b = 0; b < PartIds.Length; b++)
+                {
+                    if (b == a) continue;
+                    for (int c = 0; c < PartIds.Length; c++)
+                    {
+                        if (c == a || c == b) continue;
+                        for (int e = 0; e < PartIds.Length; e++)
+                        {
+                            if (e == a || e == b || e == c) continue;
+                            var stats = BobRules.EvalStack(new[] { PartIds[a], PartIds[b], PartIds[c], PartIds[e] }).Stats;
+                            for (int i = 0; i < 4; i++) if (stats[i] > best[i]) best[i] = stats[i];
+                        }
+                    }
+                }
+            return best;
         }
 
         /// <summary>How many of the four worksheet conditions the built cart meets (0-4).</summary>
@@ -257,13 +362,55 @@ namespace Bob.Rules
                 bad.Add("cart pass rule drifted");
             if (CartBuffs(new[] { 99, 0, 0, 0 }, need).Count != 1) bad.Add("cart buffs drifted");
 
+            // Four parts is the hand size, and the ceiling is what four parts really reach with reactions.
+            if (PartIds.Length != BobRules.Parts.Count || PartIds.Distinct().Count() != PartIds.Length)
+                bad.Add("cart part order does not cover the catalogue exactly once");
+            foreach (var id in PartIds) if (!BobRules.Parts.ContainsKey(id)) bad.Add("cart part order has an unknown part " + id);
+            var best = BestCartStats();
+            for (int i = 0; i < 4; i++)
+                if (best[i] != CartCeiling[i]) bad.Add($"cart ceiling drifted: {CartKeys[i]} {best[i]} != {CartCeiling[i]}");
+
+            // Every star key has a shelf solution that meets the D3 worksheet with the star among its conditions.
+            for (int star = 0; star < 4; star++)
+            {
+                var hardest = new Dictionary<string, int>();
+                for (int i = 0; i < CartKeys.Length; i++) hardest[CartKeys[i]] = i == star ? 9 : 6;
+                for (int o = star * 2; o < star * 2 + 2; o++)
+                {
+                    var sol = CartSolutions[o];
+                    if (sol.Length != CartParts || sol.Distinct().Count() != CartParts)
+                    {
+                        bad.Add($"cart solution for {CartKeys[star]} is not {CartParts} distinct parts");
+                        continue;
+                    }
+                    var ev = BobRules.EvalStack(sol);
+                    if (ev.Stats[star] < 9 || CartPassCount(ev.Stats, hardest) < 3)
+                        bad.Add($"cart solution for {CartKeys[star]} no longer passes D3: {string.Join("+", sol)}");
+                }
+            }
+
+            // The shelf really hands a passable four somewhere, for every seed and difficulty.
+            foreach (var seed in new[] { 1975, 9, 42, 777 })
+                for (int d = 1; d <= 3; d++)
+                {
+                    var shelf = CartShelf(seed, d);
+                    if (shelf.Count != CartShelfSize || shelf.Distinct().Count() != CartShelfSize)
+                        bad.Add($"cart shelf seed {seed} D{d} is not {CartShelfSize} distinct parts");
+                    foreach (var id in shelf) if (!BobRules.Parts.ContainsKey(id)) bad.Add($"cart shelf seed {seed} has an unknown part {id}");
+                    if (!ShelfCanPass(shelf, CartNeed(seed, d), d))
+                        bad.Add($"cart shelf seed {seed} D{d} has no passing four: {string.Join("+", shelf)}");
+                }
+
             // The same three rows server/task-race-test.js asserts (seed 1975): both sides draw these numbers.
-            foreach (var row in new[] { (1, 5, 6, 7, 6), (2, 6, 7, 7, 7), (3, 7, 7, 7, 8) })
+            foreach (var row in new[] { (1, 3, 4, 7, 4), (2, 4, 5, 8, 5), (3, 5, 6, 9, 6) })
             {
                 var g = CartNeed(1975, row.Item1);
                 if (g["clean"] != row.Item2 || g["gentle"] != row.Item3 || g["speed"] != row.Item4 || g["shine"] != row.Item5)
                     bad.Add($"cart need 1975 D{row.Item1} drifted: {g["clean"]}/{g["gentle"]}/{g["speed"]}/{g["shine"]}");
             }
+            // A golden shelf pins the C# and JS draws together (seed 1975 D3 -> the speed solution + two decoys).
+            if (string.Join(" ", CartShelf(1975, 3)) != "broom sponge steam air circle soap")
+                bad.Add("cart shelf 1975 D3 drifted: " + string.Join(" ", CartShelf(1975, 3)));
             return bad;
         }
 

@@ -26,8 +26,9 @@ function load() {
   const ctx = { console };
   vm.createContext(ctx);
   vm.runInContext(SRC + ';this.API={matchInit,matchJoin,matchJoinAttempt,matchLoop,matchTerminate,taskPlan,taskMinMs,' +
-    'taskComposition,taskTotalWeight,taskEmergencyTimes,taskCartNeed,taskCartStats,taskCartScore,TASK_CART_KEYS,' +
-    'TASK_CART_CEILING,TASK_MINIGAMES,TASK_ROUND_TIME,OP};', ctx);
+    'taskComposition,taskTotalWeight,taskEmergencyTimes,taskCartNeed,taskCartStats,taskCartScore,taskCartShelf,taskCartStar,' +
+    'TASK_CART_KEYS,TASK_CART_CEILING,TASK_CART_PARTS,TASK_CART_SHELF,TASK_PART_ORDER,TASK_CART_SOLUTIONS,evalStack,' +
+    'TASK_MINIGAMES,TASK_ROUND_TIME,OP};', ctx);
   const A = ctx.API;
   A.matchLoop = A.matchLoop;
   return A;
@@ -186,7 +187,7 @@ check('clock: time up ends the race with a result', st2.s.phase === 'result' && 
 
 // ---------------------------------------------------------------- T04 cart worksheet (docs 16 section 4)
 // The three rows below are the same rows BobTaskRaceRules.SelfTest asserts, so the phone and the server agree on T04.
-const cartGold = [[1, 5, 6, 7, 6], [2, 6, 7, 7, 7], [3, 7, 7, 7, 8]];
+const cartGold = [[1, 3, 4, 7, 4], [2, 4, 5, 8, 5], [3, 5, 6, 9, 6]];
 cartGold.forEach(([diff, clean, gentle, speed, shine]) => {
   const n = A.taskCartNeed(1975, diff);
   check('cart: seed 1975 D' + diff + ' worksheet', n.clean === clean && n.gentle === gentle && n.speed === speed && n.shine === shine,
@@ -194,14 +195,70 @@ cartGold.forEach(([diff, clean, gentle, speed, shine]) => {
 });
 const need1 = A.taskCartNeed(1975, 1), need1b = A.taskCartNeed(1975, 1), need9 = A.taskCartNeed(9, 1);
 check('cart: the worksheet is seeded', JSON.stringify(need1) === JSON.stringify(need1b) && JSON.stringify(need1) !== JSON.stringify(need9));
-// The card hands three parts, so a target above the best three parts for that stat can never be met.
-check('cart: every target is reachable with three parts',
+
+// The card hands four parts, so the ceiling must be what four parts really reach once reactions land.
+const fourPerms = (ids) => {
+  const out = [];
+  for (let a = 0; a < ids.length; a++) for (let b = 0; b < ids.length; b++) {
+    if (b === a) continue;
+    for (let c = 0; c < ids.length; c++) {
+      if (c === a || c === b) continue;
+      for (let e = 0; e < ids.length; e++) {
+        if (e === a || e === b || e === c) continue;
+        out.push([ids[a], ids[b], ids[c], ids[e]]);
+      }
+    }
+  }
+  return out;
+};
+const allFour = fourPerms(A.TASK_PART_ORDER);
+const reach = [0, 0, 0, 0];
+allFour.forEach(st => {
+  const s = A.evalStack(st, [], false).stats;
+  A.TASK_CART_KEYS.forEach((k, i) => { if (s[k] > reach[i]) reach[i] = s[k]; });
+});
+check('cart: the ceiling is what four parts reach with reactions', reach.join('/') === A.TASK_CART_CEILING.join('/'),
+  reach.join('/') + ' vs ' + A.TASK_CART_CEILING.join('/'));
+check('cart: the hand is four parts off a six-part shelf', A.TASK_CART_PARTS === 4 && A.TASK_CART_SHELF === 6,
+  A.TASK_CART_PARTS + '/' + A.TASK_CART_SHELF);
+check('cart: every target is reachable inside the ceiling',
   A.TASK_CART_KEYS.every((k, i) => [1, 2, 3].every(d => A.taskCartNeed(1975, d)[k] <= A.TASK_CART_CEILING[i])));
 check('cart: targets never shrink as difficulty rises',
   A.TASK_CART_KEYS.every(k => [1, 2, 3].every(d => d === 1 || A.taskCartNeed(1975, d)[k] >= A.taskCartNeed(1975, d - 1)[k])));
-// A locked cart scores the plain sum of its parts; pass needs 1 / 2 / 3 conditions at D1 / D2 / D3.
+
+// Each row of the solution table must meet the hardest worksheet (star 9, the rest 6) with the star among its 3.
+A.TASK_CART_SOLUTIONS.forEach((sol, row) => {
+  const star = Math.floor(row / 2), hardest = {};
+  A.TASK_CART_KEYS.forEach((k, i) => hardest[k] = i === star ? 9 : 6);
+  const stats = A.taskCartStats(sol);
+  const pass = A.TASK_CART_KEYS.filter((k, i) => stats[i] >= hardest[k]).length;
+  check('cart: solution ' + row + ' passes D3 with its star', stats[star] >= 9 && pass >= 3,
+    sol.join('+') + ' -> ' + stats.join('/') + ' pass ' + pass);
+});
+
+// The shelf must always contain a four-part stack that passes the sheet for this seed and difficulty.
+const shelves = [1975, 9, 42, 777].flatMap(seed => [1, 2, 3].map(d => [seed, d]));
+shelves.forEach(([seed, d]) => {
+  const shelf = A.taskCartShelf(seed, d);
+  const unique = new Set(shelf).size === shelf.length && shelf.every(id => A.TASK_PART_ORDER.includes(id));
+  const need = A.taskCartNeed(seed, d), want = Math.max(1, Math.min(3, d));
+  const passable = fourPerms(shelf).some(st => {
+    const stats = A.taskCartStats(st);
+    return A.TASK_CART_KEYS.filter((k, i) => stats[i] >= need[k]).length >= want;
+  });
+  check('cart: shelf ' + seed + ' D' + d + ' is six parts with a passing four', shelf.length === 6 && unique && passable,
+    shelf.join('+'));
+});
+check('cart: the shelf is seeded too',
+  JSON.stringify(A.taskCartShelf(1975, 3)) === JSON.stringify(A.taskCartShelf(1975, 3)) &&
+  JSON.stringify(A.taskCartShelf(1975, 3)) !== JSON.stringify(A.taskCartShelf(9, 3)));
+// Same golden shelf BobTaskRaceRules.SelfTest asserts: the two draws stay in step.
+check('cart: seed 1975 D3 shelf is the golden shelf',
+  A.taskCartShelf(1975, 3).join(' ') === 'broom sponge steam air circle soap', A.taskCartShelf(1975, 3).join(' '));
+
+// A locked cart scores through the same reaction pass as the card; pass needs 1 / 2 / 3 conditions at D1 / D2 / D3.
 const perfect = A.taskCartScore(1975, 1, ['brush', 'scrub', 'steam']);
-check('cart: a clean-heavy cart meets the clean target', perfect.stats[0] === 10 && perfect.pass >= 1 && perfect.buffs.includes('clean'),
+check('cart: a clean-heavy cart adds its reaction', perfect.stats[0] === 13 && perfect.pass >= 1 && perfect.buffs.includes('clean'),
   'stats ' + perfect.stats.join('/') + ' pass ' + perfect.pass);
 const empty = A.taskCartScore(1975, 1, []);
 check('cart: an empty cart passes nothing', empty.pass === 0 && empty.passed === false && empty.buffs.length === 0);

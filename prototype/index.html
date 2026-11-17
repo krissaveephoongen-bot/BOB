@@ -347,20 +347,23 @@ function taskEmergencyTimes(seed,difficulty){
 // T04 worksheet (docs 16 section 4): the four stat targets the cart must reach, one stat being the round's star
 // condition. Mirrors BobTaskRaceRules.CartNeed so the phone and the server ask for the same numbers.
 const TASK_CART_KEYS=['clean','gentle','speed','shine'];
-// The best three parts can give per stat: a target above this can never be met with the three parts the card hands.
-const TASK_CART_CEILING=[10,7,7,8];
+const TASK_CART_PARTS=4, TASK_CART_SHELF=6;
+// The catalogue in a fixed order: the shelf is drawn from this sequence on both sides, never from object order.
+const TASK_PART_ORDER=['cloth','sponge','brush','broom','soap','vinegar','soda','polish','hot','steam','scrub','air','soak','spray','circle'];
+// The most four parts reach per stat with pair/method reactions (BobTaskRaceRules.CartCeiling): 17/9/11/16.
+const TASK_CART_CEILING=[17,9,11,16];
+function taskCartStar(seed){ return Math.floor(mulberry((seed|0)^0xc2b2ae35)()*4)%4 }
 function taskCartNeed(seed,difficulty){
   const rng=mulberry((seed|0)^0xc2b2ae35), d=Math.max(1,Math.min(3,difficulty|0||1));
   const star=Math.floor(rng()*4)%4, need={};
   for(let i=0;i<TASK_CART_KEYS.length;i++)
-    need[TASK_CART_KEYS[i]]=Math.max(3,Math.min(TASK_CART_CEILING[i],(i===star?7:5)+(d-1)+(rng()<0.5?0:1)));
+    need[TASK_CART_KEYS[i]]=Math.max(3,Math.min(TASK_CART_CEILING[i],(i===star?6:3)+(d-1)+(rng()<0.5?0:1)));
   return need;
 }
-// The four stats of the locked cart: the plain sum of the parts' stats, exactly what the card adds up.
+// The four stats of the locked cart, through the same reaction pass the card uses (BobRules.EvalStack).
 function taskCartStats(stack){
-  const s=[0,0,0,0];
-  (stack||[]).forEach(id=>{const p=PARTS[id]; if(p) p.s.forEach((v,i)=>s[i]+=v)});
-  return s;
+  const ev=evalStack(stack||[], [], false);
+  return TASK_CART_KEYS.map(k=>ev.stats[k]);
 }
 // Pass rule: D1 one condition, D2 two, D3 three; a lock below that still counts as step 2 but hands no buff.
 function taskCartScore(seed,difficulty,stack){
@@ -368,6 +371,23 @@ function taskCartScore(seed,difficulty,stack){
   let pass=0;
   for(let i=0;i<TASK_CART_KEYS.length;i++) if(stats[i]>=need[TASK_CART_KEYS[i]]){pass++;buffs.push(TASK_CART_KEYS[i])}
   return {need:need,stats:stats,pass:pass,passed:pass>=Math.max(1,Math.min(3,difficulty|0||1)),buffs:buffs};
+}
+// A four-part stack per star that meets the hardest worksheet (star 9, the rest 6), the star among its conditions.
+const TASK_CART_SOLUTIONS=[
+  ['sponge','brush','steam','cloth'],   ['brush','soap','steam','cloth'],
+  ['sponge','soap','steam','cloth'],    ['sponge','steam','cloth','broom'],
+  ['cloth','brush','broom','air'],      ['broom','sponge','steam','air'],
+  ['cloth','polish','sponge','brush'],  ['cloth','polish','sponge','steam']
+];
+// The shelf: four parts that can pass plus two decoys, drawn from the seed so both islands see the same shelf.
+function taskCartShelf(seed,difficulty){
+  const star=taskCartStar(seed), options=[TASK_CART_SOLUTIONS[star*2],TASK_CART_SOLUTIONS[star*2+1]];
+  const rng=mulberry((seed|0)^0x27d4eb2d);
+  const shelf=options[Math.floor(rng()*options.length)%options.length].slice();
+  const rest=TASK_PART_ORDER.filter(id=>!shelf.includes(id));
+  for(let i=rest.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));const t=rest[i];rest[i]=rest[j];rest[j]=t}
+  while(rest.length&&shelf.length<TASK_CART_SHELF) shelf.push(rest.shift());
+  return shelf;
 }
 function taskEmergencyEnemy(seed){
   const r=mulberry((seed|0)^0x85ebca6b), ids=Object.keys(ENEMIES);
