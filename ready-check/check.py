@@ -2,8 +2,12 @@
 """Play-readiness gate for the BOB repo: the checks that catch a build which cannot be played.
 
 Unity is not available in the CI sandbox, so this script never opens the editor. It reads the same files the editor
-would: scene YAML, .meta GUIDs, Resources folders, the art manifest and the audio prefab. Everything it needs is in the
-repository, so a failure here is a real failure before anyone presses Play.
+would: scene YAML, .meta GUIDs, Resources folders, the art manifest, the audio prefab and ProjectSettings. Everything
+it needs is in the repository, so a failure here is a real failure before anyone presses Play.
+
+Checks: build scenes + GUIDs; LoadScene scene names; Canvas <-> EventSystem per scene; Resources folders and fonts;
+every Resources.Load literal; every script GUID in scenes/prefabs (with a known-external baseline); duplicate .meta
+GUIDs; the shipping PlayerSettings; the sprite names the code asks for; the audio clip names. LFS state is a note.
 
     python3 ready-check/check.py          # or: bash ready-check/check.sh
 
@@ -179,6 +183,149 @@ def check_audio_names():
     return len(clips), sorted(tones)
 
 
+def resources_index():
+    """Every path Resources.Load can resolve to: folders, file names, and names without their extension."""
+    root = os.path.join(ASSETS, "Resources")
+    idx = set()
+    for dirpath, _dirnames, filenames in os.walk(root):
+        rel = os.path.relpath(dirpath, root).replace(os.sep, "/")
+        idx.add(rel)
+        for name in filenames:
+            if name.endswith(".meta"):
+                continue
+            joined = name if rel == "." else rel + "/" + name
+            idx.add(joined)
+            idx.add(os.path.splitext(joined)[0])
+    return idx
+
+
+# Literals that are allowed to miss, with the reason. Keep this list short and honest: everything else must resolve.
+OPTIONAL_LOADS = {
+    "BobUiTheme": "optional: BobUiTheme.Current falls back to the built-in palette when the asset is absent",
+}
+
+
+def check_resources_loads():
+    """A Resources.Load path that does not resolve returns null: the screen plays empty, with no error in the console.
+
+    Only complete string literals are checked; paths built by concatenation ("Heroes/SK_" + id) are covered by their
+    own gates (art manifest names, Resources/Stages counts).
+    """
+    idx = resources_index()
+    used = set()
+    for f in glob.glob(os.path.join(ASSETS, "Scripts", "**", "*.cs"), recursive=True):
+        used |= set(re.findall(r'Resources\.Load(?:All)?(?:<[^>]+>)?\("([^"]+)"\)', read(f)))
+    for path in sorted(used):
+        if path in idx:
+            continue
+        if path in OPTIONAL_LOADS:
+            note(f'Resources.Load("{path}") is absent by design - {OPTIONAL_LOADS[path]}')
+            continue
+        fail(f'Resources.Load("{path}") resolves to nothing under Assets/Resources')
+    return len(used)
+
+
+def check_scripts():
+    """A scene or prefab that points at a script with no .cs must be caught before Play: Unity shows Missing (Mono Script).
+
+    Unity writes `m_Script: {fileID: 0}` for a component whose script it cannot find - that is always a blocker. A GUID
+    that resolves outside Assets belongs to a Unity package (TMP, uGUI), so the known-external set lives in
+    ready-check/external-scripts.txt: a *new* unresolved GUID means a project script was deleted or renamed.
+    """
+    known = set()
+    base = os.path.join(os.path.dirname(os.path.abspath(__file__)), "external-scripts.txt")
+    if os.path.exists(base):
+        known = {l.strip() for l in read(base).splitlines() if l.strip() and not l.startswith("#")}
+    path_of = {}
+    for meta in glob.glob(os.path.join(ASSETS, "**", "*.meta"), recursive=True):
+        m = re.search(r"guid: ([0-9a-f]{32})", read(meta)[:400])
+        if m:
+            path_of[m.group(1)] = meta[: -len(".meta")]
+    seen, external = set(), set()
+    for f in glob.glob(os.path.join(ASSETS, "**", "*.unity"), recursive=True) + glob.glob(
+        os.path.join(ASSETS, "**", "*.prefab"), recursive=True
+    ):
+        src = read(f)
+        short = os.path.relpath(f, REPO)
+        if "m_Script: {fileID: 0}" in src:
+            fail(f"{short} has a component with a missing script (m_Script: fileID 0)")
+        for guid in re.findall(r"m_Script: \{fileID: \d+, guid: ([0-9a-f]{32})", src):
+            seen.add(guid)
+            if guid not in path_of:
+                external.add(guid)
+            elif not path_of[guid].endswith(".cs"):
+                fail(f"{short} points at {os.path.relpath(path_of[guid], REPO)} as a script, but it is not a .cs")
+    for guid in sorted(external - known):
+        fail(f"unresolved script GUID {guid}: no .cs in Assets and not in ready-check/external-scripts.txt")
+    return len(seen), len(external)
+
+
+def check_duplicate_guids():
+    """Two assets with the same GUID make Unity bind the wrong file - the classic silent asset swap."""
+    seen = {}
+    dups = 0
+    for meta in glob.glob(os.path.join(ASSETS, "**", "*.meta"), recursive=True):
+        m = re.search(r"guid: ([0-9a-f]{32})", read(meta)[:400])
+        if not m:
+            continue
+        guid = m.group(1)
+        if guid in seen:
+            dups += 1
+            fail(f"duplicate GUID {guid}: {os.path.relpath(seen[guid], REPO)} and {os.path.relpath(meta, REPO)}")
+        else:
+            seen[guid] = meta
+    return len(seen), dups
+
+
+def check_player_settings():
+    """The build settings the game is shipped with: a wrong one makes an APK that installs but cannot be played.
+
+    These are pinned to what the code expects, not to taste: the package name is the distributed app id, the
+    orientation must stay landscape because every screen is authored 1920x1080, and activeInputHandler must stay 0
+    while TaskRaceModeManager builds a legacy StandaloneInputModule.
+    """
+    src = read(os.path.join(REPO, "unity", "ProjectSettings", "ProjectSettings.asset"))
+
+    def one(pattern, what):
+        m = re.search(pattern, src, re.MULTILINE)
+        if not m:
+            fail(f"ProjectSettings is missing {what}")
+            return None
+        return m.group(1).strip()
+
+    product = one(r"^  productName: (.+)$", "productName")
+    company = one(r"^  companyName: (.+)$", "companyName")
+    if product is not None and not product:
+        fail("productName is empty - the launcher shows a blank app name")
+    if company is not None and not company:
+        fail("companyName is empty")
+    app_id = one(r"^    Android: (.+)$", "the Android application identifier")
+    if app_id is not None and app_id != "com.bob.battleofthebrooms":
+        fail(f"Android application identifier is {app_id}, expected com.bob.battleofthebrooms")
+    code = one(r"^  AndroidBundleVersionCode: (\d+)$", "AndroidBundleVersionCode")
+    if code is not None and int(code) < 1:
+        fail("AndroidBundleVersionCode is 0 - Google Play rejects it")
+    min_sdk = one(r"^  AndroidMinSdkVersion: (\d+)$", "AndroidMinSdkVersion")
+    if min_sdk is not None and int(min_sdk) < 26:
+        fail(f"AndroidMinSdkVersion is {min_sdk}, expected 26 or newer")
+    orientation = one(r"^  defaultScreenOrientation: (\d+)$", "defaultScreenOrientation")
+    if orientation is not None and orientation not in ("3", "4"):
+        fail(f"defaultScreenOrientation is {orientation}; the game is authored landscape only (3 or 4)")
+    for key in ("allowedAutorotateToPortrait", "allowedAutorotateToPortraitUpsideDown"):
+        v = one(r"^  " + key + r": (\d+)$", key)
+        if v is not None and v != "0":
+            fail(f"{key} is {v}; portrait would letterbox every screen")
+    input_handler = one(r"^  activeInputHandler: (\d+)$", "activeInputHandler")
+    if input_handler is not None and input_handler != "0":
+        fail(
+            "activeInputHandler is "
+            + input_handler
+            + "; the scenes build a legacy StandaloneInputModule, so pointer input dies unless this stays 0"
+        )
+    version = one(r"^  bundleVersion: (.+)$", "bundleVersion") or "?"
+    return f'{app_id} · {version} ({code}) · minSdk {min_sdk} · landscape · legacy input'
+
+
 def report_lfs():
     """A wav/glb committed wholesale (not as an LFS pointer) only warns on checkout; a pointer with no object breaks it."""
     pointers, plain = 0, 0
@@ -202,12 +349,18 @@ def main():
     check_scene_loads(names)
     check_event_system(names)
     check_resources()
+    loads = check_resources_loads()
+    scripts, external = check_scripts()
+    metas, dups = check_duplicate_guids()
+    settings = check_player_settings()
     art = check_art_names()
     clips, tones = check_audio_names()
     report_lfs()
 
     print(f"scenes: {', '.join(names) if names else '(none)'}")
     print(f"art: {art} sprite name(s) checked, audio: {clips} clip(s), tone fallback: {', '.join(tones) or '(none)'}")
+    print(f"loads: {loads} Resources.Load path(s) · scripts: {scripts} guid(s) ({external} from packages) · metas: {metas} ({dups} duplicate(s))")
+    print(f"settings: {settings}")
     for n in notes:
         print("note: " + n)
     if blockers:

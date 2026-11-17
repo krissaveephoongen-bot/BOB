@@ -1,0 +1,18 @@
+# Script GUIDs referenced by scenes/prefabs that live in Unity packages, not in Assets (TextMeshPro, uGUI).
+# ready-check fails when a *new* unresolved script GUID appears: that means a project script was deleted or renamed
+# while a scene or prefab still points at it. Regenerate only when the package set itself changes:
+#   python3 - <<'EOF'
+#   ... collect m_Script guids of *.unity/*.prefab, subtract Assets/**/*.meta, print sorted ...
+#   EOF
+0cd44c1031e13a943bb63640046fad76
+1344c3c82d62a2a41a3576d8abb8e3ea
+1e3fdca004f2d45fe8abbed571a8abd5
+306cc8c2b49d7114eaa3623786fc2126
+4e29b1a8efbd4b44bb3f3716e73f07ff
+6eeb5dc026fdf4b488bc7ae0138ab719
+7a5ac11cc976e418e8d13136b07e1f52
+9541d86e2fd84c1d9990edf0852d74ab
+dc42784cf147c0c48a680349fa168899
+e19747de3f5aca642ab2be37e372fb86
+f4688fdb7df04437aeb418b961361dc5
+fe87c0e1cc204ed48ad3b37840f39efc
