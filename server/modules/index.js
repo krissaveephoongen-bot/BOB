@@ -228,6 +228,31 @@ function taskEmergencyTimes(seed,difficulty){
   for(let i=0;i<n;i++) out.push(base[i]);
   return out;
 }
+// T04 worksheet (docs 16 section 4): the four stat targets the cart must reach, one stat being the round's star
+// condition. Mirrors BobTaskRaceRules.CartNeed so the phone and the server ask for the same numbers.
+const TASK_CART_KEYS=['clean','gentle','speed','shine'];
+// The best three parts can give per stat: a target above this can never be met with the three parts the card hands.
+const TASK_CART_CEILING=[10,7,7,8];
+function taskCartNeed(seed,difficulty){
+  const rng=mulberry((seed|0)^0xc2b2ae35), d=Math.max(1,Math.min(3,difficulty|0||1));
+  const star=Math.floor(rng()*4)%4, need={};
+  for(let i=0;i<TASK_CART_KEYS.length;i++)
+    need[TASK_CART_KEYS[i]]=Math.max(3,Math.min(TASK_CART_CEILING[i],(i===star?7:5)+(d-1)+(rng()<0.5?0:1)));
+  return need;
+}
+// The four stats of the locked cart: the plain sum of the parts' stats, exactly what the card adds up.
+function taskCartStats(stack){
+  const s=[0,0,0,0];
+  (stack||[]).forEach(id=>{const p=PARTS[id]; if(p) p.s.forEach((v,i)=>s[i]+=v)});
+  return s;
+}
+// Pass rule: D1 one condition, D2 two, D3 three; a lock below that still counts as step 2 but hands no buff.
+function taskCartScore(seed,difficulty,stack){
+  const need=taskCartNeed(seed,difficulty), stats=taskCartStats(stack), buffs=[];
+  let pass=0;
+  for(let i=0;i<TASK_CART_KEYS.length;i++) if(stats[i]>=need[TASK_CART_KEYS[i]]){pass++;buffs.push(TASK_CART_KEYS[i])}
+  return {need:need,stats:stats,pass:pass,passed:pass>=Math.max(1,Math.min(3,difficulty|0||1)),buffs:buffs};
+}
 function taskEmergencyEnemy(seed){
   const r=mulberry((seed|0)^0x85ebca6b), ids=Object.keys(ENEMIES);
   return ids[Math.floor(r()*ids.length)%ids.length];

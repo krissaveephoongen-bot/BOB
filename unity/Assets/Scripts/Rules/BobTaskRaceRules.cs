@@ -152,6 +152,14 @@ namespace Bob.Rules
         public static readonly string[] CartKeys = { "clean", "gentle", "speed", "shine" };
 
         /// <summary>
+        /// The best three parts in BobRules.Parts can give per stat, in CartKeys order (brush+scrub+steam 10 clean,
+        /// cloth+sponge+broom 7 gentle, broom+air+spray 7 speed, polish+cloth+circle 8 shine). The card hands three
+        /// parts, so a worksheet target above these can never be met - the clamp in CartNeed keeps the promise that a
+        /// card is passable, and SelfTest asserts it.
+        /// </summary>
+        public static readonly int[] CartCeiling = { 10, 7, 7, 8 };
+
+        /// <summary>
         /// The T04 worksheet of docs 16 section 4: what the cart must reach in each stat. One stat is the round's star
         /// condition, the rest sit a step lower, and D2/D3 raise every number. Three parts is all the shelf gives, so
         /// the values stay inside what a three-layer stack can reach — a card nobody can pass is not a hard card.
@@ -165,7 +173,7 @@ namespace Bob.Rules
             for (int i = 0; i < CartKeys.Length; i++)
             {
                 int value = (i == star ? 7 : 5) + (d - 1) + (rng.Next() < 0.5 ? 0 : 1);
-                need[CartKeys[i]] = Math.Max(3, value);
+                need[CartKeys[i]] = Math.Max(3, Math.Min(CartCeiling[i], value));
             }
             return need;
         }
@@ -238,7 +246,9 @@ namespace Bob.Rules
             foreach (var k in CartKeys)
             {
                 if (need[k] != again[k]) bad.Add("cart need not seeded for " + k);
-                if (need[k] < 3 || need[k] > 10) bad.Add($"cart need out of range {k}={need[k]}");
+                int ceiling = CartCeiling[System.Array.IndexOf(CartKeys, k)];
+                if (need[k] < 3 || need[k] > ceiling) bad.Add($"cart need unreachable {k}={need[k]} > {ceiling}");
+                if (CartNeed(1975, 3)[k] > ceiling) bad.Add($"cart need at D3 cannot be built: {k}");
                 if (CartNeed(1975, 3)[k] < need[k]) bad.Add($"cart need shrinks with difficulty: {k}");
             }
             if (CartPassCount(new[] { 0, 0, 0, 0 }, need) != 0) bad.Add("cart pass count on an empty cart");
@@ -246,6 +256,14 @@ namespace Bob.Rules
             if (CartPassed(1, 1) == false || CartPassed(1, 3) || CartPassed(2, 2) == false || CartPassed(2, 3))
                 bad.Add("cart pass rule drifted");
             if (CartBuffs(new[] { 99, 0, 0, 0 }, need).Count != 1) bad.Add("cart buffs drifted");
+
+            // The same three rows server/task-race-test.js asserts (seed 1975): both sides draw these numbers.
+            foreach (var row in new[] { (1, 5, 6, 7, 6), (2, 6, 7, 7, 7), (3, 7, 7, 7, 8) })
+            {
+                var g = CartNeed(1975, row.Item1);
+                if (g["clean"] != row.Item2 || g["gentle"] != row.Item3 || g["speed"] != row.Item4 || g["shine"] != row.Item5)
+                    bad.Add($"cart need 1975 D{row.Item1} drifted: {g["clean"]}/{g["gentle"]}/{g["speed"]}/{g["shine"]}");
+            }
             return bad;
         }
 

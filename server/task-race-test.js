@@ -26,7 +26,8 @@ function load() {
   const ctx = { console };
   vm.createContext(ctx);
   vm.runInContext(SRC + ';this.API={matchInit,matchJoin,matchJoinAttempt,matchLoop,matchTerminate,taskPlan,taskMinMs,' +
-    'taskComposition,taskTotalWeight,taskEmergencyTimes,TASK_MINIGAMES,TASK_ROUND_TIME,OP};', ctx);
+    'taskComposition,taskTotalWeight,taskEmergencyTimes,taskCartNeed,taskCartStats,taskCartScore,TASK_CART_KEYS,' +
+    'TASK_CART_CEILING,TASK_MINIGAMES,TASK_ROUND_TIME,OP};', ctx);
   const A = ctx.API;
   A.matchLoop = A.matchLoop;
   return A;
@@ -181,6 +182,34 @@ check('emergency: it never spawns twice', again.length === 0);
 st2.s.time = 0.05;
 const b2 = tick(st2, []);
 check('clock: time up ends the race with a result', st2.s.phase === 'result' && !!last(b2, OP.RESULT), 'phase ' + st2.s.phase);
+
+
+// ---------------------------------------------------------------- T04 cart worksheet (docs 16 section 4)
+// The three rows below are the same rows BobTaskRaceRules.SelfTest asserts, so the phone and the server agree on T04.
+const cartGold = [[1, 5, 6, 7, 6], [2, 6, 7, 7, 7], [3, 7, 7, 7, 8]];
+cartGold.forEach(([diff, clean, gentle, speed, shine]) => {
+  const n = A.taskCartNeed(1975, diff);
+  check('cart: seed 1975 D' + diff + ' worksheet', n.clean === clean && n.gentle === gentle && n.speed === speed && n.shine === shine,
+    [n.clean, n.gentle, n.speed, n.shine].join('/'));
+});
+const need1 = A.taskCartNeed(1975, 1), need1b = A.taskCartNeed(1975, 1), need9 = A.taskCartNeed(9, 1);
+check('cart: the worksheet is seeded', JSON.stringify(need1) === JSON.stringify(need1b) && JSON.stringify(need1) !== JSON.stringify(need9));
+// The card hands three parts, so a target above the best three parts for that stat can never be met.
+check('cart: every target is reachable with three parts',
+  A.TASK_CART_KEYS.every((k, i) => [1, 2, 3].every(d => A.taskCartNeed(1975, d)[k] <= A.TASK_CART_CEILING[i])));
+check('cart: targets never shrink as difficulty rises',
+  A.TASK_CART_KEYS.every(k => [1, 2, 3].every(d => d === 1 || A.taskCartNeed(1975, d)[k] >= A.taskCartNeed(1975, d - 1)[k])));
+// A locked cart scores the plain sum of its parts; pass needs 1 / 2 / 3 conditions at D1 / D2 / D3.
+const perfect = A.taskCartScore(1975, 1, ['brush', 'scrub', 'steam']);
+check('cart: a clean-heavy cart meets the clean target', perfect.stats[0] === 10 && perfect.pass >= 1 && perfect.buffs.includes('clean'),
+  'stats ' + perfect.stats.join('/') + ' pass ' + perfect.pass);
+const empty = A.taskCartScore(1975, 1, []);
+check('cart: an empty cart passes nothing', empty.pass === 0 && empty.passed === false && empty.buffs.length === 0);
+const hotOnly = A.taskCartScore(1975, 1, ['hot', 'soap', 'sponge']);
+check('cart: D1 passes on one condition, D3 does not', hotOnly.passed === (hotOnly.pass >= 1) && A.taskCartScore(1975, 3, ['hot', 'soap', 'sponge']).passed === false,
+  'D1 pass ' + hotOnly.pass);
+check('cart: buffs are exactly the met conditions',
+  A.TASK_CART_KEYS.every((k, i) => perfect.buffs.includes(k) === (perfect.stats[i] >= perfect.need[k])));
 
 // ---------------------------------------------------------------- cart rounds are untouched
 const cart = A.matchInit({}, logger, fakeNk(), { seed: '11' });
