@@ -257,7 +257,7 @@ sandbox ของ cloud session ไม่มี Unity — รอบนี้ร�
 | 2 | `PauseCheck` (ข้อ 9, play mode) | timeScale 0.00 · clock แช่/เดินต่อ · `PAUSE CHECK PASSED` |
 | 2 | `BobGameScene.RunTest` (ข้อ 5, play mode) | `GAME TEST PASSED: 2:0 in 2 rounds` ที่ 2400×1080 |
 | 1 | `ready-check` | `READY-CHECK PASSED` (พื้นเดียวกับ §2) |
-| 1 | `server/task-race-test.js` | 75/75 |
+| 1 | `server/task-race-test.js` (หลัง merge คะแนนรวม) | 80/80 |
 | ใหม่ | `Editor/TaskRaceShots.cs` (editor-only) | 6 ภาพ runtime-only: ถาดเพื่อน (chips=1), วงล้อปิง, แบนเนอร์คราบ, ลูกศรขอบจอ, การ์ดปราบคราบ, การ์ด T04 |
 | — | ภาพหน้าโปรแกรม 2400×1080 | S13/S14/S15 + การ์ดจบ/ผลบท/พัก/S28 ครบชุด (รายการใน docs 24 §15.34) |
 

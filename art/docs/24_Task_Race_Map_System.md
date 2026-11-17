@@ -1222,7 +1222,8 @@ build แรกหลังงาน pure UGS + SFX — สั่งด้วย
   = done ทั้งสาม (solo 6 แถว 0/9, duo/team 7 แถว 0/13, การ์ดบท 1 "ห้องเช่า" 2-0 ดาว 3/3 ถัดไป #2 LV 2, S28 9 การ์ด fx 6/6)
 - **check ที่รันผ่าน (play mode, ไม่มี `-quit` เพราะ check ออกจาก Play เอง):** `BotCheck` = บอทขยับ 20.90 u /
   เก็บ-ข้าม-ป่วน true · `PauseCheck` = timeScale 0.00 clock แช่, เปิดการ์ดแล้วกดพักไม่ติด · `BobGameScene.RunTest`
-  = "GAME TEST PASSED: 2:0 in 2 rounds" ที่ 2400×1080 · `ready-check` = PASSED · `server/task-race-test.js` = 75/75
+  = "GAME TEST PASSED: 2:0 in 2 rounds" ที่ 2400×1080 · `ready-check` = PASSED · `server/task-race-test.js` = 80/80
+  (หลัง merge คอมมิตคะแนนรวมของ cloud session: 75 สัญญาเดิม + 5 ข้อ `taskRaceScore`)
 - **ไดรเวอร์ใหม่ `Editor/TaskRaceShots.cs`** (editor-only) เข้า Play, seed เพื่อนบอทเอง (เล่นฉากตรง ๆ ไม่มี `MatchRequest`
   จึงไม่มีเพื่อน), ถ่าย 6 ภาพด้วยกล้องตัวเดียวกับ `TaskRaceVerify.Shot` (เปลี่ยน `Shot` เป็น `public` 1 คำ):
   `Logs/taskrace-duo-mate` (ถาดเพื่อน open=True chips=1), `taskrace-ping-wheel` (วงล้อ 6 คำ), `taskrace-emergency`
