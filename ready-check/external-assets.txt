@@ -1,0 +1,22 @@
+# Asset GUIDs referenced by scenes/prefabs/materials/anims that live in Unity packages or are built in, not in Assets.
+# ready-check fails when a *new* unresolved GUID appears: a scene or prefab still points at an asset that was deleted
+# or re-imported under a new GUID. Regenerate only when the package set changes (Unity, Netcode, TMP versions).
+0000000000000000e000000000000000
+0000000000000000f000000000000000
+0cd44c1031e13a943bb63640046fad76
+1344c3c82d62a2a41a3576d8abb8e3ea
+1e3fdca004f2d45fe8abbed571a8abd5
+2705215ac5b84b70bacc50632be6e391
+306cc8c2b49d7114eaa3623786fc2126
+4e29b1a8efbd4b44bb3f3716e73f07ff
+6eeb5dc026fdf4b488bc7ae0138ab719
+71c1514a6bd24e1e882cebbe1904ce04
+7a5ac11cc976e418e8d13136b07e1f52
+9541d86e2fd84c1d9990edf0852d74ab
+ab2114bdc8544297b417dfefe9f1e410
+c41005c129ba4d66911b75229fd70b45
+dc42784cf147c0c48a680349fa168899
+e19747de3f5aca642ab2be37e372fb86
+e651dbb3fbac04af2b8f5abf007ddc23
+f4688fdb7df04437aeb418b961361dc5
+fe87c0e1cc204ed48ad3b37840f39efc

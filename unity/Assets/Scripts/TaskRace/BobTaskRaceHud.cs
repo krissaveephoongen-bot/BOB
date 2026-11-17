@@ -2102,7 +2102,7 @@ namespace Bob.TaskRace
 
             debugModeLabel = AddDebugButton(grid.transform, "โหมด: Raid", OnDebugMode);
             AddDebugButton(grid.transform, "เวลา -10", OnDebugBack);
-            AddDebugButton(grid.transform, "⏭ 65 วิ", OnDebugSkipToWarning);
+            AddDebugButton(grid.transform, "→ 65 วิ", OnDebugSkipToWarning);
             AddDebugButton(grid.transform, "เปิดสะพาน", OnDebugBridges);
             AddDebugButton(grid.transform, "+150 แต้ม", OnDebugPoints);
             AddDebugButton(grid.transform, "ป่วน", OnDebugSabotage);

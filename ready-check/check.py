@@ -326,6 +326,82 @@ def check_player_settings():
     return f'{app_id} · {version} ({code}) · minSdk {min_sdk} · landscape · legacy input'
 
 
+def check_asset_refs():
+    """A scene or prefab that points at a deleted sprite/audio/prefab loses that object at load, with no error.
+
+    GUIDs that resolve outside Assets belong to Unity packages (built-in components, Netcode, TMP), so they live in
+    ready-check/external-assets.txt: anything new there means a project asset was deleted or re-imported under a new
+    GUID while a scene, prefab, material or animator still points at the old one. A .meta with no file next to it is a
+    note (leftover after a delete), because nothing can reference it any more.
+    """
+    known = set()
+    base = os.path.join(os.path.dirname(os.path.abspath(__file__)), "external-assets.txt")
+    if os.path.exists(base):
+        known = {l.strip() for l in read(base).splitlines() if l.strip() and not l.startswith("#")}
+    path_of = {}
+    for meta in glob.glob(os.path.join(ASSETS, "**", "*.meta"), recursive=True):
+        m = re.search(r"guid: ([0-9a-f]{32})", read(meta)[:400])
+        if m:
+            path_of[m.group(1)] = meta[: -len(".meta")]
+    exts = (".unity", ".prefab", ".asset", ".mat", ".anim", ".controller", ".playable", ".mask")
+    refs, unknown, orphans = 0, {}, []
+    for f in glob.glob(os.path.join(ASSETS, "**", "*"), recursive=True):
+        if not f.endswith(exts) or f.endswith(".meta"):
+            continue
+        for guid in re.findall(r"guid: ([0-9a-f]{32})", read(f)):
+            refs += 1
+            if guid not in path_of:
+                unknown.setdefault(guid, os.path.relpath(f, REPO))
+    for guid, where in sorted(unknown.items()):
+        if guid not in known:
+            fail(f"{where} references missing asset GUID {guid} (not in Assets, not in ready-check/external-assets.txt)")
+    for guid, path in path_of.items():
+        if not os.path.exists(path):
+            orphans.append(os.path.relpath(path, REPO))
+    if orphans:
+        note(f"{len(orphans)} .meta file(s) with no asset next to them (leftover): " + ", ".join(sorted(orphans)[:5]))
+    return refs, len(unknown)
+
+
+def check_ui_glyphs():
+    """Text drawn with a glyph the font atlas does not carry shows as a box, and the Thai fonts carry a short set.
+
+    The set is the one BobTmpSetup bakes into the font assets (Bob: built ... characters). Log lines and editor code are
+    skipped: they never reach a label.
+    """
+    setup = os.path.join(ASSETS, "Scripts", "Editor", "BobTmpSetup.cs")
+    font_set = set()
+    if os.path.exists(setup):
+        for lit in re.findall(r'sb\.Append\("((?:[^"\\]|\\.)*)"\)', read(setup)):
+            font_set |= set(lit)
+    if not font_set:
+        note("could not read the TMP glyph set from BobTmpSetup.cs - skipping the glyph check")
+        return 0
+    allowed = set(chr(c) for c in range(32, 127)) | font_set
+    checked = 0
+    for f in glob.glob(os.path.join(ASSETS, "Scripts", "**", "*.cs"), recursive=True):
+        if os.sep + "Editor" + os.sep in f:
+            continue
+        for n, line in enumerate(read(f).splitlines(), 1):
+            if "Debug.Log" in line or line.lstrip().startswith("//"):
+                continue
+            if "[Header(" in line or "[Tooltip(" in line:
+                continue  # inspector text: never drawn by a label
+            for lit in re.findall(r'"((?:[^"\\]|\\.)*)"', line):
+                text = lit
+                checked += 1
+                for ch in text:
+                    o = ord(ch)
+                    if ch in allowed or 0x0E00 <= o <= 0x0E7F:
+                        continue
+                    fail(
+                        f'{os.path.relpath(f, REPO)}:{n} renders {ch!r} (U+{o:04X}) but the TMP font set has no such '
+                        f'glyph - add it to BobTmpSetup or use a character the atlas carries'
+                    )
+                    break
+    return checked
+
+
 def report_lfs():
     """A wav/glb committed wholesale (not as an LFS pointer) only warns on checkout; a pointer with no object breaks it."""
     pointers, plain = 0, 0
@@ -351,6 +427,8 @@ def main():
     check_resources()
     loads = check_resources_loads()
     scripts, external = check_scripts()
+    refs, unknown = check_asset_refs()
+    glyphs = check_ui_glyphs()
     metas, dups = check_duplicate_guids()
     settings = check_player_settings()
     art = check_art_names()
@@ -360,6 +438,7 @@ def main():
     print(f"scenes: {', '.join(names) if names else '(none)'}")
     print(f"art: {art} sprite name(s) checked, audio: {clips} clip(s), tone fallback: {', '.join(tones) or '(none)'}")
     print(f"loads: {loads} Resources.Load path(s) · scripts: {scripts} guid(s) ({external} from packages) · metas: {metas} ({dups} duplicate(s))")
+    print(f"refs: {refs} asset GUID(s) ({unknown} from packages) · glyphs: {glyphs} literal(s) checked")
     print(f"settings: {settings}")
     for n in notes:
         print("note: " + n)
