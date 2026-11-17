@@ -17,6 +17,8 @@ namespace Bob.Ugs
 
         public string LeaderboardId => leaderboardId;
         public LeaderboardScoresPage LastScores { get; private set; }
+        /// <summary>The entry the board returned from the last submit: its Rank counts from 0 (1st place = 0).</summary>
+        public LeaderboardEntry LastEntry { get; private set; }
         public string LastError { get; private set; }
 
         void Awake()
@@ -34,7 +36,7 @@ namespace Bob.Ugs
         {
             try
             {
-                await LeaderboardsService.Instance.AddPlayerScoreAsync(leaderboardId, score);
+                LastEntry = await LeaderboardsService.Instance.AddPlayerScoreAsync(leaderboardId, score);
                 LastError = null;
                 Debug.Log($"[UGS] score {score} submitted to {leaderboardId}");
                 return true;

@@ -256,6 +256,18 @@ function taskCartScore(seed,difficulty,stack){
   for(let i=0;i<TASK_CART_KEYS.length;i++) if(stats[i]>=need[TASK_CART_KEYS[i]]){pass++;buffs.push(TASK_CART_KEYS[i])}
   return {need:need,stats:stats,pass:pass,passed:pass>=Math.max(1,Math.min(3,difficulty|0||1)),buffs:buffs};
 }
+// The combined race score (docs 16 2.6, mirror of BobRaceScore.cs): work done, the cart's formula, the outcome and
+// the clock left, scaled by difficulty. Integer maths, floored, so the phone and the server print the same number.
+const TASK_SCORE_PER_TASK=100, TASK_SCORE_PER_CART=75, TASK_SCORE_WIN=400, TASK_SCORE_DRAW=150,
+      TASK_SCORE_PER_SECOND=2, TASK_SCORE_MAX_SECONDS=120, TASK_SCORE_MAX_CART=4, TASK_SCORE_D_STEP=20;
+function taskRaceScore(tasks,cartPasses,won,draw,secondsLeft,difficulty){
+  const t=Math.max(0,Math.min(99,tasks|0)), c=Math.max(0,Math.min(TASK_SCORE_MAX_CART,cartPasses|0));
+  const s=Math.max(0,Math.min(TASK_SCORE_MAX_SECONDS,secondsLeft|0));
+  const outcome=won?TASK_SCORE_WIN:draw?TASK_SCORE_DRAW:0;
+  const raw=t*TASK_SCORE_PER_TASK+c*TASK_SCORE_PER_CART+s*TASK_SCORE_PER_SECOND+outcome;
+  const d=Math.max(1,Math.min(3,difficulty|0||1));
+  return Math.floor(raw*(100+TASK_SCORE_D_STEP*(d-1))/100);
+}
 // A four-part stack per star that meets the hardest worksheet (star 9, the rest 6), the star among its conditions.
 const TASK_CART_SOLUTIONS=[
   ['sponge','brush','steam','cloth'],   ['brush','soap','steam','cloth'],

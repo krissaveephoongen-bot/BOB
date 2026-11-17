@@ -31,6 +31,32 @@ static class Program
         }
         Console.WriteLine("task race table checked");
 
+        // The combined race score (docs 16 2.6). Same hand-computed rows as server/task-race-test.js, so the phone,
+        // the browser and the server are proven to print the same number for the same match.
+        var scoreRows = new (int tasks, int cart, bool won, bool draw, int secs, int diff, int want)[]
+        {
+            (0, 0, false, false, 0, 1, 0),
+            (5, 0, false, false, 0, 1, 500),
+            (5, 2, false, false, 0, 1, 650),
+            (5, 2, true, false, 0, 3, 1470),
+            (8, 4, true, false, 60, 1, 1620),
+            (0, 0, true, false, 120, 2, 768),
+            (3, 0, false, true, 10, 1, 470),
+            (7, 1, true, false, 30, 2, 1482),
+            (1, 1, false, false, 1, 3, 247),
+            (200, 9, true, false, 999, 3, 15176),
+        };
+        foreach (var row in scoreRows)
+            Check($"score {row.tasks}t/{row.cart}c/{row.secs}s D{row.diff} = {row.want}",
+                BobRaceScore.Of(row.tasks, row.cart, row.won, row.draw, row.secs, row.diff) == row.want);
+        Check("score: the cart term stops at four passes",
+            BobRaceScore.Of(6, 4, false, false, 0, 1) == BobRaceScore.Of(6, 9, false, false, 0, 1));
+        Check("score: the clock term stops at the round length",
+            BobRaceScore.Of(6, 0, false, false, 120, 1) == BobRaceScore.Of(6, 0, false, false, 400, 1));
+        Check("score: D3 is worth 40% more than D1 on the same play",
+            BobRaceScore.Of(10, 4, true, false, 0, 3) == BobRaceScore.Of(10, 4, true, false, 0, 1) * 14 / 10);
+        Console.WriteLine("race score table checked");
+
         int rooms = 0;
         foreach (var seed in new[] { 1, 2, 3, 7, 42, 999, 123456, 654321, 8388607 })
         for (int round = 1; round <= 3; round++)

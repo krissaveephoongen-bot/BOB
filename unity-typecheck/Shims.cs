@@ -136,6 +136,13 @@ namespace Bob.Ugs
         public System.Threading.Tasks.Task EnsureReadyAsync() => null;
     }
 
+    /// <summary>The real reporter (UGS/BobRaceScoreReporter.cs) posts a finished match's score to the leaderboard.
+    /// The Task Race manager only needs Attach, so that is all this mirrors.</summary>
+    public class BobRaceScoreReporter : MonoBehaviour
+    {
+        public static BobRaceScoreReporter Attach(Bob.TaskRace.TaskRaceModeManager owner) => null;
+    }
+
     /// <summary>The real room (UGS/BobOnlineRoom.cs) needs the Lobby, Relay and Netcode assemblies. Mirror only what the
     /// screens and the Task Race scene read: the state they draw, the two events they listen to, and the calls they make.</summary>
     public sealed class BobOnlineRoom : MonoBehaviour

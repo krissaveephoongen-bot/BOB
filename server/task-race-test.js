@@ -27,6 +27,7 @@ function load() {
   vm.createContext(ctx);
   vm.runInContext(SRC + ';this.API={matchInit,matchJoin,matchJoinAttempt,matchLoop,matchTerminate,taskPlan,taskMinMs,' +
     'taskComposition,taskTotalWeight,taskEmergencyTimes,taskCartNeed,taskCartStats,taskCartScore,taskCartShelf,taskCartStar,' +
+    'taskRaceScore,TASK_SCORE_PER_TASK,TASK_SCORE_PER_CART,TASK_SCORE_WIN,TASK_SCORE_DRAW,' +
     'TASK_CART_KEYS,TASK_CART_CEILING,TASK_CART_PARTS,TASK_CART_SHELF,TASK_PART_ORDER,TASK_CART_SOLUTIONS,evalStack,' +
     'TASK_MINIGAMES,TASK_ROUND_TIME,OP};', ctx);
   const A = ctx.API;
@@ -267,6 +268,36 @@ check('cart: D1 passes on one condition, D3 does not', hotOnly.passed === (hotOn
   'D1 pass ' + hotOnly.pass);
 check('cart: buffs are exactly the met conditions',
   A.TASK_CART_KEYS.every((k, i) => perfect.buffs.includes(k) === (perfect.stats[i] >= perfect.need[k])));
+
+// ---------------------------------------------------------------- combined race score (docs 16 2.6)
+// The table below is hand-computed from the formula in BobRaceScore.cs; the C# side prints the same numbers.
+//   tasks x100 + cart x75 + secondsLeft x2 + (win 400 / draw 150), then x1.00 / 1.20 / 1.40 by D1..D3, floored.
+const SCORE_ROWS = [
+  [[0, 0, false, false, 0, 1], 0],
+  [[5, 0, false, false, 0, 1], 500],
+  [[5, 2, false, false, 0, 1], 650],
+  [[5, 2, true, false, 0, 3], 1470],
+  [[8, 4, true, false, 60, 1], 1620],
+  [[0, 0, true, false, 120, 2], 768],
+  [[3, 0, false, true, 10, 1], 470],
+  [[7, 1, true, false, 30, 2], 1482],
+  [[1, 1, false, false, 1, 3], 247],
+  [[200, 9, true, false, 999, 3], 15176]
+];
+let scoreBad = 0;
+for (const [args, want] of SCORE_ROWS) {
+  const got = A.taskRaceScore.apply(null, args);
+  if (got !== want) { scoreBad++; console.log('  MISS ' + JSON.stringify(args) + ' got ' + got + ' want ' + want); }
+}
+check('score: the hand-computed table matches, clamps included', scoreBad === 0, SCORE_ROWS.length + ' rows');
+check('score: a win always beats the same facts lost',
+  A.taskRaceScore(6, 2, true, false, 20, 2) > A.taskRaceScore(6, 2, false, false, 20, 2));
+check('score: the cart term stops at four passes',
+  A.taskRaceScore(6, 4, false, false, 0, 1) === A.taskRaceScore(6, 9, false, false, 0, 1));
+check('score: the clock term stops at the round length',
+  A.taskRaceScore(6, 0, false, false, 120, 1) === A.taskRaceScore(6, 0, false, false, 400, 1), '120 s cap');
+check('score: D3 is worth 40% more than D1 on the same play',
+  A.taskRaceScore(10, 4, true, false, 0, 3) === Math.floor(A.taskRaceScore(10, 4, true, false, 0, 1) * 1.4));
 
 // ---------------------------------------------------------------- cart rounds are untouched
 const cart = A.matchInit({}, logger, fakeNk(), { seed: '11' });

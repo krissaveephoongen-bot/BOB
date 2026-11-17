@@ -163,6 +163,10 @@ namespace Bob.TaskRace
         public bool CanPause => !Paused && !CardOpen && !countingDown && !LastResult.HasValue;
         /// <summary>Set once the match is decided; the HUD draws the result overlay from it.</summary>
         public MatchResult? LastResult { get; private set; }
+        /// <summary>The leaderboard score of the match just decided (BobRaceScore): 0 before EndMatch and after a reset.</summary>
+        public int LastScore { get; private set; }
+        /// <summary>False when the last EndMatch only composed the result (the editor verify shot): nothing is saved.</summary>
+        public bool LastMatchRecorded { get; private set; }
         /// <summary>The chapter series while storySeries is on; null in a PvP match.</summary>
         public StorySeries Series => series;
         /// <summary>A story round is running and the chapter is still open.</summary>
@@ -201,6 +205,8 @@ namespace Bob.TaskRace
             if (cameraRig == null) cameraRig = FindFirstObjectByType<BobTaskRaceCamera>();
             CollectBarriers();
             DioramaAmbient.Ensure(gameObject);
+            // The finished match posts its combined score to the leaderboard (docs 27); offline it stays local.
+            Bob.Ugs.BobRaceScoreReporter.Attach(this);
         }
 
         /// <summary>
@@ -408,6 +414,7 @@ namespace Bob.TaskRace
             RemainingSeconds = series != null ? StorySecondsForRound : matchDuration;
             warned = opened = false;
             LastResult = null;
+            LastScore = 0;
             TaskSpot.LocalTeam = localTeam;
             CloseBarriers();
             PointsChanged?.Invoke(TeamId.TeamA, teamAPoints);
@@ -476,6 +483,10 @@ namespace Bob.TaskRace
             int theirs = localTeam == TeamId.TeamB ? tasksA : tasksB;
             int localPool = PointsOf(localTeam);
             int rivalPool = PointsOf(OtherTeam);
+            // The score's clock term reads the time left, so it is taken before the clock is zeroed below. A chapter
+            // counts the locks it passed (0-3, the same thing star 3 asks); a lone round counts its met conditions.
+            int secondsLeft = Mathf.Max(0, Mathf.CeilToInt(RemainingSeconds));
+            int cartPasses = series != null ? series.CartPasses : round != null ? round.CartPassCount : 0;
 
             bool localFinished = total > 0 && mine >= total;
             bool rivalFinished = total > 0 && theirs >= total;
@@ -505,6 +516,15 @@ namespace Bob.TaskRace
 
             LastResult = BobTaskRaceProfile.Record(won, draw, teamAPoints, teamBPoints, tasksA, tasksB, total,
                 rewardPoints, rewardTasks, record, bonus);
+            LastMatchRecorded = record;
+
+            // Leaderboard score (docs 16 section 2.6): one number per finished match, from the same facts the phone
+            // shows on the result card. A chapter counts its whole series (rewardTasks), a lone round its own list.
+            int level = round != null ? round.Difficulty : 1;
+            LastScore = Bob.Rules.BobRaceScore.Of(rewardTasks, cartPasses, won, draw, secondsLeft, level);
+            if (Application.isPlaying)
+                Debug.Log("[TaskRace] score " + Bob.Rules.BobRaceScore.Explain(rewardTasks, cartPasses, won, draw,
+                    secondsLeft, level));
 
             // A3: a decided story chapter earns 0-3 stars, written before MatchEnded so the card reads the new best.
             if (record && series != null && series.Over)

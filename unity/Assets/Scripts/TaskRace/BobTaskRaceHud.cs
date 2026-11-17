@@ -1293,7 +1293,7 @@ namespace Bob.TaskRace
             }
         }
 
-        /// <summary>Coins, XP and the best score; the chapter card and the match card share this block.</summary>
+        /// <summary>Coins, XP, the leaderboard score and the best points; the chapter card and the match card share this.</summary>
         void RewardBlock(RectTransform p, MatchResult r, float top)
         {
             var reward = BobUi.Panel(p, T.surfaceCream, null, "Reward");
@@ -1302,8 +1302,10 @@ namespace Bob.TaskRace
             var line = BobUi.Label(reward.transform, $"+{r.Coins} เหรียญ     +{r.Xp} XP", 50, T.ink,
                 TextAnchor.MiddleCenter, FontStyle.Bold);
             BobUi.Stretch(line.rectTransform, 20f, 62f, 20f, 0f);
-            var best = BobUi.Label(reward.transform,
-                r.NewBest ? $"สถิติใหม่! {r.BestPoints} แต้ม" : $"สถิติสูงสุด {r.BestPoints} แต้ม",
+            // The score the leaderboard receives (docs 16 2.6), beside the local best so the two numbers can be told apart.
+            int score = manager != null ? manager.LastScore : 0;
+            string tail = r.NewBest ? $"สถิติใหม่! {r.BestPoints} แต้ม" : $"สถิติสูงสุด {r.BestPoints} แต้ม";
+            var best = BobUi.Label(reward.transform, score > 0 ? $"คะแนน {score} · {tail}" : tail,
                 28, r.NewBest ? T.accent : T.inkMuted, TextAnchor.MiddleCenter);
             BobUi.Stretch(best.rectTransform, 20f, 12f, 20f, 84f);
         }

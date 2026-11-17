@@ -11,7 +11,7 @@
 | โฟลเดอร์ `server/` (Nakama ของ session ขนาน) | **คงไว้** — ไม่อยู่ในบิลด์ Unity และไม่ถูกอ้างจากโค้ด Unity แล้ว |
 | UGS: Authentication (anonymous) | ใช้ |
 | UGS: Cloud Save (`player_profile`) | ใช้ |
-| UGS: Leaderboards (`global_high_score`) | ใช้ |
+| UGS: Leaderboards (`global_high_score`) | ใช้ — แมตช์ที่จบแล้วส่งคะแนนรวมอัตโนมัติ (17 พ.ย. 2026, §3 `BobRaceScoreReporter`) |
 | UGS: Relay + Lobby + Netcode (player-hosted) | **เล่นได้จริง 2–4 คน** (16 พ.ย. 2026): ห้อง + โค้ด 6 ตัว + ท่าฮีโร่ + งานที่เก็บร่วม — ดู §10 |
 
 กติกาการเล่น (BobRules / BobTaskRaceRules / BobMatch) ยังรันบนเครื่อง 100% — UGS เก็บเฉพาะโปรไฟล์ คะแนน และห้อง
@@ -32,15 +32,16 @@ com.unity.netcode.gameobjects      2.14.0
 
 > **หมายเหตุ:** `services.lobby` / `services.relay` ถูกประกาศ deprecated (รวมเข้า `com.unity.services.multiplayer` — Sessions API) แต่ยังทำงานได้และ owner สั่งใช้ตัวคลาสสิก `LobbyService` / `RelayService` ก่อน
 
-## 3. สคริปต์ 7 ไฟล์ (`unity/Assets/Scripts/UGS/`)
+## 3. สคริปต์ 8 ไฟล์ (`unity/Assets/Scripts/UGS/`)
 
 | ไฟล์ | หน้าที่ |
 | --- | --- |
 | `PlayerProfileData.cs` | `[Serializable]` — `coins`, `level`, `unlockedItems` (ค่าที่เก็บใน Cloud Save) |
 | `UgsCloudSaveManager.cs` | singleton — โหลด/เซฟ JSON ใต้ key `player_profile`; `LoadProfileAsync`, `SaveProfileAsync`, `AddCoinsAndSaveAsync(int)`, `UnlockItemAndSaveAsync(string)` |
-| `UgsLeaderboardManager.cs` | singleton — `leaderboardId = "global_high_score"`; `SubmitScoreAsync(double)` → `AddPlayerScoreAsync`; `GetTopScoresAsync(limit = 10)` → `GetScoresAsync` |
+| `UgsLeaderboardManager.cs` | singleton — `leaderboardId = "global_high_score"`; `SubmitScoreAsync(double)` → `AddPlayerScoreAsync` และเก็บ `LastEntry` (มี `Rank`); `GetTopScoresAsync(limit = 10)` → `GetScoresAsync` |
 | `UgsRelayLobbyManager.cs` | singleton — `CreateRoomAsync(name, maxPlayers)`, `QuickJoinOrJoinByCodeAsync(code = "")`, heartbeat 15 วิ, `LeaveRoomAsync()` |
 | `BobOnlineRoom.cs` | singleton ห้องที่เล่นได้จริง — `HostAsync(heroId, maxPlayers)`, `JoinAsync(heroId, code)`, `LeaveAsync()`, `StartMatch(seed, players)`, `SendPose`, `SendTask`; สร้าง `NetworkManager` + `UnityTransport` เองตอนรัน; ข้อความ Netcode `bob.start` / `bob.pose` / `bob.task` (§10) |
+| `BobRaceScoreReporter.cs` | ตัวส่งคะแนนของแมตช์ — `Attach(manager)` ตอน `TaskRaceModeManager.Awake`; ฟัง `MatchEnded` แล้วส่ง `manager.LastScore` เข้า `global_high_score` **ครั้งเดียวต่อแมตช์** เฉพาะเมื่อ `LastMatchRecorded` และเครื่องล็อกอินแล้ว; `LastRank` เก็บอันดับที่บอร์ดตอบกลับ (ยังไม่แสดงบน UI) |
 | `UgsBootstrapManager.cs` | singleton — `UnityServices.InitializeAsync()` + `SignInAnonymouslyAsync()` ตอนเริ่ม แล้วโหลดโปรไฟล์, log `PlayerId`, `EnsureReadyAsync()` เรียกซ้ำได้ |
 | `PureUgsDebugUI.cs` | IMGUI ปุ่มทดสอบ: +100 เหรียญ (Cloud Save), ส่งคะแนนสุ่ม + ดู Top 10, Create Room / Quick Join / Leave — Editor และ Development Build เท่านั้น |
 
@@ -94,6 +95,8 @@ Unity.exe -projectPath . -logFile Logs/ugs-check.log -executeMethod Bob.EditorTo
 - ออนไลน์รอบนี้เป็น **co-op บนเกาะของเจ้าของห้อง แข่งกับคู่แข่งจำลอง** — ไม่มีทีมสองฝั่ง/คะแนนรวมบนเซิร์ฟเวอร์ (§10.6)
 - ถ้า Unity Cloud ยังไม่เปิด Relay/Lobby/Cloud Save/Leaderboards จะได้ `Unauthorized` / `Service disabled` — กลับไปเปิดที่ dashboard
 - Leaderboard id ต้องตรงกับที่สร้างใน dashboard (`global_high_score`) ไม่งั้นได้ error ตอน submit
+- **คะแนนบนบอร์ดเป็นความเชื่อใจฝั่งเครื่อง** — UGS Leaderboards รับค่าที่ client ส่ง ไม่มีการตรวจย้อนหลังว่าทำได้จริง (ต่างจาก Nakama ที่ `server/` ตรวจได้) ใครแก้ client ก็ปั๊มคะแนนได้; ถ้าจะกันโกงต้องย้ายสูตร `BobRaceScore` ไปตรวจฝั่งเซิร์ฟเวอร์ก่อน (ยังไม่ทำ)
+- `LastRank` ที่บอร์ดตอบกลับยังไม่ถูกวาดบน UI — หน้าผลแสดงเฉพาะ "คะแนน N" (หน้ารายชื่ออันดับเป็นงานถัดไป)
 
 ## 8. สิ่งที่ถูกลบไป (16 พ.ย. 2026)
 

@@ -31,7 +31,7 @@
 | ชื่อ sprite ที่โค้ดขอ (`BobUi.Art`) | ✅ 18/18 | อยู่ใน `bob-art-manifest.json`; ชื่อที่ขาดจะกลายเป็นสี่เหลี่ยมขาว ไม่ throw |
 | ชื่อเสียงที่โค้ดขอ | ✅ 38/38 + 1 | `ping_pop` ไม่มีไฟล์ → `BobTone.PingPop()` สังเคราะห์ให้ตอนรัน (ไฟล์ `.wav` จริงชนะเองถ้าใส่ทีหลัง) |
 | Theme asset | ⚠️ ไม่มี asset | `BobUiTheme.Current` ตกลงไปใช้ค่าสีในโค้ด — ไม่บล็อกการเล่น |
-| `server/task-race-test.js` | ✅ 75/75 | รวมกับ LINE auth ใน `bob-check` |
+| `server/task-race-test.js` | ✅ 80/80 | 75 สัญญาเดิม + 5 ข้อของคะแนนรวม (`taskRaceScore`) รวมกับ LINE auth ใน `bob-check` |
 | `server/e2e-taskrace-test.js` | ✅ 39/39 | เล่นทั้งรอบ Task Race จริง D1–D3: เปิด/ปิดการ์ดทุกใบ ทุกขั้น, การ์ดรถเข็น 4 ชิ้น, คราบฉุกเฉิน, RESULT, แถว analytics |
 | `server/coop-test.js`, `mp-test.js`, `mp-bots-queue.js` | ❌ ตาย | `ECONNREFUSED 127.0.0.1:7350` — harness ยุค Nakama ที่ถอดออกตอนย้าย pure-UGS; **ไม่ใช่ regression ของรอบนี้** |
 | Git LFS | ⚠️ | 0 pointer / 301 ไฟล์ไบนารีธรรมดาใต้ `unity/Assets` (ยังใช้ได้ แค่เตือนตอน checkout); อัปโหลด LFS ตอบ 501 ด้วย token ของ session นี้ |
@@ -152,7 +152,7 @@ T16 แถวฉุกเฉิน + คราบบอส · T12 ภาพพ�
 | คำสั่ง | พิสูจน์ | ผ่านเมื่อ |
 | --- | --- | --- |
 | `bash unity-typecheck/check.sh` | ทุกสคริปต์ compile เทียบ baseline | `typecheck ok: 40 known Unity-6 gap kind(s), no new errors` |
-| `cd unity-check && dotnet run` | กติกาล้วน: กอง 5 ชั้น, ตารางฉุกเฉิน, series/stars, ห้องออฟไลน์ | `UNITY-CHECK PASSED` |
+| `cd unity-check && dotnet run` | กติกาล้วน: กอง 5 ชั้น, ตารางฉุกเฉิน, series/stars, ตารางคะแนนรวม 10 แถว, ห้องออฟไลน์ | `UNITY-CHECK PASSED` |
 | `node server/e2e-taskrace-test.js` | **เล่นทั้งรอบ**ผ่าน module จริง: lobby → race → การ์ดทุกใบ/ทุกขั้น → T04 4 ชิ้น → คราบ 3 ครั้ง → RESULT + analytics | `E2E PASSED: 39/39 checks` |
 | `/usr/local/bin/bob-check` | module server สด + `task-race-test` + LINE auth + typecheck | `BOB-CHECK PASSED` |
 | `bash ready-check/check.sh` | **เล่นได้จริงใน build**: ซีน/GUID/EventSystem/Resources/ชื่อ asset | `READY-CHECK PASSED` |
@@ -220,3 +220,8 @@ T16 แถวฉุกเฉิน + คราบบอส · T12 ภาพพ�
 3. เมื่อชั้น 2 ผ่าน: build APK (ข้อ 14) → เดินชั้น 3
 4. ระหว่างรอเครื่อง: เริ่มข้อ 3.3 ตามลำดับที่ owner เรียง (T16 → S16/แชท → PvP; `bob_score_stack` ปิดแล้วที่ docs 24 §15.32)
 5. งานบ้าน 3.4 (ซีนตาย, test เก่า, LFS) ทำเมื่อ owner อนุมัติ เพราะแตะ Build Settings/shared repo
+
+**หมายเหตุ 17 พ.ย. 2026 (ลีดเดอร์บอร์ด + คะแนนรวม, docs 31):** สูตร `BobRaceScore` ถูกตรึงด้วยตารางเลข 10 แถวชุดเดียวกัน
+ทั้ง C# (`unity-check`) และ JS (`task-race-test` 80/80) ⇒ เลขไม่เพี้ยนระหว่างเครื่อง/เซิร์ฟเวอร์. **ชั้น 1 พิสูจน์ได้แค่นั้น**:
+การส่งขึ้น `global_high_score` (`BobRaceScoreReporter`) ต้องรอเครื่องที่ล็อกอิน UGS — sandbox ไม่มี Unity, ไม่มีเน็ตไป Unity Cloud
+และไม่มีบัญชีของโปรเจกต์ จึงยังไม่มีหลักฐานว่าคะแนนขึ้นบอร์ดจริงหรือได้อันดับเท่าไร
