@@ -63,7 +63,11 @@ namespace Bob.Game
             {
                 var def = Bob.Rules.BobUnlocks.Get(FrameId);
                 if (def == null || def.Title || string.IsNullOrEmpty(def.Hex)) return PlainFrame;
-                return BobUi.Hex(def.Hex);
+                // The stage disc sits under the hero art, so the frame keeps the plain disc's softness instead of turning
+                // into an opaque plate behind the character.
+                var c = BobUi.Hex(def.Hex);
+                c.a = 0.55f;
+                return c;
             }
         }
 

@@ -99,7 +99,6 @@ namespace Bob.Game
                 foreach (var s in PlayerPrefs.GetString("bob.owned", "").Split(',')) if (s.Length > 0) owned.Add(s);
             }
             catch (Exception) { }
-            GrantUnlocks(); // whatever the last match earned is granted the next time Home loads
         }
 
         void SaveProfile()
