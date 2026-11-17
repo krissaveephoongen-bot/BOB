@@ -1225,18 +1225,27 @@ build แรกหลังงาน pure UGS + SFX — สั่งด้วย
   = "GAME TEST PASSED: 2:0 in 2 rounds" ที่ 2400×1080 · `ready-check` = PASSED · `server/task-race-test.js` = 80/80
   (หลัง merge คอมมิตคะแนนรวมของ cloud session: 75 สัญญาเดิม + 5 ข้อ `taskRaceScore`)
 - **ไดรเวอร์ใหม่ `Editor/TaskRaceShots.cs`** (editor-only) เข้า Play, seed เพื่อนบอทเอง (เล่นฉากตรง ๆ ไม่มี `MatchRequest`
-  จึงไม่มีเพื่อน), ถ่าย 6 ภาพด้วยกล้องตัวเดียวกับ `TaskRaceVerify.Shot` (เปลี่ยน `Shot` เป็น `public` 1 คำ):
+  จึงไม่มีเพื่อน), ถ่าย 7 ภาพด้วยกล้องตัวเดียวกับ `TaskRaceVerify.Shot` (เปลี่ยน `Shot` เป็น `public` 1 คำ):
   `Logs/taskrace-duo-mate` (ถาดเพื่อน open=True chips=1), `taskrace-ping-wheel` (วงล้อ 6 คำ), `taskrace-emergency`
-  (แบนเนอร์ "คราบฉุกเฉิน · เจ้าคราบ" + เหลือ 56 วิ), `taskrace-emergency-arrow` (หมุนกล้อง 180° ให้คราบอยู่หลังกล้อง),
+  (แบนเนอร์ "คราบฉุกเฉิน · เจ้าคราบ" + เหลือ 56 วิ), `taskrace-emergency-toast` (ระหว่าง toast — ลูกศรต้องไม่ขึ้น),
+  `taskrace-emergency-arrow` (หมุนกล้อง 180° ให้คราบอยู่หลังกล้อง, หลัง toast หมด),
   `taskrace-emergency-card` ("ปราบคราบ: เจ้าคราบ" ขั้น 1/1 "ถูวนบนคราบ"), `taskrace-cart-card` (T04 ขั้น 1/2 0%) —
-  ทั้งสองขนาด 1600×900 (`taskrace-*.png`) และ 2400×1080 (`taskrace-*-2400x1080.png`)
+  ทั้งสองขนาด 1600×900 (`taskrace-*.png`; ภาพ toast มีเฉพาะ 2400×1080) และ 2400×1080 (`taskrace-*-2400x1080.png`)
 - **ภาพหน้าโปรแกรม 2400×1080 ชุด S13/S14/S15:** `bob-game-{m1-splash,m2-login,m3-home,m4-modes,m4b-chapters,m4c-team,
   m4d-online,m5-heroes,m6-shop,m7-confirm,1-title,2-intro,3-build,3a-shelf,4-test,4a-split,5-result}-2400x1080.png`
-- **ข้อสังเกตจากภาพ (ยังไม่แก้ — เป็นโค้ดเกม ไม่ใช่ editor):**
-  1. **ลูกศรขอบจอทับแบนเนอร์** เมื่อทิศของคราบชี้ลง: `RenderEmergencyArrow` clamp ที่ `halfH = h/2 − 100` จากกลางจอ
-     ซึ่งอยู่ในแถบแบนเนอร์ (24–156 px จากขอบล่าง) → เห็นลูกศรแดงทับป้าย "คราบฉุกเฉิน" และปุ่ม "ปราบ"
-     ใน `taskrace-emergency-arrow(‑2400x1080).png`. ทางแก้ที่ตรงเหตุ: ยกเพดานล่างขึ้นเหนือแบนเนอร์ (~180 px)
-     หรือซ่อนลูกศรเมื่อเสี้ยวทิศล่างจะตกในแถบนั้น
+- **ข้อสังเกตจากภาพ (รอบแรก — ข้อ 1 แก้แล้ว 17 พ.ย., ข้อ 2 ไม่ใช่บั๊ก):**
+  1. **ลูกศรขอบจอทับแบนเนอร์/ปุ่ม "ปราบ" (แก้แล้ว):** เดิม clamp อยู่ที่ `halfH = h/2 − 100` จากกลางจอ
+     ซึ่งตกในแถบแบนเนอร์ (24–156 px จากขอบล่าง) → ลูกศรแดงทับป้าย "คราบฉุกเฉิน" และปุ่ม "ปราบ" ใน
+     `taskrace-emergency-arrow(‑2400x1080).png` แบบเดิม. ทางแก้ที่ลงจริงใน `RenderEmergencyArrow`
+     (`BobTaskRaceHud.cs` เท่านั้น): **ยกเพดานเป็น `− 210`** — บนหน้า 1080 จุดศูนย์กลางต่ำสุดอยู่ที่ 210 px
+     จากขอบล่าง ลูกศรสูง 44 px ครึ่ง → ขอบล่าง 166 px เหนือแบนเนอร์ (156) 10 px และขอบบน 374 px เหนือ
+     ขอบล่าง top bar (392) 18 px. **เจอชั้นสองตอนวัดภาพ:** แถบ toast (bottom 210–280, กว้าง 1100) คร่อม
+     พอดีกับที่ลูกศรลง และคราบก็โผล่พร้อม toast สีแดงเดียวกัน → สองอันรวมเป็นก้อนแดงอ่านไม่ออก. แก้เพิ่ม:
+     **ลูกศรยืนพักระหว่างที่ toast ขึ้น** (`toast.activeSelf`) — toast บอกชื่อจุดงานอยู่แล้ว ลูกศรกลับมา
+     ภายใน 2.2 วิ. หลักฐาน: `Logs/verify-shots7.log` = `edge arrow during toast: active=False`,
+     `edge arrow: active=True pos=(-333,-330) clears strips=True`, `SHOTS PASSED`; ภาพ
+     `taskrace-emergency-toast-2400x1080.png` (ไม่มีลูกศร, toast สะอาด) + `taskrace-emergency-arrow-2400x1080.png`
+     (ลูกศรเหนือแบนเนอร์มีช่องว่าง). ไดรเวอร์ `TaskRaceShots` case 3 ตรวจสองสภาพนี้ทุกครั้งที่รัน
   2. **ภาพรอบแรกของ emergency-card มีแบนเนอร์/toast ทับการ์ด** — ไม่ใช่บั๊ก: `RenderEmergency` มี `!CardOpen` และ
      ซ่อนในเฟรมถัดไป ส่วน toast อยู่บนสุดโดยเจตนา 2.2 วิ; ถ่ายใหม่หลัง settle (2.6 วิ) ได้การ์ดสะอาด
 - **ยังต้องเป็นเครื่องจริง (ทำใน sandbox ไม่ได้):** ติดตั้ง APK, ประสิทธิภาพบนมือถือ, LINE OAuth, ออนไลน์ 2 เครื่อง

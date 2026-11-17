@@ -179,7 +179,7 @@ Progress(team) = Σ น้ำหนักขั้นที่เสร็จ / 
 >
 > **อัปเดต 16 พ.ย. 2026 (T16 เติมเต็ม 2 ข้อที่ค้างจาก v1):**
 > - **จำนวนตาม D จริงแล้ว:** `BobTaskRaceRules.EmergencyTimes(seed, difficulty)` คืน 2 จังหวะที่ D1/D2 และ 3 จังหวะที่ D3 (40 / 75 / 100 วิ) — seed ยังอยู่ในลายเซ็นเพราะ server replay กับ browser mirror เรียกด้วยอาร์กิวเมนต์เดียวกัน (mirror ที่ `prototype/index.html` `taskEmergencyTimes(seed, difficulty)`, `server/match.js` ส่ง `s.difficulty`) · SelfTest เพิ่มการเช็ก 2/2/3 และ `server/task-race-test.js` เช็ก D1/D2 = 2, D3 = 3
-> - **ลูกศรขอบจอ:** `BobTaskRaceHud.RenderEmergencyArrow` วาดสามเหลี่ยมสีแดง (สร้าง texture ตอนรัน ไม่ใช้ glyph) ชี้ไปทางคราบเมื่อสถานีนั้นอยู่นอกกล้อง และซ่อนเมื่อคราบอยู่ในเฟรม/เปิดการ์ด/หยุด/จบ — ตำแหน่งมาจาก `BobEmergencyStains.TargetPosition` (ตัวโมเดลศัตรู) แปลงด้วย `WorldToViewportPoint` แล้ว clamp ที่ขอบจอ 76/100u เผื่อ safe area; กระพริบ 0.72–1.0 alpha และเปลี่ยนเป็น `danger` เมื่อเหลือ ≤ 8 วิ
+> - **ลูกศรขอบจอ:** `BobTaskRaceHud.RenderEmergencyArrow` วาดสามเหลี่ยมสีแดง (สร้าง texture ตอนรัน ไม่ใช้ glyph) ชี้ไปทางคราบเมื่อสถานีนั้นอยู่นอกกล้อง และซ่อนเมื่อคราบอยู่ในเฟรม/เปิดการ์ด/หยุด/จบ — ตำแหน่งมาจาก `BobEmergencyStains.TargetPosition` (ตัวโมเดลศัตรู) แปลงด้วย `WorldToViewportPoint` แล้ว clamp ที่ขอบจอ 76/210u (17 พ.ย. 2026: เพดานล่างยกจาก 100 → 210 เพื่อพ้นแบนเนอร์+ปุ่ม `ปราบ` และ **ลูกศรยืนพักระหว่าง toast ขึ้น** เพราะแถบ toast คร่อมจุดที่ลูกศรลงและสีแดงเดียวกัน); กระพริบ 0.72–1.0 alpha และเปลี่ยนเป็น `danger` เมื่อเหลือ ≤ 8 วิ
 > - **ยังค้าง:** บอสคราบ, ภาพศัตรูในการ์ด, ดาวคุณภาพ, ซิงก์ออนไลน์, ไฟล์ `sting_emergency.wav`
 
 ---

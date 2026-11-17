@@ -18,9 +18,9 @@ namespace Bob.EditorTools
     {
         const string ArmKey = "Bob.TaskRaceShots.Arm";
 
-        static float armedAt, stepAt, yawWas;
+        static float armedAt, stepAt, yawWas, toastGoneAt;
         static int step;
-        static bool entered, ok = true, seeded, spawnedOnce, arrowTurned, cardOpened;
+        static bool entered, ok = true, seeded, spawnedOnce, arrowTurned, toastShot, cardOpened;
         static TaskRaceModeManager manager;
         static TaskRaceRound round;
         static BobTaskRaceHud hud;
@@ -34,9 +34,11 @@ namespace Bob.EditorTools
             seeded = false;
             spawnedOnce = false;
             arrowTurned = false;
+            toastShot = false;
             cardOpened = false;
             yawWas = 0f;
             stepAt = 0f;
+            toastGoneAt = 0f;
             manager = null;
             round = null;
             hud = null;
@@ -138,6 +140,34 @@ namespace Bob.EditorTools
                         return;
                     }
                     if (Time.realtimeSinceStartup - stepAt < 0.9f) return; // followTime 0.22 s, settle well past it
+                    var arrowField = typeof(BobTaskRaceHud).GetField("emergencyArrow", BindingFlags.Instance | BindingFlags.NonPublic);
+                    // The arrow stands down while a toast is up, and the spawn toast is what is on screen right now:
+                    // shoot that state first, then wait the toast out (cap 6 s) plus a frame to repaint and shoot the arrow.
+                    var toastField = typeof(BobTaskRaceHud).GetField("toast", BindingFlags.Instance | BindingFlags.NonPublic);
+                    var toastGo = (toastField?.GetValue(hud) as Component)?.gameObject;
+                    bool toastUp = toastGo != null && toastGo.activeSelf;
+                    if (toastUp && !toastShot && Time.realtimeSinceStartup - stepAt < 6f)
+                    {
+                        toastShot = true;
+                        var duringArrow = arrowField?.GetValue(hud) as RectTransform;
+                        bool duringOn = duringArrow != null && duringArrow.gameObject.activeSelf;
+                        Debug.Log($"[TaskRaceShots] edge arrow during toast: active={duringOn} (must be False)");
+                        if (duringOn) ok = false;
+                        Shot("Logs/taskrace-emergency-toast.png");
+                        return;
+                    }
+                    if (toastUp && Time.realtimeSinceStartup - stepAt < 6f) return;
+                    if (toastGoneAt == 0f) { toastGoneAt = Time.realtimeSinceStartup; return; }
+                    if (Time.realtimeSinceStartup - toastGoneAt < 0.15f) return;
+                    var arrow = arrowField?.GetValue(hud) as RectTransform;
+                    bool arrowOn = arrow != null && arrow.gameObject.activeSelf;
+                    float arrowY = arrow != null ? arrow.anchoredPosition.y : 0f;
+                    float arrowX = arrow != null ? arrow.anchoredPosition.x : 0f;
+                    // page is 1080 high: the centre sits 540 from the bottom, so |y| must stay under 330 to clear the
+                    // 156 px banner and the 148 px top bar. Anything above 330 means the arrow is back on a strip.
+                    bool clear = Mathf.Abs(arrowY) <= 330f;
+                    Debug.Log($"[TaskRaceShots] edge arrow: active={arrowOn} pos=({arrowX:0},{arrowY:0}) clears strips={clear}");
+                    if (!arrowOn || !clear) ok = false;
                     Shot("Logs/taskrace-emergency-arrow.png");
                     if (rig != null) rig.yaw = yawWas;
                     Next();

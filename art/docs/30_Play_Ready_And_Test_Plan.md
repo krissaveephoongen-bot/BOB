@@ -181,13 +181,18 @@ T16 แถวฉุกเฉิน + คราบบอส · T12 ภาพพ�
 
 | คำสั่ง | พิสูจน์ | ผ่านเมื่อ |
 | --- | --- | --- |
-| `bash unity-typecheck/check.sh` | ทุกสคริปต์ compile เทียบ baseline | `typecheck ok: 40 known Unity-6 gap kind(s), no new errors` |
+| `bash unity-typecheck/check.sh` | ทุกสคริปต์ compile เทียบ baseline | `typecheck ok: 43 known Unity-6 gap kind(s), no new errors` |
 | `cd unity-check && dotnet run` | กติกาล้วน: กอง 5 ชั้น, ตารางฉุกเฉิน, series/stars, ตารางคะแนนรวม 10 แถว, ห้องออฟไลน์ | `UNITY-CHECK PASSED` |
 | `node server/e2e-taskrace-test.js` | **เล่นทั้งรอบ**ผ่าน module จริง: lobby → race → การ์ดทุกใบ/ทุกขั้น → T04 4 ชิ้น → คราบ 3 ครั้ง → RESULT + analytics | `E2E PASSED: 39/39 checks` |
 | `/usr/local/bin/bob-check` | module server สด + `task-race-test` + LINE auth + typecheck | `BOB-CHECK PASSED` |
 | `bash ready-check/check.sh` | **เล่นได้จริงใน build**: ซีน/GUID/EventSystem/Resources/ชื่อ asset | `READY-CHECK PASSED` |
 
 เกณฑ์รวม: ทั้ง 4 ต้องเขียวก่อน merge ทุกครั้ง. ถ้าตัวใดแดง = หยุด ไม่ใช่ "ข้ามไปก่อน"
+
+**กับดัก typecheck (17 พ.ย. 2026):** `baseline-errors.txt` เป็น LF แต่บนเครื่อง Windows ที่ `core.autocrlf` เปิด
+ไฟล์จะถูก checkout เป็น CRLF ทำให้ `comm` เทียบไม่ตรงและขึ้น "new error" ทั้งกระดาน (ทั้งที่ไม่มีอะไรเปลี่ยน) —
+ทางแก้คือรัน `bash unity-typecheck/check.sh --update` หนึ่งครั้ง (จะเขียน baseline เป็น LF และรับ gap ของสคริปต์ใหม่ เช่น
+`Editor/TaskRaceShots.cs` → 40 → 43 kind) แล้วรันซ้ำจนเขียว
 
 **หมายเหตุ 17 พ.ย. 2026 (การ์ด T04 อ่านน้อยลง):** การเปลี่ยนรอบนี้เป็น UI/ปฏิสัมพันธ์ใน `BobMinigameHost`
 (4 ช่อง, แถบสเกลเพดาน, แถวดาว, ป้าย `+N`/`-N`, มิเตอร์งบ, ทุ่มวิธี, บัฟครบสี่) — ชั้น 1 ยืนยันได้แค่ "ยังคอมไพล์/สัญญาไม่เพี้ยน"
@@ -258,10 +263,13 @@ sandbox ของ cloud session ไม่มี Unity — รอบนี้ร�
 | 2 | `BobGameScene.RunTest` (ข้อ 5, play mode) | `GAME TEST PASSED: 2:0 in 2 rounds` ที่ 2400×1080 |
 | 1 | `ready-check` | `READY-CHECK PASSED` (พื้นเดียวกับ §2) |
 | 1 | `server/task-race-test.js` (หลัง merge คะแนนรวม) | 80/80 |
-| ใหม่ | `Editor/TaskRaceShots.cs` (editor-only) | 6 ภาพ runtime-only: ถาดเพื่อน (chips=1), วงล้อปิง, แบนเนอร์คราบ, ลูกศรขอบจอ, การ์ดปราบคราบ, การ์ด T04 |
+| ใหม่ | `Editor/TaskRaceShots.cs` (editor-only) | 7 ภาพ runtime-only: ถาดเพื่อน (chips=1), วงล้อปิง, แบนเนอร์คราบ, ลูกศรระหว่าง toast (ไม่มีลูกศร), ลูกศรหลัง toast, การ์ดปราบคราบ, การ์ด T04 |
 | — | ภาพหน้าโปรแกรม 2400×1080 | S13/S14/S15 + การ์ดจบ/ผลบท/พัก/S28 ครบชุด (รายการใน docs 24 §15.34) |
 
-**ข้อสังเกตที่ยังไม่แก้ (โค้ดเกม ไม่ใช่ editor):** ลูกศรขอบจอทับแบนเนอร์เมื่อคราบอยู่นอกจอด้านล่าง — รายละเอียด + ทางแก้ใน docs 24 §15.34
+**ข้อสังเกตเดิม — แก้แล้ว 17 พ.ย. (ARROW▲):** ลูกศรขอบจอทับแบนเนอร์/ปุ่ม "ปราบ" + แถบ toast: ยกเพดาน clamp
+100 → 210 และให้ลูกศรยืนพักระหว่าง toast ขึ้น (`BobTaskRaceHud.RenderEmergencyArrow` เท่านั้น);
+ไดรเวอร์ยืนยันสองสภาพต่อการรัน — ระหว่าง toast `active=False`, หลัง toast `active=True pos=(-333,-330)` ใต้เพดาน 330
+(`Logs/verify-shots7.log`, `SHOTS PASSED`); ภาพ `taskrace-emergency-{toast,arrow}-2400x1080.png`. รายละเอียด docs 24 §15.34
 
 **ยังเหลือเป็นเครื่องจริง:** ติดตั้ง APK, ประสิทธิภาพ, LINE OAuth, ออนไลน์ 2 เครื่อง, Firebase tester group, UGS check (ข้อ 13, ต้องมีเน็ต/โปรเจกต์ UGS)
 

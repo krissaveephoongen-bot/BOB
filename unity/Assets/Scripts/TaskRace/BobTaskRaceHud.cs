@@ -1530,7 +1530,9 @@ namespace Bob.TaskRace
                     if (!inView && dir.sqrMagnitude > 0.0001f)
                     {
                         var area = page != null && page.rect.width > 1f ? page.rect.size : new Vector2(1920f, 1080f);
-                        float halfW = area.x * 0.5f - 76f, halfH = area.y * 0.5f - 100f;
+                        // 76 px clears the horizontal edges. The vertical edges carry the top bar (24–148 px) and the
+                        // emergency banner (24–156 px); at 100 px the arrow landed on them, so it keeps 210 px clear.
+                        float halfW = area.x * 0.5f - 76f, halfH = area.y * 0.5f - 210f;
                         float t = Mathf.Min(halfW / Mathf.Max(0.0001f, Mathf.Abs(dir.x)),
                                             halfH / Mathf.Max(0.0001f, Mathf.Abs(dir.y)));
                         pos = dir * t;
@@ -1539,6 +1541,10 @@ namespace Bob.TaskRace
                     }
                 }
             }
+            // The toast picks the same red and lands in the same bottom strip while it is up (2.2 s), and the stain
+            // spawns a toast itself, so the two turn red-on-red the moment the arrow appears. The toast already
+            // names the station, so the arrow waits it out instead of merging into the text.
+            if (edge && toast != null && toast.gameObject.activeSelf) edge = false;
             if (emergencyArrow.gameObject.activeSelf != edge) emergencyArrow.gameObject.SetActive(edge);
             if (!edge) return;
             emergencyArrow.anchoredPosition = pos;
