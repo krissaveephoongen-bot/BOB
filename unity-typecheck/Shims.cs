@@ -210,6 +210,7 @@ namespace Bob.Ugs
         public event System.Action<Bob.TaskRace.SeriesRound> SeriesResultApplied;
         public event System.Action<int, int, float> SeriesRoundRequested;
         public event System.Action SeriesAbandoned;
+        public event System.Action<int, bool, int> EmergencyResolved;
         public System.Threading.Tasks.Task<bool> HostAsync(string heroId, int maxPlayers) => null;
         public System.Threading.Tasks.Task<bool> JoinAsync(string heroId, string code) => null;
         public System.Threading.Tasks.Task LeaveAsync() => null;
@@ -218,6 +219,7 @@ namespace Bob.Ugs
         public void SendTask(string spotId, bool completed) { }
         public void SendSeriesResult(Bob.TaskRace.SeriesRound line) { }
         public void SendSeriesRound(int round, int seed, float seconds) { }
+        public void SendEmergency(int index, bool cleared, int slots) { }
         public void AbandonSeries() { }
     }
 }

@@ -28,8 +28,6 @@ namespace Bob.TaskRace
     {
         /// <summary>docs 16 section 4: the team has 25 s from the spawn to clear a stain.</summary>
         public const float DefaultGraceSeconds = 25f;
-        /// <summary>The PvP round the rules' 40 / 75 / 100 s moments are written for.</summary>
-        const float ReferenceRoundSeconds = 120f;
 
         [Tooltip("docs 16 section 4: seconds from spawn to คราบลาม.")]
         [SerializeField, Min(5f)] float graceSeconds = DefaultGraceSeconds;
@@ -43,19 +41,17 @@ namespace Bob.TaskRace
         float elapsed, roundSeconds = 120f;
         int spawned;
         bool planned;
-        readonly List<Moment> plan = new List<Moment>();
+        readonly List<Bob.Rules.BobTaskRaceRules.EmergencyMoment> plan =
+            new List<Bob.Rules.BobTaskRaceRules.EmergencyMoment>();
         readonly List<TaskSpot> stations = new List<TaskSpot>();
+        /// <summary>Slots already decided (cleared here, cleared by a friend, or spread). An index decides once.</summary>
+        readonly HashSet<int> resolved = new HashSet<int>();
+        Bob.Ugs.BobOnlineRoom room;
         Enemy current;
-
-        sealed class Moment
-        {
-            public float At;
-            public string MinigameId;
-            public TaskSpot Spot;
-        }
 
         sealed class Enemy
         {
+            public int Index;
             public string Name, MinigameId, TaskName, SpotId;
             public int Difficulty;
             public float EndsAt;
@@ -105,6 +101,10 @@ namespace Bob.TaskRace
             listening = true;
             manager.MatchStarted += ResetRound;
             manager.MatchEnded += OnMatchEnded;
+            // docs 27 section 10.8: in a room every device plans the same slots, so one index is enough to say
+            // "slot 1 is gone". Without this the friend's island keeps counting a stain that is already clean here.
+            room = Bob.Game.MatchRequest.Has && Bob.Game.MatchRequest.Online ? Bob.Ugs.BobOnlineRoom.Instance : null;
+            if (room != null) room.EmergencyResolved += OnRemoteResolved;
         }
 
         void Unhook()
@@ -116,6 +116,8 @@ namespace Bob.TaskRace
                 manager.MatchStarted -= ResetRound;
                 manager.MatchEnded -= OnMatchEnded;
             }
+            if (room != null) room.EmergencyResolved -= OnRemoteResolved;
+            room = null;
         }
 
         void OnDisable() => Unhook();
@@ -129,6 +131,7 @@ namespace Bob.TaskRace
             spawned = 0;
             planned = false;
             plan.Clear();
+            resolved.Clear();
             DespawnCurrent();
             roundSeconds = manager != null ? Mathf.Max(30f, manager.RemainingSeconds) : 120f;
         }
@@ -158,65 +161,58 @@ namespace Bob.TaskRace
             foreach (var spot in round.StationsOf(TaskSpot.LocalTeam)) stations.Add(spot);
             if (stations.Count == 0) return;
 
-            // The moments are the shared rules' own draw (40 / 75 / 100 s of the reference round; 2 of them at D1 and
-            // D2, all 3 at D3 — docs 16 section 5 row T16), so a server replaying the seed names the same seconds.
-            // A shorter chapter round scales them to its own clock.
-            var times = Bob.Rules.BobTaskRaceRules.EmergencyTimes(round.CurrentSeed, round.Difficulty);
-            float scale = roundSeconds / ReferenceRoundSeconds;
-            var rng = new System.Random(round.CurrentSeed * 997 + 17);
-            var pool = WeaknessPool();
-            int last = -1;
-            for (int i = 0; i < times.Count; i++)
-            {
-                int pick = rng.Next(stations.Count);
-                if (stations.Count > 1 && pick == last) pick = (pick + 1) % stations.Count;
-                last = pick;
-                plan.Add(new Moment
-                {
-                    At = times[i] * scale,
-                    MinigameId = pool[i % pool.Count],
-                    Spot = stations[pick],
-                });
-            }
+            // The schedule is the shared rules' own draw (docs 16 section 4): the moments of the reference round scaled
+            // to this clock, one station per moment, one weakness per moment. Because it is a pure function of the seed
+            // and the station count, a room lists the same slots in the same order and <c>bob.emergency</c> can carry an
+            // index (docs 27 section 10.8). Online the pool is all three weaknesses: two devices at different chapter
+            // progress must not disagree about which enemy slot 1 is.
+            var pool = Online
+                ? Bob.Rules.BobTaskRaceRules.EmergencyOnlinePool
+                : Bob.Rules.BobTaskRaceRules.EmergencyPool(BobChapters.Saved.Order, RoundNo);
+            var drawn = Bob.Rules.BobTaskRaceRules.EmergencyPlan(
+                round.CurrentSeed, round.Difficulty, roundSeconds, stations.Count, pool);
+            for (int i = 0; i < drawn.Length; i++) plan.Add(drawn[i]);
             if (Application.isPlaying)
                 Debug.Log($"[EmergencyStains] seed {round.CurrentSeed} · {plan.Count} stain(s) at " +
-                          string.Join(", ", plan.ConvertAll(m => $"{m.At:0} s {m.MinigameId} @{m.Spot.SpotId}")));
+                          string.Join(", ", plan.ConvertAll(m =>
+                              $"{m.At:0} s {m.MinigameId} @{StationName(m.Station)}")) +
+                          (Online ? " · online (bob.emergency)" : ""));
         }
 
-        /// <summary>docs 16 section 4: which weaknesses the chapter has introduced so far.</summary>
-        List<string> WeaknessPool()
-        {
-            int order = BobChapters.Saved.Order;
-            int roundNo = manager != null && manager.Series != null ? manager.Series.Round : 1;
-            var pool = new List<string> { "T02" };                 // เจ้าคราบ, round one
-            if (order > 1 || roundNo > 1) pool.Add("T03");         // สไลม์
-            if (order > 1) pool.Add("T05");                        // ขยะปีศาจ
-            return pool;
-        }
+        bool Online => Bob.Game.MatchRequest.Has && Bob.Game.MatchRequest.Online;
+
+        int RoundNo => manager != null && manager.Series != null ? manager.Series.Round : 1;
+
+        string StationName(int index) =>
+            index >= 0 && index < stations.Count && stations[index] != null ? stations[index].SpotId : "#" + index;
 
         // ---------------------------------------------------------------- spawn / clear / spread
 
         void Spawn()
         {
-            var moment = plan[spawned++];
-            if (moment.Spot == null) return;
+            int index = spawned++;
+            if (resolved.Contains(index)) return; // a friend settled this slot while our clock was still behind
+            var moment = plan[index];
+            var spot = moment.Station >= 0 && moment.Station < stations.Count ? stations[moment.Station] : null;
+            if (spot == null) return;
             var enemy = new Enemy
             {
+                Index = index,
                 Name = NameOf(moment.MinigameId),
                 MinigameId = moment.MinigameId,
-                TaskName = moment.Spot.TaskName,
-                SpotId = moment.Spot.SpotId,
+                TaskName = spot.TaskName,
+                SpotId = spot.SpotId,
                 Difficulty = Mathf.Max(1, round.Difficulty - 1),
                 EndsAt = moment.At + graceSeconds,
                 Born = Time.time,
             };
-            enemy.Body = BuildBody(enemy, moment.Spot);
+            enemy.Body = BuildBody(enemy, spot);
             current = enemy;
             BobSfx.Play("enemy_spawn", 0.9f);
             BobSfx.Play("timer_warning", 0.5f);
             Message?.Invoke($"{enemy.Name}โผล่ที่ {enemy.TaskName} · เหลือ {graceSeconds:0} วิ");
             if (Application.isPlaying)
-                Debug.Log($"[EmergencyStains] spawn {enemy.Name} ({enemy.MinigameId} D{enemy.Difficulty}) at " +
+                Debug.Log($"[EmergencyStains] spawn #{index} {enemy.Name} ({enemy.MinigameId} D{enemy.Difficulty}) at " +
                           $"{enemy.SpotId} \"{enemy.TaskName}\" · {graceSeconds:0} s grace.");
         }
 
@@ -224,33 +220,72 @@ namespace Bob.TaskRace
         public bool Clear()
         {
             if (current == null) return false;
-            var gone = current;
-            current = null;
-            NoteQuality(true);
-            BobSfx.Play("enemy_defeat", 0.9f);
-            if (gone.Body != null) StartCoroutine(ShrinkAway(gone.Body));
-            Message?.Invoke($"ปราบ{gone.Name}แล้ว!");
-            if (Application.isPlaying)
-                Debug.Log($"[EmergencyStains] cleared {gone.Name} at {gone.SpotId} with {Mathf.Max(0f, gone.EndsAt - elapsed):0.0} s left.");
-            return true;
+            return Resolve(current.Index, true, true);
         }
 
         /// <summary>The 25 s ran out: the stain spreads and one short task joins the team's list.</summary>
         void Spread()
         {
-            var gone = current;
-            current = null;
-            NoteQuality(false);
-            BobSfx.Play("enemy_defeat", 0.7f);
-            if (gone.Body != null) StartCoroutine(ShrinkAway(gone.Body));
+            if (current == null) return;
+            Resolve(current.Index, false, true);
+        }
 
-            var spec = Library(gone.MinigameId);
-            bool added = round != null &&
-                         round.AddPenaltyTask(spec, TaskSpot.LocalTeam, "คราบลาม");
-            Message?.Invoke(added ? "คราบลาม! เพิ่มงานอีก 1 อย่างในใบงาน" : "คราบลาม! แต่ใบงานเต็มแล้ว");
+        /// <summary>
+        /// Settle one slot of this round's schedule, once. <paramref name="cleared"/> is the decision; a slot that was
+        /// already settled here or by a friend (docs 27 section 10.8) is ignored, so a late message can never add the
+        /// penalty task twice or undo a clean pass. The acting device tells the room first; the receiver applies the
+        /// very same slot without broadcasting it again.
+        /// </summary>
+        bool Resolve(int index, bool cleared, bool local)
+        {
+            if (index < 0 || index >= plan.Count) return false;
+            if (!resolved.Add(index)) return false;
+
+            var gone = current != null && current.Index == index ? current : null;
+            if (gone != null) current = null;
+            if (gone != null && gone.Body != null) StartCoroutine(ShrinkAway(gone.Body));
+            string minigameId = gone != null ? gone.MinigameId : plan[index].MinigameId;
+            string name = gone != null ? gone.Name : NameOf(minigameId);
+            string spotId = gone != null ? gone.SpotId : StationName(plan[index].Station);
+
+            BobSfx.Play("enemy_defeat", cleared ? 0.9f : 0.7f);
+            if (cleared)
+            {
+                Message?.Invoke(local ? $"ปราบ{name}แล้ว!" : "เพื่อนปราบคราบแล้ว!");
+            }
+            else
+            {
+                var spec = Library(minigameId);
+                bool added = round != null && round.AddPenaltyTask(spec, TaskSpot.LocalTeam, "คราบลาม");
+                Message?.Invoke(added ? "คราบลาม! เพิ่มงานอีก 1 อย่างในใบงาน" : "คราบลาม! แต่ใบงานเต็มแล้ว");
+                if (Application.isPlaying)
+                    Debug.Log($"[EmergencyStains] {name} at {spotId} was not cleared in {graceSeconds:0} s: " +
+                              $"penalty task {(added ? "added" : "refused")}.");
+            }
+            NoteQuality(cleared);
             if (Application.isPlaying)
-                Debug.Log($"[EmergencyStains] {gone.Name} at {gone.SpotId} was not cleared in {graceSeconds:0} s: " +
-                          $"penalty task {(added ? "added" : "refused")}.");
+                Debug.Log($"[EmergencyStains] {(cleared ? "cleared" : "spread")} slot #{index} {name} at {spotId}" +
+                          (local ? " here" : " by a friend") + $" · {resolved.Count}/{plan.Count} settled.");
+            if (local) Broadcast(index, cleared);
+            return true;
+        }
+
+        void Broadcast(int index, bool cleared)
+        {
+            if (room == null || !room.Connected) return;
+            room.SendEmergency(index, cleared, plan.Count);
+        }
+
+        /// <summary>A friend settled a slot (docs 27 section 10.8). A plan of a different size means the two devices
+        /// built different islands — the message is dropped rather than applied to the wrong station.</summary>
+        void OnRemoteResolved(int index, bool cleared, int slots)
+        {
+            if (slots != plan.Count)
+            {
+                Debug.LogWarning($"[EmergencyStains] friend's plan has {slots} slot(s), ours has {plan.Count} — ignored.");
+                return;
+            }
+            Resolve(index, cleared, false);
         }
 
         /// <summary>

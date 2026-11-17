@@ -43,6 +43,7 @@ namespace Bob.Ugs
         const string RoundMessage = "bob.round";
         const string ResultMessage = "bob.result";
         const string AbandonMessage = "bob.abandon";
+        const string EmergencyMessage = "bob.emergency";
         const string ConnectionType = "dtls";
         const float HeartbeatSeconds = 15f;
         const float RosterSeconds = 2f;
@@ -89,6 +90,12 @@ namespace Bob.Ugs
         public event Action<int, int, float> SeriesRoundRequested;
         /// <summary>The series was voided because somebody left before it was decided.</summary>
         public event Action SeriesAbandoned;
+        /// <summary>
+        /// (slot index, cleared, slot count) — a stain of this round was settled, here or by a friend (docs 27
+        /// section 10.8). The slot count travels so a device whose island drew a different schedule can drop the
+        /// message instead of applying it to the wrong station.
+        /// </summary>
+        public event Action<int, bool, int> EmergencyResolved;
 
         NetworkManager nm;
         UnityTransport transport;
@@ -390,6 +397,25 @@ namespace Bob.Ugs
             }
         }
 
+        /// <summary>
+        /// A stain of this round was settled on this device (docs 27 section 10.8). The schedule is drawn from the
+        /// round seed on every device, so an index names the same slot everywhere; the host passes a client's word on
+        /// so the two islands can never disagree about which stains are gone.
+        /// </summary>
+        public void SendEmergency(int index, bool cleared, int slots)
+        {
+            if (!Connected || nm == null || slots <= 0) return;
+            using (var writer = new FastBufferWriter(16, Allocator.Temp))
+            {
+                writer.WriteValueSafe(LocalNetId);
+                writer.WriteValueSafe(index);
+                writer.WriteValueSafe(cleared);
+                writer.WriteValueSafe(slots);
+                if (nm.IsHost) nm.CustomMessagingManager.SendNamedMessageToAll(EmergencyMessage, writer, NetworkDelivery.ReliableSequenced);
+                else nm.CustomMessagingManager.SendNamedMessage(EmergencyMessage, NetworkManager.ServerClientId, writer, NetworkDelivery.ReliableSequenced);
+            }
+        }
+
         // ---------------------------------------------------------------- messages
 
         void HookHandlers(NetworkManager net)
@@ -405,6 +431,7 @@ namespace Bob.Ugs
             net.CustomMessagingManager.RegisterNamedMessageHandler(RoundMessage, HandleSeriesRound);
             net.CustomMessagingManager.RegisterNamedMessageHandler(ResultMessage, HandleSeriesResult);
             net.CustomMessagingManager.RegisterNamedMessageHandler(AbandonMessage, HandleSeriesAbandon);
+            net.CustomMessagingManager.RegisterNamedMessageHandler(EmergencyMessage, HandleEmergency);
         }
 
         void UnhookHandlers()
@@ -420,6 +447,7 @@ namespace Bob.Ugs
             nm.CustomMessagingManager.UnregisterNamedMessageHandler(RoundMessage);
             nm.CustomMessagingManager.UnregisterNamedMessageHandler(ResultMessage);
             nm.CustomMessagingManager.UnregisterNamedMessageHandler(AbandonMessage);
+            nm.CustomMessagingManager.UnregisterNamedMessageHandler(EmergencyMessage);
         }
 
         void OnPeerConnected(ulong clientId)
@@ -488,6 +516,39 @@ namespace Bob.Ugs
                 writer.WriteValueSafe(id);
                 writer.WriteValueSafe(completed);
                 nm.CustomMessagingManager.SendNamedMessageToAll(TaskMessage, writer, NetworkDelivery.ReliableSequenced);
+            }
+        }
+
+        /// <summary>
+        /// A stain was settled on some device (docs 27 section 10.8). Same shape as a task: clients only accept the
+        /// host's word, the host accepts a client's report and passes it on, and the originator never applies its own
+        /// message twice. The slot count is part of the payload so a mismatched island drops the line instead of
+        /// settling the wrong station.
+        /// </summary>
+        void HandleEmergency(ulong sender, FastBufferReader reader)
+        {
+            if (nm == null) return;
+            bool host = nm.IsHost;
+            if (!host && sender != NetworkManager.ServerClientId) return;
+            reader.ReadValueSafe(out int origin);
+            reader.ReadValueSafe(out int index);
+            reader.ReadValueSafe(out bool cleared);
+            reader.ReadValueSafe(out int slots);
+            if (index < 0 || slots <= 0) return;
+            if (origin == LocalNetId) return; // already applied locally
+            if (host && sender != nm.LocalClientId) RebroadcastEmergency(origin, index, cleared, slots);
+            EmergencyResolved?.Invoke(index, cleared, slots);
+        }
+
+        void RebroadcastEmergency(int origin, int index, bool cleared, int slots)
+        {
+            using (var writer = new FastBufferWriter(16, Allocator.Temp))
+            {
+                writer.WriteValueSafe(origin);
+                writer.WriteValueSafe(index);
+                writer.WriteValueSafe(cleared);
+                writer.WriteValueSafe(slots);
+                nm.CustomMessagingManager.SendNamedMessageToAll(EmergencyMessage, writer, NetworkDelivery.ReliableSequenced);
             }
         }
 

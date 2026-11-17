@@ -1060,7 +1060,7 @@ build แรกหลังงาน pure UGS + SFX — สั่งด้วย
 - **งานลาม — `TaskRaceRound.AddPenaltyTask(baseSpec, team, name)`:** เพิ่ม `TaskEntry` + `side.Remaining` + `TaskCount = tasks.Count` + `TotalWeight += 1` + `Version++` → แถวใหม่ขึ้น `รอคิว` ทันที และสถานีจะรับไปทำตอน restock รอบถัดไป (ทุกเลนมีงานมากกว่าสถานี การรอคิวจึงมีจริง); แถบความคืบหน้าถอยเพราะตัวหารโต (docs 16 §2.4)
 - **เสียง:** `enemy_spawn` + `timer_warning` ตอนโผล่, `enemy_defeat` ตอนจบทั้งสองทาง (`sting_emergency` ไม่มีไฟล์)
 - **ตรวจ:** `bash unity-typecheck/check.sh` = `typecheck ok: 40 known Unity-6 gap kind(s), no new errors`; `bob-check` = `BOB-CHECK PASSED` (modules sync + task-race 39/39 + LINE + typecheck); `cd unity-check && dotnet run` = `UNITY-CHECK PASSED` (`EmergencyTimes` เป็นของเดิมที่เทสต์อยู่แล้ว)
-- **ยังไม่ทำ:** บอสคราบยักษ์ (2 คน T02+T03 พร้อมกัน), ลูกศรขอบจอ `ARROW-Edge`, ภาพศัตรูในการ์ด, แถวรายการแบบ "ขอบแดง + วงนับถอยหลังในแถว" ของ docs 11 (ใช้แบนเนอร์แทน), จำนวน 2/2/3 ตาม D (จำนวนมาจาก seed), ดาวคุณภาพ "จัดการฉุกเฉินทันทุกตัว" ใน `StorySeries.Stars`, การซิงก์ออนไลน์ของสถานะคราบ (แต่ละเครื่องรันเกาะตัวเองด้วย seed เดียวกัน — ยังไม่มี `bob.emergency`), และยังไม่ได้เปิด Unity ถ่ายแบนเนอร์/ศัตรูในฉาก
+- **ยังไม่ทำ:** บอสคราบยักษ์ (2 คน T02+T03 พร้อมกัน), ลูกศรขอบจอ `ARROW-Edge`, ภาพศัตรูในการ์ด, แถวรายการแบบ "ขอบแดง + วงนับถอยหลังในแถว" ของ docs 11 (ใช้แบนเนอร์แทน), จำนวน 2/2/3 ตาม D (จำนวนมาจาก seed), ดาวคุณภาพ "จัดการฉุกเฉินทันทุกตัว" ใน `StorySeries.Stars`, การซิงก์ออนไลน์ของสถานะคราบ — **ทำแล้ว 17 พ.ย. 2026** (`bob.emergency`, docs 27 §10.8: ตารางคราบมาจาก seed เป็นฟังก์ชันบริสุทธิ์ ช่องหนึ่งตัดสินครั้งเดียว ทั้งห้องจึงเห็นชุดเดียวกัน), และยังไม่ได้เปิด Unity ถ่ายแบนเนอร์/ศัตรูในฉาก
 
 ### 15.26 รถเข็น T04 และเก้าอี้ T12 — มินิเกมจริงของสองงานสุดท้าย (16 พ.ย. 2026)
 
@@ -1089,7 +1089,7 @@ build แรกหลังงาน pure UGS + SFX — สั่งด้วย
 - **การวาง:** `RenderEmergencyArrow(show)` อ่าน `BobEmergencyStains.TargetPosition` (=`current.Body.transform.position`) → `Camera.WorldToViewportPoint` → ถ้าอยู่ในกรอบปลอดภัย (`|dx| ≤ 0.40`, `|dy| ≤ 0.38`, z > 0) ซ่อน; ถ้าอยู่นอก/หลังกล้อง (`z < 0` กลับทิศ) คำนวณ `t = min(halfW/|dx|, halfH/|dy|)` โดย `halfW = 960 − 76`, `halfH = 540 − 100` แล้ววางที่ `dir * t` หมุน `atan2 − 90°` ให้ยอดลูกศรชี้ทางคราบ
 - **สถานะการซ่อน:** ใช้เงื่อนไขเดียวกับแบนเนอร์ (`stains.Active && !ResultOpen && !PauseOpen && !CardOpen`) จึงไม่ทับการ์ด S28 การ์ดหยุด หรือหน้าผล; กระพริบ alpha 0.72–1.0 ที่ 7 rad/s และเปลี่ยนสีเป็น `danger` เมื่อเหลือ ≤ 8 วิ
 - **ตรวจ:** `bash unity-typecheck/check.sh` = `typecheck ok: 40 known Unity-6 gap kind(s), no new errors`; `bob-check` = `BOB-CHECK PASSED` (modules sync, task-race **41/41**, LINE, typecheck); `cd unity-check && dotnet run` = `UNITY-CHECK PASSED`
-- **ยังค้าง:** บอสคราบยักษ์ (2 คน T02+T03), ภาพศัตรูในการ์ด, ดาวคุณภาพ "จัดการฉุกเฉินทันทุกตัว", แถวรายการแบบขอบแดง + วงนับถอยหลังในแถวของ docs 11 (ยังใช้แบนเนอร์), การซิงก์ออนไลน์ (`bob.emergency`), ไฟล์ `sting_emergency.wav` และยังไม่ได้เปิด Unity ถ่ายลูกศร/จำนวน 3 ตัวที่ D3
+- **ยังค้าง:** บอสคราบยักษ์ (2 คน T02+T03), ภาพศัตรูในการ์ด, ดาวคุณภาพ "จัดการฉุกเฉินทันทุกตัว", แถวรายการแบบขอบแดง + วงนับถอยหลังในแถวของ docs 11 (ยังใช้แบนเนอร์), การซิงก์ออนไลน์ (`bob.emergency`) — **ทำแล้ว 17 พ.ย. 2026** (docs 27 §10.8), ไฟล์ `sting_emergency.wav` และยังไม่ได้เปิด Unity ถ่ายลูกศร/จำนวน 3 ตัวที่ D3
 
 ### 15.28 T12 ตาม D (ของรก + ระยะลาก) และดาวคุณภาพฉุกเฉิน (16 พ.ย. 2026)
 

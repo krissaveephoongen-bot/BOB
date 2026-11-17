@@ -351,6 +351,33 @@ static class Program
         Check("story: the tagline fits the narrow chip", BobStoryText.Slogan.Length <= 20);
         Check("story: the tagline uses Thai glyphs only", BobStoryText.Slogan.All(c => c <= '\u0E7F'));
 
+        // T16 in a room (docs 27 section 10.8): both devices draw the schedule from the round seed, so the wire only
+        // carries a slot index. These checks pin the three things that makes rely on — the same seed draws the same
+        // slots, the slot count never depends on the island's size, and the weakness pool never moves a slot.
+        var onlinePlan = BobTaskRaceRules.EmergencyPlan(2026, 3, 100f, 6, BobTaskRaceRules.EmergencyOnlinePool);
+        var samePlan = BobTaskRaceRules.EmergencyPlan(2026, 3, 100f, 6, BobTaskRaceRules.EmergencyOnlinePool);
+        Check("emergency: the same seed draws the same slots",
+            onlinePlan.Length == samePlan.Length && onlinePlan.Zip(samePlan, (x, y) =>
+                x.At == y.At && x.Station == y.Station && x.MinigameId == y.MinigameId).All(z => z));
+        Check("emergency: three slots at D3", onlinePlan.Length == 3);
+        Check("emergency: moments scale to the round clock",
+            Math.Abs(onlinePlan[0].At - 40f * 100f / BobTaskRaceRules.RoundTime) < 0.01f &&
+            Math.Abs(onlinePlan[2].At - 100f * 100f / BobTaskRaceRules.RoundTime) < 0.01f);
+        Check("emergency: the slot count ignores the island's size",
+            BobTaskRaceRules.EmergencyPlan(2026, 3, 100f, 12, BobTaskRaceRules.EmergencyOnlinePool).Length == 3);
+        Check("emergency: an island of one station still gets a plan",
+            BobTaskRaceRules.EmergencyPlan(2026, 1, 100f, 1, BobTaskRaceRules.EmergencyOnlinePool).All(m => m.Station == 0));
+        var lonePool = BobTaskRaceRules.EmergencyPlan(2026, 3, 100f, 6, new[] { "T05" });
+        Check("emergency: changing the pool never moves a slot",
+            lonePool.Zip(onlinePlan, (x, y) => x.At == y.At && x.Station == y.Station).All(z => z));
+        Check("emergency: slots stay inside the island",
+            onlinePlan.All(m => m.Station >= 0 && m.Station < 6) &&
+            onlinePlan.Zip(onlinePlan.Skip(1), (x, y) => x.Station != y.Station).All(z => z));
+        Check("emergency: offline pools follow the chapter", BobTaskRaceRules.EmergencyPool(1, 1).Length == 1 &&
+            BobTaskRaceRules.EmergencyPool(1, 2).Length == 2 && BobTaskRaceRules.EmergencyPool(3, 1).Length == 3);
+        Check("emergency: the room pool is all three weaknesses", BobTaskRaceRules.EmergencyOnlinePool.Length == 3);
+        Console.WriteLine("emergency sync checked");
+
         Console.WriteLine(fails == 0 ? "UNITY-CHECK PASSED" : $"UNITY-CHECK FAILED: {fails}");
         return fails == 0 ? 0 : 1;
     }

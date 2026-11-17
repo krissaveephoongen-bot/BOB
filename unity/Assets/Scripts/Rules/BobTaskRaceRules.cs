@@ -140,6 +140,71 @@ namespace Bob.Rules
             return Enumerable.Range(0, n).Select(i => at[i]).ToList();
         }
 
+        /// <summary>
+        /// One planned emergency of a round: the second it spawns, which station of the local island it stands at, and
+        /// which weakness card clears it. The plan is drawn from the round seed alone (docs 27 section 10.8), so every
+        /// device in a room lists the same moments in the same order and an index is enough to talk about a stain.
+        /// </summary>
+        public readonly struct EmergencyMoment
+        {
+            public readonly float At;
+            public readonly int Station;
+            public readonly string MinigameId;
+
+            public EmergencyMoment(float at, int station, string minigameId)
+            {
+                At = at; Station = station; MinigameId = minigameId ?? "";
+            }
+
+            public override string ToString() => $"{At:0.#} s {MinigameId} @{Station}";
+        }
+
+        /// <summary>
+        /// The weakness cards a chapter has introduced by now (docs 16 section 4): เจ้าคราบ from round one, สไลม์ from
+        /// chapter 2 or the second round of a chapter, ขยะปีศาจ from chapter 2. Online the room never reads local
+        /// chapter progress — see <see cref="EmergencyOnlinePool"/>.
+        /// </summary>
+        public static string[] EmergencyPool(int chapterOrder, int round)
+        {
+            var pool = new List<string> { "T02" };
+            if (chapterOrder > 1 || round > 1) pool.Add("T03");
+            if (chapterOrder > 1) pool.Add("T05");
+            return pool.ToArray();
+        }
+
+        /// <summary>
+        /// The pool a room uses: all three weaknesses, every round. A device that has played further than its friend
+        /// would otherwise draw a different enemy for the same slot, and "stain 1 was cleared" would mean two things.
+        /// </summary>
+        public static readonly string[] EmergencyOnlinePool = { "T02", "T03", "T05" };
+
+        /// <summary>
+        /// The whole T16 schedule (docs 16 section 4): the shared moments scaled to this round's clock, a station per
+        /// moment, and a weakness card per moment from the pool. Same seed, same station count, same clock and same
+        /// pool = the same array on every device, which is what <c>bob.emergency</c> indexes into.
+        /// </summary>
+        public static EmergencyMoment[] EmergencyPlan(int seed, int difficulty, float roundSeconds, int stationCount,
+                                                      string[] pool)
+        {
+            var times = EmergencyTimes(seed, difficulty);
+            if (stationCount <= 0) return new EmergencyMoment[0];
+            if (pool == null || pool.Length == 0) pool = new[] { "T02" };
+            float clock = roundSeconds > 0f ? roundSeconds : RoundTime;
+            float scale = clock / RoundTime;
+            var rng = new Rng(seed * 997 + 17);
+            var plan = new EmergencyMoment[times.Count];
+            int last = -1;
+            for (int i = 0; i < plan.Length; i++)
+            {
+                int pick = (int)(rng.Next() * stationCount) % stationCount;
+                // One station cannot repeat on consecutive moments: a stain on the station you just left reads as a bug.
+                if (stationCount > 1 && pick == last) pick = (pick + 1) % stationCount;
+                last = pick;
+                plan[i] = new EmergencyMoment(times[i] * scale, pick, pool[i % pool.Length]);
+            }
+            return plan;
+        }
+
         /// <summary>The enemy that stains the map, drawn from the seed so both teams meet the same one.</summary>
         public static string EmergencyEnemy(int seed)
         {
@@ -343,6 +408,32 @@ namespace Bob.Rules
             if (EmergencyEnemy(1975) != "scale") bad.Add("enemy 1975: " + EmergencyEnemy(1975) + " != scale");
             if (EmergencyEnemy(777) != "stain") bad.Add("enemy 777: " + EmergencyEnemy(777) + " != stain");
             if (EmergencyEnemy(123456) != "dust") bad.Add("enemy 123456: " + EmergencyEnemy(123456) + " != dust");
+
+            // T16 sync (docs 27 section 10.8): the plan is a pure function of seed, clock and station count, so two
+            // devices draw the same slots; the pool only decides which weakness sits in a slot, never where or when.
+            var p1 = EmergencyPlan(1975, 3, RoundTime, 6, EmergencyOnlinePool);
+            var p2 = EmergencyPlan(1975, 3, RoundTime, 6, EmergencyOnlinePool);
+            if (p1.Length != 3) bad.Add("emergency plan length drifted: " + p1.Length);
+            for (int i = 0; i < Math.Min(p1.Length, p2.Length); i++)
+            {
+                if (p1[i].At != p2[i].At || p1[i].Station != p2[i].Station || p1[i].MinigameId != p2[i].MinigameId)
+                    bad.Add($"emergency plan not deterministic at {i}");
+                if (p1[i].Station < 0 || p1[i].Station >= 6) bad.Add($"emergency station out of range at {i}");
+                if (i > 0 && p1[i].Station == p1[i - 1].Station) bad.Add($"emergency station repeats at {i}");
+            }
+            var shortRound = EmergencyPlan(1975, 4, RoundTime / 2f, 6, EmergencyOnlinePool);
+            for (int i = 0; i < Math.Min(shortRound.Length, p1.Length); i++)
+                if (Math.Abs(shortRound[i].At - p1[i].At / 2f) > 0.01f)
+                    bad.Add($"emergency moments do not scale with the clock at {i}");
+            var otherPool = EmergencyPlan(1975, 3, RoundTime, 6, new[] { "T05" });
+            for (int i = 0; i < Math.Min(otherPool.Length, p1.Length); i++)
+                if (otherPool[i].At != p1[i].At || otherPool[i].Station != p1[i].Station)
+                    bad.Add($"emergency slot moved when only the pool changed at {i}");
+            if (EmergencyPlan(1975, 3, RoundTime, 0, EmergencyOnlinePool).Length != 0)
+                bad.Add("emergency plan with no stations is not empty");
+            if (EmergencyPool(1, 1).Length != 1 || EmergencyPool(1, 2).Length != 2 || EmergencyPool(2, 1).Length != 3)
+                bad.Add("emergency pool per chapter drifted");
+            if (EmergencyOnlinePool.Length != 3) bad.Add("online emergency pool is not all three weaknesses");
             if (MinMs("T07", 3) != 0 || MinMs("T13", 1) != 2000) bad.Add("MinMs table drifted");
 
             // T04 worksheet: deterministic per seed, in range, and the pass rule counts conditions.

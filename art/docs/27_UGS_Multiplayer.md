@@ -149,10 +149,12 @@ Home (S10) → เลือกโหมด Solo/Duo/Team (S11) → S14 เลื
 | `bob.round` | host → ทุกคน | ReliableSequenced | `int round`, `int seed`, `float seconds` | client `TaskRaceModeManager.BeginOnlineRound(...)` — เริ่มรอบถัดไปด้วย seed/เวลาของ host (§10.7) |
 | `bob.result` | host → ทุกคน | ReliableSequenced | `int round`, `byte outcome`, `int localTasks`, `int rivalTasks`, `int localPoints`, `int rivalPoints` | client `Series.RegisterOutcome(...)` ตามผลของ host แล้ว `HoldForOnlineResult` → การ์ด/รอบถัดไป |
 | `bob.abandon` | host → ทุกคน | ReliableSequenced | `int round` | client `Series.Abandon()` → การ์ด "ยกเลิกซีรีส์" (§10.7) |
+| `bob.emergency` | ทุกคน → host (client) / host → ทุกคน | ReliableSequenced | `int origin`, `int index`, `bool cleared`, `int slots` | ฝั่งรับ `BobEmergencyStains.Resolve(index, cleared)` — ปิดช่องของตารางคราบให้ตรงกันทั้งห้อง (§10.8) |
 
 - **origin id อยู่ใน payload** เพราะ client ส่งถึง host คนเดียว: ถ้าใช้ client id บนสาย 3–4 คนจะถูกยุบเป็นตัวเดียว — host จึง rebroadcast พร้อม origin เดิม และฝั่งรับข้าม event ที่ `origin == LocalNetId` (กัน apply ซ้ำกับที่ทำเองไปแล้ว)
 - client ยอมรับ `bob.task`/`bob.pose` จาก `NetworkManager.ServerClientId` เท่านั้น; host คือผู้ตัดสินว่าสถานีไหนสะอาด (host-authoritative) แต่คะแนนยังคิดบนเครื่องเหมือนเดิม
 - `bob.round`/`bob.result`/`bob.abandon` เป็น **host → ทุกคนเท่านั้น**: client ไม่มีสิทธิ์ปิดรอบหรือเปลี่ยนผล; ฝั่งรับตรวจ `NetworkManager.ServerClientId` และรอบต้องตรงกับ `Series.Round` ปัจจุบัน (บรรทัดเก่าที่มาช้าถูกทิ้ง)
+- `bob.task`/`bob.emergency` เป็น **client → host → ทุกคน**: host รับคำของ client แล้ว rebroadcast; ฝั่งรับข้ามบรรทัดที่ `origin == LocalNetId` (ทำเองไปแล้ว) — ไม่ใช่ host-only เพราะทั้งสองฝั่งเป็นคนปราบได้
 - ไม่มี prefab/NetworkObject spawn, ไม่มี scene sync, ไม่มี RPC ต่อผู้เล่น — named message พอสำหรับตัวละคร 4 ตัว + สถานี ~10 จุด
 
 ### 10.3 seed เดียวกันทั้งห้อง
@@ -229,3 +231,32 @@ client จึง **ไม่** สุ่มเอง (`BeginOnlineRound` ใช�
   ออกก่อนผลแรกยังทำให้เป็นโมฆะ, เสมอเป็นรอบที่เล่นแล้วแต่ไม่ใช่ชัย, `Reset()` เคลียร์ธงโมฆะ
 - **ข้อจำกัดที่ยังเหลือ:** ไม่มี reconnect / host migration / late join; ไม่มีสองทีมจริง (ทุกคนอยู่ฝั่งเราแข่งคู่แข่งจำลอง);
   ไม่มี server validation ของผลรอบ (host ตัดสินคนเดียว) — ดู §10.6
+
+### 10.8 คราบฉุกเฉิน (T16) ในห้อง — `bob.emergency` (17 พ.ย. 2026)
+
+ปิดช่องที่ค้างจาก §10.7: คราบฉุกเฉินถูกวางแผน **บนเครื่องใครเครื่องมัน** (`System.Random` + ความคืบหน้าบทของเครื่องนั้น)
+ทั้งสองเครื่องจึงได้ศัตรูคนละตัวในช่องเดียวกัน และคราบที่อีกเครื่องปราบไปแล้วยังเดินนาฬิกาต่อจนลาม เพิ่มงานอีก 1 อย่าง
+เฉพาะเครื่องนั้น → ใบงานสองเครื่องไม่เหมือนกัน คะแนนรอบจึงเทียบกันไม่ได้
+
+- **ตารางคราบเป็นฟังก์ชันบริสุทธิ์.** `BobTaskRaceRules.EmergencyPlan(seed, difficulty, clockSeconds, stations, pool)`
+  คืน `EmergencyMoment[]` (`At`, `Station`, `MinigameId`) จาก seed อย่างเดียว ด้วย `Rng` (mulberry32) ตัวเดียวกับใบงาน —
+  seed เดียว + จำนวนสถานีเท่ากัน + นาฬิกาเท่ากัน = ตารางเหมือนกันทุกเครื่อง ลำดับในตารางคือ **index ของช่อง** ที่ใช้บนสาย
+- **pool ออนไลน์คงที่.** `EmergencyPool(order, round)` ยังคุมออฟไลน์ตามบทเหมือนเดิม แต่ในห้องใช้
+  `EmergencyOnlinePool` = ทั้งสามแบบ (T02/T03/T05) ทุกแมตช์: เครื่องที่เล่นไปไกลกว่าจะได้ศัตรูคนละตัวในช่องเดียวกันไม่ได้
+- **ข้อความ.** client ส่งถึง host, host rebroadcast ถึงทุกคน (`bob.emergency`, payload `int origin, int index, bool cleared, int slots`)
+  — รูปเดียวกับ `bob.task`. `slots` = จำนวนช่องของตาราง: ถ้าไม่ตรงกับตารางของเครื่องรับ (เกาะถูกสร้างไม่เหมือนกัน)
+  บรรทัดนั้นถูกทิ้งพร้อม log warning แทนที่จะไปปิดช่องผิด
+- **ช่องหนึ่งตัดสินครั้งเดียว.** `BobEmergencyStains.Resolve(index, cleared)` เก็บ index ที่ตัดสินแล้วใน `HashSet<int>`:
+  บรรทัดซ้ำ/มาช้าเพิ่มงาน `คราบลาม` ซ้ำไม่ได้ และล้างผลที่ปราบสำเร็จไม่ได้; ฝั่งที่รับ `cleared` แค่เก็บคราบออกและขึ้น
+  `เพื่อนปราบคราบแล้ว!`, ฝั่งที่รับ `cleared=false` เพิ่มงาน `คราบลาม` 1 อย่างเหมือนกันทั้งสองเครื่อง. ดาวคุณภาพ
+  `NoteEmergency` นับช่องละครั้งต่อเครื่อง → การ์ดผลของทั้งสองเครื่องรายงาน `คราบ x/y` ตรงกัน
+- **ช่องที่เพื่อนตัดสินไปก่อน.** ถ้านาฬิกาเครื่องเราช้ากว่าและยังไม่ถึงเวลาเกิดของช่องที่ถูกตัดสินแล้ว `Spawn()` ข้ามช่องนั้น
+  (`resolved.Contains(index)`) — คราบที่ปราบไปแล้วไม่โผล่ขึ้นมาอีก
+- **ด่านที่คุมส่วนนี้:** `SelfTest()` ของ `BobTaskRaceRules` (ตารางซ้ำได้/ช่วงเวลา/สเกลนาฬิกา/ไม่ซ้ำสถานีติดกัน/
+  pool ไม่ขยับช่อง/เกาะศูนย์สถานี/ขนาด pool) + `unity-check` `emergency sync checked` 9 ข้อ
+  (seed เดียวตารางเดียว, 3 ช่องที่ D3, สเกล 100 วิ, จำนวนช่องไม่ขึ้นกับขนาดเกาะ, เกาะสถานีเดียว, pool ไม่ขยับช่อง,
+  สถานีอยู่ในเกาะ+ไม่ซ้ำ, pool ออฟไลน์ตามบท, pool ห้องครบสาม)
+- **ข้อจำกัดที่ยังเหลือ:** สถานีที่ช่องชี้ไปคือลำดับที่ n ของ `round.StationsOf(LocalTeam)` — ต้องเรียงเหมือนกันทั้งสองเครื่อง
+  (ทั้งคู่สร้างเกาะจาก seed เดียวกันจึงเรียงเหมือนกัน); ถ้าทั้งสองเครื่องตัดสินช่องเดียวกันต่างกันในเสี้ยววินาที
+  (นาฬิกาต่างกันตอนเหลือ 0 วิ) ฝั่งที่ตัดสินเองก่อนยังคงผลของตัวเอง ไม่มีการคืน; ไม่มี server validation ของการปราบ
+  (§10.6); ตัวคราบ (โมเดล/ตำแหน่ง) ยังวาดบนเครื่องใครเครื่องมัน ไม่ได้ซิงก์; บอสคราบยักษ์ยังไม่ทำ
