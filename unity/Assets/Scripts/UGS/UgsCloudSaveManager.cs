@@ -52,7 +52,10 @@ namespace Bob.Ugs
                 Profile.unlockedItems ??= new List<string>();
                 // Cosmetics (docs 31 section 2.3): merge what the account owns into this device's list and adopt the
                 // worn slots when this device has no valid choice of its own. Never replaces offline progress.
-                Bob.Game.BobCosmetics.AdoptCloud(Profile.equippedTitle, Profile.equippedFrame, Profile.unlockedItems);
+                Bob.Game.BobCosmetics.AdoptCloud(Profile.equippedTitle, Profile.equippedFrame, Profile.unlockedItems,
+                                            Profile.sewnLook);
+                // docs 31 section 2.2: the day's attempts live on the account, so a fresh device does not refill them.
+                Bob.Game.BobDailyStore.AdoptCloud(Profile.dailyDay, Profile.dailyPlays);
                 IsLoaded = true;
                 LastError = null;
                 Debug.Log($"[UGS] profile loaded · coins {Profile.coins} · level {Profile.level} · items {Profile.unlockedItems.Count}");
@@ -111,10 +114,19 @@ namespace Bob.Ugs
         }
 
         /// <summary>Remember the worn title and frame so a reinstall wears the same decoration (docs 31 section 2.3).</summary>
-        public async Task<bool> SetEquippedAndSaveAsync(string titleId, string frameId)
+        public async Task<bool> SetEquippedAndSaveAsync(string titleId, string frameId, string sewnLook = "")
         {
             Profile.equippedTitle = titleId ?? "";
             Profile.equippedFrame = frameId ?? "";
+            Profile.sewnLook = sewnLook ?? "";
+            return await SaveProfileAsync();
+        }
+
+        /// <summary>Store today's daily attempts on the account (docs 31 section 2.2), best effort.</summary>
+        public async Task<bool> SetDailyAndSaveAsync(int day, int plays)
+        {
+            Profile.dailyDay = day;
+            Profile.dailyPlays = plays;
             return await SaveProfileAsync();
         }
     }

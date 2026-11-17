@@ -45,6 +45,19 @@ namespace Bob.TaskRace
         public static int Matches => PlayerPrefs.GetInt(MatchesKey, 0);
         public static int Wins => PlayerPrefs.GetInt(WinsKey, 0);
 
+        /// <summary>
+        /// Pay from the wallet (the S31 sewing table). Refuses rather than going negative, so a card that shows a
+        /// price it cannot pay simply stays closed.
+        /// </summary>
+        public static bool Spend(int coins)
+        {
+            if (coins <= 0) return true;
+            if (Coins < coins) return false;
+            PlayerPrefs.SetInt(CoinsKey, Coins - coins);
+            PlayerPrefs.Save();
+            return true;
+        }
+
         /// <summary>The one-off XP for closing a chapter for the first time; a replay pays the normal rate only.</summary>
         public const int FirstClearBonus = 100;
 

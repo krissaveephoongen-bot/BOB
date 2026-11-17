@@ -1250,3 +1250,30 @@ build แรกหลังงาน pure UGS + SFX — สั่งด้วย
      ซ่อนในเฟรมถัดไป ส่วน toast อยู่บนสุดโดยเจตนา 2.2 วิ; ถ่ายใหม่หลัง settle (2.6 วิ) ได้การ์ดสะอาด
 - **ยังต้องเป็นเครื่องจริง (ทำใน sandbox ไม่ได้):** ติดตั้ง APK, ประสิทธิภาพบนมือถือ, LINE OAuth, ออนไลน์ 2 เครื่อง
   (host tunnel/Nakama ถอดแล้ว), Firebase tester group
+
+### 15.35 รอบ "อีก 30%" — S25 บนการ์ดผล, ผล host ที่ตรวจได้, และโต๊ะตัดเย็บ (17 พ.ย. 2026)
+
+**ที่มา.** หลังปิดตู้เสื้อผ้า 6 ชิ้นและคราบออนไลน์ เหลืองานออกแบบที่ยังเป็นโค้ดล้วน (ไม่ต้องมีศิลป์/Unity) สี่ข้อ:
+S25 ก่อน-หลัง, การตรวจผล host ฝั่ง client, S31 P1 ตัดเย็บ, และเดลี่ต่อบัญชี + บอร์ดรายวัน. รอบนี้ทำทั้งสี่ **โดยไม่แตะฉาก
+และไม่ rebuild**; สิ่งที่ยังทำไม่ได้คือศิลป์/3D, หลักฐาน Unity/Play-mode/APK, UGS จริง และ PvP สองทีมจริง (sandbox ไม่มี Unity/UGS)
+
+- **S25 — `Rules/BobCleanRoom.cs` + `BobTaskRaceHud.CleanBand`:** `Percent`/`Of`/`Line`/`Verdict`/`Fill` แปลงน้ำหนักงาน
+  เป็น `0%→n%` ของทั้งสองฝ่าย; `ShowResult` วาดแถบ 940×104 ที่ช่องว่าง 160u เหนือการ์ด (ไม่ทับปุ่มการ์ด) มีแถบเติมของฝ่ายเรา,
+  แตะปิด หรือรอ 4 วิ (`WaitForSecondsRealtime`, จึงทำงานตอน timeScale 0). **ไม่ใช่ภาพแบ่งครึ่งจอ** ตาม docs 11 — shader
+  `_DirtAmount` ยังไม่ถูกแตะ
+- **ผล host ตรวจได้ — `Rules/BobSeriesCheck.cs` + `StorySeries.Disputes`:** client เปรียบ `งาน` (ต้องตรงเป๊ะ) และ `แต้ม`
+  (ต่างได้ ≤10%) กับบรรทัดที่ host ส่งมาก่อน `RegisterOutcome`; ไม่ตรง → `NoteDisputed()` ครั้งเดียว + toast
+  `ผลไม่ตรงกับที่เห็น · เจ้าของห้องตัดสิน`; การ์ดออนไลน์ขึ้น `ผลไม่ตรงกับที่เห็น n รอบ · เจ้าของห้องตัดสิน` — **host ยังชนะเสมอ**,
+  ไม่มี reconnect/rollback ในรอบนี้
+- **S31 P1 ตัดเย็บ — `Rules/BobSewing.cs` + แท็บที่สามในตู้เสื้อผ้า:** ผ้า→สี→ลาย→เครื่องประดับ ชั้นละ 4 ชิป ราคา 30 + ชั้น
+  (รวม 40–66 เหรียญ) + 1–2 เกล็ด; เกล็ดมาจากแมตช์ (`1 + matches/3`, หักที่ใช้ใน `bob.sew.shards`); ผ้าที่ได้ผสมสี 45%
+  แล้วยกขึ้นทางครีมจนผ่าน `BobCartPaint.Readable` ทุกคู่; `ถอดทั้งหมด` ล้างป้าย/กรอบ/ชุด; ชุดซิงก์เป็น `sewnLook` ใน Cloud Save
+- **เดลี่ต่อบัญชี + บอร์ดรายวัน — `BobDaily.PlaysToday` / `DailyBoardName` / `ValidBoardName`:** โปรไฟล์คลาวด์พก
+  `dailyDay/dailyPlays`; ตอนโหลด `BobDailyStore.AdoptCloud` ใช้ค่ามากของวันเดียวกัน (ลงเครื่องใหม่ไม่รีเซ็ต);
+  `Consume` เขียนกลับทุกครั้ง; รอบเดลี่ลง `daily_<day>` เพิ่มจาก `global_high_score` เฉพาะ `MatchRequest.Daily`
+- **ตรวจ:** `bash unity-typecheck/check.sh` = `typecheck ok: 43 known Unity-6 gap kind(s), no new errors`;
+  `cd unity-check && dotnet run` = `UNITY-CHECK PASSED` (+ `sewing table checked` 9, `clean room checked` 6,
+  `series check checked` 4, `daily board checked` 2, `series disputes checked` 1); `bob-check`, `task-race-test` 80/80,
+  `daily-test` 34/34, `e2e-taskrace-test` 39/39, `ready-check` — ตามผลที่รันในรอบนี้
+- **ยังไม่ทำ:** ภาพแบ่งครึ่งจอ S25 (shader), กระเป๋า S33, ตัวละคร 3D สวมชุด, บอร์ดเดลี่จริงบน UGS, server validation
+  ของผลรอบ, reconnect/host migration, และหลักฐาน Unity/Play-mode/APK/สองเครื่องจริง

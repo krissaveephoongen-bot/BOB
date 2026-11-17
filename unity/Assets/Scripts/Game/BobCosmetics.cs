@@ -16,6 +16,10 @@ namespace Bob.Game
         public const string FrameKey = "bob.equip.frame";
         /// <summary>The owned list the shop already writes; the wardrobe adds to the same key, never a second one.</summary>
         public const string OwnedKey = "bob.owned";
+        /// <summary>The sewn look (docs 11 S31, four indices "fabric:colour:pattern:accessory"); "" for none.</summary>
+        public const string SewKey = "bob.sew.look";
+        /// <summary>Shards already spent at the sewing table; the earned pool is BobSewing.ShardsEarned(matches).</summary>
+        public const string SewShardsKey = "bob.sew.shards";
 
         /// <summary>The plain stage disc, used when no frame is worn.</summary>
         public static readonly Color PlainFrame = new Color(1f, 1f, 1f, 0.28f);
@@ -72,6 +76,14 @@ namespace Bob.Game
         {
             get
             {
+                // A sewn look sits over the frame (docs 11 S31): the cloth is what the player made, the frame is what
+                // they earned, and the newest decoration should be the one they see.
+                if (HasSewn)
+                {
+                    var sewn = ClothColour;
+                    sewn.a = 0.55f;
+                    return sewn;
+                }
                 if (!HasFrame) return PlainFrame;
                 // The stage disc sits under the hero art, so the frame keeps the plain disc's softness instead of turning
                 // into an opaque plate behind the character.
@@ -89,10 +101,111 @@ namespace Bob.Game
         {
             get
             {
+                if (HasSewn)
+                {
+                    var cloth = SewnCloth;
+                    var sewnBody = Bob.Rules.BobCartPaint.Body(true, cloth);
+                    return new Color(sewnBody.R, sewnBody.G, sewnBody.B, 1f);
+                }
                 var frame = FrameColour;
                 var body = Bob.Rules.BobCartPaint.Body(HasFrame, new Bob.Rules.BobRgb(frame.r, frame.g, frame.b));
                 return new Color(body.R, body.G, body.B, 1f);
             }
+        }
+
+        // ---------------------------------------------------------------- the sewn look (docs 11 S31)
+
+        /// <summary>The four stored indices of the sewn look, or null when nothing was cut (or the value is foreign).</summary>
+        public static int[] SewnPicks
+        {
+            get
+            {
+                try { return Bob.Rules.BobSewing.Decode(PlayerPrefs.GetString(SewKey, "")); }
+                catch (System.Exception) { return null; }
+            }
+        }
+
+        public static bool HasSewn => SewnPicks != null;
+
+        /// <summary>The stored look as it travels in the cloud profile ("" when none).</summary>
+        public static string SewnText => Bob.Rules.BobSewing.Encode(SewnPicks);
+
+        /// <summary>The cloth colour of the sewn look; cream when nothing was cut.</summary>
+        public static Bob.Rules.BobRgb SewnCloth =>
+            HasSewn ? Bob.Rules.BobSewing.Cloth(SewnPicks) : Bob.Rules.BobCartPaint.Cream;
+
+        /// <summary>The cloth as a Unity colour (opaque) for the wardrobe preview.</summary>
+        public static Color ClothColour
+        {
+            get
+            {
+                var c = SewnCloth;
+                return new Color(c.R, c.G, c.B, 1f);
+            }
+        }
+
+        /// <summary>The look in words, or "" when nothing was cut.</summary>
+        public static string SewnName
+        {
+            get
+            {
+                var picks = SewnPicks;
+                return picks == null ? "" : Bob.Rules.BobSewing.Describe(picks);
+            }
+        }
+
+        /// <summary>Wear a sewn look. A look that is not four valid choices is refused, never half-applied.</summary>
+        public static bool WearSewn(int[] picks)
+        {
+            try
+            {
+                string text = Bob.Rules.BobSewing.Encode(picks);
+                if (string.IsNullOrEmpty(text)) return false;
+                PlayerPrefs.SetString(SewKey, text);
+                PlayerPrefs.Save();
+                SaveToCloud();
+                return true;
+            }
+            catch (System.Exception) { return false; }
+        }
+
+        /// <summary>Shards left at the sewing table: earned from matches minus what earlier cuts spent.</summary>
+        public static int SewShardsLeft
+        {
+            get
+            {
+                int earned = Bob.Rules.BobSewing.ShardsEarned(Bob.TaskRace.BobTaskRaceProfile.Matches);
+                int spent;
+                try { spent = PlayerPrefs.GetInt(SewShardsKey, 0); } catch (System.Exception) { spent = 0; }
+                return System.Math.Max(0, earned - spent);
+            }
+        }
+
+        /// <summary>Pay the shard part of a cut; false (and nothing spent) when the pile is short.</summary>
+        public static bool SpendSewShards(int shards)
+        {
+            if (shards <= 0) return true;
+            if (SewShardsLeft < shards) return false;
+            try
+            {
+                int spent;
+                try { spent = PlayerPrefs.GetInt(SewShardsKey, 0); } catch (System.Exception) { spent = 0; }
+                PlayerPrefs.SetInt(SewShardsKey, spent + shards);
+                PlayerPrefs.Save();
+                return true;
+            }
+            catch (System.Exception) { return false; }
+        }
+
+        public static void ClearSewn()
+        {
+            try
+            {
+                PlayerPrefs.SetString(SewKey, "");
+                PlayerPrefs.Save();
+                SaveToCloud();
+            }
+            catch (System.Exception) { }
         }
 
         /// <summary>Wear an owned piece in its slot; "" takes both off. A piece that is not owned is refused.</summary>
@@ -123,7 +236,8 @@ namespace Bob.Game
         /// replaced, so offline play is not lost) and each slot keeps the device's choice only when that id is still
         /// owned and belongs to the slot. Called by the cloud save manager after a successful load.
         /// </summary>
-        public static void AdoptCloud(string cloudTitle, string cloudFrame, System.Collections.Generic.ICollection<string> cloudOwned)
+        public static void AdoptCloud(string cloudTitle, string cloudFrame, System.Collections.Generic.ICollection<string> cloudOwned,
+                                      string cloudSewn = "")
         {
             try
             {
@@ -134,6 +248,10 @@ namespace Bob.Game
                 string frame = Bob.Rules.BobUnlocks.ResolveWorn(FrameId, cloudFrame, false, merged);
                 PlayerPrefs.SetString(TitleKey, title);
                 PlayerPrefs.SetString(FrameKey, frame);
+                // The sewn look is the player's own work, not a piece of the table: a device that has one keeps it,
+                // and a fresh install takes the account's when the text still parses as four valid choices.
+                if (!HasSewn && Bob.Rules.BobSewing.Decode(cloudSewn) != null)
+                    PlayerPrefs.SetString(SewKey, cloudSewn);
                 PlayerPrefs.Save();
             }
             catch (System.Exception) { }
@@ -145,7 +263,7 @@ namespace Bob.Game
             try
             {
                 var svc = Bob.Ugs.UgsCloudSaveManager.Instance;
-                if (svc != null) _ = svc.SetEquippedAndSaveAsync(TitleId, FrameId);
+                if (svc != null) _ = svc.SetEquippedAndSaveAsync(TitleId, FrameId, SewnText);
             }
             catch (System.Exception) { }
         }

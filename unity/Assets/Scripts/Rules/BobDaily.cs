@@ -64,6 +64,39 @@ namespace Bob.Rules
             return Math.Max(0, RoundsPerDay - Math.Max(0, playsToday));
         }
 
+        /// <summary>
+        /// The attempts that count for a day once the account's copy arrives (docs 31 section 2.2). The larger of the
+        /// two sides wins, so a reinstall cannot refill a day the account already spent, and a device that played
+        /// offline is not punished for it. A day that is not today contributes nothing.
+        /// </summary>
+        public static int PlaysToday(int todayDayNumber, int localDayNumber, int localPlays,
+                                     int cloudDayNumber, int cloudPlays)
+        {
+            int local = localDayNumber == todayDayNumber ? Math.Max(0, localPlays) : 0;
+            int cloud = cloudDayNumber == todayDayNumber ? Math.Max(0, cloudPlays) : 0;
+            return Math.Max(local, cloud);
+        }
+
+        /// <summary>
+        /// The daily leaderboard's id (docs 31 section 3): one board per day, so the daily is a race against the same
+        /// seed rather than against every score ever posted. Leaderboard ids are lowercase letters, digits, dashes and
+        /// underscores, 4..50 characters; this shape always fits.
+        /// </summary>
+        public static string DailyBoardName(int dayNumber) => "daily_" + Math.Max(0, dayNumber);
+
+        /// <summary>True when a board id is one Unity Leaderboards will accept (used by the check, not by the game).</summary>
+        public static bool ValidBoardName(string name)
+        {
+            if (string.IsNullOrEmpty(name) || name.Length < 4 || name.Length > 50) return false;
+            for (int i = 0; i < name.Length; i++)
+            {
+                char c = name[i];
+                bool ok = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_' || c == '-';
+                if (!ok) return false;
+            }
+            return true;
+        }
+
         /// <summary>mulberry32, the same generator BobTaskRaceRules draws the task list with.</summary>
         static double Mulberry(int seed)
         {

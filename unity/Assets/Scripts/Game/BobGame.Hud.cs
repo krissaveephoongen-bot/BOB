@@ -51,8 +51,11 @@ namespace Bob.Game
         // The daily card holds the server's reply, never a locally invented seed (docs 31 section 2.2).
         BobDailyReply dailyReply;
         bool dailyBusy;
-        // Which wardrobe tab is open (0 = titles, 1 = frame colours); kept while the card is open, reset on reload.
+        // Which wardrobe tab is open (0 = titles, 1 = frame colours, 2 = the sewing table); kept while the card is
+        // open, reset on reload.
         int wardrobeTab;
+        // The look being tried on at the sewing table (four layer indices); null until the wardrobe opens.
+        int[] sewPicks;
 
         // ================================================================ build once
 
@@ -743,6 +746,9 @@ namespace Bob.Game
             if (o == Overlay.Board) { boardSnap = null; boardLoading = false; }
             // Same for the daily: the day may have turned or an attempt may have been spent since.
             if (o == Overlay.Daily) { dailyReply = null; dailyBusy = false; }
+            // The sewing draft starts from what is worn, so the card never opens on an empty table.
+            if (o == Overlay.Wardrobe)
+                sewPicks = BobCosmetics.SewnPicks ?? new int[Bob.Rules.BobSewing.LayerCount];
             Time.timeScale = o != Overlay.None && phase == Phase.Build ? 0 : 1;
             joyActive = false;
             Sfx(o == Overlay.None ? "ui_cancel" : "ui_tap");
@@ -908,9 +914,10 @@ namespace Bob.Game
         // ---------------------------------------------------------------- wardrobe (docs 31 section 2.3)
 
         /// <summary>
-        /// S31, the wardrobe (docs 31 section 2.3, docs 11 S31): two tabs over the same six-piece table, a preview that
-        /// shows the worn title, the frame on the profile disc and the paint on the T04 cart, and one row per piece with
-        /// its own progress. It sells nothing and changes no rule — the shop sells tools, this screen wears decoration.
+        /// S31, the wardrobe (docs 31 section 2.3, docs 11 S31): three tabs over the six-piece table and the sewing
+        /// table, a preview that shows the worn title, the frame on the profile disc, the sewn cloth and the paint on
+        /// the T04 cart, and one row per piece with its own progress. It sells nothing and changes no rule — the shop
+        /// sells tools, this screen wears decoration.
         /// </summary>
         void Wardrobe(RectTransform card)
         {
@@ -924,37 +931,50 @@ namespace Bob.Game
             var tabs = BobUi.HBox(card, 12, "Tabs");
             tabs.childForceExpandHeight = false; tabs.childAlignment = TextAnchor.MiddleCenter;
             BobUi.Size(tabs, 84, 84);
-            WardrobeTab(tabs.transform, "ป้ายชื่อ", true);
-            WardrobeTab(tabs.transform, "สีกรอบ", false);
+            var titles = BobUnlocks.Of(true);
+            var frames = BobUnlocks.Of(false);
+            WardrobeTab(tabs.transform, 0, "ป้ายชื่อ " + Have(titles) + "/" + titles.Length);
+            WardrobeTab(tabs.transform, 1, "สีกรอบ " + Have(frames) + "/" + frames.Length);
+            WardrobeTab(tabs.transform, 2, "ตัดเย็บ");
 
             WardrobePreview(card);
 
-            var list = BobUnlocks.Of(wardrobeTab == 0);
-            if (list.Length == 0) BobUi.Label(card, "ยังไม่มีของในหมวดนี้", 26, BobUi.Muted, TextAnchor.MiddleCenter);
-            for (int i = 0; i < list.Length; i++) WardrobeRow(card, list[i], stats);
+            if (wardrobeTab == 2)
+            {
+                SewTable(card);
+            }
+            else
+            {
+                var list = BobUnlocks.Of(wardrobeTab == 0);
+                if (list.Length == 0) BobUi.Label(card, "ยังไม่มีของในหมวดนี้", 26, BobUi.Muted, TextAnchor.MiddleCenter);
+                for (int i = 0; i < list.Length; i++) WardrobeRow(card, list[i], stats);
+            }
 
             var foot = BobUi.HBox(card, 12, "Foot");
             foot.childForceExpandHeight = false; foot.childAlignment = TextAnchor.MiddleCenter;
             BobUi.Size(foot, 100, 100);
             BobUi.Size(BobUi.Button(foot.transform, "ถอดทั้งหมด", BobUi.Surface,
-                () => { BobCosmetics.Equip(""); Sfx("ui_tap"); RenderOverlay(); }, 30), 96, 96, 0.5f);
+                () => { BobCosmetics.Equip(""); BobCosmetics.ClearSewn(); Sfx("ui_tap"); RenderOverlay(); }, 30), 96, 96, 0.5f);
             BobUi.Size(BobUi.Button(foot.transform, "ปิด", BobUi.Surface,
                 () => SetOverlay(phase == Phase.Build ? Overlay.Pause : Overlay.None), 34), 96, 96, 0.5f);
         }
 
-        /// <summary>One tab, with how many of its pieces are owned: the two tabs partition the six-piece table.</summary>
-        void WardrobeTab(Transform tabs, string label, bool title)
+        /// <summary>How many pieces of one tab are owned.</summary>
+        static int Have(UnlockDef[] list)
         {
-            bool active = (wardrobeTab == 0) == title;
-            var list = BobUnlocks.Of(title);
             int have = 0;
-            for (int i = 0; i < list.Length; i++) if (owned.Contains(list[i].Id)) have++;
-            var b = BobUi.Button(tabs, label + " " + have + "/" + list.Length,
-                active ? BobUi.Sun : BobUi.Surface, () =>
+            for (int i = 0; i < list.Length; i++) if (BobCosmetics.IsOwned(list[i].Id)) have++;
+            return have;
+        }
+
+        /// <summary>One wardrobe tab: the two cosmetic tables plus the sewing table (docs 11 S31).</summary>
+        void WardrobeTab(Transform tabs, int index, string label)
+        {
+            bool active = wardrobeTab == index;
+            var b = BobUi.Button(tabs, label, active ? BobUi.Sun : BobUi.Surface, () =>
                 {
-                    int want = title ? 0 : 1;
-                    if (wardrobeTab == want) return;
-                    wardrobeTab = want; Sfx("ui_tap"); RenderOverlay();
+                    if (wardrobeTab == index) return;
+                    wardrobeTab = index; Sfx("ui_tap"); RenderOverlay();
                 }, 28, active ? BobUi.Ink : BobUi.Muted);
             BobUi.Size(b, 64, 64, 0.5f);
         }
@@ -988,6 +1008,12 @@ namespace Bob.Game
             var frameSub = BobUi.Label(box.transform, "จานรอง · แถบ XP · สีรถเข็น T04", 20, BobUi.Muted, TextAnchor.MiddleLeft);
             BobUi.Pin(frameSub.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(190f, -50f), new Vector2(430f, 28f));
 
+            // The sewn cloth is the third decoration: when one is worn it is what the disc and the cart above show.
+            var sewnLine = BobUi.Label(box.transform,
+                BobCosmetics.HasSewn ? "ชุดตัดเย็บ · " + BobCosmetics.SewnName : "ยังไม่ได้ตัดชุด",
+                20, BobCosmetics.HasSewn ? BobUi.Teal : BobUi.Muted, TextAnchor.MiddleLeft);
+            BobUi.Pin(sewnLine.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(190f, -76f), new Vector2(430f, 28f));
+
             // The T04 cart in the same paint the card uses: the preview is the promise, not a second design.
             var cart = BobUi.Panel(box.transform, BobCosmetics.CartPaint, "ui_panel", "CartPreview");
             BobUi.Pin((RectTransform)cart.transform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-24f, 6f), new Vector2(190f, 120f));
@@ -999,6 +1025,96 @@ namespace Bob.Game
             }
             var cartCap = BobUi.Label(box.transform, "รถเข็น T04", 20, BobUi.Muted, TextAnchor.MiddleCenter);
             BobUi.Pin(cartCap.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-24f, -66f), new Vector2(190f, 24f));
+        }
+
+        /// <summary>
+        /// The sewing table (docs 11 S31 P1): four layers — fabric, colour, pattern, accessory — each a row of chips,
+        /// the price in coins and material shards, the cloth it will make, and one button that pays and wears it.
+        /// Shards are earned from matches (BobSewing.ShardsEarned) and spent here, so the table cannot be free.
+        /// </summary>
+        void SewTable(RectTransform card)
+        {
+            var picks = SewDraft();
+            int coins = BobSewing.Coins(picks), shards = BobSewing.Shards(picks);
+            bool canPay = Bob.TaskRace.BobTaskRaceProfile.Coins >= coins && BobCosmetics.SewShardsLeft >= shards;
+
+            BobUi.Label(card, BobSewing.Describe(picks), 28, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Label(card,
+                $"ราคา {coins} เหรียญ + {shards} เกล็ด · มี {Bob.TaskRace.BobTaskRaceProfile.Coins} เหรียญ · เกล็ดเหลือ {BobCosmetics.SewShardsLeft}",
+                22, canPay ? BobUi.Muted : BobUi.Rose, TextAnchor.MiddleCenter);
+
+            for (int layer = 0; layer < BobSewing.LayerCount; layer++) SewLayerRow(card, layer, picks);
+
+            var foot = BobUi.HBox(card, 12, "SewFoot");
+            foot.childForceExpandHeight = false; foot.childAlignment = TextAnchor.MiddleCenter;
+            BobUi.Size(foot, 84, 84);
+
+            // The cloth the draft makes, beside the button: the preview is the promise, as on the cosmetic tabs.
+            var cloth = BobSewing.Cloth(picks);
+            var sw = BobUi.Panel(foot.transform, new Color(cloth.R, cloth.G, cloth.B, 1f), "ui_panel", "SewSwatch");
+            BobUi.Size(sw, 64, 64, 0f, 84f);
+            var name = BobUi.Label(foot.transform, BobCosmetics.HasSewn && BobCosmetics.SewnText == BobSewing.Encode(picks)
+                ? "ชุดนี้ใส่อยู่" : "ตัวอย่างผ้า", 22, BobUi.Muted, TextAnchor.MiddleLeft);
+            BobUi.Size(name, 64, 64, 1f);
+
+            var buy = BobUi.Button(foot.transform, "ตัดชุดนี้", canPay ? BobUi.Sun : BobUi.Surface,
+                () => BuySew(picks), 26);
+            BobUi.Size(buy, 64, 64, 0f, 180f);
+        }
+
+        /// <summary>The draft look, created on first use; always exactly four valid indices.</summary>
+        int[] SewDraft()
+        {
+            if (sewPicks == null || sewPicks.Length != BobSewing.LayerCount || !BobSewing.Complete(sewPicks))
+                sewPicks = new int[BobSewing.LayerCount];
+            return sewPicks;
+        }
+
+        /// <summary>One layer: its Thai name on the left, then one chip per choice with its extra price.</summary>
+        void SewLayerRow(RectTransform card, int layer, int[] picks)
+        {
+            var row = BobUi.HBox(card, 6, "SewLayer" + layer);
+            row.childForceExpandHeight = false; row.childAlignment = TextAnchor.MiddleCenter;
+            BobUi.Size(row, 60, 60);
+
+            var head = BobUi.Label(row.transform, BobSewing.LayerNames[layer], 22, BobUi.Muted, TextAnchor.MiddleLeft);
+            BobUi.Size(head, 54, 54, 0f, 104f);
+
+            var options = BobSewing.Layers[layer];
+            for (int i = 0; i < options.Length; i++)
+            {
+                int pick = i;
+                bool on = picks[layer] == pick;
+                var opt = options[pick];
+                string price = opt.Coins > 0 ? " · " + opt.Coins : "";
+                string shard = opt.Shards > 0 ? "+" + opt.Shards + " เศษ" : "";
+                var b = BobUi.Button(row.transform, opt.Name + price + shard,
+                    on ? BobUi.Sun : BobUi.Surface,
+                    () => { SewDraft()[layer] = pick; Sfx("ui_tap"); RenderOverlay(); },
+                    20, on ? BobUi.Ink : BobUi.Muted);
+                BobUi.Size(b, 54, 54, 1f);
+            }
+        }
+
+        /// <summary>
+        /// Pay for the draft and wear it. Both prices are checked before anything is taken, so a failed cut never
+        /// leaves the wallet short or the shard pile half-spent.
+        /// </summary>
+        void BuySew(int[] picks)
+        {
+            int coins = BobSewing.Coins(picks), shards = BobSewing.Shards(picks);
+            if (!BobSewing.Complete(picks)) { Toast("ยังเลือกไม่ครบสี่ชั้น"); return; }
+            if (Bob.TaskRace.BobTaskRaceProfile.Coins < coins) { Toast("เหรียญไม่พอ"); return; }
+            if (BobCosmetics.SewShardsLeft < shards) { Toast("เกล็ดไม่พอ · เล่นแมตช์เพิ่ม"); return; }
+            if (!Bob.TaskRace.BobTaskRaceProfile.Spend(coins) || !BobCosmetics.SpendSewShards(shards))
+            {
+                Toast("ตัดชุดไม่สำเร็จ");
+                return;
+            }
+            if (!BobCosmetics.WearSewn(picks)) { Toast("ตัดชุดไม่สำเร็จ"); return; }
+            Sfx("ui_confirm");
+            Toast("ตัดชุดแล้ว · " + BobSewing.Describe(picks));
+            RenderOverlay();
         }
 
         /// <summary>One cosmetic: a swatch, the name, where it shows (or what it asks), and ใช้ / ใช้อยู่ / ยังไม่ปลด.</summary>

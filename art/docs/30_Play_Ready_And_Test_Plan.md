@@ -168,7 +168,7 @@ new JoinLobbyByCodeOptions { Player = new Player { Data = PlayerData(pendingHero
 
 ### 3.3 งานฟีเจอร์ที่ยังไม่ทำ (ไม่บล็อกการเล่น 3 บทแรก)
 
-T16 แถวฉุกเฉิน + คราบบอส · T12 ภาพพอร์เทรต/ช่องเส้นประ · S25 ก่อน/หลัง · แท็บตั้งค่า + โหมดกดค้าง · แชท/พร้อม/S16 เลือกฮีโร่ออนไลน์ · PvP สองทีมออนไลน์ · music layering (ยังไม่มี stem)
+T16 แถวฉุกเฉิน + คราบบอส · T12 ภาพพอร์เทรต/ช่องเส้นประ · **S25 ภาพแบ่งครึ่งจอ (แถบ proof ทำแล้ว 17 พ.ย.)** · แท็บตั้งค่า + โหมดกดค้าง · แชท/พร้อม/S16 เลือกฮีโร่ออนไลน์ · PvP สองทีมออนไลน์ · music layering (ยังไม่มี stem) · S33 กระเป๋า
 
 ### 3.4 งานบ้าน (ทำเมื่อ owner อนุญาต)
 
@@ -183,7 +183,7 @@ T16 แถวฉุกเฉิน + คราบบอส · T12 ภาพพ�
 | คำสั่ง | พิสูจน์ | ผ่านเมื่อ |
 | --- | --- | --- |
 | `bash unity-typecheck/check.sh` | ทุกสคริปต์ compile เทียบ baseline | `typecheck ok: 43 known Unity-6 gap kind(s), no new errors` |
-| `cd unity-check && dotnet run` | กติกาล้วน: กอง 5 ชั้น, ตารางฉุกเฉิน, series/stars, ตารางคะแนนรวม 10 แถว, แถบอันดับ, seed เดลี่, ตารางของตกแต่ง 13 ข้อ, **สีรถเข็น 6 ข้อ**, **ตู้เสื้อผ้า 10 ข้อ (แท็บ/preview/รวมคลาวด์)**, ห้องออฟไลน์, **ออนไลน์ best-of-3 11 ข้อ (ผลรอบ/โมฆะ/ผู้ชนะ/บรรทัดเก่า)**, **คราบออนไลน์ 9 ข้อ (seed เดียวตารางเดียว/ขนาดเกาะ/pool ไม่ขยับช่อง)** | `UNITY-CHECK PASSED` |
+| `cd unity-check && dotnet run` | กติกาล้วน: กอง 5 ชั้น, ตารางฉุกเฉิน, series/stars, ตารางคะแนนรวม 10 แถว, แถบอันดับ, seed เดลี่, ตารางของตกแต่ง 13 ข้อ, **สีรถเข็น 6 ข้อ**, **ตู้เสื้อผ้า 10 ข้อ (แท็บ/preview/รวมคลาวด์)**, ห้องออฟไลน์, **ออนไลน์ best-of-3 11 ข้อ (ผลรอบ/โมฆะ/ผู้ชนะ/บรรทัดเก่า)**, **คราบออนไลน์ 9 ข้อ (seed เดียวตารางเดียว/ขนาดเกาะ/pool ไม่ขยับช่อง)**, **ตัดเย็บ 9 ข้อ / ห้องสะอาด 6 ข้อ / ผล host ตรวจได้ 4 ข้อ / บอร์ดเดลี่ 2 ข้อ / dispute 1 ข้อ** | `UNITY-CHECK PASSED` |
 | `node server/e2e-taskrace-test.js` | **เล่นทั้งรอบ**ผ่าน module จริง: lobby → race → การ์ดทุกใบ/ทุกขั้น → T04 4 ชิ้น → คราบ 3 ครั้ง → RESULT + analytics | `E2E PASSED: 39/39 checks` |
 | `/usr/local/bin/bob-check` | module server สด + `task-race-test` + `daily-test` + LINE auth + typecheck | `BOB-CHECK PASSED` |
 | `bash ready-check/check.sh` | **เล่นได้จริงใน build**: ซีน/GUID/EventSystem/Resources/ชื่อ asset | `READY-CHECK PASSED` |

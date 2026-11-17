@@ -119,6 +119,14 @@ namespace Bob.TaskRace
         /// <summary>An abandoned job was finished after all; it no longer counts against the star.</summary>
         public void NoteCardRecovered() => CardsRecovered++;
 
+        /// <summary>
+        /// Rounds where the host's line did not match what this device played (docs 27 section 10.7). The host still
+        /// decided; this only lets the card say so instead of pretending the two islands agreed.
+        /// </summary>
+        public int Disputes { get; private set; }
+
+        public void NoteDisputed() => Disputes++;
+
         /// <summary>The T04 formula was locked this round; passed says whether the stack met the difficulty need.</summary>
         public void NoteCart(bool passed)
         {
@@ -131,6 +139,7 @@ namespace Bob.TaskRace
             Round = 1; LocalWins = RivalWins = 0;
             EmergencySpawned = EmergencyCleared = 0;
             CardsAbandoned = CardsRecovered = 0;
+            Disputes = 0;
             CartRuns = CartPasses = 0;
             TotalLocalTasks = TotalRivalTasks = TotalLocalPoints = TotalRivalPoints = 0;
             ChallengeOffered = false; LastRound = null; SecondsForRound = roundSeconds;

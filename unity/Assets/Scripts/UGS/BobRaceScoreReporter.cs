@@ -75,6 +75,10 @@ namespace Bob.Ugs
                 Debug.LogWarning("[TaskRace] leaderboard submit failed: " + LastError);
                 return;
             }
+            // A daily run also lands on that day's own board (docs 31 section 2.2); a missing board there is a
+            // dashboard setting, not a failed match, so it is logged by the manager and never unwinds the global post.
+            if (Bob.Game.MatchRequest.Daily && Bob.Game.MatchRequest.DayNumber > 0)
+                _ = board.SubmitDailyAsync(score, Bob.Game.MatchRequest.DayNumber);
             LastSubmitted = score;
             LeaderboardEntry entry = board.LastEntry;
             LastRank = entry != null ? entry.Rank + 1 : -1; // the API counts from 0, the player counts from 1

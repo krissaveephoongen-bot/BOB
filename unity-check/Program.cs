@@ -14,6 +14,15 @@ static class Program
     static int fails;
     static void Check(string name, bool ok) { if (!ok) { fails++; Console.WriteLine("FAIL " + name); } }
 
+    /// <summary>Every fabric × colour pair the sewing table can produce must still carry ink (docs 11 S31).</summary>
+    static bool AllSewnReadable()
+    {
+        for (int f = 0; f < BobSewing.Layers[0].Length; f++)
+            for (int c = 0; c < BobSewing.Layers[1].Length; c++)
+                if (!BobSewing.Readable(new[] { f, c, 0, 0 })) return false;
+        return true;
+    }
+
     static int Main()
     {
         var a = BobRules.EvalStack(new[] { "hot", "soap" });
@@ -377,6 +386,89 @@ static class Program
             BobTaskRaceRules.EmergencyPool(1, 2).Length == 2 && BobTaskRaceRules.EmergencyPool(3, 1).Length == 3);
         Check("emergency: the room pool is all three weaknesses", BobTaskRaceRules.EmergencyOnlinePool.Length == 3);
         Console.WriteLine("emergency sync checked");
+
+        // S31 P1, the sewing table (docs 11 S31). The cloth is the only colour the player makes themselves, so the
+        // readability promise the cart already carries has to hold for every fabric × colour pair, and the stored
+        // look has to survive a round trip through the cloud field.
+        Check("sewing: four layers, four choices each",
+            BobSewing.Layers.Length == BobSewing.LayerCount && BobSewing.Layers.All(l => l.Length == 4));
+        Check("sewing: every fabric × colour pair can carry ink", AllSewnReadable());
+        Check("sewing: the darkest fabric is lifted, not left unreadable",
+            BobCartPaint.Luminance(BobSewing.Cloth(new[] { 2, 3, 3, 2 })) >=
+            BobCartPaint.Luminance(BobSewing.Cloth(new[] { 2, 3, 0, 0 })) - 1f);
+        Check("sewing: an incomplete look is refused", !BobSewing.Complete(null) && !BobSewing.Complete(new[] { 0, 0, 0 }) &&
+            !BobSewing.Complete(new[] { 0, 0, 0, 4 }) && BobSewing.Complete(new[] { 3, 3, 3, 3 }));
+        Check("sewing: the price follows the layers",
+            BobSewing.Coins(new[] { 0, 0, 0, 0 }) == 40 && BobSewing.Shards(new[] { 0, 0, 0, 0 }) == 1 &&
+            BobSewing.Coins(new[] { 3, 3, 3, 3 }) == 66 && BobSewing.Shards(new[] { 0, 0, 0, 3 }) == 2 &&
+            BobSewing.Coins(new[] { 0, 0, 0 }) == 0);
+        Check("sewing: a stored look survives the round trip",
+            BobSewing.Encode(new[] { 1, 2, 0, 3 }) == "1:2:0:3" &&
+            string.Join(",", BobSewing.Decode("1:2:0:3")) == "1,2,0,3");
+        Check("sewing: a broken stored look is refused, not guessed",
+            BobSewing.Decode("") == null && BobSewing.Decode("1:2:0") == null &&
+            BobSewing.Decode("1:2:0:9") == null && BobSewing.Decode("a:b:c:d") == null);
+        Check("sewing: the look is described in four words",
+            BobSewing.Describe(new[] { 0, 1, 1, 2 }).Split('·').Length == 4);
+        Check("sewing: shards start at one and grow every three matches",
+            BobSewing.ShardsEarned(0) == 1 && BobSewing.ShardsEarned(2) == 1 &&
+            BobSewing.ShardsEarned(3) == 2 && BobSewing.ShardsEarned(8) == 3);
+        Console.WriteLine("sewing table checked");
+
+        // S25, the clean-room split (docs 11 S25): percentages that can be printed, a verdict that decides nothing.
+        Check("clean room: percentages clamp at both ends",
+            BobCleanRoom.Percent(0, 10) == 0 && BobCleanRoom.Percent(5, 10) == 50 &&
+            BobCleanRoom.Percent(20, 10) == 100 && BobCleanRoom.Percent(-3, 10) == 0 &&
+            BobCleanRoom.Percent(0, 0) == 100);
+        Check("clean room: the round starts dirty", BobCleanRoom.Of(7, 10).Before == 0 && BobCleanRoom.Of(7, 10).After == 70);
+        Check("clean room: the gain is what the team cleaned", BobCleanRoom.Of(7, 10).Gain == 70);
+        Check("clean room: the verdict compares, never decides",
+            BobCleanRoom.Verdict(new CleanShot(0, 80), new CleanShot(0, 60)) == "ห้องเราสะอาดกว่า" &&
+            BobCleanRoom.Verdict(new CleanShot(0, 60), new CleanShot(0, 80)) == "คู่แข่งสะอาดกว่า" &&
+            BobCleanRoom.Verdict(new CleanShot(0, 80), new CleanShot(0, 80)) == "สะอาดเท่ากัน");
+        Check("clean room: the line carries both sides",
+            BobCleanRoom.Line(new CleanShot(0, 80), new CleanShot(0, 60)).Contains("80%") &&
+            BobCleanRoom.Line(new CleanShot(0, 80), new CleanShot(0, 60)).Contains("60%"));
+        Check("clean room: the bar fill stays inside the bar", BobCleanRoom.Fill(new CleanShot(0, 100)) == 1f &&
+            BobCleanRoom.Fill(new CleanShot(0, 0)) == 0f);
+        Console.WriteLine("clean room checked");
+
+        // The host's word still wins online (docs 27 section 10.7); the client only says when the line did not fit.
+        Check("series check: the same numbers agree",
+            BobSeriesCheck.Agrees(6, 900, 6, 900) && BobSeriesCheck.Agrees(6, 900, 6, 880));
+        Check("series check: a different task count never agrees",
+            !BobSeriesCheck.Agrees(6, 900, 5, 900) && !BobSeriesCheck.Agrees(4, 700, 6, 700));
+        Check("series check: points may drift a tenth, not more",
+            BobSeriesCheck.Agrees(6, 900, 6, 820) && !BobSeriesCheck.Agrees(6, 900, 6, 700));
+        Check("series check: no dispute prints nothing", BobSeriesCheck.DisputedLine(0) == "");
+        Check("series check: a dispute says the host decided",
+            BobSeriesCheck.DisputedLine(2).Contains("2 รอบ") && BobSeriesCheck.DisputedLine(2).Contains("เจ้าของห้อง") &&
+            BobSeriesCheck.DisputedChip.Contains("เจ้าของห้อง"));
+        Console.WriteLine("series check checked");
+
+        // Per-account daily attempts and the one-board-per-day id (docs 31 sections 2.2 and 3) are pure rules too:
+        // the larger of device and cloud wins, so a reinstall cannot refill a day the account already spent.
+        Check("daily: the larger of device and cloud wins for today",
+            BobDaily.PlaysToday(100, 100, 1, 100, 0) == 1 &&
+            BobDaily.PlaysToday(100, 100, 0, 100, 1) == 1 &&
+            BobDaily.PlaysToday(100, 100, 1, 100, 1) == 1 &&
+            BobDaily.PlaysToday(100, 99, 1, 100, 1) == 1 &&
+            BobDaily.PlaysToday(100, 99, 1, 99, 1) == 0);
+        Check("daily: one board per day and always a legal board id",
+            BobDaily.DailyBoardName(20774) == "daily_20774" && BobDaily.ValidBoardName("daily_20774") &&
+            BobDaily.ValidBoardName(BobDaily.DailyBoardName(0)) &&
+            !BobDaily.ValidBoardName("daily 1") && !BobDaily.ValidBoardName("ab") &&
+            !BobDaily.ValidBoardName("") && !BobDaily.ValidBoardName(new string('a', 51)));
+        Console.WriteLine("daily board checked");
+
+        // The host still decides an online round; the client only remembers that its own line did not match.
+        var disputed = new StorySeries();
+        disputed.NoteDisputed(); disputed.NoteDisputed();
+        bool counted = disputed.Disputes == 2;
+        disputed.Reset();
+        Check("series: disputes are counted and cleared with the series",
+            counted && disputed.Disputes == 0 && new StorySeries().Disputes == 0);
+        Console.WriteLine("series disputes checked");
 
         Console.WriteLine(fails == 0 ? "UNITY-CHECK PASSED" : $"UNITY-CHECK FAILED: {fails}");
         return fails == 0 ? 0 : 1;

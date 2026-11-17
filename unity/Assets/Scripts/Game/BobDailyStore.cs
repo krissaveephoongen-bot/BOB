@@ -51,6 +51,44 @@ namespace Bob.Game
                 // A new day is one more day the daily was played on, which is what the wardrobe's title counts.
                 if (fresh) PlayerPrefs.SetInt(DaysKey, Mathf.Min(9999, DaysPlayed + 1));
                 PlayerPrefs.Save();
+                Publish();
+            }
+            catch (Exception) { }
+        }
+
+        /// <summary>
+        /// Take today's attempts from the account (docs 31 section 2.2): the larger count wins, so deleting the device's
+        /// data cannot refill a day the account already spent and playing offline is never punished. A newer day the
+        /// account knows about is adopted as-is; the day itself refills the count anyway.
+        /// </summary>
+        public static void AdoptCloud(int cloudDay, int cloudPlays)
+        {
+            if (cloudDay <= 0) return;
+            try
+            {
+                int today = Day;
+                if (cloudDay == today)
+                {
+                    int plays = Bob.Rules.BobDaily.PlaysToday(today, today, Plays, cloudDay, cloudPlays);
+                    PlayerPrefs.SetInt(PlaysKey, Mathf.Clamp(plays, 0, 99));
+                }
+                else if (cloudDay > today)
+                {
+                    PlayerPrefs.SetInt(DayKey, cloudDay);
+                    PlayerPrefs.SetInt(PlaysKey, Mathf.Clamp(cloudPlays, 0, 99));
+                }
+                PlayerPrefs.Save();
+            }
+            catch (Exception) { }
+        }
+
+        /// <summary>Best effort: push the day and its count to the account so another device reads the same limit.</summary>
+        static void Publish()
+        {
+            try
+            {
+                var svc = Bob.Ugs.UgsCloudSaveManager.Instance;
+                if (svc != null) _ = svc.SetDailyAndSaveAsync(Day, Plays);
             }
             catch (Exception) { }
         }

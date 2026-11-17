@@ -711,6 +711,19 @@ namespace Bob.TaskRace
         public void OnOnlineSeriesRound(SeriesRound line)
         {
             if (!Online || series == null || LastResult.HasValue) return;
+            // The host decides (docs 27 section 10.7); this device only notices when the line it was handed does not
+            // fit the round it played. Stations are synced by bob.task, so the task count must agree exactly; points
+            // may drift by the clock tolerance of BobSeriesCheck. Nothing is recomputed — the host's numbers stand.
+            if (!IsOnlineHost && round != null &&
+                !Bob.Rules.BobSeriesCheck.Agrees(round.DoneCountOf(localTeam), PointsOf(localTeam),
+                                                 line.LocalTasks, line.LocalPoints))
+            {
+                series.NoteDisputed();
+                ToastRequested?.Invoke(Bob.Rules.BobSeriesCheck.DisputedChip);
+                if (Application.isPlaying)
+                    Debug.Log($"[TaskRace] round {line.Number} disputed: saw {round.DoneCountOf(localTeam)} tasks / " +
+                              $"{PointsOf(localTeam)} pts, host said {line.LocalTasks} / {line.LocalPoints}.");
+            }
             RemainingSeconds = 0f;
             ShowRoundLine(line);
             // A round that did not close the series keeps the clock held until the host opens the next one (bob.round);

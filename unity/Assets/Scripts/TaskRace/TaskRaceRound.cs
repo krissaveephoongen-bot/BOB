@@ -112,6 +112,8 @@ namespace Bob.TaskRace
         public int DoneCountOf(TeamId team) => team == TeamId.TeamB ? sideB.done : sideA.done;
         public int TotalWeight { get; private set; }
         public int DoneWeight => sideA.doneWeight;
+        /// <summary>Clean weight of either island, for the S25 before/after card (docs 11 S25).</summary>
+        public int DoneWeightOf(TeamId team) => team == TeamId.TeamB ? sideB.doneWeight : sideA.doneWeight;
         public bool Won => TaskCount > 0 && sideA.done >= TaskCount;
         /// <summary>Sum of the scaled card times of the list.</summary>
         public float EstimatedCardSeconds { get; private set; }

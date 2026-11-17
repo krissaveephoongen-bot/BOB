@@ -16,6 +16,7 @@
 //
 // Layout is placed by hand instead of layout groups: the card is authored in the editor (no layout pass runs
 // outside play mode), and fixed row heights keep a wrapped Thai name from sliding into the next row.
+using System.Collections;
 using System.Collections.Generic;
 using Bob.Game;
 using Bob.Rules;
@@ -1093,8 +1094,52 @@ namespace Bob.TaskRace
             else if (series != null && series.Over) BuildChapterCard(p, r, series);
             else BuildMatchCard(p, r);
 
+            // S25's before/after proof rides in the free strip above the card, on every result (docs 24 section 15.25).
+            CleanBand(resultRoot, round);
+
             shownResult = r;
             hasShownResult = true;
+        }
+
+        /// <summary>
+        /// S25's clean-room proof (docs 11 S25, docs 24 section 15.25): the lobby card's before→after percentages for
+        /// both sides, drawn in the free 160u band above the result panel. It is a read-only flourish over the result —
+        /// tap it or wait four seconds — and it never covers the card's own buttons.
+        /// </summary>
+        void CleanBand(RectTransform root, TaskRaceRound r)
+        {
+            if (root == null || r == null || manager == null || r.TotalWeight <= 0) return;
+            var ours = BobCleanRoom.Of(r.DoneWeightOf(TaskSpot.LocalTeam), r.TotalWeight);
+            var theirs = BobCleanRoom.Of(r.DoneWeightOf(manager.OtherTeam), r.TotalWeight);
+
+            var band = BobUi.Panel(root, T.surfaceCream, null, "CleanBand");
+            var br = (RectTransform)band.transform;
+            BobUi.Pin(br, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -18f), new Vector2(940f, 104f));
+
+            var line = BobUi.Label(br, BobCleanRoom.Line(ours, theirs), 26, T.ink, TextAnchor.MiddleCenter);
+            BobUi.Stretch(line.rectTransform, 24f, 30f, 24f, 10f);
+
+            // One bar for our half: the numbers are in the line, the bar is the glance.
+            var track = BobUi.Rect("CleanTrack", br);
+            var timg = track.gameObject.AddComponent<Image>();
+            timg.color = new Color(0f, 0f, 0f, 0.10f); timg.raycastTarget = false;
+            BobUi.Pin(track, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 10f), new Vector2(860f, 12f));
+            var fill = BobUi.Rect("CleanFill", track);
+            var fimg = fill.gameObject.AddComponent<Image>();
+            fimg.color = T.success; fimg.raycastTarget = false;
+            fill.anchorMin = Vector2.zero; fill.anchorMax = new Vector2(BobCleanRoom.Fill(ours), 1f);
+            fill.offsetMin = fill.offsetMax = Vector2.zero;
+
+            var btn = band.gameObject.AddComponent<Button>();
+            btn.transition = Selectable.Transition.None;
+            btn.onClick.AddListener(() => Kill(br));
+            StartCoroutine(HideAfter(br, 4f));
+        }
+
+        IEnumerator HideAfter(RectTransform rt, float seconds)
+        {
+            yield return new WaitForSecondsRealtime(seconds);
+            if (rt != null) Kill(rt);
         }
 
         /// <summary>
@@ -1188,6 +1233,14 @@ namespace Bob.TaskRace
                 var why = BobUi.Label(p, "มีผู้เล่นออกจากห้องกลางซีรีส์ · ไม่มีผู้ชนะ", 28, T.inkMuted, TextAnchor.MiddleCenter);
                 BobUi.Pin(why.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                     new Vector2(0f, -294f), new Vector2(1000f, 48f));
+            }
+            else if (s != null && s.Disputes > 0)
+            {
+                // The host's result is the one that counts; when our own round agreed less than it, say so once
+                // (docs 27 section 10.7 + Rules/BobSeriesCheck) instead of silently showing a score we did not see.
+                var dispute = BobUi.Label(p, BobSeriesCheck.DisputedLine(s.Disputes), 24, T.danger, TextAnchor.MiddleCenter);
+                BobUi.Pin(dispute.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                    new Vector2(0f, -294f), new Vector2(1000f, 40f));
             }
 
             RewardBlock(p, r, -326f);
