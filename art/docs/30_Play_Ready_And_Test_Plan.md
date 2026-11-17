@@ -33,6 +33,7 @@
 | ชื่อเสียงที่โค้ดขอ | ✅ 38/38 + 1 | `ping_pop` ไม่มีไฟล์ → `BobTone.PingPop()` สังเคราะห์ให้ตอนรัน (ไฟล์ `.wav` จริงชนะเองถ้าใส่ทีหลัง) |
 | Theme asset | ⚠️ ไม่มี asset | `BobUiTheme.Current` ตกลงไปใช้ค่าสีในโค้ด — ไม่บล็อกการเล่น |
 | `server/task-race-test.js` | ✅ 80/80 | 75 สัญญาเดิม + 5 ข้อของคะแนนรวม (`taskRaceScore`) รวมกับ LINE auth ใน `bob-check` |
+| `server/daily-test.js` | ✅ 34/34 | เดลี่: ตาราง seed 6 แถว + เขตเที่ยงคืน UTC+7 + สำเนาใน prototype + **HTTP จริง** (200 / 409 / 404 / 405, `no-store`) |
 | `server/e2e-taskrace-test.js` | ✅ 39/39 | เล่นทั้งรอบ Task Race จริง D1–D3: เปิด/ปิดการ์ดทุกใบ ทุกขั้น, การ์ดรถเข็น 4 ชิ้น, คราบฉุกเฉิน, RESULT, แถว analytics |
 | `server/coop-test.js`, `mp-test.js`, `mp-bots-queue.js` | ❌ ตาย | `ECONNREFUSED 127.0.0.1:7350` — harness ยุค Nakama ที่ถอดออกตอนย้าย pure-UGS; **ไม่ใช่ regression ของรอบนี้** |
 | Git LFS | ⚠️ | 0 pointer / 301 ไฟล์ไบนารีธรรมดาใต้ `unity/Assets` (ยังใช้ได้ แค่เตือนตอน checkout); อัปโหลด LFS ตอบ 501 ด้วย token ของ session นี้ |
@@ -184,7 +185,7 @@ T16 แถวฉุกเฉิน + คราบบอส · T12 ภาพพ�
 | `bash unity-typecheck/check.sh` | ทุกสคริปต์ compile เทียบ baseline | `typecheck ok: 40 known Unity-6 gap kind(s), no new errors` |
 | `cd unity-check && dotnet run` | กติกาล้วน: กอง 5 ชั้น, ตารางฉุกเฉิน, series/stars, ตารางคะแนนรวม 10 แถว, ห้องออฟไลน์ | `UNITY-CHECK PASSED` |
 | `node server/e2e-taskrace-test.js` | **เล่นทั้งรอบ**ผ่าน module จริง: lobby → race → การ์ดทุกใบ/ทุกขั้น → T04 4 ชิ้น → คราบ 3 ครั้ง → RESULT + analytics | `E2E PASSED: 39/39 checks` |
-| `/usr/local/bin/bob-check` | module server สด + `task-race-test` + LINE auth + typecheck | `BOB-CHECK PASSED` |
+| `/usr/local/bin/bob-check` | module server สด + `task-race-test` + `daily-test` + LINE auth + typecheck | `BOB-CHECK PASSED` |
 | `bash ready-check/check.sh` | **เล่นได้จริงใน build**: ซีน/GUID/EventSystem/Resources/ชื่อ asset | `READY-CHECK PASSED` |
 
 เกณฑ์รวม: ทั้ง 4 ต้องเขียวก่อน merge ทุกครั้ง. ถ้าตัวใดแดง = หยุด ไม่ใช่ "ข้ามไปก่อน"

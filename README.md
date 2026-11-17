@@ -10,7 +10,7 @@ Playable prototype: https://claude.ai/artifact/M9orSH3LFGbYboRm7QAkHn
 > `Scripts/Net/` and `Scripts/Coop/` were deleted with the Nakama → UGS migration; the Nakama/LINE/
 > Co-op material below is kept as server-side reference only. APK v2 (`0.1.0 (2)`) is on Firebase.
 > Checks: `bash unity-typecheck/check.sh`, `cd unity-check && dotnet run`, `node server/task-race-test.js`,
-> `node server/e2e-taskrace-test.js`, `bash ready-check/check.sh`.
+> `node server/daily-test.js`, `node server/e2e-taskrace-test.js`, `bash ready-check/check.sh`.
 
 ## What is here
 
@@ -38,6 +38,7 @@ Checks without Unity:
 bash unity-typecheck/check.sh
 cd unity-check && dotnet run
 node server/task-race-test.js
+node server/daily-test.js          # the daily seed rule + a real HTTP round trip to GET /daily/seed
 node server/e2e-taskrace-test.js   # plays a whole Task Race round (D1-D3) through the real server module
 bash ready-check/check.sh      # play-readiness: 11 static checks (scenes, EventSystem, Resources.Load, GUIDs, glyphs, ...)
 ```

@@ -248,7 +248,8 @@ namespace Bob.TaskRace
                           $"{Bob.Game.MatchRequest.Players} player(s)/side · " +
                           $"{(storySeries ? "story series (3 rounds)" : "one round")} · " +
                           $"{Bob.Game.MatchRequest.Helpers.Length} offline teammate(s)" +
-                          $"{(Bob.Game.MatchRequest.Online ? $" · online {(Bob.Game.MatchRequest.Host ? "host" : "client")} seed {Bob.Game.MatchRequest.Seed}" : "")}");
+                          $"{(Bob.Game.MatchRequest.Online ? $" · online {(Bob.Game.MatchRequest.Host ? "host" : "client")} seed {Bob.Game.MatchRequest.Seed}" : "")}" +
+                          $"{(Bob.Game.MatchRequest.Daily ? $" · daily day {Bob.Game.MatchRequest.DayNumber} seed {Bob.Game.MatchRequest.Seed}" : "")}");
         }
 
         /// <summary>
@@ -525,6 +526,17 @@ namespace Bob.TaskRace
             if (Application.isPlaying)
                 Debug.Log("[TaskRace] score " + Bob.Rules.BobRaceScore.Explain(rewardTasks, cartPasses, won, draw,
                     secondsLeft, level));
+
+            // Daily challenge (docs 31 section 2.2): the server handed out today's seed, so the attempt is spent when the
+            // round ends, whatever the result. The store keys it by the day the seed belonged to, never by the phone's
+            // clock, so a device with a wrong date cannot farm attempts.
+            if (Bob.Game.MatchRequest.Daily)
+            {
+                int day = Bob.Game.MatchRequest.DayNumber;
+                Bob.Game.BobDailyStore.Consume(day);
+                if (Application.isPlaying)
+                    Debug.Log($"[TaskRace] daily day {day} · {Bob.Game.BobDailyStore.AttemptsLeft(day)} attempt(s) left");
+            }
 
             // A3: a decided story chapter earns 0-3 stars, written before MatchEnded so the card reads the new best.
             if (record && series != null && series.Over)

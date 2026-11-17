@@ -303,11 +303,13 @@ namespace Bob.Game
             BobUi.Pin(hs.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -280), new Vector2(1000, 44));
 
             // Dock (bottom left): only buttons that open a screen that works. A4 removed "บ้าน", which only raised a
-            // "เร็วๆ นี้" toast; 17 Nov added the board, so the dock is two squares wide now (2 x 143 + 14 spacing).
-            var dock = BobUi.Pin(BobUi.Rect("Dock", S), Vector2.zero, Vector2.zero, new Vector2(30, 30), new Vector2(300, 190));
+            // "เร็วๆ นี้" toast; 17 Nov added the board and the daily, so the dock is three squares wide now
+            // (3 x 143 + 2 x 14 spacing = 457, rounded to 460).
+            var dock = BobUi.Pin(BobUi.Rect("Dock", S), Vector2.zero, Vector2.zero, new Vector2(30, 30), new Vector2(460, 190));
             var dh = dock.gameObject.AddComponent<HorizontalLayoutGroup>(); dh.spacing = 14; dh.childControlWidth = dh.childControlHeight = true;
             DockButton(dock, "menu_shop", "ร้านค้า", () => { Phase p = Phase.Shop; phase = p; Sfx("ui_confirm"); RenderAll(); });
             DockButton(dock, "icon_star", "อันดับ", () => SetOverlay(Overlay.Board));
+            DockButton(dock, "icon_timer", "เดลี่", () => SetOverlay(Overlay.Daily));
 
             // Task Race is the only match (docs 24): the chip above PLAY is the chapter the player picked in S13, tap
             // opens the stage select. It carries the values the TaskRace scene applies (difficulty + clock), so what

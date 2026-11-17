@@ -66,6 +66,37 @@ static class Program
         Check("board: a score past the leader stops at the track", BobRaceScore.BarFraction(9000, 1620) == 1f);
         Console.WriteLine("board bars checked");
 
+        // The daily challenge (docs 31 2.2): the day turns at UTC+7 midnight and the seed belongs to the server.
+        // Same six rows as server/daily-test.js, so a phone that drifts from GET /daily/seed fails this gate.
+        long Ms(int y, int mo, int d, int h, int mi, int sec) =>
+            new DateTimeOffset(new DateTime(y, mo, d, h, mi, sec, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
+        var noonTh = Ms(2026, 11, 17, 5, 0, 0);
+        Check("daily: noon on 2026-11-17 is day 20774", BobDaily.DayNumber(noonTh) == 20774);
+        Check("daily: the day turns at UTC+7 midnight",
+            BobDaily.DayNumber(Ms(2026, 11, 17, 16, 59, 59)) == 20774 &&
+            BobDaily.DayNumber(Ms(2026, 11, 17, 17, 0, 0)) == 20775);
+        Check("daily: a fresh day lasts a whole day",
+            BobDaily.UntilNextDayMs(Ms(2026, 11, 17, 17, 0, 0)) == BobDaily.DayMs);
+        Check("daily: the day halves by noon", BobDaily.UntilNextDayMs(noonTh) == 43200000L);
+        var seedRows = new (int day, int want)[]
+        {
+            (20774, 8131275), (20775, 1364361), (20776, 8028718),
+            (0, 716302), (1, 4737385), (365, 3934344),
+        };
+        foreach (var row in seedRows)
+            Check($"daily: seed of day {row.day} is {row.want}", BobDaily.SeedFor(row.day) == row.want);
+        Check("daily: a seed is in 1..8388607",
+            new[] { 0, 1, 20774, 20775, 99999, 1234567 }.All(d => BobDaily.SeedFor(d) >= 1 && BobDaily.SeedFor(d) <= 8388607));
+        Check("daily: thirty days give thirty different seeds",
+            Enumerable.Range(20774, 30).Select(BobDaily.SeedFor).Distinct().Count() == 30);
+        Check("daily: the seed and the day agree",
+            BobDaily.Matches(8131275, 20774) && !BobDaily.Matches(8131275, 20775) && !BobDaily.Matches(0, 20774));
+        Check("daily: a new day refills the attempt",
+            BobDaily.AttemptsLeft(20775, 20774, 1) == 1 && BobDaily.AttemptsLeft(20774, 20774, 0) == 1);
+        Check("daily: a played day does not",
+            BobDaily.AttemptsLeft(20774, 20774, 1) == 0 && BobDaily.AttemptsLeft(20774, 20774, 5) == 0);
+        Console.WriteLine("daily seed table checked");
+
 
         int rooms = 0;
         foreach (var seed in new[] { 1, 2, 3, 7, 42, 999, 123456, 654321, 8388607 })

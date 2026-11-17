@@ -43,11 +43,14 @@ namespace Bob.Game
         RectTransform cartCardRt;
         string popFor;
         int lastTick = -1;
-        enum Overlay { None, Pause, Settings, Board }
+        enum Overlay { None, Pause, Settings, Board, Daily }
         Overlay overlay = Overlay.None;
         // The board card reads a snapshot, never the SDK: LoadBoard fills it in the background and re-renders.
         BobBoardSnapshot boardSnap;
         bool boardLoading;
+        // The daily card holds the server's reply, never a locally invented seed (docs 31 section 2.2).
+        BobDailyReply dailyReply;
+        bool dailyBusy;
 
         // ================================================================ build once
 
@@ -736,6 +739,8 @@ namespace Bob.Game
             overlay = o;
             // Every open of the board asks again: a score may have landed since the last look.
             if (o == Overlay.Board) { boardSnap = null; boardLoading = false; }
+            // Same for the daily: the day may have turned or an attempt may have been spent since.
+            if (o == Overlay.Daily) { dailyReply = null; dailyBusy = false; }
             Time.timeScale = o != Overlay.None && phase == Phase.Build ? 0 : 1;
             joyActive = false;
             Sfx(o == Overlay.None ? "ui_cancel" : "ui_tap");
@@ -761,6 +766,7 @@ namespace Bob.Game
                 return;
             }
             if (overlay == Overlay.Board) { Board(card); return; }
+            if (overlay == Overlay.Daily) { Daily(card); return; }
             BobUi.Label(card, "ตั้งค่า", 52, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
             BobUi.Size(BobUi.Button(card, "เสียงเอฟเฟกต์: " + (soundOn ? "เปิด" : "ปิด"), soundOn ? BobUi.Sun : BobUi.Surface, () => { SetSound(!soundOn); RenderOverlay(); }, 34), 104, 104);
             BobUi.Size(BobUi.Button(card, "เพลง: " + (musicOn ? "เปิด" : "ปิด"), musicOn ? BobUi.Sun : BobUi.Surface, () => { SetMusic(!musicOn); RenderOverlay(); }, 34), 104, 104);
@@ -844,6 +850,68 @@ namespace Bob.Game
 
             var sc = BobUi.Label(line.transform, row.Score.ToString(), 30, BobUi.Ink, TextAnchor.MiddleRight, FontStyle.Bold);
             BobUi.Pin(sc.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-16f, 0f), new Vector2(190f, 44f));
+        }
+
+        // ---------------------------------------------------------------- daily challenge (docs 31 section 2.2)
+
+        /// <summary>
+        /// The daily card: the server's day, how many attempts are left today and one button. The seed is the server's,
+        /// so a card that could not reach it offers a retry, not a made-up round. A spent day says when it refills.
+        /// </summary>
+        void Daily(RectTransform card)
+        {
+            BobUi.Pin(card, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900f, 0f));
+            BobUi.Label(card, "เดลี่วันนี้", 52, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+
+            if (dailyReply == null)
+            {
+                if (!dailyBusy) LoadDaily();
+                BobUi.Label(card, "กำลังถามเซิร์ฟเวอร์…", 30, BobUi.Muted, TextAnchor.MiddleCenter);
+            }
+            else if (!dailyReply.Valid)
+            {
+                BobUi.Label(card, "ออฟไลน์ · เล่นโหมดปกติไปก่อน", 30, BobUi.Muted, TextAnchor.MiddleCenter);
+                BobUi.Label(card, dailyReply.error ?? "อ่านเดลี่ไม่ได้", 24, BobUi.Muted, TextAnchor.MiddleCenter);
+                BobUi.Size(BobUi.Button(card, "ลองใหม่", BobUi.Surface, () => { dailyReply = null; dailyBusy = false; RenderOverlay(); }, 34), 104, 104);
+            }
+            else
+            {
+                int left = BobDailyStore.AttemptsLeft(dailyReply.dayNumber);
+                BobUi.Label(card, "วัน " + dailyReply.day, 34, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+                BobUi.Label(card, left > 0 ? "เหลือ " + left + " รอบวันนี้" : "เล่นแล้ววันนี้ · กลับมาพรุ่งนี้",
+                    left > 0 ? 40 : 34, left > 0 ? BobUi.Teal : BobUi.Muted, TextAnchor.MiddleCenter,
+                    left > 0 ? FontStyle.Bold : FontStyle.Normal);
+                BobUi.Label(card, "seed " + dailyReply.seed + " · ทุกคนได้ชุดงานเดียวกัน", 24, BobUi.Muted, TextAnchor.MiddleCenter);
+                if (left > 0)
+                    BobUi.Size(BobUi.Button(card, "เล่นเดลี่", BobUi.Sun, StartDaily, 44), 130, 130);
+                else
+                    BobUi.Label(card, "เปิดใหม่ตอน 00:00 น.", 24, BobUi.Muted, TextAnchor.MiddleCenter);
+            }
+
+            BobUi.Size(BobUi.Button(card, "ปิด", BobUi.Surface, () => SetOverlay(phase == Phase.Build ? Overlay.Pause : Overlay.None), 34), 104, 104);
+        }
+
+        /// <summary>The daily round: one timed solo round on the server's seed, spent when it ends (MatchRequest.Daily).</summary>
+        void StartDaily()
+        {
+            if (dailyReply == null || !dailyReply.Valid) { Toast("ยังไม่ได้ seed ของวันนี้"); return; }
+            if (BobDailyStore.AttemptsLeft(dailyReply.dayNumber) <= 0) { Toast("เล่นเดลี่วันนี้แล้ว"); return; }
+            Sfx("ui_confirm");
+            MatchRequest.SetDaily(dailyReply.dayNumber, dailyReply.seed);
+            SetOverlay(Overlay.None);
+            LoadMatchScene("TaskRace");
+        }
+
+        void LoadDaily()
+        {
+            if (dailyBusy) return;
+            dailyBusy = true;
+            StartCoroutine(BobDailyFeed.Fetch(r =>
+            {
+                dailyBusy = false;
+                dailyReply = r;
+                if (overlay == Overlay.Daily) RenderOverlay();
+            }));
         }
 
         void LoadBoard()
