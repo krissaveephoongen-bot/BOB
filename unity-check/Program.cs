@@ -470,6 +470,29 @@ static class Program
             counted && disputed.Disputes == 0 && new StorySeries().Disputes == 0);
         Console.WriteLine("series disputes checked");
 
+        // S33, the bag (docs 11 S33): a read-only count over the same six-piece table, and the shard line the sewing
+        // table spends. Nothing here buys, sells or equips, so the checks are counts and printed words.
+        Check("bag: an empty bag counts nothing and says so",
+            BobBag.Count(null).Total == 0 && BobBag.Count(new List<string>()).Total == 0 &&
+            BobBag.Headline(BobBag.Count(new List<string>())).Contains("ยังไม่มีของแต่ง"));
+        var bagIds = new List<string> { "title_sweep", "frame_teal", "frame_teal", "not_a_piece" };
+        var bag = BobBag.Count(bagIds);
+        Check("bag: owned pieces split into titles and frames, duplicates and strangers ignored",
+            bag.Titles == 1 && bag.Frames == 1 && bag.Total == 2);
+        Check("bag: the headline carries all three numbers",
+            BobBag.Headline(bag).Contains("2 ชิ้น") && BobBag.Headline(bag).Contains("ป้าย 1") &&
+            BobBag.Headline(bag).Contains("กรอบ 1"));
+        Check("bag: negative counts clamp at zero",
+            BobBag.Headline(new BobBagCounts(-2, -1)).Contains("ยังไม่มีของแต่ง") &&
+            new BobBagCounts(-2, -1).Total == 0);
+        Check("bag: the material line never prints a negative used",
+            BobBag.Materials(5, 2).Contains("เหลือ 2") && BobBag.Materials(5, 2).Contains("ได้มา 5") &&
+            BobBag.Materials(5, 2).Contains("ใช้ไป 3") && BobBag.Materials(2, 5).Contains("ใช้ไป 0") &&
+            BobBag.Materials(-3, 1).Contains("ได้มา 0"));
+        Check("bag: the sell note states the owner's rule",
+            BobBag.SellNote.Contains("ขายคืนไม่ได้") && BobBag.SellNote.Contains("ไม่เพิ่มพลัง"));
+        Console.WriteLine("bag checked");
+
         Console.WriteLine(fails == 0 ? "UNITY-CHECK PASSED" : $"UNITY-CHECK FAILED: {fails}");
         return fails == 0 ? 0 : 1;
     }

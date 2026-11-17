@@ -51,6 +51,9 @@ namespace Bob.Game
         // The daily card holds the server's reply, never a locally invented seed (docs 31 section 2.2).
         BobDailyReply dailyReply;
         bool dailyBusy;
+        // The same card's board: yesterday's runs never mix in, so this reads BobDaily.DailyBoardName(day) only.
+        BobBoardSnapshot dailySnap;
+        bool dailyBoardBusy;
         // Which wardrobe tab is open (0 = titles, 1 = frame colours, 2 = the sewing table); kept while the card is
         // open, reset on reload.
         int wardrobeTab;
@@ -745,7 +748,7 @@ namespace Bob.Game
             // Every open of the board asks again: a score may have landed since the last look.
             if (o == Overlay.Board) { boardSnap = null; boardLoading = false; }
             // Same for the daily: the day may have turned or an attempt may have been spent since.
-            if (o == Overlay.Daily) { dailyReply = null; dailyBusy = false; }
+            if (o == Overlay.Daily) { dailyReply = null; dailyBusy = false; dailySnap = null; dailyBoardBusy = false; }
             // The sewing draft starts from what is worn, so the card never opens on an empty table.
             if (o == Overlay.Wardrobe)
                 sewPicks = BobCosmetics.SewnPicks ?? new int[Bob.Rules.BobSewing.LayerCount];
@@ -895,6 +898,7 @@ namespace Bob.Game
                     BobUi.Size(BobUi.Button(card, "เล่นเดลี่", BobUi.Sun, StartDaily, 44), 130, 130);
                 else
                     BobUi.Label(card, "เปิดใหม่ตอน 00:00 น.", 24, BobUi.Muted, TextAnchor.MiddleCenter);
+                DailyBoardRows(card);
             }
 
             BobUi.Size(BobUi.Button(card, "ปิด", BobUi.Surface, () => SetOverlay(phase == Phase.Build ? Overlay.Pause : Overlay.None), 34), 104, 104);
@@ -909,6 +913,50 @@ namespace Bob.Game
             MatchRequest.SetDaily(dailyReply.dayNumber, dailyReply.seed);
             SetOverlay(Overlay.None);
             LoadMatchScene("TaskRace");
+        }
+
+        /// <summary>
+        /// The day's own board under the daily card (docs 31 section 2.2). It reads only BobDaily.DailyBoardName(day),
+        /// so yesterday's runs never mix in; it marks no Self row because a daily page has no stable device rank.
+        /// </summary>
+        void DailyBoardRows(RectTransform card)
+        {
+            BobUi.Label(card, "อันดับเดลี่วันนี้ · seed เดียวกันทุกคน", 24, BobUi.Muted, TextAnchor.MiddleCenter);
+            if (dailySnap == null)
+            {
+                if (!dailyBoardBusy) LoadDailyBoard();
+                BobUi.Label(card, "กำลังโหลดอันดับ…", 22, BobUi.Muted, TextAnchor.MiddleCenter);
+                return;
+            }
+            if (!dailySnap.SignedIn)
+            {
+                BobUi.Label(card, "ออฟไลน์ · ยังดูอันดับวันนี้ไม่ได้", 22, BobUi.Muted, TextAnchor.MiddleCenter);
+                return;
+            }
+            if (dailySnap.Rows.Count == 0)
+            {
+                BobUi.Label(card, dailySnap.Error != null ? "อ่านอันดับวันนี้ไม่ได้" : "วันนี้ยังไม่มีใครส่งคะแนน",
+                    22, BobUi.Muted, TextAnchor.MiddleCenter);
+                return;
+            }
+            int top = 0;
+            for (int i = 0; i < dailySnap.Rows.Count; i++) if (dailySnap.Rows[i].Score > top) top = dailySnap.Rows[i].Score;
+            for (int i = 0; i < dailySnap.Rows.Count; i++) BoardRow(card, dailySnap.Rows[i], top);
+        }
+
+        void LoadDailyBoard()
+        {
+            if (dailyBoardBusy || dailyReply == null || !dailyReply.Valid) return;
+            dailyBoardBusy = true;
+            _ = LoadDailyBoardAsync(dailyReply.dayNumber);
+        }
+
+        async System.Threading.Tasks.Task LoadDailyBoardAsync(int day)
+        {
+            var snap = await BobBoardService.LoadDailyAsync(day, 5);
+            dailyBoardBusy = false;
+            dailySnap = snap ?? new BobBoardSnapshot { Error = "offline" };
+            if (overlay == Overlay.Daily) RenderOverlay();
         }
 
         // ---------------------------------------------------------------- wardrobe (docs 31 section 2.3)
@@ -933,15 +981,20 @@ namespace Bob.Game
             BobUi.Size(tabs, 84, 84);
             var titles = BobUnlocks.Of(true);
             var frames = BobUnlocks.Of(false);
-            WardrobeTab(tabs.transform, 0, "ป้ายชื่อ " + Have(titles) + "/" + titles.Length);
-            WardrobeTab(tabs.transform, 1, "สีกรอบ " + Have(frames) + "/" + frames.Length);
+            WardrobeTab(tabs.transform, 0, "ป้าย " + Have(titles) + "/" + titles.Length);
+            WardrobeTab(tabs.transform, 1, "กรอบ " + Have(frames) + "/" + frames.Length);
             WardrobeTab(tabs.transform, 2, "ตัดเย็บ");
+            WardrobeTab(tabs.transform, 3, "กระเป๋า");
 
             WardrobePreview(card);
 
             if (wardrobeTab == 2)
             {
                 SewTable(card);
+            }
+            else if (wardrobeTab == 3)
+            {
+                Bag(card);
             }
             else
             {
@@ -1115,6 +1168,73 @@ namespace Bob.Game
             Sfx("ui_confirm");
             Toast("ตัดชุดแล้ว · " + BobSewing.Describe(picks));
             RenderOverlay();
+        }
+
+        /// <summary>
+        /// S33, the bag (docs 11 S33): the read-only half of the wardrobe. It counts what the account owns, shows the
+        /// sewn look and each owned piece as a tile, and prints the material line the sewing table spends. Nothing here
+        /// is a button that buys or sells — BobBag.SellNote says so where a shop would put its sell price.
+        /// </summary>
+        void Bag(RectTransform card)
+        {
+            var owned = BobCosmetics.OwnedIds();
+            var counts = BobBag.Count(owned);
+            BobUi.Label(card, BobBag.Headline(counts), 30, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Label(card,
+                BobBag.Materials(BobSewing.ShardsEarned(Bob.TaskRace.BobTaskRaceProfile.Matches), BobCosmetics.SewShardsLeft),
+                22, BobUi.Muted, TextAnchor.MiddleCenter);
+
+            var names = new List<string>();
+            var colours = new List<Color>();
+            var wheres = new List<string>();
+            if (BobCosmetics.HasSewn)
+            {
+                names.Add(BobCosmetics.SewnName); colours.Add(BobCosmetics.ClothColour);
+                wheres.Add("ชุดตัดเย็บ · อยู่ในรอบ");
+            }
+            for (int i = 0; i < BobUnlocks.All.Length; i++)
+            {
+                var def = BobUnlocks.All[i];
+                if (def == null || !owned.Contains(def.Id)) continue;
+                names.Add(def.Name); colours.Add(def.Title ? BobUi.Teal : BobUi.Hex(def.Hex));
+                wheres.Add(BobUnlocks.Where(def));
+            }
+
+            if (names.Count == 0)
+            {
+                BobUi.Label(card, "กระเป๋าว่าง", 26, BobUi.Muted, TextAnchor.MiddleCenter);
+            }
+            else
+            {
+                for (int i = 0; i < names.Count; i += 3)
+                {
+                    var row = BobUi.HBox(card, 8, "BagRow");
+                    row.childForceExpandHeight = false; row.childAlignment = TextAnchor.MiddleCenter;
+                    BobUi.Size(row, 116, 116);
+                    for (int j = i; j < i + 3 && j < names.Count; j++) BagTile(row.transform, names[j], colours[j], wheres[j]);
+                    for (int j = names.Count; j < i + 3; j++) BobUi.Size(BobUi.Rect("Gap", row.transform), 116, 116, 1);
+                }
+            }
+
+            BobUi.Label(card, BobBag.SellNote, 22, BobUi.Muted, TextAnchor.MiddleCenter);
+        }
+
+        /// <summary>One owned piece in the bag: its colour, its name and where it shows. Never interactive.</summary>
+        void BagTile(Transform parent, string name, Color colour, string where)
+        {
+            var tile = BobUi.Panel(parent, new Color(1f, 1f, 1f, 0.62f), "ui_panel", "BagTile");
+            BobUi.Size(tile, 112, 112, 1);
+
+            var sw = BobUi.Rect("Swatch", tile.transform);
+            var img = sw.gameObject.AddComponent<Image>();
+            img.raycastTarget = false; img.color = colour;
+            BobUi.Pin(sw, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(10f, -10f), new Vector2(40f, 40f));
+
+            var nm = BobUi.Label(tile.transform, name, 20, BobUi.Ink, TextAnchor.UpperLeft, FontStyle.Bold);
+            BobUi.Pin(nm.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(58f, -10f), new Vector2(180f, 40f));
+
+            var wh = BobUi.Label(tile.transform, where, 16, BobUi.Muted, TextAnchor.LowerLeft);
+            BobUi.Pin(wh.rectTransform, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(10f, 8f), new Vector2(250f, 40f));
         }
 
         /// <summary>One cosmetic: a swatch, the name, where it shows (or what it asks), and ใช้ / ใช้อยู่ / ยังไม่ปลด.</summary>

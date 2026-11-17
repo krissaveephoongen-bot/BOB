@@ -81,5 +81,46 @@ namespace Bob.Ugs
                 if (snap.SelfRank > 0 && snap.Rows[i].Rank == snap.SelfRank) snap.Rows[i].Self = true;
             return snap;
         }
+
+        /// <summary>
+        /// The top of one day's board (docs 31 section 2.2). Same offline contract as LoadAsync, but it never marks a
+        /// Self row: a daily page is one day's own board, and this device's place in it is not read here.
+        /// </summary>
+        public static async Task<BobBoardSnapshot> LoadDailyAsync(int day, int limit = 5)
+        {
+            var snap = new BobBoardSnapshot();
+            var boot = UgsBootstrapManager.Instance;
+            if (boot == null || !boot.IsReady)
+            {
+                snap.Error = "offline";
+                return snap;
+            }
+            snap.SignedIn = true;
+
+            var board = UgsLeaderboardManager.Instance;
+            if (board == null)
+            {
+                // The lobby scene only hosts the bootstrap, so the board manager is created on the first look.
+                var host = new GameObject("UGS Board");
+                board = host.AddComponent<UgsLeaderboardManager>();
+            }
+
+            var page = await board.GetDailyScoresAsync(day, limit);
+            if (page == null)
+            {
+                snap.Error = string.IsNullOrEmpty(board.LastError) ? "read failed" : board.LastError;
+                return snap;
+            }
+            if (page.Results != null)
+            {
+                foreach (var e in page.Results)
+                {
+                    if (e == null) continue;
+                    string name = string.IsNullOrEmpty(e.PlayerName) ? NoName : e.PlayerName;
+                    snap.Rows.Add(new BobBoardRow(e.Rank + 1, name, (int)Math.Round(e.Score)));
+                }
+            }
+            return snap;
+        }
     }
 }

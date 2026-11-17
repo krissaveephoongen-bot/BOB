@@ -176,6 +176,7 @@ namespace Bob.Ugs
     public static class BobBoardService
     {
         public static System.Threading.Tasks.Task<BobBoardSnapshot> LoadAsync(int limit = 10) => null;
+        public static System.Threading.Tasks.Task<BobBoardSnapshot> LoadDailyAsync(int day, int limit = 5) => null;
     }
 
     /// <summary>The real reporter (UGS/BobRaceScoreReporter.cs) posts a finished match's score to the leaderboard.
