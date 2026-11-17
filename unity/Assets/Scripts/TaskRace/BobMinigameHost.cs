@@ -1146,14 +1146,35 @@ namespace Bob.TaskRace
             Track(cartRecipe.gameObject);
         }
 
+        /// <summary>The T04 cart body: cream, tinted toward the worn frame colour as paint only (docs 31 section 2.3).</summary>
+        static Color CartBodyColour()
+        {
+            var frame = Bob.Game.BobCosmetics.FrameColour;
+            var body = Bob.Rules.BobCartPaint.Body(Bob.Game.BobCosmetics.HasFrame,
+                new Bob.Rules.BobRgb(frame.r, frame.g, frame.b));
+            return new Color(body.R, body.G, body.B, 1f);
+        }
+
         void SetupCartBuild()
         {
             // The cart: four layer slots, the same number of parts the shelf hands over (BobTaskRaceRules.CartParts).
-            var cart = BobUi.Panel(layer, new Color(0.97f, 0.94f, 0.87f, 1f), "ui_panel", "Cart");
+            // Its body wears the worn frame colour as paint only (docs 31 section 2.3): no rule reads the colour, and
+            // BobCartPaint keeps the body light enough for the ink labels drawn on it.
+            var cart = BobUi.Panel(layer, CartBodyColour(), "ui_panel", "Cart");
             cart.raycastTarget = false;
             BobUi.Pin((RectTransform)cart.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
                 new Vector2(360f, -10f), new Vector2(300f, 430f));
             Track(cart.gameObject);
+            if (Bob.Game.BobCosmetics.HasFrame)
+            {
+                // A thin rim in the frame colour at full strength: the pastel body alone can read as lighting, the rim
+                // says "this is your paint".
+                var rim = BobUi.Rect("CartPaintRim", cart.transform).gameObject.AddComponent<Image>();
+                rim.raycastTarget = false;
+                rim.color = Bob.Game.BobCosmetics.FrameColour;
+                BobUi.Pin((RectTransform)rim.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                    new Vector2(0f, 2f), new Vector2(292f, 6f));
+            }
             var cartTitle = BobUi.Label(cart.transform, "รถเข็น", 30, T.inkMuted, TextAnchor.MiddleCenter, FontStyle.Bold);
             BobUi.Pin(cartTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0f, -8f), new Vector2(260f, 38f));

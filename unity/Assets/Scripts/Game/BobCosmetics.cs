@@ -56,16 +56,26 @@ namespace Bob.Game
 
         public static bool HasFrame => Bob.Rules.BobUnlocks.Get(FrameId) != null && !Bob.Rules.BobUnlocks.Get(FrameId).Title;
 
+        /// <summary>The worn frame's colour at full strength; white when nothing (or a title) is worn.</summary>
+        public static Color FrameColour
+        {
+            get
+            {
+                var def = Bob.Rules.BobUnlocks.Get(FrameId);
+                if (def == null || def.Title || string.IsNullOrEmpty(def.Hex)) return Color.white;
+                return BobUi.Hex(def.Hex);
+            }
+        }
+
         /// <summary>The stage disc colour: the worn frame, or the plain translucent white.</summary>
         public static Color FrameTint
         {
             get
             {
-                var def = Bob.Rules.BobUnlocks.Get(FrameId);
-                if (def == null || def.Title || string.IsNullOrEmpty(def.Hex)) return PlainFrame;
+                if (!HasFrame) return PlainFrame;
                 // The stage disc sits under the hero art, so the frame keeps the plain disc's softness instead of turning
                 // into an opaque plate behind the character.
-                var c = BobUi.Hex(def.Hex);
+                var c = FrameColour;
                 c.a = 0.55f;
                 return c;
             }

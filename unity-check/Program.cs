@@ -130,6 +130,28 @@ static class Program
             BobUnlocks.All.Where(d => d.Title).All(d => d.Hex.Length == 0));
         Console.WriteLine("unlock table checked");
 
+        // The T04 cart wears the worn frame colour as paint only (docs 31 section 2.3). The card draws ink text on the
+        // cart body, so the paint is a tint and not a repaint: every frame in the table must leave the body light
+        // enough to stay readable, and a bare cart must keep the cream it shipped with.
+        static bool Same(BobRgb a, BobRgb b) =>
+            Math.Abs(a.R - b.R) < 1e-4f && Math.Abs(a.G - b.G) < 1e-4f && Math.Abs(a.B - b.B) < 1e-4f;
+        Check("paint: a bare cart keeps the shipped cream body",
+            Same(BobCartPaint.Body(false, new BobRgb(0.1f, 0.2f, 0.3f)), BobCartPaint.Cream));
+        Check("paint: the shipped cream body is readable on its own", BobCartPaint.Readable(BobCartPaint.Cream));
+        Check("paint: every frame colour shows on the body",
+            BobUnlocks.All.Where(d => !d.Title)
+                .All(d => !Same(BobCartPaint.Body(true, BobCartPaint.ParseHex(d.Hex).Value), BobCartPaint.Cream)));
+        Check("paint: a painted body stays light enough for ink text",
+            BobUnlocks.All.Where(d => !d.Title)
+                .All(d => BobCartPaint.Readable(BobCartPaint.Body(true, BobCartPaint.ParseHex(d.Hex).Value))));
+        Check("paint: the weight is a tint, never a repaint", BobCartPaint.Weight > 0f && BobCartPaint.Weight <= 0.5f);
+        Check("paint: the hex reader takes the table's colours and refuses junk",
+            BobCartPaint.ParseHex("#2f7f6f").HasValue &&
+            Math.Abs(BobCartPaint.ParseHex("#2f7f6f").Value.G - 0x7f / 255f) < 1e-4f &&
+            !BobCartPaint.ParseHex("2F7F6F").HasValue && !BobCartPaint.ParseHex("#GGGGGG").HasValue &&
+            !BobCartPaint.ParseHex("#2F7F6").HasValue);
+        Console.WriteLine("cart paint checked");
+
 
         int rooms = 0;
         foreach (var seed in new[] { 1, 2, 3, 7, 42, 999, 123456, 654321, 8388607 })
