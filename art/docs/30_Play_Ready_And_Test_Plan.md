@@ -2,6 +2,7 @@
 
 สถานะ: **ตรวจครบ 1 รอบ · เจอบล็อกเกอร์ "เกมเล่นไม่ได้" 1 ตัวและแก้แล้ว · เพิ่ม gate ใหม่ 1 ตัว (`ready-check`)**
 ยังไม่มีการรันใน Unity เลยในรอบนี้ เพราะ sandbox ไม่มี Unity — ข้อ 6 เขียนตรง ๆ ว่าเหลืออะไรให้พิสูจน์บนเครื่อง owner
+**อัปเดต 17 พ.ย. 2026: รันบน editor จริงแล้ว** — คอมไพล์ 0 error, check ชั้น 2 ผ่านครบ + เจอบล็อกเกอร์คอมไพล์ออนไลน์เพิ่ม 1 ตัว (แก้แล้ว, §2.1) และได้ภาพ 2400×1080 ครบชุด (§6.1)
 
 ---
 
@@ -107,6 +108,35 @@ READY-CHECK PASSED
 
 รอบแรกของ gate ผ่านทั้งที่ยังไม่มี EventSystem เพราะยอมรับ "มีตัวสร้างอยู่ในไฟล์ใดก็ได้" — แก้ให้ผูกซีนกับเจ้าของของมันแล้วจึงจับได้จริง
 
+### 2.1 บล็อกเกอร์คอมไพล์ออนไลน์ CS0117 ที่ typecheck ออฟไลน์มองไม่เห็น (17 พ.ย. 2026)
+
+รอบที่เปิด Unity จริงครั้งแรก (หลังชุดงาน cloud session) คอมไพล์ล้ม **ทั้งโปรเจกต์** ใน
+`unity/Assets/Scripts/UGS/BobOnlineRoom.cs` — 3 จุด ชนิดเดียวกัน:
+
+```
+BobOnlineRoom.cs(128,21): error CS0117: 'CreateLobbyOptions' does not contain a definition for 'PlayerData'
+BobOnlineRoom.cs(173,..): error CS0117: 'QuickJoinLobbyOptions' does not contain a definition for 'PlayerData'
+BobOnlineRoom.cs(175,..): error CS0117: 'JoinLobbyByCodeOptions' does not contain a definition for 'PlayerData'
+```
+
+**สาเหตุ:** โค้ดเขียน `options.PlayerData = …` แต่ Lobby SDK **1.3.0** ที่ติดตั้งจริง
+(`Library/PackageCache/com.unity.services.lobby@743c1c4a1740`) ให้ property `Player` (ชนิด
+`Unity.Services.Lobbies.Models.Player` ที่มี `Dictionary<string, PlayerDataObject> Data`) บน option class ทั้งสามตัว
+ไม่มี `PlayerData` ตรง ๆ
+
+**แก้:** ห่อเป็น `Player` 3 จุด โดยไม่แตะ helper เดิม:
+
+```csharp
+IsPrivate = false, Player = new Player { Data = PlayerData(pendingHero) },
+...
+new QuickJoinLobbyOptions { Player = new Player { Data = PlayerData(pendingHero) } }
+new JoinLobbyByCodeOptions { Player = new Player { Data = PlayerData(pendingHero) } }
+```
+
+**ทำไมรอบก่อนจับไม่ได้:** `unity-typecheck/BobTypeCheck.csproj` ตัด `Assets/Scripts/UGS/**/*.cs` และ
+`Editor/UgsCheck.cs` ออกจาก typecheck ออฟไลน์ (ไม่มี stub ของ UGS SDK) — "typecheck ok" จึงไม่เคยคอมไพล์ไฟล์นี้.
+หลังแก้: คอมไพล์จริง `0 error CS` และ check ที่รันต่อในรอบเดียวกันผ่านหมด — ดู §6.1
+
 ---
 
 ## 3. list งาน
@@ -124,14 +154,14 @@ READY-CHECK PASSED
 | # | งาน | คำสั่ง |
 | --- | --- | --- |
 | 4 | E2E ทั้งเส้น (S02 → Home → S11 → S13 → S14 → TaskRace → ผล) | `Bob/Run E2E` |
-| 5 | บอทเล่นแมตช์เต็มในซีน Game | `Bob/Run Game Test` |
-| 6 | บอทเก็บงาน + ข้ามสะพาน + sabotage ใน Task Race | `Bob/Run Bot Check` |
-| 7 | อนุกรม 3 ยก + ดาว 1–3 + XP เคลียร์ครั้งแรก | `Bob/Run Story Series Check` |
-| 8 | การ์ดผลบท + ปุ่มบทถัดไป | `Bob/Run Chapter Result Check` |
-| 9 | พักเกม: นาฬิกาหยุดจริงแล้วเดินต่อ | `Bob/Run Pause Check` |
-| 10 | คานต์ดาวน์ 3-2-1-ลุย! | `Bob/Run Countdown Check` |
-| 11 | บันไดบท (LV 2–6, ดาว ≥ 2) | `Bob/Chapters/Check Ladder` |
-| 12 | ภาพ/เส้นทาง NavMesh ทั้ง 3 ขนาดเกาะ | `TaskRaceVerify.Run / RunDuo / RunTeam` |
+| 5 | บอทเล่นแมตช์เต็มในซีน Game ✅ 17 พ.ย. (`GAME TEST PASSED: 2:0 in 2 rounds`) | `Bob/Run Game Test` |
+| 6 | บอทเก็บงาน + ข้ามสะพาน + sabotage ใน Task Race ✅ 17 พ.ย. (`BOT CHECK PASSED`) | `Bob/Run Bot Check` |
+| 7 | อนุกรม 3 ยก + ดาว 1–3 + XP เคลียร์ครั้งแรก ✅ 17 พ.ย. (`rules PASSED`) | `Bob/Run Story Series Check` |
+| 8 | การ์ดผลบท + ปุ่มบทถัดไป ✅ 17 พ.ย. (`CHAPTER RESULT CHECK PASSED`) | `Bob/Run Chapter Result Check` |
+| 9 | พักเกม: นาฬิกาหยุดจริงแล้วเดินต่อ ✅ 17 พ.ย. (`PAUSE CHECK PASSED`) | `Bob/Run Pause Check` |
+| 10 | คานต์ดาวน์ 3-2-1-ลุย! ✅ 17 พ.ย. (2.7 วิ ตรงสเปก) | `Bob/Run Countdown Check` |
+| 11 | บันไดบท (LV 2–6, ดาว ≥ 2) ✅ 17 พ.ย. (`6 chapters, ladder ok`) | `Bob/Chapters/Check Ladder` |
+| 12 | ภาพ/เส้นทาง NavMesh ทั้ง 3 ขนาดเกาะ ✅ 17 พ.ย. (`done` ทั้ง solo/duo/team) | `TaskRaceVerify.Run / RunDuo / RunTeam` |
 | 13 | UGS: anonymous → Relay → Lobby | `Bob/Run UGS Check` |
 | 14 | build APK + ติดตั้งบนเครื่องจริง | `Bob/Android/Build APK` |
 
@@ -211,12 +241,36 @@ T16 แถวฉุกเฉิน + คราบบอส · T12 ภาพพ�
 - **LFS อัปโหลดไม่ได้** (501) → ไฟล์ไบนารีใหม่ต้องเป็นไฟล์ธรรมดา หรือรอสิทธิ์ LFS
 - ภาพ/ตัวเลขประสิทธิภาพบนมือถือต้องมาจากเครื่องจริงเท่านั้น
 
+### 6.1 รอบที่พิสูจน์บน editor จริง (17 พ.ย. 2026)
+
+sandbox ของ cloud session ไม่มี Unity — รอบนี้รันบนเครื่อง owner (editor ว่าง), `-projectPath unity/` ตรง ๆ:
+
+| ชั้น | งาน | ผล |
+| --- | --- | --- |
+| คอมไพล์ | คอมไพล์จริงทั้งโปรเจกต์ | รอบแรก **ล้ม CS0117 ×3** (UGS, §2.1) → แก้แล้ว **0 error CS** |
+| 2 | `BobChapterCheck` (§3.2 ข้อ 11) | `6 chapters, ladder ok (chapter 1 at level 1)` |
+| 2 | `ChapterResultCheck` (ข้อ 8) | `CHAPTER RESULT CHECK PASSED` |
+| 2 | `StorySeriesCheck` (ข้อ 7) | `series 1-2 lost: ok` · `rules PASSED` |
+| 2 | `RaceCountdownCheck` (ข้อ 10) | 2.7 วิ (ตรงสเปก) · `COUNTDOWN CHECK PASSED` |
+| 2 | `TaskRaceVerify.Run/RunDuo/RunTeam` (ข้อ 12) | `done` ทั้งสาม · solo 6 แถว 0/9, duo/team 7 แถว 0/13 · การ์ดบท 1 ดาว 3/3 · S28 9 การ์ด fx 6/6 |
+| 2 | `BotCheck` (ข้อ 6, play mode) | บอท 20.90 u · เก็บ/ข้าม/ป่วน true · `BOT CHECK PASSED` |
+| 2 | `PauseCheck` (ข้อ 9, play mode) | timeScale 0.00 · clock แช่/เดินต่อ · `PAUSE CHECK PASSED` |
+| 2 | `BobGameScene.RunTest` (ข้อ 5, play mode) | `GAME TEST PASSED: 2:0 in 2 rounds` ที่ 2400×1080 |
+| 1 | `ready-check` | `READY-CHECK PASSED` (พื้นเดียวกับ §2) |
+| 1 | `server/task-race-test.js` (หลัง merge คะแนนรวม) | 80/80 |
+| ใหม่ | `Editor/TaskRaceShots.cs` (editor-only) | 6 ภาพ runtime-only: ถาดเพื่อน (chips=1), วงล้อปิง, แบนเนอร์คราบ, ลูกศรขอบจอ, การ์ดปราบคราบ, การ์ด T04 |
+| — | ภาพหน้าโปรแกรม 2400×1080 | S13/S14/S15 + การ์ดจบ/ผลบท/พัก/S28 ครบชุด (รายการใน docs 24 §15.34) |
+
+**ข้อสังเกตที่ยังไม่แก้ (โค้ดเกม ไม่ใช่ editor):** ลูกศรขอบจอทับแบนเนอร์เมื่อคราบอยู่นอกจอด้านล่าง — รายละเอียด + ทางแก้ใน docs 24 §15.34
+
+**ยังเหลือเป็นเครื่องจริง:** ติดตั้ง APK, ประสิทธิภาพ, LINE OAuth, ออนไลน์ 2 เครื่อง, Firebase tester group, UGS check (ข้อ 13, ต้องมีเน็ต/โปรเจกต์ UGS)
+
 ---
 
 ## 7. ลำดับลงมือถัดไป
 
-1. owner เปิด Unity รันข้อ 3.2 ตามลำดับ แล้วส่ง `unity/Logs/*.log` กับภาพที่ได้กลับมา — ผมอ่านให้และแก้จุดที่ตก
-2. ผมแก้เฉพาะที่ log ชี้ (ไม่เดา) แล้วรันชั้น 1 ซ้ำจนเขียว
+1. ~~owner เปิด Unity รันข้อ 3.2~~ → **เสร็จ 17 พ.ย.** (ตาราง §6.1); ข้อ 13 (UGS) กับข้อ 14 (APK บนเครื่อง) ยังต้องรัน
+2. ผมแก้เฉพาะที่ log ชี้ (ไม่เดา) แล้วรันชั้น 1 ซ้ำจนเขียว — ยังเขียวหลังแก้ CS0117
 3. เมื่อชั้น 2 ผ่าน: build APK (ข้อ 14) → เดินชั้น 3
 4. ระหว่างรอเครื่อง: เริ่มข้อ 3.3 ตามลำดับที่ owner เรียง (T16 → S16/แชท → PvP; `bob_score_stack` ปิดแล้วที่ docs 24 §15.32)
 5. งานบ้าน 3.4 (ซีนตาย, test เก่า, LFS) ทำเมื่อ owner อนุมัติ เพราะแตะ Build Settings/shared repo
