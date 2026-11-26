@@ -31,6 +31,8 @@ namespace Bob.Ugs
     public sealed class BobOnlineRoom : MonoBehaviour
     {
         public const string MatchScene = "TaskRace";
+        /// <summary>The M1 duo slice scene (docs 32 section 8).</summary>
+        public const string DuoScene = "DuoClean";
         public const int MaxSlots = 4;
         /// <summary>One online round is the story round length, and the room takes two of three (docs 27 section 10.7).</summary>
         public const float SeriesRoundSeconds = 100f;
@@ -43,6 +45,11 @@ namespace Bob.Ugs
         const string RoundMessage = "bob.round";
         const string ResultMessage = "bob.result";
         const string AbandonMessage = "bob.abandon";
+        // docs 32 M1: one channel for the duo slice. Actions are small and frequent; snapshots are the host's truth.
+        const string DuoStartMessage = "bob.duostart";
+        const string DuoActionMessage = "bob.duoact";
+        const string DuoSnapshotMessage = "bob.duosnap";
+        const string DuoEndMessage = "bob.duoend";
         const string ConnectionType = "dtls";
         const float HeartbeatSeconds = 15f;
         const float RosterSeconds = 2f;
@@ -268,6 +275,84 @@ namespace Bob.Ugs
             catch (Exception e) { Debug.LogWarning("[UGS] leave lobby: " + e.Message); }
         }
 
+        // ---------------------------------------------------------------- duo slice (docs 32 M1)
+
+        /// <summary>Two numbers for the current task plus the authoritative clock; everything a client draws.</summary>
+        public struct DuoSnapshot
+        {
+            public float Charge0, Charge1, Elapsed;
+            public int Task, DoneMask;
+        }
+
+        /// <summary>slot 0/1, code 0 = hold start(+1)/stop(-1), 1 = good tap, 2 = drag units.</summary>
+        public event Action<int, byte, float> DuoActionReceived;
+        public event Action<DuoSnapshot> DuoSnapshotReceived;
+        public event Action DuoStarted;
+        public event Action<bool, float> DuoEnded;
+
+        /// <summary>A duo match is running in this room (clients learn it from bob.duostart).</summary>
+        public bool DuoStarting { get; private set; }
+        public bool DuoOver { get; private set; }
+
+        /// <summary>Host starts the duo slice. Two players only: the slice has exactly two roles.</summary>
+        public bool StartDuo(int players)
+        {
+            if (!InRoom || !IsHost || nm == null || players != 2) return false;
+            DuoStarting = true;
+            DuoOver = false;
+            using (var writer = new FastBufferWriter(4, Allocator.Temp))
+            {
+                writer.WriteValueSafe(players);
+                nm.CustomMessagingManager.SendNamedMessageToAll(DuoStartMessage, writer, NetworkDelivery.ReliableSequenced);
+            }
+            return true;
+        }
+
+        /// <summary>Input from a device: the host applies it, a client sends it to the host.</summary>
+        public void SendDuoAction(int slot, byte code, float amount)
+        {
+            if (nm == null || !DuoStarting || DuoOver) return;
+            // A tap must never be lost (it is a whole 1/8 of a task); holds and drags are continuous and lossy is fine.
+            var delivery = code == 1 ? NetworkDelivery.ReliableSequenced : NetworkDelivery.Unreliable;
+            using (var writer = new FastBufferWriter(16, Allocator.Temp))
+            {
+                writer.WriteValueSafe(slot);
+                writer.WriteValueSafe(code);
+                writer.WriteValueSafe(amount);
+                if (nm.IsHost)
+                    nm.CustomMessagingManager.SendNamedMessageToAll(DuoActionMessage, writer, delivery);
+                else
+                    nm.CustomMessagingManager.SendNamedMessage(DuoActionMessage, NetworkManager.ServerClientId, writer, delivery);
+            }
+        }
+
+        /// <summary>Host broadcast, five times a second (the client lerps between them).</summary>
+        public void SendDuoSnapshot(DuoSnapshot snap)
+        {
+            if (nm == null || !nm.IsHost) return;
+            using (var writer = new FastBufferWriter(24, Allocator.Temp))
+            {
+                writer.WriteValueSafe(snap.Charge0);
+                writer.WriteValueSafe(snap.Charge1);
+                writer.WriteValueSafe(snap.Elapsed);
+                writer.WriteValueSafe(snap.Task);
+                writer.WriteValueSafe(snap.DoneMask);
+                nm.CustomMessagingManager.SendNamedMessageToAll(DuoSnapshotMessage, writer, NetworkDelivery.ReliableSequenced);
+            }
+        }
+
+        public void SendDuoEnd(bool won, float percent)
+        {
+            if (nm == null || !nm.IsHost) return;
+            DuoOver = true;
+            using (var writer = new FastBufferWriter(8, Allocator.Temp))
+            {
+                writer.WriteValueSafe(won);
+                writer.WriteValueSafe(percent);
+                nm.CustomMessagingManager.SendNamedMessageToAll(DuoEndMessage, writer, NetworkDelivery.ReliableSequenced);
+            }
+        }
+
         // ---------------------------------------------------------------- match handoff
 
         /// <summary>
@@ -413,6 +498,10 @@ namespace Bob.Ugs
             net.CustomMessagingManager.RegisterNamedMessageHandler(RoundMessage, HandleSeriesRound);
             net.CustomMessagingManager.RegisterNamedMessageHandler(ResultMessage, HandleSeriesResult);
             net.CustomMessagingManager.RegisterNamedMessageHandler(AbandonMessage, HandleSeriesAbandon);
+            net.CustomMessagingManager.RegisterNamedMessageHandler(DuoStartMessage, HandleDuoStart);
+            net.CustomMessagingManager.RegisterNamedMessageHandler(DuoActionMessage, HandleDuoAction);
+            net.CustomMessagingManager.RegisterNamedMessageHandler(DuoSnapshotMessage, HandleDuoSnapshot);
+            net.CustomMessagingManager.RegisterNamedMessageHandler(DuoEndMessage, HandleDuoEnd);
         }
 
         void UnhookHandlers()
@@ -428,6 +517,10 @@ namespace Bob.Ugs
             nm.CustomMessagingManager.UnregisterNamedMessageHandler(RoundMessage);
             nm.CustomMessagingManager.UnregisterNamedMessageHandler(ResultMessage);
             nm.CustomMessagingManager.UnregisterNamedMessageHandler(AbandonMessage);
+            nm.CustomMessagingManager.UnregisterNamedMessageHandler(DuoStartMessage);
+            nm.CustomMessagingManager.UnregisterNamedMessageHandler(DuoActionMessage);
+            nm.CustomMessagingManager.UnregisterNamedMessageHandler(DuoSnapshotMessage);
+            nm.CustomMessagingManager.UnregisterNamedMessageHandler(DuoEndMessage);
         }
 
         void OnPeerConnected(ulong clientId)
@@ -518,6 +611,47 @@ namespace Bob.Ugs
             StartSeed = seed;
             Starting = true;
             EnterMatch(false, players, seed, difficulty, stageOrder);
+        }
+
+        void HandleDuoStart(ulong sender, FastBufferReader reader)
+        {
+            if (nm == null || nm.IsHost || sender != NetworkManager.ServerClientId) return;
+            reader.ReadValueSafe(out int players);
+            if (players != 2) return;
+            DuoStarting = true;
+            DuoOver = false;
+            DuoStarted?.Invoke();
+        }
+
+        void HandleDuoAction(ulong sender, FastBufferReader reader)
+        {
+            if (nm == null || !DuoStarting) return;
+            if (!nm.IsHost) return; // only the host simulates; clients consume snapshots
+            reader.ReadValueSafe(out int slot);
+            reader.ReadValueSafe(out byte code);
+            reader.ReadValueSafe(out float amount);
+            DuoActionReceived?.Invoke(slot & 1, code, amount);
+        }
+
+        void HandleDuoSnapshot(ulong sender, FastBufferReader reader)
+        {
+            if (nm == null || nm.IsHost || sender != NetworkManager.ServerClientId) return;
+            reader.ReadValueSafe(out float c0);
+            reader.ReadValueSafe(out float c1);
+            reader.ReadValueSafe(out float elapsed);
+            reader.ReadValueSafe(out int task);
+            reader.ReadValueSafe(out int mask);
+            DuoSnapshotReceived?.Invoke(new DuoSnapshot { Charge0 = c0, Charge1 = c1, Elapsed = elapsed, Task = task, DoneMask = mask });
+        }
+
+        void HandleDuoEnd(ulong sender, FastBufferReader reader)
+        {
+            if (nm == null || nm.IsHost || sender != NetworkManager.ServerClientId) return;
+            reader.ReadValueSafe(out bool won);
+            reader.ReadValueSafe(out float percent);
+            DuoStarting = false;
+            DuoOver = true;
+            DuoEnded?.Invoke(won, percent);
         }
 
         // ---------------------------------------------------------------- best-of-three handlers

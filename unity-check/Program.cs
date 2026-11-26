@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Bob.Rules;
 using Bob.TaskRace;
+using Bob.Duo;
 
 static class Program
 {
@@ -30,6 +31,15 @@ static class Program
             Console.WriteLine("FAIL task race: " + bad);
         }
         Console.WriteLine("task race table checked");
+
+        // The M1 duo slice (docs 32 sections 3 and 4): timeline, the six tasks, the role swap, and the rule that one
+        // player alone cannot finish anything.
+        foreach (var bad in BobDuoRules.SelfTest())
+        {
+            fails++;
+            Console.WriteLine("FAIL duo: " + bad);
+        }
+        Console.WriteLine("duo slice table checked");
 
         // The combined race score (docs 16 2.6). Same hand-computed rows as server/task-race-test.js, so the phone,
         // the browser and the server are proven to print the same number for the same match.

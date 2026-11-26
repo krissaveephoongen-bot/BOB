@@ -708,6 +708,9 @@ namespace Bob.Game
             // S15 (docs 27): the same screen also offers a real room. The offline pick above still works with no network.
             var online = BobUi.Button(right, "ออนไลน์ 2–4 คน", BobUi.Surface, OpenOnlineRoom, 28, BobUi.Ink);
             BobUi.Size(online, 96, 104);
+            // docs 32 M1: the duo co-op slice, two devices, one room, six tasks.
+            var duoSlice = BobUi.Button(right, "คู่ 2 คน · M1", BobUi.Teal, OpenDuoSlice, 28, BobUi.Surface);
+            BobUi.Size(duoSlice, 96, 104);
         }
 
         void StartPendingMatch()
@@ -722,6 +725,15 @@ namespace Bob.Game
             mode = m.Id; SaveProfile();
             LoadMatchScene(m.Scene);
         }
+
+        // docs 32 M1: the menu's way into the duo co-op slice (DuoClean).
+        void OpenDuoSlice()
+        {
+            Sfx("ui_confirm");
+            MatchRequest.Set("duo", 1, false, new[] { charId });
+            BobSceneLoader.Load(Bob.Ugs.BobOnlineRoom.DuoScene, "ห้องคู่ 2 คน");
+        }
+
 
         // ---------------------------------------------------------------- S15 online room (docs 27)
 

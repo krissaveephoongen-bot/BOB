@@ -255,5 +255,17 @@ namespace Bob.Ugs
         public void SendSeriesResult(Bob.TaskRace.SeriesRound line) { }
         public void SendSeriesRound(int round, int seed, float seconds) { }
         public void AbandonSeries() { }
+        public const string DuoScene = "DuoClean";
+        public struct DuoSnapshot { public float Charge0, Charge1, Elapsed; public int Task, DoneMask; }
+        public event System.Action<int, byte, float> DuoActionReceived;
+        public event System.Action<DuoSnapshot> DuoSnapshotReceived;
+        public event System.Action DuoStarted;
+        public event System.Action<bool, float> DuoEnded;
+        public bool DuoStarting { get; private set; }
+        public bool DuoOver { get; private set; }
+        public bool StartDuo(int players) => false;
+        public void SendDuoAction(int slot, byte code, float amount) { }
+        public void SendDuoSnapshot(DuoSnapshot snapshot) { }
+        public void SendDuoEnd(bool won, float percent) { }
     }
 }
