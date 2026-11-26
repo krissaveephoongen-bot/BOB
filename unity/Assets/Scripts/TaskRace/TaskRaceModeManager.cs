@@ -173,6 +173,8 @@ namespace Bob.TaskRace
         public bool Online => Bob.Game.MatchRequest.Has && Bob.Game.MatchRequest.Online;
         /// <summary>This device hosts the online room: only it may close a shared round and open the next one.</summary>
         public bool IsOnlineHost => Online && Bob.Game.MatchRequest.Host;
+        /// <summary>A tuned device playing offline: the result card says so and nothing about the match is saved (S41).</summary>
+        public bool PracticeRun => !Online && Bob.Game.BobTuningStore.Practice;
         static Bob.Ugs.BobOnlineRoom Room => Bob.Ugs.BobOnlineRoom.Instance;
         /// <summary>A story round is running and the chapter is still open.</summary>
         public bool InSeries => series != null && !series.Over;
@@ -189,9 +191,12 @@ namespace Bob.TaskRace
             set { PlayerPrefs.SetInt(LossStreakKey, Mathf.Max(0, value)); PlayerPrefs.Save(); }
         }
 
-        /// <summary>A story round is 100 s, plus the mercy seconds once two chapters were lost in a row.</summary>
+        /// <summary>
+        /// A story round is 100 s, plus the mercy seconds once two chapters were lost in a row. A practice run may pad
+        /// or shorten the base (§S41); the mercy is added after, so the tuned number is what the player set.
+        /// </summary>
         public float StorySecondsForRound =>
-            storyRoundSeconds + (StoryLossStreak >= 2 ? loseStreakBonusSeconds : 0f);
+            Bob.Game.BobTuningStore.TaskSeconds(storyRoundSeconds) + (StoryLossStreak >= 2 ? loseStreakBonusSeconds : 0f);
 
         public int PointsOf(TeamId team) =>
             team == TeamId.TeamB ? teamBPoints : team == TeamId.TeamA ? teamAPoints : 0;
@@ -266,7 +271,10 @@ namespace Bob.TaskRace
         void ApplyChapter()
         {
             var chapter = Bob.Rules.BobChapters.Saved;
-            matchDuration = Mathf.Max(30f, chapter.RoundTime);
+            // Practice tuning (docs 11 S41) may pad or shorten the clock offline; an online room always reads the
+            // chapter's own seconds, because both devices have to meet the same round end.
+            matchDuration = Mathf.Max(30f, Online ? chapter.RoundTime
+                : Bob.Game.BobTuningStore.TaskSeconds(chapter.RoundTime));
             var list = FindFirstObjectByType<TaskRaceRound>();
             if (list != null) list.ConfigureRound(list.Players, chapter.Difficulty, list.ConfiguredSeed);
             if (Application.isPlaying)
@@ -499,6 +507,10 @@ namespace Bob.TaskRace
         public void EndMatch(bool record = true, bool? seriesWon = null, bool? seriesDraw = null)
         {
             if (LastResult.HasValue) return;
+            // A practice run is never official (docs 11 S41): the result card is composed but nothing is saved — no
+            // wallet, no best, no stars — and BobRaceScoreReporter reads LastMatchRecorded = false and posts nothing.
+            // An online room can never be practice: its numbers belong to every device in the room.
+            if (record && !Online && Bob.Game.BobTuningStore.Practice) record = false;
             SetPaused(false); // the result overlay has to appear on a running scene
             SkipCountdown(); // a match decided during the countdown must not keep it on screen
             if (round == null) round = FindAnyObjectByType<TaskRaceRound>();
@@ -556,8 +568,8 @@ namespace Bob.TaskRace
 
             // Daily challenge (docs 31 section 2.2): the server handed out today's seed, so the attempt is spent when the
             // round ends, whatever the result. The store keys it by the day the seed belonged to, never by the phone's
-            // clock, so a device with a wrong date cannot farm attempts.
-            if (Bob.Game.MatchRequest.Daily)
+            // clock, so a device with a wrong date cannot farm attempts. A practice run spends nothing (S41).
+            if (Bob.Game.MatchRequest.Daily && !PracticeRun)
             {
                 int day = Bob.Game.MatchRequest.DayNumber;
                 Bob.Game.BobDailyStore.Consume(day);

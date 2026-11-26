@@ -20,6 +20,8 @@ namespace Bob.EditorTools
             "bob.story.lossStreak",
             "bob.story.stars.1", "bob.story.stars.2", "bob.story.stars.3",
             "bob.story.stars.4", "bob.story.stars.5", "bob.story.stars.6",
+            // A tuned device plays practice runs that save nothing (docs 11 S41), so the flow below clears them first.
+            "bob.tune.roundTime", "bob.tune.budget", "bob.tune.rivalSkill", "bob.tune.taskTime",
         };
 
         static readonly Dictionary<string, int> before = new Dictionary<string, int>();
@@ -36,6 +38,9 @@ namespace Bob.EditorTools
             foreach (var key in Wallet) before[key] = PlayerPrefs.GetInt(key, 0);
             // The login screen is the first screen of the flow: a leftover guest flag would skip S02.
             PlayerPrefs.SetInt("bob.guest", 0);
+            // Practice knobs go back to their shipped numbers for the run; the restore below puts them back (S41).
+            for (int i = 0; i < Bob.Rules.BobTuning.Defs.Length; i++)
+                PlayerPrefs.DeleteKey(Bob.Game.BobTuningStore.Prefix + Bob.Rules.BobTuning.Defs[i].Id);
             PlayerPrefs.Save();
 
             SessionState.SetBool(BobE2EDriver.ArmKey, true);

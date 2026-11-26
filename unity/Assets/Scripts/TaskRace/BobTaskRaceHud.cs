@@ -1097,8 +1097,21 @@ namespace Bob.TaskRace
             // S25's before/after proof rides in the free strip above the card, on every result (docs 24 section 15.25).
             CleanBand(resultRoot, round);
 
+            // A practice result pays nothing and posts nothing (docs 11 S41), so the card has to say so: an empty
+            // reward block would otherwise read as a bug.
+            if (manager != null && manager.PracticeRun) PracticeChip(resultRoot);
+
             shownResult = r;
             hasShownResult = true;
+        }
+
+        /// <summary>The corner chip of a practice result: no board post, no wallet, no stars (docs 11 S41).</summary>
+        void PracticeChip(RectTransform root)
+        {
+            var chip = BobUi.Panel(root, T.surfaceCream, null, "PracticeChip");
+            BobUi.Pin((RectTransform)chip.transform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(24f, -20f), new Vector2(460f, 56f));
+            var text = BobUi.Label(chip.transform, "รอบซ้อม · ไม่ส่งอันดับ ไม่บันทึกดาว", 22, T.inkMuted, TextAnchor.MiddleCenter);
+            BobUi.Stretch(text.rectTransform, 8f, 4f, 8f, 4f);
         }
 
         /// <summary>

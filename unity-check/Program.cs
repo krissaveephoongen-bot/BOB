@@ -493,6 +493,67 @@ static class Program
             BobBag.SellNote.Contains("ขายคืนไม่ได้") && BobBag.SellNote.Contains("ไม่เพิ่มพลัง"));
         Console.WriteLine("bag checked");
 
+        // S41, practice tuning (docs 11 S41): four knobs with their own range and grid, and one rule above all — a
+        // knob that leaves its shipped number makes the run a practice run. Nothing here touches PlayerPrefs.
+        var fresh = new BobTuningState();
+        Check("tuning: four knobs, each with a unique id", BobTuning.Defs.Length == 4 &&
+            BobTuning.Defs.Select(d => d.Id).Distinct().Count() == 4);
+        Check("tuning: a fresh state is official and says so",
+            fresh.IsOfficial && fresh.TouchedCount == 0 && fresh.Summary.Contains("ทางการ"));
+        Check("tuning: every default is inside its range and on its own grid",
+            BobTuning.Defs.All(d => d.InRange(d.Default) && d.OnGrid(d.Default) && d.Min <= d.Max && d.Step > 0));
+        Check("tuning: a value is clamped to the knob's own range",
+            BobTuning.Clamp(BobTuning.Def("roundTime"), 9999) == 180 &&
+            BobTuning.Clamp(BobTuning.Def("roundTime"), -5) == 60 &&
+            BobTuning.Clamp(BobTuning.Def("taskTime"), -999) == -60);
+        Check("tuning: snap walks to the nearest grid point and stays in range",
+            BobTuning.Snap(BobTuning.Def("roundTime"), 64) == 60 &&
+            BobTuning.Snap(BobTuning.Def("roundTime"), 66) == 70 &&
+            BobTuning.Snap(BobTuning.Def("budget"), 100) == 100 &&
+            BobTuning.Snap(BobTuning.Def("taskTime"), -22) == -15 &&
+            BobTuning.Snap(BobTuning.Def("rivalSkill"), 104) == 100);
+        Check("tuning: one press steps the grid and stops at both ends",
+            BobTuning.Step(BobTuning.Def("roundTime"), 100, 1) == 110 &&
+            BobTuning.Step(BobTuning.Def("roundTime"), 100, -1) == 90 &&
+            BobTuning.Step(BobTuning.Def("roundTime"), 180, 1) == 180 &&
+            BobTuning.Step(BobTuning.Def("roundTime"), 60, -1) == 60 &&
+            BobTuning.Step(BobTuning.Def("taskTime"), 0, -1) == -15);
+        Check("tuning: the value reads with its unit, and the clock delta reads ตามบท at zero",
+            BobTuning.Format(BobTuning.Def("roundTime"), 100) == "100 วิ" &&
+            BobTuning.Format(BobTuning.Def("rivalSkill"), 120) == "120%" &&
+            BobTuning.Format(BobTuning.Def("taskTime"), 0) == "ตามบท" &&
+            BobTuning.Format(BobTuning.Def("taskTime"), 15) == "+15 วิ" &&
+            BobTuning.Format(BobTuning.Def("taskTime"), -30) == "-30 วิ");
+        var tweaked = new BobTuningState();
+        tweaked.Set("roundTime", 130);
+        Check("tuning: one knob off its shipped number turns the run into practice",
+            !tweaked.IsOfficial && tweaked.TouchedCount == 1 && tweaked.Touched().Single().Id == "roundTime" &&
+            tweaked.Summary.Contains("รอบซ้อม") && tweaked.Summary.Contains("1 ค่า"));
+        tweaked.Set("roundTime", 100);
+        Check("tuning: putting the shipped number back makes the run official again",
+            tweaked.IsOfficial && tweaked.TouchedCount == 0);
+        tweaked.Set("budget", 9999);
+        tweaked.Set("not_a_knob", 1);
+        Check("tuning: a write clamps before it is stored, and an unknown id is ignored",
+            tweaked.Get("budget") == 160 && tweaked.Get("not_a_knob") == 0 && tweaked.TouchedCount == 1 &&
+            BobTuning.Def("not_a_knob") == null);
+        tweaked.Reset();
+        Check("tuning: reset returns every knob and clears the touched list",
+            tweaked.IsOfficial && BobTuning.Defs.All(d => tweaked.Get(d.Id) == d.Default));
+
+        // The practice rival scales the shipped try count and never drops below one try, so a 0% rival still plays.
+        var room = BobMatch.MakeRound(1, 424242);
+        var normalRival = BobMatch.Rival(room, 424242, 100);
+        var sameRival = BobMatch.Rival(room, 424242, 100, 1f);
+        var weakRival = BobMatch.Rival(room, 424242, 100, 0f);
+        Check("tuning: the shipped rival is unchanged by the skill parameter",
+            normalRival != null && sameRival != null &&
+            string.Join(",", normalRival.Stack) == string.Join(",", sameRival.Stack) &&
+            normalRival.Score.Total == sameRival.Score.Total);
+        Check("tuning: even a 0% rival still plays a legal stack",
+            weakRival != null && weakRival.Stack.Count > 0 && BobRules.CountLayers(weakRival.Stack) > 0);
+        Console.WriteLine("tuning checked");
+
         Console.WriteLine(fails == 0 ? "UNITY-CHECK PASSED" : $"UNITY-CHECK FAILED: {fails}");
         return fails == 0 ? 0 : 1;
     }

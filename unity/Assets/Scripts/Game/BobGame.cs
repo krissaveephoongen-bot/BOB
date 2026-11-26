@@ -135,7 +135,8 @@ namespace Bob.Game
         void OnBack()
         {
             if (taskMode) { OnTaskBack(); return; }
-            if (overlay != Overlay.None) SetOverlay(phase == Phase.Build && overlay == Overlay.Settings ? Overlay.Pause : Overlay.None);
+            if (overlay != Overlay.None) SetOverlay(overlay == Overlay.Tuning ? Overlay.Settings
+                : phase == Phase.Build && overlay == Overlay.Settings ? Overlay.Pause : Overlay.None);
             else if (phase == Phase.Build) SetOverlay(Overlay.Pause);
             else if (phase == Phase.Intro || phase == Phase.Test || phase == Phase.Result) ToTitle();
             else if (phase == Phase.Team) { phase = Phase.Modes; RenderAll(); }
@@ -146,6 +147,12 @@ namespace Bob.Game
         EvalResult Ev() => BobRules.EvalStack(stack, R?.Enemies, shield);
         int BudgetLeft => budget - BobRules.StackCost(stack);
         CharInfo Hero => BobMatch.Char(charId);
+
+        // Practice tuning (docs 11 S41): a practice run reads the panel's numbers, a normal run reads the constants.
+        float RoundSeconds => BobTuningStore.RoundSeconds(RoundTime);
+        int BudgetBase => BobTuningStore.Budget(BobRules.RoundBudget);
+        /// <summary>The clock this round really runs on (the tuned one when a practice run is on).</summary>
+        float RoundLength => tasks != null && tasks.Duration > 0f ? tasks.Duration : RoundSeconds;
 
         // ---------------------------------------------------------------- match flow
 
@@ -163,6 +170,8 @@ namespace Bob.Game
             abUsed = false; // 4.6: one hero ability per match, not per round
             Time.timeScale = 1;
             Sfx("ui_confirm");
+            // Said once per match, so a tuned run is never mistaken for an official one (docs 11 S41).
+            if (BobTuningStore.Practice) Toast("โหมดซ้อม · ใช้ค่าที่ปรับไว้ และไม่นับสถิติ");
             NextRound();
         }
 
@@ -172,7 +181,7 @@ namespace Bob.Game
             phase = Phase.Loading; RenderAll();
             R = BobMatch.MakeRound(roundNo, seed);
             stack.Clear(); hand.Clear();
-            tasks.Begin(R.Need, RoundTime); budget = BobRules.RoundBudget + carry / 2;
+            tasks.Begin(R.Need, RoundSeconds); budget = BudgetBase + carry / 2;
             shield = false; swapMode = false; freeze = 0; preview = null;
             ResetRoomForRound();
             phase = Phase.Intro; RenderAll();
@@ -260,7 +269,7 @@ namespace Bob.Game
                 case "bubble":
                     shield = true; Toast("โล่ฟอง! กันปฏิกิริยาหักล้างที่แรงที่สุด"); Sfx("bubble_pop"); SpawnFx("fx_bubble_pop", Raise(PlayerPos, 0.5f)); break;
                 case "spray":
-                    preview = BobRules.TotalScore(Ev(), R.Need, BudgetLeft, budget, time / RoundTime);
+                    preview = BobRules.TotalScore(Ev(), R.Need, BudgetLeft, budget, time / RoundLength);
                     Toast("เล็งเป้า! กองนี้จะได้ " + preview.Total + " คะแนน"); Sfx("spray_psst"); SpawnFx("fx_target", CartTop); break;
                 case "press":
                     tasks.FreezeFor(FreezeTime); Toast("รีดเวลา! หยุดนาฬิกา 8 วินาที"); Sfx("steam_hiss"); SpawnFx("fx_steam", Raise(PlayerPos, 0.5f)); break;
@@ -272,11 +281,11 @@ namespace Bob.Game
         {
             if (phase != Phase.Build) return;
             phase = Phase.Scoring; RenderAll();
-            var e = Ev(); int left = BudgetLeft; double tf = Mathf.Clamp01(time / RoundTime);
+            var e = Ev(); int left = BudgetLeft; double tf = Mathf.Clamp01(time / RoundLength);
             var mine = BobRules.TotalScore(e, R.Need, left, budget, tf);
             int[] stats = (int[])e.Stats.Clone();
-            int rb = BobRules.RoundBudget + rivalCarry / 2;
-            var rv = BobMatch.Rival(R, seed, rb);
+            int rb = BudgetBase + rivalCarry / 2;
+            var rv = BobMatch.Rival(R, seed, rb, BobTuningStore.RivalScale);
             bool win = mine.Total > rv.Score.Total || (mine.Total == rv.Score.Total && left >= rb - rv.Ev.Cost);
             if (win) wins++; else losses++;
             results.Add(win);

@@ -43,7 +43,7 @@ namespace Bob.Game
         RectTransform cartCardRt;
         string popFor;
         int lastTick = -1;
-        enum Overlay { None, Pause, Settings, Board, Daily, Wardrobe }
+        enum Overlay { None, Pause, Settings, Board, Daily, Wardrobe, Tuning }
         Overlay overlay = Overlay.None;
         // The board card reads a snapshot, never the SDK: LoadBoard fills it in the background and re-renders.
         BobBoardSnapshot boardSnap;
@@ -627,7 +627,9 @@ namespace Bob.Game
             card.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             var head = BobUi.HBox(card, 10, "Head"); head.childForceExpandHeight = false; BobUi.Size(head, 60, 60);
             BobUi.Size(BobUi.Label(head.transform, "ใบงาน · รอบ " + roundNo + "/3", 46, BobUi.Ink, TextAnchor.MiddleLeft, FontStyle.Bold), 60, 60, 1);
-            BobUi.Size(BobUi.Label(head.transform, $"งบ {budget} · เวลา {RoundTime:0} วิ", 28, BobUi.Muted, TextAnchor.MiddleRight), 60, 60, 1);
+            BobUi.Size(BobUi.Label(head.transform, $"งบ {budget} · เวลา {RoundLength:0} วิ", 28, BobUi.Muted, TextAnchor.MiddleRight), 60, 60, 1);
+            if (BobTuningStore.Practice)
+                BobUi.Size(BobUi.Label(head.transform, "ซ้อม", 26, BobUi.Rose, TextAnchor.MiddleRight, FontStyle.Bold), 60, 60);
 
             foreach (var id in R.Enemies)
             {
@@ -779,10 +781,71 @@ namespace Bob.Game
             if (overlay == Overlay.Board) { Board(card); return; }
             if (overlay == Overlay.Daily) { Daily(card); return; }
             if (overlay == Overlay.Wardrobe) { Wardrobe(card); return; }
+            if (overlay == Overlay.Tuning) { Tuning(card); return; }
             BobUi.Label(card, "ตั้งค่า", 52, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
             BobUi.Size(BobUi.Button(card, "เสียงเอฟเฟกต์: " + (soundOn ? "เปิด" : "ปิด"), soundOn ? BobUi.Sun : BobUi.Surface, () => { SetSound(!soundOn); RenderOverlay(); }, 34), 104, 104);
             BobUi.Size(BobUi.Button(card, "เพลง: " + (musicOn ? "เปิด" : "ปิด"), musicOn ? BobUi.Sun : BobUi.Surface, () => { SetMusic(!musicOn); RenderOverlay(); }, 34), 104, 104);
+            BobUi.Size(BobUi.Button(card, "ปรับแต่ง (ซ้อม)", BobUi.Surface, () => SetOverlay(Overlay.Tuning), 34), 104, 104);
+            BobUi.Label(card, BobTuningStore.State.Summary, 24,
+                BobTuningStore.Practice ? BobUi.Rose : BobUi.Muted, TextAnchor.MiddleCenter);
             BobUi.Size(BobUi.Button(card, "ปิด", BobUi.Surface, () => SetOverlay(phase == Phase.Build ? Overlay.Pause : Overlay.None), 34), 104, 104);
+        }
+
+        // ---------------------------------------------------------------- practice tuning (docs 11 S41)
+
+        /// <summary>
+        /// The four knobs of docs 11 S41: one row per knob, a - and a + that walk the knob's own grid, and one line
+        /// that says whether this run still counts. A value that leaves its shipped number turns every run into a
+        /// practice run — no leaderboard post, no wallet, no stars (BobTuningStore explains why) — so the screen says
+        /// it twice: once under the title and once in the reset row.
+        /// </summary>
+        void Tuning(RectTransform card)
+        {
+            BobUi.Pin(card, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(980f, 0f));
+            BobUi.Label(card, "ปรับแต่ง (ซ้อม)", 52, BobUi.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Label(card, "แตะ - / + เพื่อจูน · ค่าที่เปลี่ยนจะใช้กับรอบซ้อมเท่านั้น", 24, BobUi.Muted, TextAnchor.MiddleCenter);
+
+            for (int i = 0; i < BobTuning.Defs.Length; i++)
+            {
+                var def = BobTuning.Defs[i];
+                var row = BobUi.HBox(card, 10, "TuneRow");
+                row.childForceExpandHeight = false; row.childAlignment = TextAnchor.MiddleCenter;
+                BobUi.Size(row, 88, 88);
+
+                var names = BobUi.Rect("Names", row.transform);
+                VStack(names, 0, 0, 2);
+                BobUi.Size(BobUi.Label(names, def.Label, 30, BobUi.Ink, TextAnchor.MiddleLeft, FontStyle.Bold), 36, 36, 1);
+                BobUi.Size(BobUi.Label(names, def.Hint, 20, BobUi.Muted, TextAnchor.MiddleLeft), 26, 26, 1);
+
+                int value = BobTuningStore.State.Get(def.Id);
+                bool official = BobTuning.Official(def, value);
+                BobUi.Size(BobUi.Label(row.transform, BobTuning.Format(def, value), 32, official ? BobUi.Ink : BobUi.Rose,
+                    TextAnchor.MiddleCenter, FontStyle.Bold), 88, 88, 0, 180);
+                BobUi.Size(BobUi.Button(row.transform, "-", BobUi.Surface, () => NudgeTuning(def.Id, -1), 40), 88, 88, 0, 88);
+                BobUi.Size(BobUi.Button(row.transform, "+", BobUi.Surface, () => NudgeTuning(def.Id, 1), 40), 88, 88, 0, 88);
+            }
+
+            BobUi.Label(card, BobTuningStore.State.Summary, 28,
+                BobTuningStore.Practice ? BobUi.Rose : BobUi.Teal, TextAnchor.MiddleCenter, FontStyle.Bold);
+            BobUi.Size(BobUi.Button(card, "คืนค่ามาตรฐาน", BobTuningStore.Practice ? BobUi.Sun : BobUi.Surface,
+                ResetTuning, 34), 104, 104);
+            BobUi.Size(BobUi.Button(card, "ปิด", BobUi.Surface, () => SetOverlay(Overlay.Settings), 34), 104, 104);
+        }
+
+        void NudgeTuning(string id, int direction)
+        {
+            var def = BobTuning.Def(id);
+            if (def == null) return;
+            BobTuningStore.Set(id, BobTuning.Step(def, BobTuningStore.State.Get(id), direction));
+            Sfx("ui_tap");
+            RenderOverlay();
+        }
+
+        void ResetTuning()
+        {
+            BobTuningStore.Reset();
+            Sfx("ui_cancel");
+            RenderOverlay();
         }
 
         // ---------------------------------------------------------------- board (docs 31 section 3)
@@ -894,7 +957,14 @@ namespace Bob.Game
                     left > 0 ? 40 : 34, left > 0 ? BobUi.Teal : BobUi.Muted, TextAnchor.MiddleCenter,
                     left > 0 ? FontStyle.Bold : FontStyle.Normal);
                 BobUi.Label(card, "seed " + dailyReply.seed + " · ทุกคนได้ชุดงานเดียวกัน", 24, BobUi.Muted, TextAnchor.MiddleCenter);
-                if (left > 0)
+                // The daily seed and its two attempts are shared by every phone, so a tuned device cannot spend one:
+                // it is sent to the tuning card instead (docs 11 S41).
+                if (BobTuningStore.Practice)
+                {
+                    BobUi.Label(card, "โหมดซ้อมเปิดอยู่ · คืนค่ามาตรฐานก่อนเล่นเดลี่", 24, BobUi.Rose, TextAnchor.MiddleCenter);
+                    BobUi.Size(BobUi.Button(card, "ไปที่ปรับแต่ง", BobUi.Surface, () => SetOverlay(Overlay.Tuning), 32), 104, 104);
+                }
+                else if (left > 0)
                     BobUi.Size(BobUi.Button(card, "เล่นเดลี่", BobUi.Sun, StartDaily, 44), 130, 130);
                 else
                     BobUi.Label(card, "เปิดใหม่ตอน 00:00 น.", 24, BobUi.Muted, TextAnchor.MiddleCenter);

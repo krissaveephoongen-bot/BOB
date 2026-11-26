@@ -138,12 +138,17 @@ namespace Bob.Rules
             return best;
         }
 
-        /// <summary>The rival's play for a round, as the prototype's submit() does it.</summary>
-        public static RivalPlay Rival(Round r, int seed, int rivalBudget)
+        /// <summary>
+        /// The rival's play for a round, as the prototype's submit() does it. `skill` scales the try count (a practice
+        /// knob, docs 11 S41): 1 is the shipped "5 + round x 4", and the count never drops below one, so even a 0%
+        /// practice rival still plays a legal stack instead of returning null.
+        /// </summary>
+        public static RivalPlay Rival(Round r, int seed, int rivalBudget, float skill = 1f)
         {
             var rng = new Mulberry(seed * 31L + r.Number);
             double tf = 0.1 + rng.Next() * 0.25; // JS evaluates this argument before aiBest runs
-            return AiBest(r.Offer, r, rivalBudget, 5 + r.Number * 4, rng, tf);
+            int tries = (int)Math.Round((5 + r.Number * 4) * Math.Max(0f, skill));
+            return AiBest(r.Offer, r, rivalBudget, Math.Max(1, tries), rng, tf);
         }
     }
 }
