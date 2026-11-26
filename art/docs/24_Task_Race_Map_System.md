@@ -1266,3 +1266,345 @@ run15 (1440) ผ่าน แต่ run16 (1920) ยัง FAIL pixel dim; run18
 ไม่ใช่ HUD ในเกม — capture helper เก็บ/คืน sorting layer กับ order, โหมดและกล้อง แล้ว log ลำดับเรนเดอร์จริง;
 run18/19/20/21/22 = R1 CHECKS PASSED ที่ 1920/1440/2400/1920/3840×2160 (หลักฐานวิธีอ่าน docs 30 §6.2)
 และ run22 ย้ำหลังแก้เส้นทางเซฟ/อันดับ/เดลี่/ออนไลน์ ไม่อ้าง sortingOrder หรือ compile แทนหลักฐานภาพจริง.
+
+### 15.36 APK `0.1.0 (3)` — การ์ด Home R1 ขึ้นมือถือจริง (18 พ.ย. 2026)
+
+owner สั่ง "build apk, ขอ url สำหรับดาวน์โหลด" — รอบนี้คือ v3 ที่มีงาน UI R1 (HUD §15.35 + การ์ด overlay 5 ใบ + สีรถเข็น §15.33)
+
+**สูตร build (ทำตาม §15.19):** รันจากสำเนา `compile-check/` ไม่ใช่ `unity/` เพราะ Editor เคยถูกล็อก (17 พ.ย. 15:46 ยังเหลือ `unity/Temp/UnityLockfile` ค้างทั้งที่ไม่มี Unity.exe — build ผ่านสำเนาจึงไม่ต้องแตะไฟล์นั้น)
+
+```
+Unity.exe -batchmode -quit -projectPath <repo>/compile-check \
+  -executeMethod Bob.EditorTools.BobAndroidBuild.BuildApk -bobVersionCode 3 \
+  -logFile <repo>/compile-check/Logs/apk-build-v3.log
+```
+
+- สำเนาเท่ากันกับ HEAD แบบ byte-identical ทั้ง `Assets/Scripts` และ `ProjectSettings/ProjectSettings.asset` (ตรวจด้วย `diff -rq`) — งาน `e468e7a`/`846c693` อยู่ใน APK ครบ
+- **กันของงานอื่นติดมา:** `unity/Packages/manifest.json` มี `com.unity.purchasing 5.5.1` + GDK เพิ่มเมื่อ 17 พ.ย. 15:48 (อีก session, ยังไม่ commit, ไม่มีโค้ดอ้าง — grep `Purchasing` ใน `Assets/Scripts` = 0 จุด) จึงเขียนทับ manifest/lock **ในสำเนา** ด้วยฉบับ `git show HEAD:` → APK ตรงกับ branch ที่ push; ไฟล์ของอีก session ใน `unity/` ไม่ถูกแตะและไม่ถูก gitignore
+- ผล: `Bob: APK build Succeeded, 0 errors, 892 MB`, exit 0, ~10 นาที (log `compile-check/Logs/apk-build-v3.log`)
+- ไฟล์จริง `Builds/BOB-prototype-v1.apk` = **93,608,620 bytes (89.3 MiB)** (+214 KB จาก v2) · สำเนาเก่า: `BOB-prototype-v1-code2.apk` (v2) และ `BOB-prototype-v1-prev.apk` (v1) · `Builds/` ไม่เข้า git
+- `aapt2 dump badging`: `versionCode='3' versionName='0.1.0'`, `native-code: 'arm64-v8a'`, `targetSdkVersion 36`, `minSdk 26`, permission `INTERNET` / `VIBRATE` / `ACCESS_NETWORK_STATE` (ไม่มี `com.android.vending.BILLING` → ยืนยันว่า IAP ไม่ติดมา), launcher `com.unity3d.player.UnityPlayerGameActivity`, label `Battle of the Brooms`
+- `apksigner verify` (ต้อง `JAVA_HOME` = OpenJDK ของ Unity): `CN=Android Debug`, SHA-256 `91a710ef…71e0` = **ลายเซ็นเดียวกับ v2** → ติดตั้งทับได้ไม่ต้องถอนเครื่อง (debug keystore ยังไม่ใช่ทาง Play Store)
+- `unity/ProjectSettings/ProjectSettings.asset` ตั้ง `AndroidBundleVersionCode: 3` ตามเลขที่ออกจริง (build เขียนในสำเนา; ฉบับ repo ยัง **ไม่ commit** — รอคำสั่ง owner)
+
+**การแจกจ่าย (Firebase App Distribution, โปรเจกต์ `bob-preprod`)** — release **`0.1.0 (3)`** id **`11i46lsumkoj0`**
+
+- console: `https://console.firebase.google.com/project/bob-preprod/appdistribution/app/android:com.bob.battleofthebrooms/releases/11i46lsumkoj0`
+- ลิงก์สำหรับ tester (เปิดด้วยบัญชี `jakgrits.pho@gmail.com` แล้วกด install ได้): `https://appdistribution.firebase.google.com/testerapps/1:438462393037:android:76c94b4645660e52e69784/releases/11i46lsumkoj0`
+- **ขั้น group ยังใช้ไม่ได้ (เหมือนตอน v2):** `appdistribution:groups:create testers` ตอบ "created successfully" แต่ `testers:add --group-alias testers` และ `distribute --groups testers` ยัง 404 (`groups/testers:batchJoin`, `releases/<id>:distribute`) และ `groups:list` คืนตารางว่าง → สคริปต์ `distribute-android.sh` ที่ `.env` ชี้ `FIREBASE_TESTER_GROUP=testers` ไว้จึงหลุดที่ขั้นท้ายเสมอ (ตัว release ขึ้นก่อนแล้ว)
+- **ทางที่ใช้ได้จริง:** `testers:add <email>` ระดับโปรเจกต์ ("Testers created successfully") แล้ว `firebase appdistribution:distribute <apk> --app <id> --project bob-preprod --release-notes "..." --testers <email>` → `re-uploaded already existing release 0.1.0 (3)` + `distributed to testers/groups successfully` (ไม่สิ้นเปลืองเพราะ binary เดิมถูก dedupe)
+- **ลิงก์ binary ตรงใช้ไม่ได้จาก shell:** `.../app-binary-downloads/.../app.apk?token=…` ตอบ 403 `Could not verify signature. This URL may be expired.` ทั้งที่ token เพิ่งสร้าง (v2 เคยวัดได้ 200) → ถือว่าหมดอายุทันที/ผูกกับผู้เรียก; ถ้าจะส่งต่อไฟล์จริงให้ copy `Builds/BOB-prototype-v1.apk` หรือใช้ลิงก์ tester/console
+**โหลดไฟล์ตรงจากเครื่อง (owner สั่ง 18 พ.ย. "ใช้ wifi เดียวกัน ขอลิงก์ดาวน์โหลด")** — ไฟล์ 89.3 MiB ไม่ต้องผ่าน Firebase:
+
+- `node Builds/serve-apk.js 8081 BOB-prototype-v1.apk` → `/` เป็นหน้าลิงก์, `/BOB-prototype-v1.apk` เป็นไฟล์ ส่ง `Content-Type: application/vnd.android.package-archive` และรับ `Range` (206) เพื่อให้กดโหลดต่อได้เมื่อหลุดกลางคัน
+- **วง LAN ใช้ไม่ได้ทันที:** Wi-Fi ของเครื่องอยู่ใน NetworkCategory `Public` และ firewall ON โดยไม่มี inbound rule ให้ node → มือถือเรียก `http://192.168.1.37:8081/` ไม่ผ่าน ถ้าจะใช้วงในต้องสั่งจาก shell elevated: `netsh advfirewall firewall add rule name="BOB APK LAN" dir=in action=allow protocol=TCP localport=8081` (ยังไม่รันให้ — เป็นการแก้ firewall ของเครื่องเจ้าของ)
+- **ทางที่ใช้แทน ไม่ต้องแตะ firewall (เป็นการเชื่อมต่อขาออกแบบ):** `npx -y cloudflared@latest tunnel --url http://127.0.0.1:8081 --no-autoupdate` แล้วเปิด `<url>/BOB-prototype-v1.apk` — ลิงก์ `*.trycloudflare.com` สุ่มใหม่ทุกครั้งที่รัน อยู่ได้เท่าที่ process ยังทำงาน และใครถือลิงก์ก็โหลดได้ จึงใช้เฉพาะช่วงทดสอบ
+- วัดจริงผ่านอุโมงค์: `HEAD` → `200`, `Content-Length: 93608620`, `Accept-Ranges: bytes` · `Range: bytes=0-8000000` → `206` ครบ 8,000,001 bytes, md5 ตรงกับ `head -c 8000001` ของไฟล์ในเครื่อง, ~12 MB/s
+
+- **ยังไม่ทำ:** เปิด Proguard/R8 + signing keystore จริง, split APK/AAB สำหรับ Play Store, และทดสอบบนเครื่องจริง (ครั้งนี้ยังไม่มีหลักฐานการเล่นบนมือถือ — ดู docs 30 §5 ข้อ Android)
+
+### 15.37 แอปปิดตัวเองตอนกด "เริ่มเล่น" บน vivo X200 → บังคับ OpenGLES3 (18 พ.ย. 2026)
+
+**อาการ (owner รายงาน):** ติดตั้ง `0.1.0 (3)` จากลิงก์แล้วกด **เริ่มเล่น** ใน Home → แอปพับหายจากหน้าจอทันที · เครื่อง **vivo X200** (Android 15, Dimensity 9400 + Mali) · ตัว **v2 ก็เข้าไม่ได้** ⇒ ฉาก 3D ยังไม่เคยรันบนมือถือจริงเลย ไม่ใช่อาการถอยหลังจาก v3
+
+**ที่ตัดออกก่อนสรุป (วัดจริงทั้งหมด):** ไฟล์ที่แจกไม่เสีย — `HEAD` ผ่านอุโมงค์ได้ `Content-Length: 93,608,620` และ 8 MB แรก md5 ตรงกับไฟล์ในเครื่อง · วิดีโอทุกตัว in-project ถูก transcode เป็น H.264 1280×720 (`enableTranscoding: 1`) และการที่เมนูเล่นวิดีโอพื้นหลังได้ = ตัวถอดรหัสของเครื่องทำงาน · `aapt2` ไม่ permission `BILLING` · Home เป็น UI canvas ล้วน จึงยังไม่มีเฟรม 3D ก่อนกดปุ่ม ⇒ ตายที่ **เฟรม 3D เฟรมแรก** ของฉาก `TaskRace` และการที่ process หายไปเลย (ไม่มี error บนจอ) = native crash ไม่ใช่ exception ฝั่ง C#
+
+**สมมติฐานหลัก:** `m_BuildTargetGraphicsAPIs: []` = Automatic ซึ่งใน Unity 6 เรียง **Vulkan ไว้ก่อน** บน built-in pipeline · ฉากแข่งมี RenderTexture แบบ MSAA x4 (`S28Stage`) + shader โลกโค้งของตัวเอง · driver Mali กับ Vulkan + MSAA RT เป็นคู่ที่มีรายงาน SIGSEGV ตั้งแต่ตอนสลับฉาก ⇒ การทดลองที่แพงน้อยที่สุดคือปิด Vulkan
+
+**สิ่งที่แก้:** `BobAndroidBuild.Apply()` เรียก `PlayerSettings.SetGraphicsAPIs(BuildTarget.Android, [OpenGLES3])` ( overload ที่รับ `NamedBuildTarget` **ไม่มีใน Unity 6** — ลองแล้วได้ `error CS1503: cannot convert from 'NamedBuildTarget' to 'BuildTarget'`) และค่าที่ build เขียนลงไปจริงถูก copy กลับเข้า `unity/ProjectSettings/ProjectSettings.asset` แล้ว (`m_APIs: 0b000000i` = 0x0b = OpenGLES3, `m_Automatic: 0`) เพื่อให้เปิด Editor แล้วเห็น settings ตรงกับของที่ออก · `AndroidBundleVersionCode: 4` ตามเลขที่ออกจริง
+
+**ผล build:** `compile-check/Logs/apk-build-v4.log` → `Bob: APK build Succeeded, 0 errors, 891 MB` exit 0 · `Builds/BOB-prototype-v1.apk` = **93,194,388 bytes (88.9 MiB, −398 KB จาก v3)** เพราะไม่คอมไพล์ shader variant ฝั่ง Vulkan · `aapt2`: versionCode 4 / 0.1.0, `arm64-v8a`, minSdk 26, targetSdk 36 · สำเนา v3 เก็บไว้ที่ `Builds/BOB-prototype-v1-code3.apk` · แจกผ่าน `node Builds/serve-apk.js 8081` + `cloudflared tunnel` (ลิงก์ `*.trycloudflare.com` สุ่มใหม่ทุกครั้งที่รัน process ตายคือลิงก์ตายด้วย)
+
+**ผลของ GLES3 (18 พ.ย. 2026):** owner ทดสอบ `0.1.0 (4)` แล้วรายงาน "ทดสอบแล้ว อาการเดิม" ⇒ ** Vulkan/GLES3 ไม่ใช่สาเหตุ** ตัดสมมติฐานหลักทิ้ง และห้ามเดาตัวต่อไปจนกว่าจะเห็น log จริง (ข้อ 15.38)
+
+**ถ้ายังไม่เห็น log:** ทางที่เร็วกว่าคือ `adb -s <เครื่อง> logcat -b crash` หรือ wireless debugging แล้วกรอง `Fatal signal` / `libmali` / `libc` · ตัวแปรถัดไปที่ลองทีละตัว: `antiAliasing` ของ `S28Stage` 4 → 1, Managed stripping ต่ำสุด, และ `androidRenderOutsideSafeArea`
+
+### 15.38 Crash trail ในแอป — ให้มือถือรายงานตัวเอง (APK `0.1.0 (5)` development build, 18 พ.ย. 2026)
+
+owner ไม่เสียบสาย USB ⇒ ไม่มีทางได้ logcat จึงใส่ตัวเก็บ log ลงไปในแอปแทน เพื่อให้เครื่องที่พับตัวเองบอกได้ว่าพับที่บรรทัดไหน
+
+**`unity/Assets/Scripts/Dev/BobCrashTrail.cs` (ไฟล์ใหม่, `#if UNITY_EDITOR || DEVELOPMENT_BUILD`):**
+
+- boot ตัวเองด้วย `[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]` → GameObject `DontDestroyOnLoad` จึงทำงานก่อนฉากไหนโดยไม่แตะ bootstrap เดิม
+- ดึง `bob-trail.txt` ใน `Application.persistentDataPath` มาไว้ในการ-memory ก่อน แล้วเขียนต่อท้ายทีละบรรทัดด้วย `File.AppendAllText` **ไม่ buffer** เพราะส่วนที่สำคัญคือหางไฟล์ซึ่งหายไปก่อนถ้าเขียนแบบ buffering · เก็บ 400 บรรทัด, หมุนไฟล์ที่ 400 KB
+- ต่อ `Application.logMessageReceived` (ตัด newline เป็น ` | `, truncate บรรทัด `Log` ที่เกิน 400 ตัว) + `SceneManager.sceneLoaded` → บรรทัด `scene loaded <name>`
+- บรรทัด boot บอก `version / deviceModel / RAM` และถ้ารอบก่อนไม่มี `clean-exit` ปิดท้ายจะต่อท้ายว่า **`PREV RUN ENDED WITHOUT CLEAN EXIT`** (ตรวจได้จาก `OnApplicationQuit`)
+- เฟรมที่ 3 เป็นต้นไปเขียน `gfx <graphicsDeviceType> | <deviceName> | shaderLevel | vram | screen WxH@dpi` — คือหลักฐานว่า GLES3 มีผลจริงบนเครื่องหรือไม่
+- `OnGUI`: ปุ่มมุมขวาบน `LOG` / **`LOG (ตาย)`** (ตัว `(ตาย)` ขึ้นเมื่อรอบก่อนจบไม่สะอาด) เปิดแผง scroll แสดง 80 บรรทัดท้าย + แสดง path ของไฟล์ไว้บนหัวแผง
+
+**จุดตรวจในโค้ดเกม:** `BobGame.Menus.cs:415` เพิ่ม `Debug.Log("[BobGame] opening match scene " + scene)` ข้างใน `LoadMatchScene` — เห็นบรรทัดนี้แต่ไม่เห็น `scene loaded TaskRace` แปลว่าตายตอนโหลดฉาก ไม่ใช่หลังฉากเปิด
+
+** flag ใหม่ของ build:** `BobAndroidBuild` รับ `-bobDevBuild` → `BuildOptions.Development` (เดิม build release เท่านั้น จึงไม่มีทางเห็น log บนเครื่อง)
+
+**ผล build:** `compile-check/Logs/apk-build-v5.log` → `Bob: APK build Succeeded, 0 errors` exit 0 · `Builds/BOB-prototype-v1.apk` = **106,277,148 bytes (101.3 MiB, +12.5 MB จาก v4)** เพราะ development player พก profiler มาด้วย · `aapt2`: versionCode **5** / 0.1.0, `arm64-v8a`, targetSdk 36 · ลายเซ็น debug เดิม `91a710ef…71e0` ⇒ **ทับของเก่าได้ ไม่ต้องถอนการติดตั้ง** · พิสูจน์ว่าตัว log ติดไปด้วยจริง: `global-metadata.dat` ใน APK มี `BobCrashTrail` 2 ครั้ง + `bob-trail.txt` 1 ครั้ง, `boot.config` มี key `player-connection-*` · Unity 6 เตือน `warning UAC0009` ว่า `DEVELOPMENT_BUILD` deprecated (เตือนตัวเดียวกับ `PureUgsDebugUI.cs` — ยังใช้ได้อยู่, ครั้งหน้าค่อยย้ายไป `Debug.isDebugBuild`) · build แรกพลาด `error CS0103: The name 'scroll' does not exist` เพราะลืมประกาศ field ของ scroll view แก้แล้ว build ผ่าน
+
+**วิธีใช้ (owner):** ติดตั้ง `0.1.0 (5)` จาก `https://carrying-walker-obligation-heavily.trycloudflare.com/BOB-prototype-v1.apk` → กด **เริ่มเล่น** จนแอปพับ → เปิดแอปใหม่ → แตะปุ่ม **LOG (ตาย)** → **capture หน้าจอส่งมา** (อ่านจาก 20 บรรทัดสุดท้ายก็พอ) · ถ้าโหลดไม่สะดวกผ่านลิงก์เพราะลิงก์ตายตาม process tunnel ต้องรันใหม่แล้วได้ URL ใหม่
+
+**อ่านผล:** ไม่มีบรรทัด `gfx` เลย = ตายก่อนเฟรมแรก (boot/IL2CPP) · `gfx` บอก `Vulkan` = settings GLES3 ไม่ถูกใช้ · มี `opening match scene TaskRace` แล้วจบแค่นั้น = native crash ตอนโหลดฉาก → ลองทีละตัวตามที่ §15.37 เหลือไว้ (MSAA 4→1, stripping, safe area) · ถ้ามีบรรทัด `Exception` = แก้ตรงนั้นได้เลย ไม่ต้องเดาต่อ
+
+### 15.39 ผลจาก trail รอบแรก + ให้แอปดึง logcat ของตัวเอง (APK `0.1.0 (6)`, 18 พ.ย. 2026)
+
+owner ส่ง screenshot ของแผง `LOG (ตาย)` มา ⇒ trail ทำงานตามที่ออกแบบ และได้คำตอบ 2 ข้อ
+
+**หลักฐานที่ได้ (vivo V2415 = X200, ram 11343MB):**
+
+```
+gfx OpenGLES3 | Mali-G925-Immortalis MC12 | shaderLevel 50 | vram 4096MB | screen 2800x1260@480
+...
+Log [BobGame] opening match scene TaskRace
+=== boot ... | PREV RUN ENDED WITHOUT CLEAN EXIT
+```
+
+- **GLES3 มีผลจริงบนเครื่อง** และการบังคับ API ไม่ได้ช่วย ⇒ ปิดสมมติฐาน Vulkan ของ §15.37 อย่างเด็ดขาด (`shaderLevel 50` + `vram 4096MB` = driver ทำงานปกติ, เครื่องไม่ได้แรมน้อย)
+- **รอบที่ตายจบที่ `opening match scene TaskRace`** ไม่มี `scene loaded TaskRace` ต่อท้าย ไม่มี `Exception`/`Error` สักบรรทัด ⇒ process ตายระหว่าง Unity โหลดฉากจริง (native) ไม่ใช่โค้ดเกมโยน error และไม่ใช่ฉากที่เปิดมาแล้วค่อยพัง
+- ข้อสังเกตที่ยังอธิบายไม่ได้: รอบแรก (03:01:45) ไม่มีบรรทัด `gfx` ทั้งที่มี log ของ Home หลายบรรทัดก่อนหน้า — ไม่กระทบข้อสรุปเพราะ `gfx` ของรอบที่สองพิสูจน์เรื่อง API แล้ว
+
+**สิ่งที่ใส่เพิ่ม (ไฟล์เดียว + marker 2 บรรทัด):**
+
+- `BobCrashTrail`: เปลี่ยนไปใช้ `Application.logMessageReceivedThreaded` (แบบเดิมส่งเฉพาะ main thread จึงพลาด log จาก worker/UGS) · boot line เพิ่ม `SystemInfo.operatingSystem` (ได้ API level มาด้วย) · เมื่อ `PREV RUN ENDED WITHOUT CLEAN EXIT` จะ spawn background thread รัน `/system/bin/logcat -d -b crash` (เก็บทุกอย่าง), `-b main -t 600` (กรอง `Fatal signal / SIGSEGV / backtrace / #0 / libc / libunity / libil2cpp / mali / vulkan / GLES / ANR`) และ `-b events -t 600` (กรอง `am_kill / am_proc_died / am_anr / lmkd / watchdog`) แล้วเขียนลง trail เป็นบรรทัด `[native crash] …`
+  - **ทำไมทำได้โดยไม่ต้องมี adb:** ตั้งแต่ Android 4.1 `logd` ให้ process อ่าน entries ของ UID ตัวเองได้ และ `crash`/`events` ring buffer ยังเก็บของรอบก่อนไว้ ⇒ เป็น log ของแอปเราเอง ไม่ใช่การ bypass permission หรือการอ่านข้อมูลแอปอื่น
+- `TaskRaceModeManager.Awake()` (บรรทัด 206) เพิ่ม `Debug.Log("[TaskRace] manager awake begin" / "… end")` — ถ้าเห็น begin โดยไม่มี end จะรู้ว่าตายภายใน Awake แล้วค่อย bisect รอบถัดไป
+
+**ผล build:** `compile-check/Logs/apk-build-v6.log` → `Bob: APK build Succeeded, 0 errors` exit 0 · `Builds/BOB-prototype-v1.apk` = **106,298,540 bytes (101.4 MiB)** · versionCode **6**, arm64-v8a, ลายเซ็น debug เดิม `91a710ef…` ⇒ ทับได้ไม่ต้อง uninstall · ยืนยันว่าโค้ดใหม่ติดไปด้วย: `global-metadata.dat` มี `/system/bin/logcat` และ `manager awake begin` ครบ · อุโมงค์ตอบ `Content-Length: 106,298,540` ที่ลิงก์เดิม · สำเนา v5 เก็บไว้ที่ `Builds/BOB-prototype-v1-code5.apk` · `unity/ProjectSettings/ProjectSettings.asset` = `AndroidBundleVersionCode: 6`
+
+**วิธีอ่านผลรอบถัดไป (แยก 3 ทาง):** มี `Fatal signal 11 (SIGSEGV)` + backtrace ใน `[native crash]` = รู้ตัว lib ที่พัง (mali / libunity / libil2cpp) แล้วแก้ตรงนั้น · `[native crash]` ว่างแต่ `[native events]` มี `am_kill`/`lmkd` = ระบบ vivo จัดการกระบวนการเอง ไม่ใช่บั๊กฝั่ง render · มี `manager awake begin` แต่ไม่มี `end` = bisect ใน Awake (รายชื่อ call ที่ต้องแยก: `EnsureEventSystem` / `ApplyStage` / `CollectBarriers` / `DioramaAmbient.Ensure` / `BobRaceScoreReporter.Attach`)
+
+### 15.40 v6 พิสูจน์ว่าอาการเดิม + ตัวอ่าน logcat พังเอง → เปลี่ยนไปใช้ JNI (APK `0.1.0 (7)`, 18 พ.ย. 2026)
+
+**ที่ trail รอบ v6 บอก (owner ส่ง screenshot 06:29):**
+
+- อาการเหมือนเดิมเป๊ะ: `boot 06:28:28` → `gfx OpenGLES3 | Mali-G925-Immortalis MC12` → UGS signed in / profile loaded → `Log [BobGame] opening match scene TaskRace` → `boot 06:29:04 ... | PREV RUN ENDED WITHOUT CLEAN EXIT` (ห่าง 36 วิ = กดเล่นแล้วตาย) · ได้ข้อมูลเครื่องเพิ่มจาก `SystemInfo.operatingSystem`: **Android OS 16 / API-36 (BP2A.250605.031.A3_V000L1)** บน vivo V2415
+- `[native] failed ApplicationName='/system/bin/logcat', CommandLine='-d -b crash', Native error= Success` ⇒ **`System.Diagnostics.Process` ใช้ไม่ได้บน IL2CPP Android** (มัน throw แบบ error code 0)
+- `[trail] write failed get_persistentDataPath can only be called from the main thread` ⇒ thread ที่ capture ตายตั้งแต่บรรทัดแรก เพราะ `Write()` เรียก `Application.persistentDataPath` ผ่าน property — เป็น main-thread-only API
+
+**สิ่งที่แก้ใน `BobCrashTrail` (v7):**
+
+- `filePath` ถูก cache ตอน `Awake()` (main thread) และ `Write()` ใช้ค่านั้น — ถ้า `filePath == null` จะเก็บเข้า memory อย่างเดียว ไม่แตะ file
+- เปลี่ยนจาก `Process.Start` เป็น **JNI**: `new AndroidJavaObject("java.lang.ProcessBuilder", (object)argv)` → `start()` → `getInputStream()` → `InputStreamReader` → `BufferedReader.readLine()` จนได้ `null` แล้ว `waitFor()` (อ่านจบ stream ก่อนรอ เพื่อไม่ให้ pipe ค้าง) · ทุก object ในสายถูก `using` dispose · `AndroidJavaObject` ใช้งานจาก background thread ได้ (JNI attach ให้เอง)
+- อ่าน 4 buffer: `crash` (ทั้งก้อน), `system -t 400`, `main -t 700` (กรอง `NativeKeys`), `events -t 700` (กรอง `KillKeys`) และเขียนบรรทัดสรุป `[native] <tag> kept N of M (exit E)` — ถ้า `kept 0 of 0` จะแยกออกทันทีว่า buffer ว่าง ไม่ใช่ capture พัง (สมมติฐานของรอบนั้นที่ว่า `AndroidJavaObject` เรียกจาก background thread ได้เพราะ JNI attach ให้เอง — **ผิด**, ดู §15.41)
+- เพิ่มปุ่ม **`NATIVE ONLY`** ในแผง (สลับกับ `ALL LINES`): log ของ Home รอบใหม่ดันบรรทัด `[native …]` ลงไปใต้ scroll จึงต้องมีตัวกรองเฉพาะบรรทัด native ให้เห็นใน screenshot ใบเดียว
+
+**ผล build:** `compile-check/Logs/apk-build-v7.log` → `Bob: APK build Succeeded, 0 errors` · `Builds/BOB-prototype-v1.apk` = **106,289,352 bytes (101.36 MiB)** · versionCode **7**, arm64-v8a, ลายเซ็น debug เดิม ⇒ ทับได้ · ยืนยันใน `global-metadata.dat`: มี `java.lang.ProcessBuilder` และ `NATIVE ONLY` · อุโมงค์ตอบ `Content-Length: 106,289,352` ที่ลิงก์เดิม · บทเรียน: build ครั้งต่อไปให้ copy ไฟล์เก่าเป็น `Builds/BOB-prototype-v1-codeN.apk` **ก่อน** build (v6 ไม่ได้เก็บสำเนา เพราะถูกทับ — ไม่กระทบงาน เพราะ v6 = v5 + ตัว capture ที่พัง)
+
+
+### 15.41 trail รอบที่ 3 จับผิดเครื่องมือตัวเอง + หน้าโหลดที่ owner ขอ (APK `0.1.0 (8)` → `(9)`, 18 พ.ย. 2026)
+
+**หลักฐานจาก screenshot ของ v7 — `trail … (42 lines)` = 6 boot × 7 บรรทัดพอดี:**
+
+- ไม่มีบรรทัด `[native] <tag> kept N of M (exit E)` เลย ทั้งที่ boot เขียน `PREV RUN ENDED WITHOUT CLEAN EXIT` (เงื่อนไข trigger ครบ)
+- สิ่งที่โผล่ 3 บรรทัดต่อ boot คือ `… failed Object reference not set to an instance of an object.` — grep ทั้ง repo พบจุดที่พิมพ์ข้อความรูปแบบนี้เพียงจุดเดียวคือ `unity/Assets/Scripts/Dev/BobCrashTrail.cs:111` ⇒ **เป็นข้อความของตัว capture เอง ไม่ใช่ error ของเกม**
+- สรุปสาเหตุ: `AndroidJavaObject` เรียกจาก `System.Threading.Thread` ที่ Unity ไม่ได้ attach เข้า JVM ไม่ได้ (NRE ไม่ใช่ `AndroidJavaException`) — ความเชื่อท้าย §15.40 ที่ว่า JNI attach ให้เองใช้ไม่ได้จริง
+
+**สิ่งที่แก้ใน trail (v8):**
+
+- ย้าย capture จาก worker thread มาเป็น coroutine บน main thread (`Pull()` → `StartCoroutine(CaptureRoutine())`) เริ่มหลังบรรทัด `gfx …` หนึ่งเฟรม และอ่านหนึ่ง buffer ต่อเฟรม (logcat แบบ `-d` จะ block ~100–300 ms/buffer ยอมรับได้เพราะเป็น development build)
+- พิมพ์ชนิด exception ด้วย: `e.GetType().Name + ": " + e.Message` — รอบก่อนเห็นแค่ message จึงเดาที่มาไม่ได้
+- เพิ่มปุ่ม **`PULL LOGCAT`** ในแผง (ระหว่างอ่านขึ้น `READING...`): เดิมดึงอัตโนมัติเฉพาะ boot ที่รอบก่อนจบไม่สะอาด ตอนนี้กดดึงได้ทุกเมื่อที่เพิ่งเห็น crash บนจอ
+- บังคับ `scroll.x = 0` + ตัดทุกบรรทัดที่ 150 ตัวอักษร (`Clip`): screenshot ใบก่อนหัวบรรทัดหาย (`gfx OpenGLES…` เหลือเห็นแต่ `S3 | Mali-…`) เพราะ scroll แนวนอนไหล — อ่านไม่ออกเท่ากับไม่มีหลักฐาน
+
+**สมมติฐานของ owner ("เกมขาดหน้า download และ login"):**
+
+- **login มีอยู่จริงแต่เงียบ:** trail แสดงลำดับ `signed in - PlayerId vERPPr2bw4BKoUF0GrutwsOl5uI9` → `No cloud profile yet - starting a new one` → `profile loaded - coins 0 level 1 items 0` ก่อนถึง Home ทุกครั้ง ⇒ UGS Authentication + Cloud Save ทำงานครบโดยไม่มี UI เลย (ถ้าต้องการการ์ดบัญชีที่มองเห็น ต้องเพิ่ม — ยังไม่ทำ รอคำสั่ง)
+- **หน้าโหลดไม่มีจริง:** `LoadMatchScene` เรียก `SceneManager.LoadScene` แบบ sync ⇒ ระหว่างที่ Unity สร้างฉาก 3D ทั้งฉากในเฟรมเดียว จอยังค้างอยู่หน้า Home ไม่มีอะไรบอกว่ากำลังโหลด และเส้นขอบเขต crash อยู่ตรงนั้นพอดี (`opening match scene TaskRace` → ตาย, ไม่มี `scene loaded`)
+
+**`BobSceneLoader` (ใหม่ — `unity/Assets/Scripts/Game/BobSceneLoader.cs`):**
+
+- Canvas `ScreenSpaceOverlay` + `sortingOrder 90` (เหนือ HUD ที่ 10 และเหนือการ์ด overlay ทั้งหมดยกเว้นแผง LOG ที่เป็น IMGUI) บน GameObject ที่ `DontDestroyOnLoad` เพราะมันต้องอยู่ต่อหลังฉากเดิมถูก unload
+- ลำดับ: present 1 เฟรม → `LoadSceneAsync` → `allowSceneActivation = false` → แถบ progress จาก `op.progress / 0.9` → ครบ 100% ค้าง 0.3 วิ → ปล่อย activate → พัก 1 เฟรม → `Destroy`
+- caption แสดงตัวเลขเปอร์เซ็นต์ (`กำลังโหลดฉากแข่งขัน 62%`) — เป็นครั้งแรกที่ crash report บอกได้ว่าโหลดไปไกลแค่ไหน, ก่อนหน้ารู้แค่ว่า "ตายหลัง `opening match scene`"
+- `MenuBackgroundVideo.StopAll()` ถูกเรียกก่อนโหลด: ใน APK มี mp4 7 ก้อน (`assets/bin/Data/*.resource` ลงท้าย `ftypmp42`) รวม `menu_loop` 4.2 MB จาก `unity/Assets/Resources/Video/menu_loop.mp4` และ ModeSelect/ChapterSelect เปิด VideoPlayer ไว้ · `Release()` เพิ่ม `player.Stop()` + `player.clip = null` เพื่อคืน MediaCodec surface **ก่อน** frame ที่โหลดฉาก แทนที่จะปล่อยให้เกิดตอน destructor (native fault ที่ scene load มี MediaCodec เป็นจำเลยอันดับต้นๆ) · Home ไม่ได้ attach video ⇒ ตัวนี้คือกันไว้ตอนกดเล่นจากหน้าที่มีวิดีโอ
+- `try/finally` ปิด overlay เสมอ: ถ้า coroutine พังกลางทาง จอโหลดเต็มจอจะค้างแล้วกลบอาการ crash ที่กำลังวัดอยู่ (v8 build ผ่านแล้วจึงเห็นจุดนี้ ⇒ rebuild เป็น v9 ด้วยโค้ดเดิม + hardening นี้, เก็บสำเนา `Builds/BOB-prototype-v1-code8.apk`)
+- กันกดซ้ำด้วย `BobSceneLoader.Busy` — `LoadMatchScene` คืนค่าทันทีถ้ามีโหลดค้างอยู่ (LoadScene ซ้อนสองครั้งคือ native fault อีกแบบหนึ่ง)
+
+**ผล build:** v8 `compile-check/Logs/apk-build-v8.log` → `Bob: APK build Succeeded, 0 errors, 945 MB` = **106,293,368 bytes**, versionCode 8, arm64, ลายเซ็น debug เดิม ⇒ ทับได้ · v9 `-bobVersionCode 9` + hardening · strings ที่ยืนยันใน `global-metadata.dat` ของ v8: `PULL LOGCAT`, `capture begin`, `capture end`, `BobSceneLoader`, `loading scene`, `กำลังโหลดฉากแข่งขัน` · typecheck offline ไม่มี error ใน 4 ไฟล์ที่แก้ · อุโมงค์ serve ไฟล์ใหม่เองเพราะ `serve-apk.js` อ่าน stats ต่อ request
+
+**อ่านผลรอบหน้า (4 ทาง — กด `PULL LOGCAT` ก่อนส่ง screenshot):**
+
+1. มี `Fatal signal …` + backtrace → ระบุ lib ที่พังได้ตรง
+2. ทุก buffer `kept 0 of 0 (exit 0)` → vivo ไม่ปล่อย log ของรอบก่อนให้ UID ตัวเอง ต้อง adb เท่านั้น
+3. จอโหลดขึ้นแล้วค้างที่ N% → ได้พรมแดนการโหลดเป็นตัวเลขครั้งแรก (N ≈ 90% = ตายตอน activate ฉาก, N ต่ำ = ตายตอนโหลด asset)
+4. ผ่านจอโหลดเข้าฉากได้ปกติ → sync load / video teardown คือสาเหตุจริง แล้วค่อยลดระดับ `BobSceneLoader` เป็นฟีเจอร์ถาวร
+
+### 15.42 tombstone ชี้ว่า Unity ยอมตัวเองตอน preload + อ่าน logcat ตาม pid ของรอบที่ตาย (APK `0.1.0 (10)`, 18 พ.ย. 2026)
+
+screenshot ของ v9 ให้หลักฐานที่ชัดที่สุดตั้งแต่เริ่มวินิจฉัยมา:แผง `NATIVE ONLY` แสดง tombstone เต็ม ๆ ของ debuggerd
+
+```
+pid: 26681, tid: 26795, name: Loading.Preload  >>> com.bob.battleofthebrooms <<<
+uid: 10409
+signal 5 (SIGTRAP), code -6 (SI_TKILL), fault addr --------
+backtrace:
+  #00 pc 00000079fd4b0a4c  /apex/com.android.runtime/lib64/bionic/libc.so
+  #01..#25  … libunity.so …  #26 __start_thread
+27 total frames
+```
+
+**แปลผล:** `SIGTRAP` + `code -6 (SI_TKILL)` = โปรเซสส่งสัญญาณใส่ตัวเอง (SI_TKILL คือ tkill จากในโปรเซสเดียวกัน ไม่ใช่ใครยิงเข้ามา) และ thread ที่ตายชื่อ **`Loading.Preload`** คือ thread โหลด asset ของ `SceneManager` ไม่ใช่ render thread — frame ที่เหลือทั้งหมดอยู่ใน libunity/bionic ไม่มี Mali/vulkan โผล่มา ⇒ **Unity ยิง fatal/assert ตอน preload ฉาก TaskRace**
+
+สิ่งที่หลักฐานนี้ตัดออกจากรายนามจำเลย:
+- **Vulkan / GFX driver** — frame ไม่ได้พังใน `libGLES_mali.so` และการตั้งค่า GLES3-only (§15.37) ยังเป็นค่าเดิม ไม่ถูกแตะใน v10 (ข้อเสนอ "GLES3 → Vulkan" จึงยังไม่ต้องทดสอบ — หลักฐานชี้ว่า driver ไม่ใช่จำเลย)
+- **vivo ฆ่า / RAM** — `events` buffer ตอบ `kept 0 of 0 (exit 0)` คือไม่มี `am_kill`/`am_proc_died`/`am_anr`/`lowmemorykiller` เลย, `ram` ในบรรทัด boot ก็ยังเหลือ
+- **APK เสียจากการดาวน์โหลด** — tombstone เป็นของ code ที่ติดตั้งจริง + `versionCode 9` ตรงกับที่ build
+- **login/เซฟ** — trail ก่อนหน้าบรรทัด `opening match scene` แสดง `signed in - PlayerId …` → `No cloud profile yet - starting a new one` → `profile loaded - coins 0 level 1 items 0` ทุกครั้ง ⇒ ระบบล็อกอิน UGS ทำงานเสร็จเงียบ ๆ ก่อนถึง Home, ไม่มีอะไรให้แก้ที่ root cause
+
+**ตรวจสมมติฐานของ owner 2 ข้อ (รอบนี้ตอบได้ด้วยหลักฐาน):**
+
+| สมมติฐาน | ผลตรวจ | สรุป |
+| --- | --- | --- |
+| "เกมขาดหน้า login เข้าสู่เกม" | login มีครบ (UGS sign-in + Cloud Save) แต่ไม่มี UI บอก | มีจริงเฉพาะ "มองไม่เห็น" — จะทำเป็นการ์ดบัญชีเมื่อสั่ง |
+| "เกมขาดหน้า download" | `LoadMatchScene` เคยเรียก `SceneManager.LoadScene` แบบ sync (จบในเฟรมเดียว) | **จริง** — `BobSceneLoader` เข้ามาแล้วตั้งแต่ v9 และโชว์ `%` เป็นตัวเลข |
+
+**สิ่งที่ v10 เปลี่ยน (เครื่องมืออย่างเดียว ไม่มียาแบบเดา):** ตัวกรอง `NativeKeys` เก็บแต่คีย์ native (libc/mali/GLES/`Fatal signal`…) และ **ตัดข้อความของ Unity ทิ้ง** — ประโยค `Fatal error on graphics API …`, `Assertion failed on expression …`, `BUG: …` จึงไม่โผล่ใน trail ทั้งที่มันคือคำตอบตัวเดียวที่ยังขาด ⇒ เพิ่มการอ่าน logcat **ตาม pid ของรอบที่ตาย** ซึ่งไม่ผ่านตัวกรองคีย์นั้น ([Dev/BobCrashTrail.cs](../../unity/Assets/Scripts/Dev/BobCrashTrail.cs))
+
+- `ReadLogcat()` แยกเป็น 3 ชั้น: `RunLogcat(argv, tag, out exit)` อ่าน raw ทั้งหมด (เก็บไม่เกิน 4200 บรรทัด, ตัดหัวทีละ 1200) → `ReadLogcat()` กรอง key อย่างเดิม + คืน pid ที่พบ → `ReadRun(argv, tag, pid)` ตัวใหม่เก็บเฉพาะบรรทัดที่คอลัมน์ pid ตรงกับที่ตาย
+- `DeadPid()` อ่าน `pid: ` จากหัว tombstone แบบ **บรรทัดล่าสุดชนะ** — crash buffer ยังเก็บ tombstone ของรอบเก่าไว้ด้วย, ถ้าเก็บตัวแรกจะไปอ่าน pid ของรอบที่ตายไปนานแล้ว
+- `IsPid()`/`Field()`/`Body()` คาดรูปแบบคอลัมน์ `MM-DD HH:MM:SS PID TID LEVEL TAG: message` (threadtime) — `Body()` ปลด prefix 5 คอลัมน์ออกให้เห็นข้อความชิดขอบซ้าย ประหยัด ~20 ตัวอักษรต่อบรรทัดก่อน `Clip` ที่ 150
+- ผลถูกเขียนเป็น `[native main~]` / `[native system~]` **เป็นชุดสุดท้าย** ของ capture เพื่อให้ `NATIVE ONLY` (โชว์ 120 บรรทัดล่าสุด) วางมันไว้บนสุด
+- งบบรรทัดเพิ่มเพื่อไม่ให้ rotation กลบของใหม่: `ShowLines 80→120`, `KeepLines 400→900`, `RotateAtBytes 400 KB→900 KB`, `NativeLines 90→140`, `RunLines` ใหม่ 160 — เป็นค่าตอนรันในเครื่องล้วน ไม่มีผลต่อขนาด APK
+
+**ผล build:** v10 `-bobVersionCode 10 -bobDevBuild` → `compile-check/Logs/apk-build-v10.log` = `Bob: APK build Succeeded, 0 errors` → **106,294,984 bytes**, aapt2 badging `versionCode='10' versionName='0.1.0' minSdkVersion 26 arm64`, `boot.config` มี `player-connection-mode=Listen` (development build), strings ใน `global-metadata.dat` ตรวจพบ `lines of pid`, `capture begin`, `PULL LOGCAT`, `loading scene`, `กำลังโหลดฉากแข่งขัน` ครบ · mirror hygiene: `compile-check/Packages/{manifest,packages-lock}.json` เขียนทับด้วยฉบับ `git show HEAD:` ⇒ `com.unity.purchasing` + GDK ของอีก session ไม่ติด APK · สำเนา v9 เก็บที่ `Builds/BOB-prototype-v1-code9.apk` · อุโมงค์เดิมจ่าย v10 แล้ว (`Content-Length: 106294984`) — ไม่ต้อง restart อะไรเพราะ `serve-apk.js` อ่าน stats ต่อ request
+
+**อ่านผลรอบหน้า (v10 — กด `PULL LOGCAT` → `NATIVE ONLY` ก่อนส่ง screenshot):**
+
+1. มี `[native main~] … Fatal error … / Assertion failed … / BUG: …` → ได้ชื่อ asset/type/shader ที่ Unity บ่น ⇒ **นี่คือทางหลัก** แล้วแก้ตรงจุดนั้น
+2. `[native] main lines of pid NNNN: 0 of 0` → vivo ไม่เก็บ main buffer ของ UID ตัวเอง หรือรูปแบบคอลัมน์ไม่ใช่ threadtime ⇒ v11 ขยาย `NativeKeys` ด้วย `Fatal error|Assertion|BUG|il2cpp` แทนการพึ่ง pid
+3. จอโหลดค้างที่ N% → N ต่ำ = ตายตอนโหลด asset, N ≈ 90–100% = ตายตอน activate ฉาก (ตอน `allowSceneActivation = true`)
+4. เข้าฉากได้ → `BobSceneLoader` (async) คือยาจริง, แต่ preload ยังไม่ถูกแก้ขาด ⇒ ค่อยไล่ต่อว่า object ไหนใน `TaskRace.unity` ที่ทำให้ preload ยอมแพ้ (แล้วเปลี่ยน `BobSceneLoader` เป็นฟีเจอร์ประจำ)
+
+### 15.43 ผลรอบแรก ของ v10: จอโหลดหลุดที่ 38% + audit footprint ของฉาก (18 พ.ย. 2026)
+
+owner รายงานว่า **"หลุดตอน 38%"** — นี่คือทางที่ 3 ของตารางอ่านผล และเป็นตัวเลขพรมแดนรอบแรก
+
+**แปลง % ที่เห็นบนจอก่อน** เพราะ `BobSceneLoader.Show()` ถูกป้อน `op.progress / 0.9f` (จาก loop `while (op.progress < 0.9f)`) ⇒ จอ 38% = `AsyncOperation.progress` **≈ 0.342** ไม่ใช่ 0.38 และไม่ใช่ 0.9 ⇒ **ตายกลางตอนโหลด asset ยังไม่แตะ activate ฉากด้วยซ้ำ**
+
+สิ่งที่ตัวเลขนี้ตัดเพิ่ม:
+- ตัด "ตายตอนเฟรม 3D แรก" (§15.37 เคยสงสัย) และตัด "activate ฉาก" → GFX driver / shader compile ตอน present **ไม่ใช่** เวลาเกิดเหตุ
+- ตัด MediaCodec/video teardown เป็นจำเลยของ *round นี้* (overlay จอโหลดถูก present ก่อน และ 34% ยังไม่ถึงขั้น swap scene)
+- เหลือจำเลยเดียวตาม tombstone: **`Loading.Preload` thread ระหว่าง deserialize/upload scene content**
+
+**audit ว่า preload โหลดอะไรอยู่ที่ 34%** (สคริปต์ parse GUID ทั้งหมดใน `unity/Assets/Scenes/TaskRace.unity` แล้ว resolve ผ่าน `.meta` รวม `Library/PackageCache`):
+
+| รายการ | ค่าที่วัดได้ |
+| --- | --- |
+| ขนาดไฟล์ฉาก | 2.9 MB, อ้างถึง GUID ทั้งหมด **106** ตัว |
+| bytes ของ asset ที่ถูกอ้างถึง | **18.8 MB** |
+| `.asset` | **16.30 MB = 87%** ของที่อ้างถึงทั้งหมด |
+| ├ `Resources/Fonts/TMP/IBMPlexSansThai-Medium SDF.asset` | **8.11 MB**, atlas 2048×2048, ~398 glyph blocks, ถูกใช้ **58** จุด |
+| ├ `Resources/Fonts/TMP/Mitr-Medium SDF.asset` | **8.11 MB**, atlas 2048×2048, ~400 glyph blocks, ถูกใช้ **20** จุด |
+| ├ `Art/BobArtLibrary.asset` + NavMesh 2 ชุด | 0.07 + 0.01 + 0.01 MB |
+| `.fbx` ×25 | 1.63 MB (ใหญ่สุด `Art/Props/SM_washing_machine.fbx` 600 KB) |
+| `.cs` ×20 `.prefab` ×30 `.png` ×7 `.mat` ×4 `.shader` ×1 | 0.50 / 0.17 / 0.18 / 0.01 / 0.01 MB |
+| `TextMeshProUGUI` ในฉาก | **42 blocks** (TMP ใช้ 78 จุด) |
+| GUID ที่ resolve ไม่ได้ | **0** — ตัวที่ไม่อยู่ใน `Assets/` เป็นสคริปต์จาก package ทั้ง 12 ตัว (ugui TMP/Image/Button/CanvasScaler + ai.navigation NavMeshSurface/Modifier/Link), ไม่มี "referenced script missing" |
+
+**ข้อสรุปที่ใช้ได้ตอนนี้ (ยังไม่ใช่คำวินิจฉัย):** สิ่งที่ thread `Loading.Preload` ต้องโหลดในฉากคือ **TMP font asset สองตัว = 16.2 MB + atlas 2048×2048 สองผืน** ซึ่งตรงกับช่วง progress 0.34 พอดี และเป็นจำเลยที่เข้ากับ SIGTRAP (Unity assert/abort ตัวเอง) มากกว่า driver/RAM ที่ตัดออกไปแล้ว — แต่ยังไม่สรุป เพราะบรรทัด fatal ของ Unity ยังไม่มาถึง
+
+**ชิ้นที่ยังขาด (ข้อ 15.43):** screenshot ของ LOG (ปุ่ม `PULL LOGCAT` → `NATIVE ONLY`) จาก v10 เพื่อเห็น `[native main~]` — ถ้ามี `Fatal error` / `Assertion failed` / `BUG:` ที่ชื่อ font/TMP/texture ก็จบที่บรรทัดนั้น
+**ถ้า `[native] main lines of pid …: 0 of 0`:** v11 จะ bundled 3 อย่าง (ยังเป็น diagnostic เท่านั้น) — (1) เพิ่มคำ `Fatal error`, `Assertion`, `BUG`, `il2cpp` เข้า `NativeKeys` ให้ไม่ต้องพึ่ง pid, (2) พิมพ์ progress ดิบ (`op.progress` ไม่ใช่ค่าหาร) + heartbeat หน่วยความจำ (`Profiler.GetTotalAllocatedMemoryLong` / `GetMonoUsedSizeLong`) ลง trail ทุก ~20 เฟรม เพื่อดูว่าตายที่หน้าผา allocation หรือไม่ (Unity abort ได้เมื่อ allocate ไม่สำเร็จ), (3) เก็บ `[native main~]` ต่อเนื่องเมื่อมี tombstone หลายรอบ
+
+### 15.44 ผล v10: pid-reader ยิงถูกตัว แต่ `main` buffer กลืน log ของรอบที่ตายไปแล้ว ⇒ หลักฐานต้องมาจาก trail file ไม่ใช่ logcat (18 พ.ย. 2026)
+
+เจ้าของส่ง screenshot ของ LOG panel (v10, ตอนอยู่ที่ Home พร้อม modal ตั้งค่า) อ่านได้ดังนี้
+
+**tombstone ที่ buffer `crash` เก็บไว้ (เหมือน v9 แต่ pid ใหม่):**
+
+```
+CRASH: Timestamp: 2026-11-18 15:28:52.054950174+07:00
+CRASH: pid: 20050, tid: 20160, name: Loading.Preload  >>> com.bob.battleofthebrooms <<<
+CRASH: uid: 10409
+CRASH: signal 5 (SIGTRAP), code -6 (SI_TKILL), fault addr --------
+CRASH: backtrace:
+CRASH:   #00 pc ... libc.so (__abort+148)
+CRASH:   #01..#25 pc ... /data/app/~~Rde9cygFs3ThGwFtvY1Dg==/com.bob.battleofthebrooms-.../libunity.so
+CRASH:   #26 pc ... libc.so (__pthread_start(void*)+64)
+CRASH: Forwarding signal 5
+libc   : debuggerd signal invoked signal:5
+libc   : get api level success 203404
+libc   : debuggerd requestDump:0 NO_NEW_PRIVS:0
+libc   : clone child process pid:20230
+libc   : debuggerd pseudothread crash_process: 20160
+```
+
+ทุก frame ใน `libunity.so` ทั้งนั้น ไม่มี `libmli`/`libvulkan`/`libEGL` แทรก ⇒ ยืนยันคำเดิมว่า **Unity เรียก abort ใส่ตัวเองตอน preload** ไม่ใช่ driver crash และไม่ใช่ vivo ฆ่า (บรรทัด `libc` ข้างล่างเป็นแค่บทสนทนาของ debuggerd ตอนเขียน tombstone ไม่ใช่สาเหตุ)
+
+**บรรทัดตัดสินของ v10:** `[native] main lines of pid 20050: 1 of 1 (exit 0)` — `ReadRun` หา pid ผู้ตายเจอจริง (แสดงว่า `DeadPid` last-wins ทำงาน) แต่ใน window ล่าสุดของ buffer `main` มีบรรทัดที่ถือ pid 20050 อยู่ **บรรทัดเดียว** ⇒ **ข้อความที่ Unity พิมพ์ออกมาก่อนตายไม่อยู่ใน logcat แล้ว** on-device post-mortem หมดสิทธิ์
+
+**เหตุผล:** แอปที่ไม่มี `READ_LOGS` อ่านได้แต่บรรทัดของ uid ตัวเองก็จริง แต่ ring buffer เป็นของส่วนกลาง — ระหว่างที่เครื่องดับจนเจ้าของเปิดแอปใหม่ log ของแอปอื่นกินที่จนเส้นของรอบผู้ตายถูก eviction หมด ส่วน buffer `crash` รอดเพราะมันเล็กและเขียนเฉพาะตอนมี tombstone เท่านั้น (นี่คือกลไกเดียวกับที่ §15.42 ใช้)
+
+**ข้อจำกัดของบรรทัด header ที่ต้องแก้:** `ReadRun` พิมพ์ `n of mine.Count` เท่านั้น ไม่ได้พิมพ์ `all.Count` ⇒ จาก "1 of 1" แยกไม่ออกว่า "อ่านได้ 4000 บรรทัดแต่ตรง pid 1 บรรทัด" หรือ "logcat คืนมาแค่บรรทัดเดียว" v11 ต้องพิมพ์ `kept / matched / total` ให้ครบ
+
+**ของที่ยังมีอยู่จริงในเครื่อง (และ v10 ยังโชว์ไม่ได้):** `persistentDataPath/bob-trail.txt` — `OnLog` ผูกกับ `Application.logMessageReceivedThreaded` แล้ว `Write` ทีละบรรทัดไม่ buffer ตั้งแต่ §15.36 แปลว่า **บรรทัดสุดท้ายของรอบที่ตายถูกเขียนลงไฟล์ไปแล้ว** รวมถึง `[BobLoader] loading scene TaskRace async` และสิ่งที่ Unity พิมพ์ต่อจากนั้น ตัว `lines` ในหน่วยความจำก็โหลดทั้งไฟล์กลับมาตอน `Awake` (cap 900 บรรทัด) ซึ่งรอบใหม่เขียนไปแค่ ~500 บรรทัด ⇒ **หลักฐานยังอยู่ แต่ UI เข้าถึงไม่ได้** เพราะ (ก) `OnGUI` โชว์แค่ `ShowLines = 120` บรรทัดท้าย และ (ข) ทุก repaint บังคับ `scroll.y = measure - inner.height + 20` เลื่อนลงก้น list เสมอ แตะลากขึ้นไม่ทัน — ปุ่ม `NATIVE ONLY` ที่เพิ่มมาเพื่อเรื่องนี้กลับ filter เอาเฉพาะ `[native*` ซึ่งคือ dump ใหม่ที่ไม่มีข้อมูลผู้ตายพอดี
+
+**v11 ต้องทำอะไร (viewer + heartbeat เท่านั้น ไม่แตะพฤติกรรมเกม) — สถานะ: พักไว้ เพราะ adb ทำแทนได้หมดแล้ว (§15.45):**
+1. **หน้า `PRE-DEATH`** — ตอน `Awake` ถ้า `lastRunDied` ให้ slice บรรทัดก่อน `=== boot` ล่าสุดแล้วเขียนซ้ำเป็น `[prev] …` (80 บรรทัดท้าย) พร้อมปุ่ม filter ที่นับ `[prev` เข้ามาด้วย นี่คือบรรทัดที่ Unity พิมพ์จริงก่อน SIGTRAP
+2. **heartbeat ใน `BobSceneLoader`** — พิมพ์ `op.progress` ดิบ + `Profiler.GetTotalAllocatedMemoryLong()` + `GetMonoUsedSizeLong()` ทุก ~20 เฟรม ลง trail เพื่อให้บรรทัดสุดท้ายบอก stage และ RAM ตอนตาย
+3. **ลด dump ตอน boot** — `NativeLines` ของ tag `crash` จาก 140 เหลือ ~30 (เก็บ header + 8 frame ก็พอ) เพื่อให้ไม่กลืน window, เพิ่มคำ `Fatal error` / `Assertion` / `BUG` / `il2cpp` เข้า `NativeKeys`, และแก้ header `ReadRun` ให้พิมพ์ total
+
+**ทางที่เร็วกว่าและไม่ต้อง build:** adb on the PC ให้ shell ซึ่งถือ `READ_LOGS` ครบ ⇒ เห็น log ของทุก uid แบบสด ๆ ตอนกดเริ่มเล่น (บรรทัด fatal ของ Unity มาตรง ๆ), `adb pull` ไฟล์ trail ทั้งไฟล์มาอ่าน, และ `dumpsys` ประกอบได้ ใช้ v10 ที่ติดตั้งอยู่แล้วได้เลย วิธีเปิดบน vivo X200: Settings → About phone → tap Build number 7 ครั้ง → Developer options → **Wireless debugging** (หรือเสียบสาย USB แล้วเปิด USB debugging) แล้วส่ง pairing code + IP:port มาให้ `adb pair`
+
+### 15.45 สาเหตุจริงจาก adb: Unity ปฏิเสธไฟล์ฉากที่ build ออกมา — `assets/bin/Data/level1 is corrupted! [Position out of bounds!]` (18 พ.ย. 2026)
+
+เจ้าของเสียบสาย USB ⇒ adb เห็นเครื่องทันทีหลังกด Allow USB debugging (serial `10AECM1ELY001Q9`, model `V2415`) · **ไร้สายปิดทาง**: `adb pair 192.168.1.36:45375 382063` ตอบ `protocol fault (couldn't read status message)` ซ้ำ 2 รอบรวมหลัง `kill-server` — วัดจริงว่าพอร์ต pairing `45375` ปิดไปพร้อมหน้าต่าง dialogue ที่หาย (พอร์ต `46569` ที่โชว์อยู่ไว้สำหรับ `connect` ไม่ใช่ `pair`) ⇒ ครั้งหน้าใช้สายเท่านั้น
+
+**บรรทัดตัดสิน** — `adb pull /storage/emulated/0/Android/data/com.bob.battleofthebrooms/files/bob-trail.txt` ได้ 774 บรรทัด 137,349 B (ตรงกับ §15.44 ว่าหลักฐานอยู่ในไฟล์นี้ แค่ UI โชว์ไม่ถึง) หางของรอบที่เริ่ม 15:28:48 และตาย 15:28:52:
+
+```
+Log [UGS] signed in · PlayerId vERPpR2bw4BKoUF0GrutwsOl5uf9
+Log [UGS] no cloud profile yet · starting a new one
+Log [UGS] profile loaded · coins 0 · level 1 · items 0
+Log [BobGame] opening match scene TaskRace
+Log [BobLoader] loading scene TaskRace async
+Error The file '/data/app/~~Rde9jcygFs3ThGwFtvYtDg==/com.bob.battleofthebrooms-l049wFB4z9piBZG4MAdxXA==/base.apk/assets/bin/Data/level1' is corrupted! Remove it and launch unity again! | [Position out of bounds!]
+```
+
+**อ่านผล:** thread `Loading.Preload` เปิด level file ที่ build ฝังใน APK แล้ว Unity แตะ offset ที่พ้นขอบไฟล์ ⇒ trail ลงท้ายด้วย error นี้ในรอบที่ tombstone (§15.44) บันทึกไว้ที่ 15:28:52 (boot 15:28:48 ⇒ ตายภายใน ~4 วิของการโหลด ไม่ใช่หลังเข้าฉากแล้ว) · SIGTRAP code -6 + frame #01–#25 ใน `libunity.so` = **Unity abort ตัวเองเพราะอ่าน serialized data ไม่สำเร็จ** ไม่ใช่ native fault จากภายนอก · **จำเลยเก่าพ้นข้อหา:** TMP font 16.3 MB (§15.42–15.43 เคยเป็นตัวอันดับ 1) — font อยู่ใน `sharedassets*` ไม่ใช่ `level1` และความพังอยู่ที่ offset ภายในไฟล์ level เอง · Vulkan/GLES3, video teardown, RAM, UGS login, ตัวจ่ายไฟล์ ตกไปตั้งแต่รอบก่อน (3 บรรทัดแรกยัง `signed in` สำเร็จ)
+
+**หลักฐานว่าไม่ใช่เครื่อง ไม่ใช่สายส่งไฟล์ ไม่ใช่ vivo:** `md5sum` ของ `base.apk` ในเครื่อง = `f3ecee8ce7777a0bc97d40c266d73f77` เท่ากับ `Builds/BOB-prototype-v1.apk` บน PC (106,294,984 B) ⇒ สิ่งที่เครื่องอ่านคือไฟล์ที่เรา build เป๊ะ ๆ **ข้อบกพร่องอยู่ที่ผลผลิตของ build ไม่ใช่ distribution**
+
+**ตรวจตลับ (container) แล้วสะอาดหมด — ยังชี้ตัว object ไม่ได้:**
+- `level1` อยู่ใน APK เป็น 6 entry `level1.split0…split5` = 1,048,576×5 + 317,504 = **5,560,384 B** ขณะที่ header (big-endian, format version 23) ประกาศ `fileSize` @28 = **5,560,384** ตรงกัน ⇒ **ไฟล์ไม่ขาดกลาง การต่อ split ครบ** (`metadataSize` @20 = 49,906, ขนาด metadata uncompressed @36 = 49,968, `targetPlatform` @64 = **13 = Android**)
+- zip entry เรียง lexical (`split0, split1, split10, …`) แต่ runtime อ้างตามชื่อ ⇒ ลำดับไม่ใช่สาเหตุ · ตรวจทุก group ที่มี `.split` พบ group เดียวที่เลขไม่เรียงตาม zip คือ `sharedassets0.assets` ซึ่ง Home โหลดผ่านอยู่แล้ว
+- `assets/bin/Data` เป็น deflate (method 8) เกือบทั้งหมดยกเว้น 8 ไฟล์ `.resource` + 2 json ที่ method 0 — และ `level0` (Home) ก็ method 8 เหมือนกันแต่โหลดได้ ⇒ โครงสร้าง compression เป็นปกติของ Unity ไม่ได้มีใคร zip APK ใหม่
+- ต้นทางไม่เก่า: `unity/Assets/Scenes/TaskRace.unity` กับ `compile-check/Assets/Scenes/TaskRace.unity` **md5 เดียวกัน** `76784564526e73728f3f613191b8e8f2` (3,003,493 B ทั้งคู่)
+- ไม่มี artifact คนละรุ่น: `ProjectVersion.txt` สองโปรเจกต์ = `6000.6.8f1 (237b6593792b)` และ banner ใน `compile-check/Logs/apk-build-v10.log` ก็ revision เดียวกัน (`6000.6/respin/6000.6.8f1-b6138bef9630`, 0 errors, `Succeeded`)
+
+**แปลว่าอะไร:** ที่พังคือ ** serialization ของ `level1` ตอน player build** (ฝั่ง artifact ของ `compile-check/Library`) ไม่ใช่ scene YAML ต้นทาง และไม่ใช่โทรศัพท์ · อาการนี้ต้องเกิดกับทุก build v2–v10 เพราะนี่เป็นครั้งแรกที่ฉากนี้ไปไกลพอที่จะพูดออกมา
+
+**Gotcha ที่เพิ่งเจอ (จำเป็น):** ช่วง Android post-process Unity พิมพ์ `Killing ADB server in 2.2236869 seconds.` ⇒ **ทุก build ฆ่า adb server** หลัง build ต้อง `adb kill-server; adb start-server` + ถอด/เสียบสายใหม่ ไม่งั้น `adb devices` ว่างเปล่า (นี่คือเหตุผลที่ live logcat `Logs/live-crash.log` ตาย exit 255 กลางคัน) · shell ของ adb ถือ `READ_LOGS` อยู่แล้ว ⇒ แถว APK11▲ (viewer + heartbeat) **ไม่จำเป็นแล้ว**
+
+**ทางเลือกต่อไป (ยังไม่ build ใหม่นอกจากเจ้าของสั่ง):**
+1. **repro แบบสด (ถูกสุด ไม่ต้อง build):** เสียบสาย → `adb logcat -v threadtime > Logs/live-crash.log` → เจ้าของกด เริ่มเล่น → ได้บริบทเต็มของ Unity ก่อน abort ว่ากำลังอ่าน type/object ไหน ( ณ จบรอบนี้สายถูกถอดแล้ว)
+2. **one variable ที่ชี้ขาด:** ล้าง `compile-check/Library/ArtifactDB` + `SourceAssetDB` แล้ว full reimport + build ใหม่ (หรือ build จาก `unity/` ที่ Library เป็นของจริงที่ editor ใช้) — เป็นยามาตรฐานของข้อความ "corrupted! Remove it" และตอบตรง ๆ ว่า artifact cache ของ mirror เป็นตัวการไหม (แพง: reimport + build ~10 นาทีขึ้นไป)
+3. **ชี้ตัว object โดยไม่แตะมือถือ ไม่ build:** parse object table ของ `level1` ที่ประกอบจาก 6 split แล้วหาอ็อบเจ็กต์ที่ `byteStart + byteSize > 5,560,384` — ต้องใช้ `UnityPy` (ยังไม่ติดตั้งในเครื่องนี้) ถ้าเจอจะระบุได้ว่า feature ไหนของฉาก (NavMeshData? CurvedWorld? S28 stage?) ที่ build แล้วเลยขอบ
+
+### 15.46 live logcat + tombstone ที่มี symbol: เครื่องอ่าน PPtr ของ MonoBehaviour ใน `level1` ไม่ทันขอบไฟล์ (18 พ.ย. 2026)
+
+เจ้าของเลือกทาง 1 (repro สด) ⇒ ทำสคริปต์ขับเอง `Logs/repro-watch.sh`: รอ `sys.usb.configfs` ขึ้น (authorized) → `logcat -b all -c` → สตรีม `-b main -b system -b crash -b events` ลง `Logs/live-crash2.log` → `screencap` → หาปุ่มเหลืองด้วย PIL mask (`r>235 and 170<g<215 and b<110`) → `input tap` → รอ 50s → `screencap` อีกรอบ → ปิด capture · ผล 16:18:09 device online, 16:18:19 tap ที่ 1444,1074, 16:19:16 จบ **5,706 บรรทัด 590,166 B** · step log `Logs/repro-steps.log` ภาพ `Logs/phone-pre.png` / `phone-post.png`
+
+**ได้อะไรเพิ่มจาก §15.45:** faultบรรทัดเดียวเดิมนแต่คราวนี้ tombstone มี frame ครบและ **symbol แล้ว** (16:18:47 pid 13929 tid 14115 `Loading.Preload`):
+
+```
+CachedReader::OutOfBoundsError  <-  CachedReader::UpdateReadCache
+  <-  TransferPPtr<StreamedBinaryRead>  <-  Transfer_UnityEngineObject
+  <-  SerializableManagedRefTransfer::TransferScriptingObjectWithSerializedRefSupport
+  <-  ManagedObjectHostTransferRedirect<MonoBehaviour>::Transfer
+  <-  SerializedFile::ReadObject  <-  PersistentManager::ReadAndActivateObjectThreaded
+signal 5 (SIGTRAP), code -6 (SI_TKILL)
+Version '6000.6.8f1 (237b6593792b)' · Build type 'Development' · il2cpp · arm64-v8a · Stripping 'Enabled'
+```
+
+**แปล:** runtime กำลังย้าย **PPtr ของ MonoBehaviour ใน `level1`** แล้ว request offset ที่พ้น cache/ขอบไฟล์ ⇒ Unity abort ตัวเองกลาง deserialization ไม่ใช่โค้ดเกม · device `vivo/V2415/V2415:16/BP2A.250605.031.A3_V000L1`
+
+**ทำไม % เลื่อน (38% ⇄ 94%):** `%` ที่โชว์ = `op.progress / 0.9` ⇒ 38% ≈ raw 0.342, 94% ≈ raw 0.846 · preload ไล่เปิด object หลาย worker จึงพังตอนถึงตัวไหนก่อนเราก็จับ % ตอนนั้น ⇒ **% เป็น noise ไม่ใช่ตัวแยกสาเหตุ** ให้ดูบรรทัด fatal เป็นหลัก
+
+**ตัดผู้ต้องหาใหม่ — "split + deflate" ไม่ใช่กลไกพัง:** ใน APK มี entry `.split` รวม **99** ตัว กระจาย 3 group — `sharedassets0.assets` 93,366,660 B / 90 chunks, `level1` 5,560,384 B / 6 chunks, `globalgamemanagers.assets` 3,036,976 B / 3 chunks · ทั้ง 3 group deflate (method 8) เหมือนกันหมด และ **สอง groupแรก Home ใช้อยู่แล้วโหลดผ่าน** ⇒ การซอยไฟล์ + compress ไม่ใช่สาเหตุ เหลือ `level1` เป็นไฟล์เดียวที่มีปัญหา · `level0` (Home) มี 2,472 B ไม่มี split
+
+** arithmetic ที่ยืนยันแล้วของ `level1` (BE, format v23):** `metadataSize` @20 = 49,906 · `fileSize` @28 = 5,560,384 · data เริ่ม @36 = 49,968 (= 62 + metadataSize) ⇒ **data section = 5,510,416 B** และเกณฑ์ตรวจ object record คือ `byteStart + byteSize ≤ 5,510,416` (metadata region 62..49,967 ไม่มี plaintext ชื่อ type ⇒ block info ถูก压缩 — parse เองต้อง decompress ก่อน หรือใช้ `UnityPy`)
+
+**ของที่ต้องใช้ตอน install เอง (เก็บไว้ใช้):** `zipalign` / `apksigner` อยู่ใต้ `…/AndroidPlayer/SDK/build-tools/36.0.0` · debug keystore `C:\Users\Jakgrits\.android\debug.keystore` (`androiddebugkey`) = `CN=Android Debug` SHA-256 `91:A7:10:EF…71:E0` ซึ่ง **ตรงกับ signer ของ `BOB-prototype-v1.apk`** ⇒ APK ที่เราประกอบใหม่ติดตั้งทับของเดิมได้ด้วย `adb install -r` (ไม่ต้อง uninstall, ข้อมูลเซฟไม่หาย)
+
+**รอบนี้สั่งทำอะไร (option 1 — Library สว่างสนิท):** stage สำเนาโปรเจกต์ใหม่ `clean-build/` ด้วย `Logs/clean-copy.sh` = 994 MB / 1,888 ไฟล์ / **no Library** / `Packages` เขียนทับด้วยฉบับ `git show HEAD:` (48 deps — กัน `com.unity.purchasing 5.5.1` ที่อีก session ยังไม่ commit ติดมาด้วย แบบเดียวกับ §15.19) · `Logs/clean-build.sh` เรียก `BobAndroidBuild.BuildApk -bobVersionCode 11 -bobDevBuild` ลง `Builds/BOB-prototype-v1.apk` แล้ว copy เป็น `BOB-prototype-v1-code11.apk` · **กันของเดิม:** `Builds/BOB-prototype-v1-code10-backup.apk` md5 `f3ecee8ce7777a0bc97d40c266d73f77` (= ไฟล์ที่ติดตั้งในเครื่อง) · `clean-build/` เพิ่มเข้า `.git/info/exclude` แล้ว (local เท่านั้น ไม่ commit)
+
+**Gotcha ใหม่ 2 ตัว (จำเป็น):**
+1. robocopy รับชื่อโฟลเดอร์เป็น positional ⇒ มันตีความเป็น **file filter** ไม่ใช่ "เลือก subfolder" → `robocopy src dst Assets Packages /E` = คัด 0 ไฟล์ rc 16 · ต้อง `robocopy src\Assets dst\Assets /E` ทีละตัว (ผลรอบแรกที่พัง: 3,069 โฟลเดอร์เปล่า 792K)
+2. `MSYS2_ARG_CONV_EXCL='*'` จำเป็นสำหรับ Git Bash + เครื่องมือ Windows จริง ไม่งั้น `/E /XJ /MT:16 /LOG:` ถูก glue เข้า path และ switch key `-bobVersionCode` ก็พัง (→ rc 16 ทุกคำสั่ง) · ค่านี้บันทึ
