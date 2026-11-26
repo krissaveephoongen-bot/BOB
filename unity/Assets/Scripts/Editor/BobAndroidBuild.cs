@@ -4,6 +4,7 @@
 //   -bobVersionCode N   use this AndroidBundleVersionCode (default: current + 1)
 //   -bobNoBump          keep the current versionCode
 //   -bobVersionName X   bump the versionName (default: keep the project value)
+//   -bobDevBuild        development player build (logcat + the on-screen crash trail of Dev/BobCrashTrail.cs)
 // The APK lands in ../Builds/BOB-prototype-v1.apk. Needs Android Build Support (SDK, NDK, OpenJDK) from Unity Hub.
 // A failed build restores the previous versionCode and the Editor's platform, so a retry never burns a release number.
 using System.IO;
@@ -35,6 +36,9 @@ namespace Bob.EditorTools
             PlayerSettings.allowedAutorotateToLandscapeLeft = true; PlayerSettings.allowedAutorotateToLandscapeRight = true;
             PlayerSettings.SetApiCompatibilityLevel(NamedBuildTarget.Android, ApiCompatibilityLevel.NET_Standard);
             PlayerSettings.Android.forceInternetPermission = true;
+            // Automatic makes Unity 6 put Vulkan first, and the first 3D frame (TaskRace) hard-exits the process on a
+            // vivo X200 (Dimensity/Mali) before any managed error can be logged. GLES3 only: docs 24 §15.37.
+            PlayerSettings.SetGraphicsAPIs(BuildTarget.Android, new[] { UnityEngine.Rendering.GraphicsDeviceType.OpenGLES3 });
             KeepShaders("Standard", "Unlit/Texture"); // the 2.5D room creates these materials in code, so a player build must not strip them
             Debug.Log("Bob: Android player settings applied (" + Package + ", IL2CPP, ARM64, landscape).");
         }
@@ -127,7 +131,8 @@ namespace Bob.EditorTools
 
                 var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
                 {
-                    scenes = scenes, locationPathName = path, target = BuildTarget.Android, options = BuildOptions.None
+                    scenes = scenes, locationPathName = path, target = BuildTarget.Android,
+                    options = HasFlag("-bobDevBuild") ? BuildOptions.Development : BuildOptions.None
                 });
                 var s = report.summary;
                 built = s.result == UnityEditor.Build.Reporting.BuildResult.Succeeded;

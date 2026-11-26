@@ -205,6 +205,9 @@ namespace Bob.TaskRace
 
         void Awake()
         {
+            // Two markers for the device crash trail (docs 24 §15.38): the phone dies during this scene's load with no
+            // managed error, so begin/end here says whether Awake is even reached.
+            Debug.Log("[TaskRace] manager awake begin");
             cached = this;
             EnsureEventSystem();
             ApplyMatchRequest();
@@ -216,6 +219,7 @@ namespace Bob.TaskRace
             DioramaAmbient.Ensure(gameObject);
             // The finished match posts its combined score to the leaderboard (docs 27); offline it stays local.
             Bob.Ugs.BobRaceScoreReporter.Attach(this);
+            Debug.Log("[TaskRace] manager awake end");
         }
 
         /// <summary>

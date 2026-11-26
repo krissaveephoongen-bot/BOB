@@ -414,7 +414,10 @@ namespace Bob.Game
         /// <summary>Open a match scene, or explain on screen why this build cannot (the scene is not in Build Settings).</summary>
         void LoadMatchScene(string scene)
         {
-            if (Application.CanStreamedLevelBeLoaded(scene)) { SceneManager.LoadScene(scene); return; }
+            // The device crash trail keys off this line: press logged but no "scene loaded" means the load itself died.
+            Debug.Log("[BobGame] opening match scene " + scene);
+            if (BobSceneLoader.Busy) return;
+            if (Application.CanStreamedLevelBeLoaded(scene)) { BobSceneLoader.Load(scene, "กำลังโหลดฉากแข่งขัน"); return; }
             Debug.LogWarning("[BobGame] " + scene + " is not in Build Settings: no match to start.");
             Toast("ยังไม่มีฉากแข่งขัน (" + scene + ")");
         }
@@ -733,7 +736,6 @@ namespace Bob.Game
             MatchRequest.Set("duo", 1, false, new[] { charId });
             BobSceneLoader.Load(Bob.Ugs.BobOnlineRoom.DuoScene, "ห้องคู่ 2 คน");
         }
-
 
         // ---------------------------------------------------------------- S15 online room (docs 27)
 

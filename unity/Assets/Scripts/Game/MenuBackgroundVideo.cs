@@ -36,6 +36,40 @@ namespace Bob.Game
         RawImage image;
         VideoPlayer player;
         RenderTexture target;
+        bool released;
+
+        /// <summary>Tear every live clip down now. The scene loader calls this before a match load so the codec surface is
+        /// released while the menu scene is still intact, instead of being destroyed mid-load with the rest of the scene.</summary>
+        public static void StopAll()
+        {
+            foreach (var v in FindObjectsByType<MenuBackgroundVideo>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                if (v != null) v.StopNow();
+        }
+
+        void StopNow()
+        {
+            Release();
+            Destroy(gameObject);
+        }
+
+        void Release()
+        {
+            if (released) return;
+            released = true;
+            if (player != null)
+            {
+                player.prepareCompleted -= OnPrepared;
+                player.Stop();
+                player.targetTexture = null;
+                player.clip = null; // hands the MediaCodec surface back now, not whenever the component destructor runs
+            }
+            if (target != null)
+            {
+                target.Release();
+                Destroy(target);
+                target = null;
+            }
+        }
 
         void Bind(RawImage img)
         {
@@ -64,18 +98,6 @@ namespace Bob.Game
             if (image != null) image.color = Color.white;
         }
 
-        void OnDestroy()
-        {
-            if (player != null)
-            {
-                player.prepareCompleted -= OnPrepared;
-                player.targetTexture = null;
-            }
-            if (target != null)
-            {
-                target.Release();
-                Destroy(target);
-            }
-        }
+        void OnDestroy() => Release();
     }
 }
