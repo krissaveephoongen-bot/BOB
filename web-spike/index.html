@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>สมรภูมิปัดกวาด — Web Spike M1–M3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mitr:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="rotate">หมุนเครื่องเป็นแนวนอนก่อนเล่น</div>
+
+<div id="stage">
+  <section id="s-splash" class="screen">
+    <div class="logo-mark"></div>
+    <h1>สมรภูมิปัดกวาด</h1>
+    <p>Battle of the Brooms · เว็บสไปค์ M1–M3</p>
+  </section>
+
+  <section id="s-home" class="screen">
+    <div class="home-top">
+      <div id="home-stats" class="stats"></div>
+      <div class="home-btns">
+        <button id="sound" class="ghost small">เสียง</button>
+        <button id="dev" class="ghost small">ตรวจตัวเลข</button>
+      </div>
+    </div>
+    <div class="home-mid">
+      <div class="home-title">
+        <h1>สมรภูมิปัดกวาด</h1>
+        <p>ตลาดเก่าท่าศาลา · ทำความสะอาดแข่งกับเวลา ชนะ 2 ใน 3 รอบ</p>
+      </div>
+      <button id="play" class="play">เล่นเลย</button>
+      <div class="home-sub">
+        <button id="to-heroes" class="wide">เลือกมือกวาด</button>
+        <span id="home-hero" class="muted"></span>
+      </div>
+    </div>
+    <p class="foot">โหมดที่ยังไม่อยู่ในสไปค์: Duo/Team/ออนไลน์ · T04 รถเข็น · T13 สองคน · ร้านเสื้อผ้า · ภารกิจรายวัน</p>
+  </section>
+
+  <section id="s-chapters" class="screen">
+    <h2>เลือกบท</h2>
+    <p class="sub">6 บท · ปลดล็อกด้วยเลเวลและดาว</p>
+    <div id="chapter-grid"></div>
+    <button id="ch-back" class="ghost back">กลับ</button>
+  </section>
+
+  <section id="s-heroes" class="screen">
+    <h2>เลือกมือกวาด</h2>
+    <p class="sub">ความถนัดให้ +25% กับงานหมวดนั้น</p>
+    <div id="hero-row"></div>
+    <button id="hero-back" class="ghost back">กลับ</button>
+  </section>
+
+  <section id="s-race" class="screen">
+    <canvas id="scene"></canvas>
+    <div id="hud">
+      <div class="hud-top">
+        <div class="team" id="hud-me">ทีมเรา <b>0%</b><span class="tbar"><i id="bar-me"></i></span></div>
+        <div class="timer"><span id="clock">120</span><em>วินาที</em></div>
+        <div class="team rival" id="hud-rival">ทีมสะอาดเอี่ยม <b>0%</b><span class="tbar"><i id="bar-rival"></i></span></div>
+      </div>
+      <div class="hud-meta"><span id="series"></span><span id="stains"></span><button id="pause" class="ghost small">พัก</button></div>
+      <div id="queue"></div>
+      <div class="hud-bottom">
+        <button id="work" class="work" hidden>ทำงาน</button>
+        <button id="sab" class="work sab" hidden>ปราบ · ส่งคราบ</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="card-layer"></div>
+  <div id="overlay" hidden></div>
+  <div id="toasts"></div>
+</div>
+
+<script type="module" src="src/app.js"></script>
+</body>
+</html>
