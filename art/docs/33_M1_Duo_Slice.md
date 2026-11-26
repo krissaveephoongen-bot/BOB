@@ -7,7 +7,7 @@
 - โค้ดของ slice M1 ตามแผน [`docs/superpowers/plans/2026-11-25-bob-m1-duo-coop-slice.md`](../../docs/superpowers/plans/2026-11-25-bob-m1-duo-coop-slice.md) เขียนครบทั้ง 8 งานแล้ว
 - **ยังไม่เคยเปิด Unity Editor ในรอบนี้** — `Assets/Scenes/DuoClean.unity` ยังไม่ถูก bake และยังไม่ได้รันทดสอบสองเครื่องจริง
 - ด่านอัตโนมัติที่รันได้โดยไม่ต้องเปิด Editor ทั้งสองด่านเขียว (ดู [`## ทดสอบ`](#ทดสอบ))
-- สถานะนี้ตรงกับแถว `M1-DUO▲` ใน [`COORDINATION.md`](../../COORDINATION.md) §3 (ยังไม่ commit)
+- สถานะนี้ตรงกับแถว `M1-DUO▲` ใน [`COORDINATION.md`](../../COORDINATION.md) §3 (commit `e82a6c0`, push แล้ว)
 
 ## ทางเข้า
 
