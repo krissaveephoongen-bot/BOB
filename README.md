@@ -12,6 +12,11 @@ Playable prototype: https://claude.ai/artifact/M9orSH3LFGbYboRm7QAkHn
 > Checks: `bash unity-typecheck/check.sh`, `cd unity-check && dotnet run`, `node server/task-race-test.js`,
 > `node server/daily-test.js`, `node server/e2e-taskrace-test.js`, `bash ready-check/check.sh`.
 
+> **Web demo (26 Nov 2026):** `https://bobcleanup-bsn8guby.manus.game` is a **Godot 4.7.2 / GDScript web export**
+> built on a Manus template (collect nodes, 2 stages, local leaderboard) that borrows this repo's `press_*`/`sweep_*`
+> sprites. It is **not** a build of the Unity game and shares none of its systems — comparison and verdict in
+> [art/docs/33](art/docs/33_Godot_Web_Demo_vs_Unity.md).
+
 ## What is here
 
 | Folder | What | State |
